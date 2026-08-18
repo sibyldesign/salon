@@ -56,7 +56,7 @@
     .appt-card { background: #fff; border-left: 4px solid var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
     .appt-time { font-weight: bold; color: var(--primary-dark); font-size: 17px; }
     .action-btn { padding: 6px 12px; border: none; border-radius: 8px; color: #fff; font-size: 12px; font-weight: bold; cursor: pointer; }
-    .btn-green { background: #4caf50; } .btn-red { background: #f44336; } .btn-blue { background: #2196F3; }
+    .btn-green { background: #4caf50; } .btn-red { background: #f44336; } .btn-blue { background: #2196F3; } .btn-amber { background: #ff9800; }
     
     .img-upload-slot {
       width: 100%; aspect-ratio: 4 / 5; border: 2px dashed #ddd; border-radius: 12px;
@@ -174,8 +174,8 @@
     <div class="card-box">
       <div class="card-title">➕ 新增服務項目</div>
       <div class="row g-2 mb-2">
-        <div class="col-6"><input type="text" id="svc-name" class="form-control" placeholder="服務名稱 (如: 洗剪設計)"></div>
-        <div class="col-6"><input type="number" id="svc-price" class="form-control" placeholder="金額 (如: 800)"></div>
+        <div class="col-6"><input type="text" id="svc-name" class="form-control" placeholder="服務名稱"></div>
+        <div class="col-6"><input type="number" id="svc-price" class="form-control" placeholder="金額"></div>
       </div>
       <div class="row g-2 mb-2">
         <div class="col-6"><input type="number" id="svc-duration" class="form-control" placeholder="所需時間(分)"></div>
@@ -199,7 +199,7 @@
     </div>
   </div>
 
-  <!-- 分頁 7. ⚙️ 店家設定 (基本資料/密碼/禁約/排班時段設定/7張說明圖/模組開關) -->
+  <!-- 分頁 7. ⚙️ 店家設定 -->
   <div id="page-settings" class="page">
     <div class="card-box">
       <div class="card-title">🔐 後台密碼修改</div>
@@ -211,11 +211,19 @@
     </div>
 
     <div class="card-box">
+      <div class="card-title">💬 預約確認通知文案範本 (一鍵複製用)</div>
+      <div class="mb-2">
+        <textarea id="cfg-booking-msg-tpl" class="form-control" rows="4" placeholder="輸入預約確認訊息範本..."></textarea>
+      </div>
+      <div class="text-muted small">可使用變數：<code>{姓名}</code>、<code>{時間}</code>、<code>{項目}</code>、<code>{金額}</code></div>
+    </div>
+
+    <div class="card-box">
       <div class="card-title">🏪 基本資料與預約防護</div>
       <div class="mb-3"><label class="form-label fw-bold">店家主標題</label><input type="text" id="cfg-title" class="form-control" placeholder="輸入店名"></div>
       <div class="mb-3"><label class="form-label fw-bold">店家副標題</label><input type="text" id="cfg-subtitle" class="form-control" placeholder="輸入副標題"></div>
-      <div class="mb-3"><label class="form-label fw-bold">店地址 (顯示於前台預約鈕上方)</label><input type="text" id="cfg-address" class="form-control" placeholder="輸入店面地址"></div>
-      <div class="mb-3"><label class="form-label fw-bold">營業時間文字</label><input type="text" id="cfg-hours" class="form-control" placeholder="輸入營業時間"></div>
+      <div class="mb-3"><label class="form-label fw-bold">店地址 (顯示於前台預約鈕上方)</label><input type="text" id="cfg-address" class="form-control" placeholder="輸入店面地址 (留空則不顯示)"></div>
+      <div class="mb-3"><label class="form-label fw-bold">營業時間文字</label><input type="text" id="cfg-hours" class="form-control" placeholder="輸入營業時間 (留空則不顯示)"></div>
       <div class="mb-3"><label class="form-label fw-bold">⛔ 預約緩衝禁約時間 (小時)</label><input type="number" id="cfg-buffer" class="form-control" placeholder="例如：1"></div>
     </div>
 
@@ -267,7 +275,6 @@
 
 <div id="fab-btn" class="fab-btn" style="display:none;" onclick="openManualBooking()">+</div>
 
-<!-- 底部 7 大功能切換導覽 -->
 <div id="bottom-nav" class="bottom-nav" style="display:none;">
   <div class="nav-item active" onclick="switchPage('calendar', this)"><span class="nav-icon">📅</span>月曆</div>
   <div class="nav-item" onclick="switchPage('customer', this)"><span class="nav-icon">👥</span>客人</div>
@@ -413,9 +420,10 @@
           <span class="badge ${a.status === '待確認' ? 'bg-warning text-dark' : (a.status === '已結單' ? 'bg-secondary' : 'bg-success')}">${a.status}</span>
         </div>
         <div class="fw-bold fs-6">${a.name} <span class="text-muted small">(${a.phone})</span></div>
-        <div class="small text-muted mb-1">LINE名稱：<b>${a.lineName}</b> | 預約金額：<b>${a.price}元</b> ${a.status === '已結單' ? `(實收：<b class="text-danger">${a.finalPrice}元</b>)` : ''}</div>
+        <div class="small text-muted mb-1">LINE名稱：<b>${a.lineName || '無'}</b> | 預約金額：<b>${a.price}元</b> ${a.status === '已結單' ? `(實收：<b class="text-danger">${a.finalPrice}元</b>)` : ''}</div>
         <div class="text-dark small mb-2">項目：<b>${a.service}</b> ${a.notes ? `<br>備註：${a.notes}` : ''}</div>
         <div class="d-flex gap-2 flex-wrap">
+          <button class="action-btn btn-amber" onclick="copyBookingNotice('${a.name}', '${a.date} ${a.time}', '${a.service}', ${a.price})">📋 複製預約通知</button>
           <button class="action-btn btn-blue" onclick="openEditDetailsModal('${a.id}', '${a.service}', '${a.notes || ''}')">改項目/備註</button>
           <button class="action-btn btn-blue" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改時(需確認空檔)</button>
           <button class="action-btn btn-green" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">結單/改金額</button>
@@ -423,6 +431,25 @@
         </div>
       </div>
     `).join('');
+  }
+
+  function copyBookingNotice(name, timeStr, svcStr, priceNum) {
+    const tpl = backendData.settings.bookingMsgTpl || "您好！已為您確認預約 🎉\n姓名：{姓名}\n時間：{時間}\n項目：{項目}\n預估金額：{金額}元\n期待您的光臨！";
+    const finalMsg = tpl
+      .replace('{姓名}', name)
+      .replace('{時間}', timeStr)
+      .replace('{項目}', svcStr)
+      .replace('{金額}', priceNum);
+
+    navigator.clipboard.writeText(finalMsg).then(() => {
+      Swal.fire({
+        title: '✅ 預約通知已複製！',
+        text: '請打開 LINE 官方帳號貼上傳送給客人唷',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    });
   }
 
   function openEditDetailsModal(id, currentSvc, currentNotes) {
@@ -651,6 +678,7 @@
     document.getElementById('cfg-address').value = s.address || '';
     document.getElementById('cfg-hours').value = s.businessHours || '';
     document.getElementById('cfg-buffer').value = s.bookingBufferHours ?? 1;
+    document.getElementById('cfg-booking-msg-tpl').value = s.bookingMsgTpl || '';
     document.getElementById('cfg-shift-start').value = s.shiftStartTime || '09:00';
     document.getElementById('cfg-shift-end').value = s.shiftEndTime || '19:00';
     document.getElementById('cfg-shift-interval').value = String(s.shiftInterval || 30);
@@ -681,8 +709,8 @@
       careContainer.innerHTML += `
         <div class="border p-2 rounded-3 mb-2 bg-light">
           <div class="row g-2 mb-1">
-            <div class="col-7"><input type="text" class="form-control form-control-sm rule-name" placeholder="項目關鍵字 (如: 燙染)" value="${r.name}"></div>
-            <div class="col-5"><input type="number" class="form-control form-control-sm rule-months" placeholder="月數 (如: 3)" value="${r.months}"></div>
+            <div class="col-7"><input type="text" class="form-control form-control-sm rule-name" placeholder="項目名稱" value="${r.name}"></div>
+            <div class="col-5"><input type="number" class="form-control form-control-sm rule-months" placeholder="月數" value="${r.months}"></div>
           </div>
           <textarea class="form-control form-control-sm rule-msg" rows="2" placeholder="關懷訊息 (可用 {姓名} 與 {項目})">${r.msg}</textarea>
         </div>`;
@@ -749,6 +777,7 @@
       address: document.getElementById('cfg-address').value,
       businessHours: document.getElementById('cfg-hours').value,
       bookingBufferHours: Number(document.getElementById('cfg-buffer').value || 1),
+      bookingMsgTpl: document.getElementById('cfg-booking-msg-tpl').value,
       shiftStartTime: document.getElementById('cfg-shift-start').value,
       shiftEndTime: document.getElementById('cfg-shift-end').value,
       shiftInterval: Number(document.getElementById('cfg-shift-interval').value || 30),
