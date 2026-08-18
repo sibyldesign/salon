@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Rosa Hair - 後台管理</title>
+  <title>沙龍管理後台</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     :root {
@@ -12,13 +13,15 @@
       --primary-dark: #A08875;
       --bg: #FDFBF7;
       --dark: #5C4B3C;
-      --green-bg: #e8f5e9; --green-text: #2e7d32; --pink-bg: #fde8ec; --pink-text: #c62828;
+      --green-bg: #e8f5e9; --green-text: #2e7d32;
+      --pink-bg: #fde8ec; --pink-text: #c62828;
     }
     * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; }
-    body { margin: 0; background: var(--bg); padding-bottom: 70px; color: #333; }
+    body { margin: 0; background: var(--bg); padding-bottom: 80px; color: #333; }
     .header { background: var(--primary); color: #fff; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 10; letter-spacing: 1px; }
     .page { display: none; padding: 15px; }
     .page.active { display: block; }
+    
     #lock-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
     .lock-box { background: #fff; padding: 30px 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; width: 100%; max-width: 320px; }
     .lock-icon { font-size: 40px; margin-bottom: 10px; }
@@ -28,6 +31,7 @@
     .lock-btn { width: 100%; background: var(--primary); color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .lock-btn:active { transform: scale(0.98); background: var(--primary-dark); }
     .lock-error { color: var(--pink-text); font-size: 13px; margin-bottom: 10px; height: 18px; }
+    
     .calendar-container { background: #fff; border-radius: 16px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
     .cal-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .btn-outline { border: 1px solid var(--dark); background: transparent; color: var(--dark); padding: 4px 14px; border-radius: 20px; font-size: 14px; cursor: pointer; font-weight: bold; }
@@ -38,9 +42,11 @@
     .cal-date { font-size: 12px; font-weight: bold; margin-bottom: 2px; }
     .cal-dots { display: flex; flex-wrap: wrap; gap: 2px; }
     .dot { width: 6px; height: 6px; border-radius: 50%; background: #e74c3c; }
+    
     .appt-list { margin-top: 20px; }
     .appt-card { background: #fff; border-left: 4px solid var(--primary); padding: 15px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); position: relative; }
     .appt-time { font-weight: bold; color: var(--primary-dark); font-size: 18px; margin-bottom: 4px; }
+    
     .top-scroll { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 15px; border-bottom: 1px dashed var(--primary); margin-bottom: 15px; -webkit-overflow-scrolling: touch; align-items: center; }
     .top-scroll::-webkit-scrollbar { display: none; }
     .date-box { flex: 0 0 75px; border: 1px solid var(--primary); background: #fff; border-radius: 12px; text-align: center; padding: 12px 5px; cursor: pointer; color: var(--dark); transition: 0.2s; }
@@ -48,6 +54,7 @@
     .date-box .m-text { font-size: 12px; margin-bottom: 4px; }
     .date-box .d-text { font-size: 20px; font-weight: bold; }
     .add-date-btn { flex: 0 0 75px; border: 2px dashed #4caf50; background: #e8f5e9; border-radius: 12px; text-align: center; padding: 12px 5px; cursor: pointer; color: #2e7d32; transition: 0.2s; }
+    
     .shift-day-panel { background: #fff; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); overflow: hidden; }
     .shift-day-header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #fafafa; border-bottom: 1px solid #eee; }
     .shift-day-title { font-size: 18px; font-weight: bold; color: var(--dark); }
@@ -57,15 +64,29 @@
     .slot-badge { padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
     .slot-badge.open { background: var(--green-bg); color: var(--green-text); }
     .slot-badge.closed { background: var(--pink-bg); color: var(--pink-text); }
+    
     .action-btn { padding: 8px 12px; border: none; border-radius: 8px; color: #fff; font-size: 12px; cursor: pointer; font-weight: bold; }
     .btn-green { background: #4caf50; } .btn-red { background: #f44336; } .btn-gray { background: #9e9e9e; } .btn-blue { background: #2196F3; }
-    .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
-    .nav-item { flex: 1; text-align: center; padding: 12px 0; font-size: 11px; color: #aaa; cursor: pointer; }
+    
+    .card-box { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-bottom: 15px; border: 1px solid #f0ede9; }
+    .card-title { font-size: 16px; font-weight: bold; color: var(--dark); margin-bottom: 15px; }
+    
+    .img-upload-slot {
+      width: 100%; aspect-ratio: 4 / 5; border: 2px dashed #ddd; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background-size: cover; background-position: center; cursor: pointer; position: relative; background-color: #fafafa;
+    }
+    .img-upload-slot span { background: rgba(0,0,0,0.6); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 11px; }
+
+    .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; overflow-x: auto; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .bottom-nav::-webkit-scrollbar { display: none; }
+    .nav-item { flex: 0 0 14.28%; min-width: 58px; text-align: center; padding: 10px 0; font-size: 11px; color: #aaa; cursor: pointer; white-space: nowrap; }
     .nav-item.active { color: var(--primary-dark); font-weight: bold; }
-    .nav-icon { font-size: 18px; display: block; margin-bottom: 4px; opacity: 0.6; }
+    .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; opacity: 0.6; }
     .nav-item.active .nav-icon { opacity: 1; }
+    
     #loader { text-align: center; padding: 50px; color: #666; display: none; }
-    .fab-btn { position: fixed; bottom: 80px; right: 20px; width: 60px; height: 60px; background: var(--primary-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 4px 15px rgba(160, 136, 117, 0.4); cursor: pointer; z-index: 1000; }
+    .fab-btn { position: fixed; bottom: 85px; right: 20px; width: 60px; height: 60px; background: var(--primary-dark); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 4px 15px rgba(160, 136, 117, 0.4); cursor: pointer; z-index: 1000; }
   </style>
 </head>
 <body>
@@ -73,17 +94,19 @@
 <div id="lock-screen">
   <div class="lock-box">
     <div class="lock-icon">🔒</div>
-    <div class="lock-title">Rosa Hair 後台管理系統</div>
+    <div class="lock-title" id="lock-header-title">沙龍後台管理系統</div>
     <div id="lock-error" class="lock-error"></div>
     <input type="password" id="pin-input" class="lock-input" placeholder="請輸入密碼" inputmode="numeric" pattern="[0-9]*" maxlength="6">
     <button class="lock-btn" onclick="checkPin()">解鎖登入</button>
   </div>
 </div>
 
-<div class="header">✂️ Rosa Hair 專屬管理後台</div>
+<div class="header" id="top-bar-title">✂️ 沙龍專屬管理後台</div>
 <div id="loader">資料載入中，請稍候...</div>
 
 <div id="content" style="display:none;">
+
+  <!-- 1. 📅 月曆總覽 -->
   <div id="page-calendar" class="page active">
     <div class="calendar-container">
       <div class="cal-header-row">
@@ -98,25 +121,138 @@
     </div>
   </div>
 
+  <!-- 2. 👥 客人預約管理 -->
   <div id="page-customer" class="page">
     <div class="top-scroll" id="cust-scroll-area"></div>
     <div id="cust-content-area"></div>
   </div>
 
+  <!-- 3. ⏰ 單日排班管理 -->
   <div id="page-shift" class="page">
     <div class="top-scroll" id="shift-scroll-area"></div>
     <div id="shift-content-area"></div>
   </div>
 
+  <!-- 4. 💰 業績統計 -->
   <div id="page-revenue" class="page">
     <div class="top-scroll" id="rev-scroll-area"></div>
     <div id="rev-content-area"></div>
   </div>
 
+  <!-- 5. 🎁 售後關懷名單 -->
   <div id="page-care" class="page">
     <div style="margin-bottom: 10px; color: #888; font-size: 13px;">自動抓取符合週期的客人，一鍵跳轉 LINE 關心</div>
     <div id="care-list"></div>
   </div>
+
+  <!-- 6. ⚙️ 店家品牌與功能模組開關 -->
+  <div id="page-settings" class="page">
+    <div class="card-box">
+      <div class="card-title">🏪 品牌基本設定與功能開關</div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">店家主標題</label>
+        <input type="text" id="cfg-title" class="form-control" placeholder="例如：Rosa Hair 或 艾莉美甲">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">店家副標題</label>
+        <input type="text" id="cfg-subtitle" class="form-control" placeholder="例如：蘿莎髮妝 / 日系專業美甲">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">前台模組啟用/停用</label>
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="cfg-toggle-carousel" checked>
+          <label class="form-check-label">啟用 4:5 說明圖輪播</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="cfg-toggle-portfolio" checked>
+          <label class="form-check-label">啟用 作品集專區</label>
+        </div>
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="cfg-toggle-care" checked>
+          <label class="form-check-label">啟用 保養叮嚀與售後提醒</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-box">
+      <div class="card-title">📢 公告與 7 張說明圖 (4:5 比例)</div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">跑馬燈公告文字</label>
+        <input type="text" id="cfg-promo" class="form-control" placeholder="例：歡迎光臨！線上預約服務中">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">點選格子直接上傳說明圖 (直傳 ImgBB)</label>
+        <div class="row g-2" id="promo-upload-grid"></div>
+      </div>
+    </div>
+
+    <div class="card-box">
+      <div class="card-title">💬 關懷訊息與社群連結</div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">售後關心文字範本</label>
+        <textarea id="cfg-care" class="form-control" rows="3" placeholder="輸入關心文字..."></textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">官方 LINE 預約網址</label>
+        <input type="text" id="cfg-line" class="form-control" placeholder="https://line.me/R/ti/p/...">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Instagram 網址</label>
+        <input type="text" id="cfg-ig" class="form-control" placeholder="https://instagram.com/...">
+      </div>
+      <button class="btn btn-dark w-100 fw-bold py-2" onclick="saveStoreSettings()">💾 儲存所有店家設定</button>
+    </div>
+  </div>
+
+  <!-- 7. ✂️ 服務項目與作品 ImgBB 直傳 -->
+  <div id="page-services" class="page">
+    <div class="card-box">
+      <div class="card-title">➕ 新增服務項目</div>
+      <div class="row g-2 mb-2">
+        <div class="col-6"><input type="text" id="svc-name" class="form-control" placeholder="服務名稱"></div>
+        <div class="col-6"><input type="number" id="svc-price" class="form-control" placeholder="價格"></div>
+      </div>
+      <div class="row g-2 mb-3">
+        <div class="col-6"><input type="number" id="svc-duration" class="form-control" placeholder="耗時(分)"></div>
+        <div class="col-6">
+          <select id="svc-type" class="form-select">
+            <option value="Group_A">Group A (技術類)</option>
+            <option value="Group_B">Group B (專屬類)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-dark w-100 fw-bold" onclick="addNewService()">➕ 確定新增服務項目</button>
+    </div>
+
+    <div class="card-box">
+      <div class="card-title">➕ 直傳新增作品 (上傳至 ImgBB)</div>
+      <input type="text" id="work-cat" class="form-control mb-2" placeholder="分類 (例如：女生染髮 / 單色光療)">
+      <input type="text" id="work-title" class="form-control mb-2" placeholder="作品標題">
+      <input type="text" id="work-link" class="form-control mb-2" placeholder="IG 連結 (選填)">
+      <input type="file" id="work-file" class="form-control mb-3" accept="image/*">
+      <button class="btn btn-dark w-100 fw-bold" onclick="uploadAndAddPortfolio()">🚀 上傳並新增作品</button>
+    </div>
+  </div>
+
+  <!-- 8. 📅 區間排班快速生成 -->
+  <div id="page-template" class="page">
+    <div class="card-box">
+      <div class="card-title">📅 自動套用班表模板 (區間快速生成)</div>
+      <p class="text-muted small">選擇起始與結束日期，系統將自動為你生成全月排班預設時段 (10:00 - 19:00，週一全休)。</p>
+      <div class="row g-2 mb-3">
+        <div class="col-6">
+          <label class="form-label small fw-bold">開始日期</label>
+          <input type="date" id="sch-start-date" class="form-control">
+        </div>
+        <div class="col-6">
+          <label class="form-label small fw-bold">結束日期</label>
+          <input type="date" id="sch-end-date" class="form-control">
+        </div>
+      </div>
+      <button class="btn btn-dark w-100 fw-bold py-2" onclick="applyScheduleTemplate()">⚡ 一秒生成排班時段</button>
+    </div>
+  </div>
+
 </div>
 
 <div id="fab-btn" class="fab-btn" style="display:none;" onclick="openManualBooking()">+</div>
@@ -127,17 +263,25 @@
   <div class="nav-item" onclick="switchPage('shift', this)"><span class="nav-icon">⏰</span>排班</div>
   <div class="nav-item" onclick="switchPage('revenue', this)"><span class="nav-icon">💰</span>業績</div>
   <div class="nav-item" onclick="switchPage('care', this)"><span class="nav-icon">🎁</span>關心</div>
+  <div class="nav-item" onclick="switchPage('settings', this)"><span class="nav-icon">⚙️</span>設定</div>
+  <div class="nav-item" onclick="switchPage('services', this)"><span class="nav-icon">✂️</span>服務/作品</div>
+  <div class="nav-item" onclick="switchPage('template', this)"><span class="nav-icon">⚡</span>班表模板</div>
 </div>
 
 <script>
-  // 請填入你部署的獨立 GAS Web App URL
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+  const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
   const PIN_CODE = '0604';
+
+  // 自動解析網址列中的 ?store_id=...
+  const urlParams = new URLSearchParams(window.location.search);
+  const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
 
   let backendData = {};
   let currentShiftDate = 'ALL', currentCustDate = 'ALL', currentRevDate = 'ALL';
   let calYear = new Date().getFullYear();
   let calMonth = new Date().getMonth();
+  let promoImgsArray = new Array(7).fill("");
 
   document.getElementById('pin-input').addEventListener('keypress', function (e) {
     if (e.key === 'Enter') checkPin();
@@ -149,6 +293,7 @@
     if (input === PIN_CODE) {
       document.getElementById('lock-screen').style.display = 'none';
       document.getElementById('loader').style.display = 'block';
+      renderUploadSlots();
       fetchDataAndRender(true);
       fetchCareReminders();
     } else {
@@ -159,10 +304,37 @@
 
   async function fetchDataAndRender(isFirstLoad = false) {
     try {
-      const res = await fetch(`${API_URL}?action=getTeacherData`);
+      const res = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}`);
       const data = await res.json();
       backendData = data || { appointments: [], scheduleDates: [], serviceOptions: [] };
-      renderCalendar(); renderCustomer(); renderShift(); renderRevenue();
+      
+      renderCalendar();
+      renderCustomer();
+      renderShift();
+      renderRevenue();
+
+      if (backendData.settings) {
+        document.getElementById('top-bar-title').innerText = `✂️ ${backendData.settings.storeName || '沙龍'} 管理後台`;
+        document.getElementById('cfg-title').value = backendData.settings.storeName || '';
+        document.getElementById('cfg-subtitle').value = backendData.settings.subtitle || '';
+        document.getElementById('cfg-promo').value = backendData.settings.promoText || '';
+        document.getElementById('cfg-care').value = backendData.settings.careText || '';
+        document.getElementById('cfg-line').value = backendData.settings.line || '';
+        document.getElementById('cfg-ig').value = backendData.settings.ig || '';
+        document.getElementById('cfg-toggle-carousel').checked = backendData.settings.enableCarousel ?? true;
+        document.getElementById('cfg-toggle-portfolio').checked = backendData.settings.enablePortfolio ?? true;
+        document.getElementById('cfg-toggle-care').checked = backendData.settings.enableCare ?? true;
+
+        if (backendData.settings.promoImgs) {
+          promoImgsArray = backendData.settings.promoImgs;
+          promoImgsArray.forEach((url, i) => {
+            if (url && document.getElementById(`slot-${i}`)) {
+              document.getElementById(`slot-${i}`).style.backgroundImage = `url('${url}')`;
+              document.getElementById(`slot-${i}`).innerHTML = '';
+            }
+          });
+        }
+      }
 
       if (isFirstLoad) {
         document.getElementById('loader').style.display = 'none';
@@ -179,7 +351,7 @@
 
   async function fetchCareReminders() {
     try {
-      const res = await fetch(`${API_URL}?action=getFollowUpReminders`);
+      const res = await fetch(`${API_URL}?action=getFollowUpReminders&store_id=${CURRENT_STORE_ID}`);
       const data = await res.json();
       renderCare(data);
     } catch (e) {
@@ -214,8 +386,8 @@
     const firstDay = new Date(calYear, calMonth, 1).getDay();
     const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
     const now = new Date();
-    for(let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-cell" style="border:none;"></div>`; }
-    for(let i = 1; i <= daysInMonth; i++) {
+    for (let i = 0; i < firstDay; i++) { grid.innerHTML += `<div class="cal-cell" style="border:none;"></div>`; }
+    for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
       let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr);
       let isToday = (i === now.getDate() && calMonth === now.getMonth() && calYear === now.getFullYear()) ? 'today' : '';
@@ -230,14 +402,14 @@
 
   function changeCalMonth(dir) {
     calMonth += dir;
-    if(calMonth > 11) { calMonth = 0; calYear++; }
-    if(calMonth < 0) { calMonth = 11; calYear--; }
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0) { calMonth = 11; calYear--; }
     renderCalendar();
   }
 
   function showApptsInCalendar(dateStr, appts) {
     const container = document.getElementById('selected-date-appts');
-    if(appts.length === 0) { container.innerHTML = `<div style="text-align:center; color:#999; margin-top:20px;">${dateStr}<br>當日無預約</div>`; return; }
+    if (appts.length === 0) { container.innerHTML = `<div style="text-align:center; color:#999; margin-top:20px;">${dateStr}<br>當日無預約</div>`; return; }
     appts.sort((a,b) => a.time.localeCompare(b.time));
     let html = `<h4 style="margin-bottom:10px; color: var(--dark);">${dateStr} 預約表</h4>`;
     appts.forEach(a => { html += `<div class="appt-card"><div class="appt-time">${a.time}</div><div style="font-weight:bold;">${a.name} (${a.phone})</div><div style="color:#666; font-size:14px;">項目：${a.service}</div></div>`; });
@@ -252,12 +424,12 @@
     let appts = backendData.appointments || [];
     if (currentCustDate !== 'ALL') appts = appts.filter(a => a.date === currentCustDate);
 
-    if(appts.length === 0) { content.innerHTML = '<div style="text-align:center; color:#999;">此日期無預約資料</div>'; return; }
+    if (appts.length === 0) { content.innerHTML = '<div style="text-align:center; color:#999;">此日期無預約資料</div>'; return; }
     appts.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
     let html = '';
     appts.forEach(a => {
       let statusColor = a.status === '待確認' ? '#f57c00' : '#4caf50';
-      let confirmBtnHtml = a.status === '待確認' 
+      let confirmBtnHtml = a.status === '待確認'
         ? `<button class="action-btn btn-green" onclick="confirmAndForward('${a.id}', '${a.name}', '${a.date} ${a.time}', '${a.service}')">確認接單並複製</button>`
         : `<button class="action-btn btn-green" style="opacity: 0.7;" onclick="resendLineMsg('confirm', '${a.name}', '${a.date} ${a.time}', '${a.service}')">再次複製確認文</button>`;
 
@@ -311,7 +483,7 @@
   }
 
   async function confirmAndForward(id, name, time, svc) {
-    let msg = `Rosa已接收到預約確認！🎉\n姓名：${name}\n時間：${time}\n項目：${svc}`;
+    let msg = `已接收到預約確認！🎉\n姓名：${name}\n時間：${time}\n項目：${svc}`;
     Swal.fire({ title: '狀態同步中...', allowOutsideClick: false });
     Swal.showLoading();
 
@@ -333,7 +505,7 @@
   }
 
   async function rejectAndCancel(id, name) {
-    let msg = `非常抱歉，Rosa 這個時段已有預約或其他排程，需請您更改其他時段 🥺\n也可私訊 Rosa 安排其他空檔給您唷❤️`;
+    let msg = `非常抱歉，這個時段已有預約或其他排程，需請您更改其他時段 🥺\n也可私訊安排其他空檔給您唷❤️`;
     Swal.fire({
       title: `確定婉拒 ${name} 並釋出時段?`, icon: 'warning',
       showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: '確定婉拒', cancelButtonText: '保留'
@@ -356,7 +528,7 @@
   }
 
   function resendLineMsg(type, name, time, svc) {
-    let msg = type === 'confirm' ? `Rosa已接收到預約確認！🎉\n姓名：${name}\n時間：${time}\n項目：${svc}` : `非常抱歉，Rosa 這個時段已有預約或其他排程，需請您更改其他時段 🥺\n也可私訊 Rosa 安排其他空檔給您唷❤️`;
+    let msg = type === 'confirm' ? `已接收到預約確認！🎉\n姓名：${name}\n時間：${time}\n項目：${svc}` : `非常抱歉，這個時段已有預約或其他排程，需請您更改其他時段 🥺\n也可私訊安排其他空檔給您唷❤️`;
     navigator.clipboard.writeText(msg).then(() => {
       Swal.fire({ title: '已重新複製！', text: '請打開「LINE 官方帳號 APP」貼上傳送', icon: 'success', timer: 2000, showConfirmButton: false });
     });
@@ -407,7 +579,7 @@
     let appts = backendData.appointments || [];
     if (currentRevDate !== 'ALL') appts = appts.filter(a => a.date === currentRevDate);
 
-    if(appts.length === 0) { content.innerHTML = '<div style="text-align:center; color:#999;">此日期無業績資料</div>'; return; }
+    if (appts.length === 0) { content.innerHTML = '<div style="text-align:center; color:#999;">此日期無業績資料</div>'; return; }
     appts.sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
     let totalRev = 0; let html = '';
     appts.forEach(a => {
@@ -435,6 +607,106 @@
     navigator.clipboard.writeText(msg).then(() => {
       Swal.fire({ title: '已複製關心訊息！', text: '請打開「LINE 官方帳號 APP」貼上傳送給客人', icon: 'success', timer: 2500, showConfirmButton: false });
     });
+  }
+
+  function renderUploadSlots() {
+    const grid = document.getElementById('promo-upload-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      grid.innerHTML += `
+        <div class="col-4">
+          <div class="img-upload-slot" id="slot-${i}" onclick="triggerFileInput(${i})">
+            <span>圖 ${i + 1}</span>
+          </div>
+          <input type="file" id="file-${i}" style="display:none;" accept="image/*" onchange="handleImgUpload(${i}, this)">
+        </div>`;
+    }
+  }
+
+  function triggerFileInput(idx) { document.getElementById(`file-${idx}`).click(); }
+
+  async function handleImgUpload(idx, input) {
+    const file = input.files[0];
+    if (!file) return;
+    Swal.fire({ title: `上傳說明圖 ${idx + 1} 中...`, allowOutsideClick: false });
+    Swal.showLoading();
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        promoImgsArray[idx] = data.data.url;
+        document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
+        document.getElementById(`slot-${idx}`).innerHTML = '';
+        Swal.fire('成功', `圖 ${idx + 1} 上傳成功！`, 'success');
+      }
+    } catch (e) {
+      Swal.fire('上傳失敗', e.message, 'error');
+    }
+  }
+
+  async function saveStoreSettings() {
+    Swal.fire({ title: '儲存中...', allowOutsideClick: false });
+    Swal.showLoading();
+    const payload = {
+      storeName: document.getElementById('cfg-title').value,
+      subtitle: document.getElementById('cfg-subtitle').value,
+      promoText: document.getElementById('cfg-promo').value,
+      promoImgs: promoImgsArray.filter(u => u !== ""),
+      careText: document.getElementById('cfg-care').value,
+      line: document.getElementById('cfg-line').value,
+      ig: document.getElementById('cfg-ig').value,
+      enableCarousel: document.getElementById('cfg-toggle-carousel').checked,
+      enablePortfolio: document.getElementById('cfg-toggle-portfolio').checked,
+      enableCare: document.getElementById('cfg-toggle-care').checked
+    };
+
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "saveSettings", store_id: CURRENT_STORE_ID, data: payload })
+    });
+    Swal.fire('儲存成功', '設定已同步更新至前台！', 'success').then(() => fetchDataAndRender());
+  }
+
+  async function addNewService() {
+    const name = document.getElementById('svc-name').value;
+    const price = document.getElementById('svc-price').value;
+    const duration = document.getElementById('svc-duration').value;
+    const type = document.getElementById('svc-type').value;
+    if (!name || !price) { Swal.fire('請填寫完整', '名稱與金額為必填', 'warning'); return; }
+
+    Swal.fire({ title: '新增服務中...', allowOutsideClick: false });
+    Swal.showLoading();
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "addService", store_id: CURRENT_STORE_ID, data: { name, price, duration, type } })
+    });
+    Swal.fire('成功', '服務已新增', 'success').then(() => fetchDataAndRender());
+  }
+
+  async function uploadAndAddPortfolio() {
+    const file = document.getElementById('work-file').files[0];
+    const cat = document.getElementById('work-cat').value;
+    const title = document.getElementById('work-title').value;
+    const link = document.getElementById('work-link').value;
+    if (!file || !cat || !title) { Swal.fire('請填寫完整', '分類、標題與照片皆為必填', 'warning'); return; }
+
+    Swal.fire({ title: '正在上傳作品至 ImgBB...', allowOutsideClick: false });
+    Swal.showLoading();
+    const formData = new FormData();
+    formData.append("image", file);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+    const imgData = await res.json();
+
+    if (imgData.success) {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "addPortfolio", store_id: CURRENT_STORE_ID, data: { category: cat, title: title, link: link, imgUrl: imgData.data.url } })
+      });
+      Swal.fire('成功', '作品已成功發布！', 'success').then(() => fetchDataAndRender());
+    }
   }
 
   function openManualBooking() {
@@ -468,7 +740,7 @@
         Swal.fire({ title: '安插中...', allowOutsideClick: false }); Swal.showLoading();
         await fetch(API_URL, {
           method: "POST",
-          body: JSON.stringify({ action: "forceAddBooking", data: result.value })
+          body: JSON.stringify({ action: "forceAddBooking", store_id: CURRENT_STORE_ID, data: result.value })
         });
         Swal.fire('成功', '已順利幫客人安插卡位！', 'success').then(() => fetchDataAndRender());
       }
