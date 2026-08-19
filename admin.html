@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>沙龍管理後台</title>
+  <title>沙龍管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -25,10 +25,12 @@
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
 
-<!-- 解鎖畫面 -->
+<!-- 解鎖登入畫面 -->
 <div id="lock-screen" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs">
-    <div class="text-4xl mb-2">🔒</div>
+    <div class="w-12 h-12 mx-auto mb-3 bg-brand-100 rounded-full flex items-center justify-center text-brand-500">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    </div>
     <div class="text-base font-bold text-brand-900 mb-4" id="lock-title">沙龍管理後台</div>
     <div id="lock-error" class="text-xs text-red-500 mb-2 h-4"></div>
     <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
@@ -37,29 +39,31 @@
 </div>
 
 <!-- 頂部導航列 -->
-<header class="bg-brand-400 text-white px-4 py-3 sticky top-0 z-30 shadow-sm flex justify-between items-center">
-  <div class="font-bold text-sm tracking-wide" id="top-bar-title">✂️ 沙龍管理後台</div>
+<header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm flex justify-between items-center">
+  <div class="font-bold text-sm text-brand-900 tracking-wide" id="top-bar-title">沙龍管理系統</div>
   <div class="flex gap-2">
-    <button class="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition" onclick="fetchDataAndRender()">🔄 重新整理</button>
-    <button class="px-2.5 py-1 bg-black/20 hover:bg-black/30 rounded-lg text-xs font-bold transition" onclick="location.reload()">登出</button>
+    <button class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" onclick="fetchDataAndRender()" title="重新整理">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+    </button>
+    <button class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" onclick="location.reload()" title="登出">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    </button>
   </div>
 </header>
 
-<!-- 開發者全域公告橫幅 -->
-<div id="sys-announcement-banner" class="bg-amber-100 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 font-medium flex justify-between items-center" style="display: none;">
-  <span id="sys-announcement-text">📢 系統公告載入中...</span>
-  <button onclick="document.getElementById('sys-announcement-banner').style.display='none'" class="text-amber-700 font-bold ml-2">×</button>
-</div>
-
 <main class="max-w-md mx-auto p-4" id="main-content" style="display: none;">
 
-  <!-- 分頁 1. 📅 月曆總覽 -->
+  <!-- 分頁 1. 日曆總覽 -->
   <div id="page-calendar" class="page space-y-4">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm">
       <div class="flex justify-between items-center mb-3">
-        <button class="px-3 py-1 border border-brand-300 rounded-full text-xs font-bold text-brand-800" onclick="changeCalMonth(-1)">❮</button>
+        <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(-1)">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
         <div id="cal-month-title" class="font-bold text-sm text-brand-900"></div>
-        <button class="px-3 py-1 border border-brand-300 rounded-full text-xs font-bold text-brand-800" onclick="changeCalMonth(1)">❯</button>
+        <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(1)">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
       </div>
       <div class="grid grid-cols-7 gap-1 text-center text-xs" id="cal-grid"></div>
     </div>
@@ -68,10 +72,10 @@
     </div>
   </div>
 
-  <!-- 分頁 2. 👥 客人預約管理 -->
+  <!-- 分頁 2. 名單管理 -->
   <div id="page-customer" class="page space-y-3" style="display: none;">
     <div class="flex justify-between items-center bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm">
-      <span class="text-xs font-bold text-brand-900">📋 預約清單</span>
+      <span class="text-xs font-bold text-brand-900">預約名單清單</span>
       <select id="filter-status" class="text-xs border border-brand-200 rounded-lg px-2 py-1 bg-brand-50" onchange="renderCustomer()">
         <option value="ALL">全部狀態</option>
         <option value="待確認">待確認</option>
@@ -83,21 +87,20 @@
     <div id="cust-content-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 3. ⏰ 排班管理 -->
+  <!-- 分頁 3. 排班管理 -->
   <div id="page-shift" class="page space-y-4" style="display: none;">
     <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm" id="staff-shift-selector-box" style="display: none;">
-      <div class="text-[11px] font-bold text-brand-500 mb-2">專員班表切換</div>
+      <div class="text-[11px] font-bold text-brand-500 mb-2">美容師班表切換</div>
       <div class="flex gap-2 overflow-x-auto pb-1" id="staff-shift-buttons"></div>
     </div>
-
     <div class="flex gap-2 overflow-x-auto pb-2 border-b border-dashed border-brand-300" id="shift-scroll-area"></div>
     <div id="shift-content-area"></div>
   </div>
 
-  <!-- 分頁 4. 💰 業績統計 -->
+  <!-- 分頁 4. 業績統計 -->
   <div id="page-revenue" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💰 營業額統計</div>
+      <div class="text-xs font-bold text-brand-900">營業額分析</div>
       <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
         <option value="ALL">全部服務項目總覽</option>
       </select>
@@ -109,108 +112,91 @@
     </div>
   </div>
 
-  <!-- 分頁 5. 🎁 售後關懷 -->
+  <!-- 分頁 5. 回訪關懷 -->
   <div id="page-care" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🎁 符合關懷名單</div>
+      <div class="text-xs font-bold text-brand-900">定期回訪建議名單</div>
       <div id="care-list" class="space-y-2"></div>
     </div>
-
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">⚙️ 自訂 5 組關心週期與文案</div>
+      <div class="text-xs font-bold text-brand-900">自訂 5 組關懷週期與文案</div>
       <div id="care-rules-container" class="space-y-2"></div>
-      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveCareRules()">💾 儲存關心規則</button>
+      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveCareRules()">儲存關懷規則</button>
     </div>
   </div>
 
-  <!-- 分頁 6. ✂️ 服務項目與作品管理 -->
+  <!-- 分頁 6. 服務項目與作品 -->
   <div id="page-services" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900" id="svc-form-title">➕ 新增服務項目</div>
+      <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目</div>
       <input type="hidden" id="edit-svc-id">
       <div class="grid grid-cols-2 gap-2">
         <input type="text" id="svc-name" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="服務名稱 (如: 洗剪設計)">
         <input type="number" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額 (如: 800)">
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="時間 (分鐘)">
+        <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="所需時間 (分鐘)">
         <select id="svc-type" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50">
-          <option value="Group_A">Group A (技術類等待期)</option>
+          <option value="Group_A">Group A (等待期技術類)</option>
           <option value="Group_B">Group B (全程專屬類)</option>
         </select>
       </div>
       <div class="flex items-center gap-2 px-1">
         <input type="checkbox" id="svc-is-addon" class="accent-brand-400 rounded">
-        <label class="text-xs font-medium text-brand-800">標示為「加購項目」（前台需選主項目後才可選）</label>
+        <label class="text-xs font-medium text-brand-800">設為「加購項目」（前台需選主項目後才可選）</label>
       </div>
       <div class="flex gap-2">
-        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveServiceItem()">確定儲存服務項目</button>
+        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveServiceItem()">儲存服務項目</button>
         <button class="px-3 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
       </div>
     </div>
-
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-      <div class="text-xs font-bold text-brand-900 mb-2">📋 目前服務列表</div>
+      <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表</div>
       <div id="service-list-container" class="space-y-2"></div>
     </div>
-
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">➕ 新增作品集</div>
+      <div class="text-xs font-bold text-brand-900">新增作品集</div>
       <input type="text" id="work-cat" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="分類 (例如：染髮設計 / 美甲光療)">
       <input type="text" id="work-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="作品標題">
       <input type="text" id="work-link" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="IG 連結 (選填)">
       <input type="file" id="work-file" class="w-full p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50" accept="image/*">
       <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="uploadAndSavePortfolio()">發布作品</button>
     </div>
-
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-      <div class="text-xs font-bold text-brand-900 mb-2">🖼️ 目前作品列表</div>
+      <div class="text-xs font-bold text-brand-900 mb-2">作品展示列表</div>
       <div id="portfolio-list-container" class="grid grid-cols-2 gap-2"></div>
     </div>
   </div>
 
-  <!-- 分頁 7. 💳 訂閱方案與功能許願 -->
+  <!-- 分頁 7. 方案管理 -->
   <div id="page-subscription" class="page space-y-4" style="display: none;">
-    <!-- 現行方案卡片 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💳 目前系統訂閱狀態</div>
+      <div class="text-xs font-bold text-brand-900">系統訂閱方案</div>
       <div class="p-4 bg-brand-50 rounded-2xl space-y-2 text-xs border border-brand-100">
         <div class="flex justify-between"><span class="text-brand-500">系統版本</span><span class="font-bold text-brand-900" id="sub-plan-name">標準版</span></div>
         <div class="flex justify-between"><span class="text-brand-500">終止訂閱日</span><span class="font-bold text-brand-900" id="sub-expire-date">載入中...</span></div>
         <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-green-600" id="sub-status-badge">正常運行中</span></div>
       </div>
     </div>
-
-    <!-- 線上續約繳費選項 (PayUNi 金流) -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
-      <div class="space-y-2" id="plan-options-container">
-        <!-- 依產業別動態產出方案按鈕 -->
-      </div>
-      <div class="text-[11px] text-brand-400 leading-relaxed pt-2 border-t border-brand-100">
-        ※ 系統採統一金流 (PayUNi) 加密付款，付款完成後系統將自動延長到期日。<br>
-        ※ 如需取消訂閱，請於到期日前點選 <button onclick="cancelSubscriptionAlert()" class="text-red-500 underline font-bold">取消訂閱</button>。
-      </div>
+      <div class="text-xs font-bold text-brand-900">線上續費</div>
+      <div class="space-y-2" id="plan-options-container"></div>
     </div>
-
-    <!-- 功能許願留言區 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💡 功能許願留言區</div>
-      <p class="text-[11px] text-brand-400">請清楚描述您希望系統新增的功能，開發團隊將定期評估並排入改版更新！</p>
-      <textarea id="wish-content" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="例如：希望可以新增自訂每週二提早一小時打烊..."></textarea>
+      <div class="text-xs font-bold text-brand-900">功能許願留言區</div>
+      <textarea id="wish-content" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="描述您希望系統新增的功能..."></textarea>
       <button class="w-full py-2.5 bg-brand-800 text-white text-xs font-bold rounded-xl shadow-md" onclick="submitWish()">送出許願</button>
     </div>
   </div>
 
-  <!-- 分頁 8. ⚙️ 設定 (公休控制台 + 店家設定 + 美容師管理) -->
+  <!-- 分頁 8. 店休與設定 -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
-    
-    <!-- 店家公休控制台 (圖1) -->
+    <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
       <div class="flex items-center gap-2 text-sm font-bold text-red-500">
-        <span>📅</span> 店家公休控制台
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        店家公休控制台
       </div>
-      
       <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2.5">
         <div class="text-xs font-bold text-brand-900">1. 勾選每週固定公休日</div>
         <div class="grid grid-cols-4 gap-2 text-xs" id="weekly-off-grid">
@@ -223,150 +209,135 @@
           <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="6" class="accent-brand-400"> 六</label>
         </div>
       </div>
-
       <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2.5">
-        <div class="text-xs font-bold text-brand-900">2. 指定特殊日期公休 (特休/連假)</div>
+        <div class="text-xs font-bold text-brand-900">2. 指定特殊公休日</div>
         <div class="flex gap-2">
           <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white">
-          <button class="px-3.5 py-2 bg-brand-400 text-white rounded-xl text-xs font-bold" onclick="addCustomOffDate()">+ 新增日期</button>
+          <button class="px-3.5 py-2 bg-brand-400 text-white rounded-xl text-xs font-bold" onclick="addCustomOffDate()">+ 新增</button>
         </div>
         <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
       </div>
-
-      <button class="w-full py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="saveOffDaysSetting()">⚡ 儲存公休設定</button>
+      <button class="w-full py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="saveOffDaysSetting()">儲存公休設定</button>
     </div>
 
-    <!-- 專員人員設定 -->
+    <!-- 專員管理 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">👥 專員人員管理 (專屬網址認代號)</div>
+      <div class="text-xs font-bold text-brand-900">服務專員列表</div>
       <div class="space-y-2" id="staff-list-container"></div>
       <div class="flex gap-2 pt-2">
         <input type="text" id="new-staff-id" class="w-1/3 p-2 rounded-xl border border-brand-200 text-xs" placeholder="代號 (如 staff_a)">
-        <input type="text" id="new-staff-name" class="w-1/2 p-2 rounded-xl border border-brand-200 text-xs" placeholder="姓名 (如 店長)">
+        <input type="text" id="new-staff-name" class="w-1/2 p-2 rounded-xl border border-brand-200 text-xs" placeholder="姓名 (如 專員A)">
         <button class="flex-1 py-2 bg-brand-400 text-white text-xs font-bold rounded-xl" onclick="addStaffMember()">新增</button>
       </div>
     </div>
 
-    <!-- 密碼與基本設定 -->
+    <!-- 密碼與基本資料 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🔐 後台密碼</div>
+      <div class="text-xs font-bold text-brand-900">後台密碼管理</div>
       <div class="flex gap-2">
         <input type="password" id="cfg-new-pin" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="輸入 4-6 碼新密碼">
         <button class="px-4 py-2.5 bg-brand-800 text-white rounded-xl text-xs font-bold" onclick="updateAdminPin()">修改密碼</button>
       </div>
     </div>
-
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🏪 品牌基本資料</div>
+      <div class="text-xs font-bold text-brand-900">品牌資料</div>
       <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
       <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="副標題">
-      <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店面地址 (留空則前台自動隱藏)">
+      <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店面地址 (留空則不顯示)">
       <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="營業時間文字">
       <div>
-        <label class="text-xs font-bold text-brand-800">⛔ 預約緩衝禁約時間 (小時)</label>
+        <label class="text-xs font-bold text-brand-800">預約緩衝禁約時間 (小時)</label>
         <input type="number" id="cfg-buffer" class="w-full p-2.5 mt-1 rounded-xl border border-brand-200 text-xs" placeholder="例：1">
       </div>
     </div>
 
-    <!-- 不常改的初始設定排在最下方 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">⏰ 排班時段範圍與間隔</div>
+      <div class="text-xs font-bold text-brand-900">營業排班時段與間隔</div>
       <div class="grid grid-cols-2 gap-2">
         <input type="time" id="cfg-shift-start" class="p-2.5 rounded-xl border border-brand-200 text-xs" value="09:00">
         <input type="time" id="cfg-shift-end" class="p-2.5 rounded-xl border border-brand-200 text-xs" value="19:00">
       </div>
       <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs">
-        <option value="30">每 30 分鐘一格 (推薦)</option>
+        <option value="30">每 30 分鐘一格</option>
         <option value="60">每 60 分鐘一格</option>
       </select>
     </div>
 
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🎛️ 前台功能模組開關</div>
+      <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400"></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400"></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400"></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400"></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400"></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span class="font-medium">啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400"></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400"></label>
       </div>
     </div>
 
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">📢 7 張說明圖管理 (4:5 比例)</div>
+      <div class="text-xs font-bold text-brand-900">說明圖管理 (4:5 比例)</div>
       <input type="text" id="cfg-promo" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="跑馬燈公告文字">
       <div class="grid grid-cols-4 gap-2" id="promo-upload-grid"></div>
     </div>
 
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🔗 社群與預約通知範本</div>
+      <div class="text-xs font-bold text-brand-900">通知與連結</div>
       <textarea id="cfg-booking-msg-tpl" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="預約確認通知範本"></textarea>
       <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="官方 LINE 網址">
       <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Instagram 網址">
       <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Google 地圖網址">
-      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="saveStoreSettings()">💾 儲存全部設定</button>
-    </div>
-
-  </div>
-
-  <!-- 分頁 9. 👑 最高管理者 Super Admin 後台 -->
-  <div id="page-super-admin" class="page space-y-4" style="display: none;">
-    <div class="bg-brand-900 text-white p-5 rounded-3xl shadow-sm space-y-3">
-      <div class="text-xs font-bold">👑 Super Admin 總管控制台</div>
-      <div class="text-[11px] text-brand-300">監控所有訂閱店家狀態、手動延長到期日與發布系統公告。</div>
-    </div>
-
-    <!-- 發布系統公告 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-      <div class="text-xs font-bold text-brand-900">📢 發布全域系統公告</div>
-      <input type="text" id="sa-ann-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="公告標題">
-      <textarea id="sa-ann-content" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="公告內容..."></textarea>
-      <button class="w-full py-2 bg-brand-400 text-white text-xs font-bold rounded-xl" onclick="publishSystemAnnouncement()">發布公告至所有店家</button>
-    </div>
-
-    <!-- 店家訂閱總清單 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🏪 租用店家列表</div>
-      <div id="sa-stores-list" class="space-y-3"></div>
-    </div>
-
-    <!-- 許願池列表 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💡 店家許願池列表</div>
-      <div id="sa-wishes-list" class="space-y-2 text-xs"></div>
+      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="saveStoreSettings()">儲存全部設定</button>
     </div>
   </div>
 
 </main>
 
-<div id="fab-btn" class="fixed bottom-24 right-5 w-14 h-14 bg-brand-500 text-white rounded-full flex items-center justify-center text-3xl shadow-lg cursor-pointer z-30" onclick="openManualBooking()" style="display: none;">+</div>
+<div id="fab-btn" class="fixed bottom-24 right-5 w-14 h-14 bg-brand-500 text-white rounded-full flex items-center justify-center text-3xl shadow-lg cursor-pointer z-30" onclick="openManualBooking()" style="display: none;">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+</div>
 
-<!-- 底部導覽欄 (圖3 質感樣式) -->
+<!-- 底部導覽列 (純單色 SVG 圖示) -->
 <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-brand-200/80 px-2 py-2 flex justify-around items-center z-40 shadow-lg" id="bottom-nav" style="display: none;">
+  <!-- 日曆 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
-    <span class="text-lg">📅</span><span class="text-[10px] mt-0.5">日曆</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+    <span class="text-[10px] mt-1">日曆</span>
   </button>
+  <!-- 排班 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('shift', this)">
-    <span class="text-lg">⏰</span><span class="text-[10px] mt-0.5">排班</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <span class="text-[10px] mt-1">排班</span>
   </button>
+  <!-- 名單 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
-    <span class="text-lg">👥</span><span class="text-[10px] mt-0.5">名單</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+    <span class="text-[10px] mt-1">名單</span>
   </button>
+  <!-- 業績 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('revenue', this)">
-    <span class="text-lg">💰</span><span class="text-[10px] mt-0.5">業績</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+    <span class="text-[10px] mt-1">業績</span>
   </button>
+  <!-- 回訪 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('care', this)">
-    <span class="text-lg">🎁</span><span class="text-[10px] mt-0.5">回訪</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    <span class="text-[10px] mt-1">回訪</span>
   </button>
+  <!-- 服務 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('services', this)">
-    <span class="text-lg">✂️</span><span class="text-[10px] mt-0.5">服務</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879a3 3 0 11-4.242-4.242L10.758 10.758M12 12l2.879-2.879a3 3 0 10-4.242-4.242L7.758 7.758"/></svg>
+    <span class="text-[10px] mt-1">服務</span>
   </button>
+  <!-- 方案 -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('subscription', this)">
-    <span class="text-lg">💳</span><span class="text-[10px] mt-0.5">方案</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+    <span class="text-[10px] mt-1">方案</span>
   </button>
+  <!-- 設定 (店休) -->
   <button class="nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('settings', this)">
-    <span class="text-lg">⚙️</span><span class="text-[10px] mt-0.5">設定</span>
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    <span class="text-[10px] mt-1">店休</span>
   </button>
 </nav>
 
@@ -376,7 +347,6 @@
   const urlParams = new URLSearchParams(window.location.search);
   const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
   const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
-  const IS_SUPER_ADMIN = urlParams.get('super') === 'sibyl2026';
 
   let backendData = {};
   let currentShiftDate = 'ALL';
@@ -403,14 +373,6 @@
         activeShiftStaffId = CURRENT_STAFF_PARAM;
       }
 
-      if (IS_SUPER_ADMIN) {
-        const saBtn = document.createElement('button');
-        saBtn.className = "nav-item flex flex-col items-center justify-center px-3 py-1.5 rounded-2xl transition text-red-500 font-bold";
-        saBtn.innerHTML = `<span class="text-lg">👑</span><span class="text-[10px] mt-0.5">總管</span>`;
-        saBtn.onclick = function() { switchPage('super-admin', this); loadSuperAdminData(); };
-        document.getElementById('bottom-nav').appendChild(saBtn);
-      }
-
       renderUploadSlots();
       fetchDataAndRender(true);
     } else {
@@ -423,11 +385,6 @@
     try {
       const res = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
       backendData = await res.json();
-
-      if (backendData.systemAnnouncement) {
-        document.getElementById('sys-announcement-text').innerText = `📢 ${backendData.systemAnnouncement.title}：${backendData.systemAnnouncement.content}`;
-        document.getElementById('sys-announcement-banner').style.display = 'flex';
-      }
 
       renderCalendar();
       renderCustomer();
@@ -519,7 +476,7 @@
         <div class="text-[11px] text-brand-500">專員：<b>${a.staffName || '不指定'}</b> | LINE：<b>${a.lineName || '無'}</b> | 金額：<b>${a.price}元</b> ${a.status === '已結單' ? `(實收：<b class="text-red-500">${a.finalPrice}元</b>)` : ''}</div>
         <div class="text-xs text-brand-800">項目：<b>${a.service}</b> ${a.notes ? `<br><span class="text-brand-500">備註：${a.notes}</span>` : ''}</div>
         <div class="flex gap-1.5 pt-2 flex-wrap text-[11px]">
-          <button class="px-2.5 py-1 bg-amber-500 text-white rounded-lg font-bold" onclick="copyBookingNotice('${a.name}', '${a.date} ${a.time}', '${a.service}', ${a.price})">📋 複製通知</button>
+          <button class="px-2.5 py-1 bg-amber-500 text-white rounded-lg font-bold" onclick="copyBookingNotice('${a.name}', '${a.date} ${a.time}', '${a.service}', ${a.price})">複製通知</button>
           <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditDetailsModal('${a.id}', '${a.service}', '${a.notes || ''}')">改項目/備註</button>
           <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
           <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">結單改金額</button>
@@ -727,7 +684,7 @@
       <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1 text-xs">
         <div class="flex justify-between font-bold"><span class="text-brand-900">${r.name} (${r.phone})</span><span class="text-brand-500">${r.followUpStr}前消費</span></div>
         <div class="text-[11px] text-brand-400">上次項目：${r.service} (${r.lastDate})</div>
-        <button class="w-full py-2 bg-brand-400 text-white rounded-xl text-xs font-bold mt-1 shadow-sm" onclick="copyCareMsg(\`${r.msg}\`)">📋 複製關懷文案</button>
+        <button class="w-full py-2 bg-brand-400 text-white rounded-xl text-xs font-bold mt-1 shadow-sm" onclick="copyCareMsg(\`${r.msg}\`)">複製關懷文案</button>
       </div>
     `).join('');
   }
@@ -771,7 +728,7 @@
     document.getElementById('svc-duration').value = s.duration;
     document.getElementById('svc-type').value = s.type;
     document.getElementById('svc-is-addon').checked = s.isAddon;
-    document.getElementById('svc-form-title').innerText = "✏️ 修改服務項目";
+    document.getElementById('svc-form-title').innerText = "修改服務項目";
     document.getElementById('svc-cancel-btn').classList.remove('hidden');
   }
 
@@ -781,7 +738,7 @@
     document.getElementById('svc-price').value = '';
     document.getElementById('svc-duration').value = '';
     document.getElementById('svc-is-addon').checked = false;
-    document.getElementById('svc-form-title').innerText = "➕ 新增服務項目";
+    document.getElementById('svc-form-title').innerText = "新增服務項目";
     document.getElementById('svc-cancel-btn').classList.add('hidden');
   }
 
@@ -873,7 +830,7 @@
     });
   }
 
-  // 💳 訂閱方案介面呈現
+  // 💳 訂閱方案
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '標準版';
@@ -911,32 +868,12 @@
   }
 
   async function initiatePay(cycle, amount, days) {
-    Swal.fire({ title: '產生訂單中...', allowOutsideClick: false }); Swal.showLoading();
-    const res = await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "createPayOrder", store_id: CURRENT_STORE_ID, planCycle: cycle, amount, days })
-    });
-    const data = await res.json();
-    if (data.status === "SUCCESS") {
-      Swal.fire({
-        title: '準備前往 PayUNi 統一金流',
-        html: `訂單編號：<code>${data.tradeNo}</code><br>應付金額：<b>${data.amount}元</b>`,
-        confirmButtonText: '前往刷卡/繳費',
-        confirmButtonColor: '#A08875'
-      });
-    }
-  }
-
-  function cancelSubscriptionAlert() {
     Swal.fire({
-      title: '確定取消系統訂閱?',
-      text: '系統將於終止訂閱日後暫停使用。如需協助請洽詢客服。',
-      icon: 'warning',
+      title: '準備前往金流付款',
+      html: `方案週期：<b>${cycle}</b><br>應付金額：<b>${amount}元</b>`,
       showCancelButton: true,
-      confirmButtonText: '聯繫官方客服',
-      confirmButtonColor: '#5C4B3C'
-    }).then(r => {
-      if (r.isConfirmed) window.open('https://lin.ee/YoxX201', '_blank');
+      confirmButtonText: '確定前往',
+      confirmButtonColor: '#A08875'
     });
   }
 
@@ -952,60 +889,7 @@
     Swal.fire('許願成功！', '開發團隊已收到您的建議。', 'success');
   }
 
-  // 👑 Super Admin 模組
-  async function loadSuperAdminData() {
-    const res = await fetch(`${API_URL}?action=getSuperAdminData&secret=sibyl_admin_secret_2026`);
-    const data = await res.json();
-    
-    // 渲染店家列表
-    const sList = document.getElementById('sa-stores-list');
-    sList.innerHTML = (data.stores || []).map(st => `
-      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5">
-        <div class="flex justify-between font-bold"><span class="text-brand-900">${st.store_name} (${st.industry_type})</span><span class="${st.plan_status==='active'?'text-green-600':'text-red-500'}">${st.plan_status}</span></div>
-        <div class="text-[11px] text-brand-500">ID: <code>${st.id}</code> | 到期日: <b>${st.expires_at?st.expires_at.split('T')[0]:'無'}</b></div>
-        <div class="flex gap-2 pt-1">
-          <button class="px-3 py-1 bg-green-600 text-white rounded-lg font-bold text-[11px]" onclick="saRenewStore('${st.id}', 30)">+30天</button>
-          <button class="px-3 py-1 bg-brand-400 text-white rounded-lg font-bold text-[11px]" onclick="saRenewStore('${st.id}', 365)">+1年</button>
-        </div>
-      </div>
-    `).join('');
-
-    // 渲染許願列表
-    const wList = document.getElementById('sa-wishes-list');
-    wList.innerHTML = (data.wishes || []).map(w => `
-      <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
-        <div class="font-bold text-brand-900">${w.store_name}</div>
-        <div class="text-brand-800 mt-0.5">${w.content}</div>
-        <div class="text-[10px] text-brand-400 mt-1">${w.created_at.split('T')[0]}</div>
-      </div>
-    `).join('');
-  }
-
-  async function saRenewStore(targetId, days) {
-    Swal.fire({ title: '延長中...', allowOutsideClick: false }); Swal.showLoading();
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "superAdminRenewStore", secret: "sibyl_admin_secret_2026", targetStoreId: targetId, daysToAdd: days })
-    });
-    loadSuperAdminData();
-    Swal.fire('已手動延長！', '', 'success');
-  }
-
-  async function publishSystemAnnouncement() {
-    const title = document.getElementById('sa-ann-title').value.trim();
-    const content = document.getElementById('sa-ann-content').value.trim();
-    if (!title || !content) { Swal.fire('請填寫完整公告', '', 'warning'); return; }
-    Swal.fire({ title: '發布中...', allowOutsideClick: false }); Swal.showLoading();
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ action: "publishAnnouncement", secret: "sibyl_admin_secret_2026", title, content })
-    });
-    document.getElementById('sa-ann-title').value = '';
-    document.getElementById('sa-ann-content').value = '';
-    Swal.fire('公告已發布！', '', 'success');
-  }
-
-  // ⚙️ 公休控制台
+  // ⚙️ 公休控制台 (修復自動勾選週一問題)
   function addCustomOffDate() {
     const dateVal = document.getElementById('new-custom-off-date').value;
     if (!dateVal) return;
@@ -1038,7 +922,7 @@
       body: JSON.stringify({ action: "saveOffDays", store_id: CURRENT_STORE_ID, data: { weeklyOffDays: checkedWeekly, customOffDates: customOffDatesArray } })
     });
     fetchDataAndRender();
-    Swal.fire('公休已套用！', '', 'success');
+    Swal.fire('公休已套用！', '前台已自動封鎖公休時段。', 'success');
   }
 
   function addStaffMember() {
@@ -1068,13 +952,16 @@
 
   function populateSettings() {
     const s = backendData.settings || {};
-    document.getElementById('top-bar-title').innerText = `✂️ ${s.storeName || '沙龍'} 管理後台`;
+    document.getElementById('top-bar-title').innerText = `${s.storeName || '沙龍'} 管理後台`;
     document.getElementById('cfg-title').value = s.storeName || '';
     document.getElementById('cfg-subtitle').value = s.subtitle || '';
     document.getElementById('cfg-address').value = s.address || '';
     document.getElementById('cfg-hours').value = s.businessHours || '';
     document.getElementById('cfg-buffer').value = s.bookingBufferHours ?? 1;
     document.getElementById('cfg-booking-msg-tpl').value = s.bookingMsgTpl || '';
+    document.getElementById('cfg-shift-start').value = s.shiftStartTime || '09:00';
+    document.getElementById('cfg-shift-end').value = s.shiftEndTime || '19:00';
+    document.getElementById('cfg-shift-interval').value = String(s.shiftInterval || 30);
     document.getElementById('cfg-promo').value = s.promoText || '';
     document.getElementById('cfg-line').value = s.line || '';
     document.getElementById('cfg-ig').value = s.ig || '';
@@ -1087,11 +974,12 @@
     document.getElementById('cfg-toggle-portfolio').checked = s.enablePortfolio ?? true;
     document.getElementById('cfg-toggle-care').checked = s.enableCare ?? true;
 
-    const weeklyOff = s.weeklyOffDays || [1];
+    // 公休讀取 (空陣列即無勾選，絕不強制週一)
+    const weeklyOff = Array.isArray(s.weeklyOffDays) ? s.weeklyOffDays : [];
     document.querySelectorAll('#weekly-off-grid input').forEach(input => {
       input.checked = weeklyOff.includes(Number(input.value));
     });
-    customOffDatesArray = s.customOffDates || [];
+    customOffDatesArray = Array.isArray(s.customOffDates) ? s.customOffDates : [];
     renderCustomOffDatesTags();
 
     const staffList = s.staffList || [{ id: "all", name: "不指定" }];
@@ -1182,6 +1070,8 @@
       enableCustType: document.getElementById('cfg-toggle-custtype').checked,
       enablePortfolio: document.getElementById('cfg-toggle-portfolio').checked,
       enableCare: document.getElementById('cfg-toggle-care').checked,
+      weeklyOffDays: Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value)),
+      customOffDates: customOffDatesArray,
       staffList: backendData.settings.staffList || [{ id: "all", name: "不指定" }],
       shiftStartTime: document.getElementById('cfg-shift-start').value,
       shiftEndTime: document.getElementById('cfg-shift-end').value,
@@ -1210,7 +1100,7 @@
     let staffOpts = (backendData.settings.staffList || []).map(st => `<option value="${st.id}" data-name="${st.name}">${st.name}</option>`).join('');
 
     Swal.fire({
-      title: '➕ 幫客人安插預約',
+      title: '手動安插預約',
       html: `
         <input id="swal-name" class="swal2-input text-xs" style="width:85%;" placeholder="客人姓名">
         <select id="swal-staff" class="swal2-input text-xs" style="width:85%;">${staffOpts}</select>
