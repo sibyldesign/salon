@@ -13,14 +13,8 @@
         extend: {
           colors: {
             brand: {
-              50: '#FDFBF7',
-              100: '#F7EDE8',
-              200: '#EBE5DF',
-              300: '#D5C7BC',
-              400: '#BCA38F',
-              500: '#A08875',
-              800: '#5C4B3C',
-              900: '#3D3126',
+              50: '#FDFBF7', 100: '#F7EDE8', 200: '#EBE5DF', 300: '#D5C7BC',
+              400: '#BCA38F', 500: '#A08875', 800: '#5C4B3C', 900: '#3D3126',
             }
           },
           fontFamily: {
@@ -38,6 +32,14 @@
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
+<!-- 系統停權 / 過期阻擋畫面 -->
+<div id="expired-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
+  <div class="w-20 h-20 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-4xl mb-4 shadow-sm">⚠️</div>
+  <h2 class="text-xl font-bold text-brand-900 mb-2">系統服務暫停中</h2>
+  <p class="text-xs text-brand-500 mb-6 leading-relaxed">該店家的預約系統目前處於維護或方案待續費狀態。<br>若您是店家負責人，請登入管理後台進行線上續費。</p>
+  <a href="https://lin.ee/YoxX201" target="_blank" class="px-6 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md">聯繫 Sibyl 客服專線</a>
+</div>
+
 <div id="booking-ui" class="max-w-md mx-auto min-h-screen flex flex-col">
   
   <!-- 頂部品牌 Header -->
@@ -47,9 +49,7 @@
   </header>
 
   <!-- 跑馬燈公告 -->
-  <div id="promo" class="bg-brand-400 text-white text-xs font-medium py-2.5 px-4 text-center tracking-wide shadow-sm">
-    歡迎線上預約
-  </div>
+  <div id="promo" class="bg-brand-400 text-white text-xs font-medium py-2.5 px-4 text-center tracking-wide shadow-sm" style="display: none;"></div>
 
   <!-- 4:5 拍立得卡片輪播 (圖1) -->
   <div class="px-4 mt-4" id="bannerWrapper" style="display: none;">
@@ -87,35 +87,35 @@
           <input type="text" id="lineName" placeholder="例如：小美" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
-        <!-- 身份切換 (開關控制) -->
+        <!-- 顧客身份 -->
         <div id="custTypeSection">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">顧客身份</label>
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" class="type-btn py-2.5 rounded-xl border border-brand-200 text-xs font-bold transition bg-brand-400 text-white shadow-sm" onclick="setType('old', this)">舊朋友</button>
+            <button type="button" class="type-btn py-2.5 rounded-xl border border-brand-400 text-xs font-bold transition bg-brand-400 text-white shadow-sm" onclick="setType('old', this)">舊朋友</button>
             <button type="button" class="type-btn py-2.5 rounded-xl border border-brand-200 text-xs font-bold transition bg-brand-50/50 text-brand-800" onclick="setType('new', this)">新朋友</button>
           </div>
           <input type="hidden" id="custType" value="old">
         </div>
 
-        <!-- 指定美容師 (開關控制) -->
+        <!-- 指定專員 -->
         <div id="staffSection" style="display: none;">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">選擇服務專員</label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">指定服務專員</label>
           <div class="grid grid-cols-3 gap-2" id="staffGrid"></div>
           <input type="hidden" id="staffId" value="all">
           <input type="hidden" id="staffName" value="不指定">
         </div>
 
-        <!-- 預約項目 (加購綁定機制) -->
+        <!-- 預約項目 (支援加購綁定) -->
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="text-xs font-bold text-brand-800">選擇項目 (可複選)</label>
-            <span class="text-[11px] text-brand-400 font-medium" id="addonHint">※ 加購項目需先選擇主項目</span>
+            <span class="text-[11px] text-brand-400 font-medium" id="addonHint">※ 加購項目需先選主項目</span>
           </div>
           <div class="grid grid-cols-2 gap-2" id="service-grid"></div>
           <input type="hidden" id="service" required>
         </div>
 
-        <!-- 選擇日期 (月曆) -->
+        <!-- 預約日期 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約日期</label>
           <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -129,7 +129,7 @@
           <input type="hidden" id="date" required>
         </div>
 
-        <!-- 進場時段 (三欄藥丸網格，圖3) -->
+        <!-- 進場時段 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">進場時段</label>
           <div class="grid grid-cols-3 gap-2" id="timePillGrid">
@@ -215,9 +215,21 @@
       const res = await fetch(`${API_URL}?action=getInitialData&store_id=${CURRENT_STORE_ID}`);
       db = await res.json();
 
+      // 檢查是否過期停權
+      if (db.isExpired) {
+        document.getElementById('booking-ui').style.display = 'none';
+        document.getElementById('expired-screen').style.display = 'flex';
+        return;
+      }
+
       document.getElementById('brand-title').innerText = db.storeName || "線上預約";
       document.getElementById('brand-subtitle').innerText = db.subtitle || "專業美業服務";
-      document.getElementById('promo').innerText = db.promoText || "歡迎線上預約";
+      
+      if (db.promoText) {
+        document.getElementById('promo').innerText = db.promoText;
+        document.getElementById('promo').style.display = 'block';
+      }
+
       document.getElementById('nav-ig').href = db.ig || '#';
       document.getElementById('nav-line').href = db.line || '#';
       document.getElementById('nav-map').href = db.map || '#';
@@ -235,7 +247,6 @@
         document.getElementById('custTypeSection').style.display = 'none';
       }
 
-      // 美容師選擇
       if (db.enableStaffSelect && db.staffList && db.staffList.length > 0) {
         const staffGrid = document.getElementById('staffGrid');
         staffGrid.innerHTML = db.staffList.map((s, idx) => `
@@ -246,7 +257,6 @@
         document.getElementById('staffSection').style.display = 'block';
       }
 
-      // 說明圖輪播
       if (db.enableCarousel && db.promoImgs && db.promoImgs.length > 0) {
         const track = document.getElementById('carouselTrack');
         const dots = document.getElementById('carouselDots');
@@ -258,12 +268,11 @@
         document.getElementById('bannerWrapper').style.display = 'block';
       }
 
-      if (db.enableCare) {
-        document.getElementById('care-content').innerText = db.careText || "暫無資訊";
+      if (db.enableCare && db.careText) {
+        document.getElementById('care-content').innerText = db.careText;
         document.getElementById('careSection').style.display = 'block';
       }
 
-      // 作品集
       if (db.enablePortfolio && db.portfolio && db.portfolio.length > 0) {
         document.getElementById('portfolioSection').style.display = 'block';
         setupPortfolio();
@@ -289,8 +298,6 @@
   function renderServices() {
     const svcGrid = document.getElementById('service-grid');
     svcGrid.innerHTML = '';
-    
-    // 檢查是否有主項目被勾選
     const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
 
     (db.services || []).forEach(s => {
@@ -309,9 +316,6 @@
   }
 
   function handleServiceChange(cb) {
-    const isAddon = cb.getAttribute('data-isaddon') === 'true';
-    
-    // 如果取消了所有主項目，自動取消勾選加購項目
     const selectedMainCount = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length;
     if (selectedMainCount === 0) {
       document.querySelectorAll('#service-grid input[data-isaddon="true"]').forEach(addonCb => {
@@ -319,11 +323,9 @@
       });
     }
 
-    // 重新計算被選取的項目
     let selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
     document.getElementById('service').value = selectedBoxes.map(el => el.value).join(', ');
     
-    // 更新樣式與時段
     document.querySelectorAll('.service-card').forEach(card => {
       const input = card.querySelector('input');
       if (input.checked) {
@@ -332,7 +334,6 @@
         card.classList.remove('bg-brand-100', 'border-brand-400', 'font-bold');
       }
 
-      // 動態控制加購項目是否鎖定
       if (input.getAttribute('data-isaddon') === 'true') {
         if (selectedMainCount > 0) {
           card.classList.remove('opacity-40', 'pointer-events-none');
@@ -408,7 +409,7 @@
       grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
       return;
     }
-    grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-500">計算空檔時段中...</div>';
+    grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-500">計算可用時段中...</div>';
 
     try {
       const res = await fetch(`${API_URL}?action=getAvailableTimes&store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(d)}&services=${encodeURIComponent(sStr)}&staff_id=${staffId}`);
