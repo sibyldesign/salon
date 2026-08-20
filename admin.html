@@ -41,9 +41,11 @@
   </div>
 </div>
 
+<!-- 頂部 Header (電腦版限制寬度並置中) -->
 <header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm flex justify-between items-center max-w-2xl mx-auto w-full">
   <div class="font-bold text-sm text-brand-900 tracking-wide" id="top-bar-title">沙龍管理系統</div>
-  <div class="flex gap-2">
+  <div class="flex gap-2 items-center">
+    <button class="px-2.5 py-1 text-xs border border-brand-300 rounded-lg text-brand-800 font-bold hover:bg-brand-50" onclick="promptChangePin()">修改密碼</button>
     <button class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" onclick="fetchDataAndRender(false)" title="重新整理">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
     </button>
@@ -55,7 +57,7 @@
 
 <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
 
-  <!-- 分頁 1. 日曆總覽 -->
+  <!-- 分頁 1. 日曆總覽 (下方為完整預約卡片) -->
   <div id="page-calendar" class="page space-y-4">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm">
       <div class="flex justify-between items-center mb-3">
@@ -89,7 +91,7 @@
     <div id="cust-content-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 3. 排班管理 (全功能完整修復) -->
+  <!-- 分頁 3. 排班管理 (完整支援多專員與即時開關) -->
   <div id="page-shift" class="page space-y-4" style="display: none;">
     <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm" id="staff-shift-selector-box" style="display: none;">
       <div class="text-[11px] font-bold text-brand-500 mb-2">專員班表切換</div>
@@ -132,7 +134,7 @@
     </div>
   </div>
 
-  <!-- 分頁 5. 回訪關懷 (單位：週) -->
+  <!-- 分頁 5. 回訪關懷 -->
   <div id="page-care" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🎁 定期回訪建議名單 (依消費週數)</div>
@@ -247,8 +249,7 @@
       <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
       <div class="space-y-2" id="plan-options-container"></div>
       <div class="text-[11px] text-brand-400 leading-relaxed pt-2 border-t border-brand-100">
-        ※ 系統採統一金流 (PayUNi) 加密付款，付款完成後系統將自動延長到期日。<br>
-        ※ 如需取消訂閱，請於到期日前點選 <button onclick="cancelSubscriptionAlert()" class="text-red-500 underline font-bold">取消訂閱</button>。
+        ※ 系統採統一金流 (PayUNi) 加密付款，付款完成後系統將自動延長到期日。
       </div>
     </div>
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -314,7 +315,7 @@
       <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="填寫提供給客人的保養注意事項..."></textarea>
     </div>
 
-    <!-- 專員管理 -->
+    <!-- 專員管理 (含員工個人密碼顯示) -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">👥 專員名單管理 (員工網址認代號)</div>
       <div class="space-y-2" id="staff-list-container"></div>
@@ -325,14 +326,7 @@
       </div>
     </div>
 
-    <!-- 密碼與基本資料 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🔐 後台密碼管理</div>
-      <div class="flex gap-2">
-        <input type="password" id="cfg-new-pin" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="輸入 4-6 碼新密碼">
-        <button class="px-4 py-2.5 bg-brand-800 text-white rounded-xl text-xs font-bold" onclick="updateAdminPin()">修改密碼</button>
-      </div>
-    </div>
+    <!-- 基本資料 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🏪 品牌資料</div>
       <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
@@ -360,6 +354,7 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400"></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400"></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400"></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400"></label>
@@ -386,7 +381,7 @@
 
 </main>
 
-<!-- 底部導覽欄 (電腦版水平置中限制最大寬度，手機版可左右滑動) -->
+<!-- 底部導覽欄 (電腦版置中不變形，手機版可平滑滑動) -->
 <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white border-t border-brand-200/80 shadow-lg">
   <nav class="max-w-2xl w-full px-2 py-2 flex items-center overflow-x-auto no-scrollbar gap-1 justify-start md:justify-around" id="bottom-nav" style="display: none;">
     <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
@@ -451,7 +446,7 @@
 
   async function checkPin() {
     const input = document.getElementById('pin-input').value;
-    const res = await fetch(`${API_URL}?action=verifyPin&store_id=${CURRENT_STORE_ID}&pin=${input}`);
+    const res = await fetch(`${API_URL}?action=verifyPin&store_id=${CURRENT_STORE_ID}&pin=${input}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
     const data = await res.json();
     if (data.valid) {
       document.getElementById('lock-screen').style.display = 'none';
@@ -469,6 +464,25 @@
       document.getElementById('lock-error').innerText = '密碼錯誤，請重新輸入';
       document.getElementById('pin-input').value = '';
     }
+  }
+
+  async function promptChangePin() {
+    Swal.fire({
+      title: CURRENT_STAFF_PARAM ? `修改專員 (${CURRENT_STAFF_PARAM}) 密碼` : '修改後台管理密碼',
+      input: 'password',
+      inputPlaceholder: '請輸入 4-6 碼新密碼',
+      showCancelButton: true,
+      confirmButtonText: '確定修改',
+      confirmButtonColor: '#A08875'
+    }).then(async r => {
+      if (r.isConfirmed && r.value && r.value.length >= 4) {
+        await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "changePin", store_id: CURRENT_STORE_ID, newPin: r.value, staffId: CURRENT_STAFF_PARAM })
+        });
+        Swal.fire('密碼修改成功！', '', 'success');
+      }
+    });
   }
 
   async function fetchDataAndRender(isFirstLoad = false) {
@@ -663,7 +677,7 @@
     });
   }
 
-  // ⏰ 排班管理 (支援極速切換)
+  // ⏰ 排班管理
   function renderShift() {
     if (backendData.settings.enableMultiStaffSchedule && !CURRENT_STAFF_PARAM) {
       const staffList = backendData.settings.staffList || [];
@@ -1039,7 +1053,7 @@
     Swal.fire({ title: '已成功新增預約卡片！', icon: 'success', timer: 1500, showConfirmButton: false });
   }
 
-  // 💳 訂閱方案
+  // 💳 方案管理 (含老顧客隱藏專區與 PayUNi 自動跳轉)
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '標準版';
@@ -1078,18 +1092,39 @@
       title: '準備前往 PayUNi 統一金流',
       html: `方案：<b>${cycle}</b><br>應付金額：<b>${amount}元</b>`,
       showCancelButton: true,
-      confirmButtonText: '前往付款',
+      confirmButtonText: '確定前往付款',
       confirmButtonColor: '#A08875'
     }).then(async r => {
       if (r.isConfirmed) {
-        Swal.fire({ title: '建立訂單中...', allowOutsideClick: false }); Swal.showLoading();
+        Swal.fire({ title: '跳轉中...', allowOutsideClick: false }); Swal.showLoading();
         const res = await fetch(API_URL, {
           method: "POST",
           body: JSON.stringify({ action: "createPayOrder", store_id: CURRENT_STORE_ID, planCycle: cycle, amount, days })
         });
         const data = await res.json();
+        
         if (data.status === "SUCCESS") {
-          Swal.fire('訂單已建立', `訂單編號: ${data.tradeNo}\n即將跳轉 PayUNi 官方金流頁面`, 'info');
+          // 動態建立 POST Form 自動送出至 PayUNi 官方頁面
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = data.gatewayUrl;
+          
+          const params = {
+            MerID: data.merchantId,
+            Version: "1.0",
+            EncryptInfo: data.encryptInfo
+          };
+
+          for (const key in params) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = params[key];
+            form.appendChild(input);
+          }
+
+          document.body.appendChild(form);
+          form.submit();
         }
       }
     });
@@ -1146,7 +1181,7 @@
     const name = document.getElementById('new-staff-name').value.trim();
     if (!id || !name) { Swal.fire('請填寫代號與姓名', '', 'warning'); return; }
     const list = backendData.settings.staffList || [];
-    list.push({ id, name });
+    list.push({ id, name, pin: "8888" });
     document.getElementById('new-staff-id').value = '';
     document.getElementById('new-staff-name').value = '';
     saveStoreSettings();
@@ -1156,13 +1191,6 @@
     let list = backendData.settings.staffList || [];
     backendData.settings.staffList = list.filter(s => s.id !== id);
     saveStoreSettings();
-  }
-
-  async function updateAdminPin() {
-    const newPin = document.getElementById('cfg-new-pin').value.trim();
-    if (newPin.length < 4) { Swal.fire('密碼需至少4碼', '', 'warning'); return; }
-    await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "changePin", store_id: CURRENT_STORE_ID, newPin }) });
-    Swal.fire({ title: '密碼修改成功！', icon: 'success', timer: 1200, showConfirmButton: false });
   }
 
   function populateSettings() {
@@ -1183,6 +1211,7 @@
     document.getElementById('cfg-ig').value = s.ig || '';
     document.getElementById('cfg-map').value = s.map || '';
 
+    document.getElementById('cfg-toggle-email').checked = s.enableEmailCopy === true;
     document.getElementById('cfg-toggle-audit-booking').checked = s.enableAuditBooking !== false;
     document.getElementById('cfg-toggle-deposit').checked = s.enableDeposit === true;
     document.getElementById('cfg-toggle-staff-select').checked = s.enableStaffSelect === true;
@@ -1199,10 +1228,13 @@
     customOffDatesArray = Array.isArray(s.customOffDates) ? s.customOffDates : [];
     renderCustomOffDatesTags();
 
-    const staffList = s.staffList || [{ id: "all", name: "不指定" }];
+    const staffList = s.staffList || [{ id: "all", name: "不指定", pin: "8888" }];
     document.getElementById('staff-list-container').innerHTML = staffList.map(st => `
       <div class="flex justify-between items-center p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs">
-        <span><b>${st.name}</b> <code class="text-brand-400">(代號: ${st.id})</code></span>
+        <div>
+          <b>${st.name}</b> <code class="text-brand-400">(代號: ${st.id})</code>
+          <span class="ml-2 text-[10px] text-gray-500">密碼: ${st.pin || '8888'}</span>
+        </div>
         ${st.id !== 'all' ? `<button onclick="removeStaffMember('${st.id}')" class="text-red-500 font-bold px-2">刪除</button>` : '<span class="text-brand-300">預設</span>'}
       </div>
     `).join('');
@@ -1226,7 +1258,7 @@
         <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5">
           <div class="flex gap-2">
             <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="項目關鍵字" value="${r.name}">
-            <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數 (如: 4)" value="${r.weeks || 4}">
+            <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
           </div>
           <textarea class="w-full p-2 rounded-xl border border-brand-200 rule-msg text-xs" rows="2" placeholder="關懷訊息">${r.msg}</textarea>
         </div>`;
@@ -1267,6 +1299,8 @@
   }
 
   async function saveStoreSettings() {
+    Swal.fire({ title: '儲存中...', allowOutsideClick: false }); Swal.showLoading();
+
     const payload = {
       storeName: document.getElementById('cfg-title')?.value || '',
       subtitle: document.getElementById('cfg-subtitle')?.value || '',
@@ -1280,6 +1314,7 @@
       line: document.getElementById('cfg-line')?.value || '',
       ig: document.getElementById('cfg-ig')?.value || '',
       map: document.getElementById('cfg-map')?.value || '',
+      enableEmailCopy: document.getElementById('cfg-toggle-email')?.checked ?? false,
       enableAuditBooking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? true,
       enableDeposit: document.getElementById('cfg-toggle-deposit')?.checked ?? false,
       enableStaffSelect: document.getElementById('cfg-toggle-staff-select')?.checked ?? false,
@@ -1290,7 +1325,7 @@
       enableCare: document.getElementById('cfg-toggle-care')?.checked ?? true,
       weeklyOffDays: Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value)),
       customOffDates: customOffDatesArray,
-      staffList: backendData.settings.staffList || [{ id: "all", name: "不指定" }],
+      staffList: backendData.settings.staffList || [{ id: "all", name: "不指定", pin: "8888" }],
       shiftStartTime: document.getElementById('cfg-shift-start')?.value || "09:00",
       shiftEndTime: document.getElementById('cfg-shift-end')?.value || "19:00",
       shiftInterval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
@@ -1301,14 +1336,12 @@
       })).filter(r => r.name !== '')
     };
 
-    // 樂觀即時同步
-    backendData.settings = Object.assign(backendData.settings || {}, payload);
-    Swal.fire({ title: '設定已儲存！', icon: 'success', timer: 1000, showConfirmButton: false });
-
     await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "saveSettings", store_id: CURRENT_STORE_ID, data: payload })
     });
+    await fetchDataAndRender(false);
+    Swal.fire({ title: '設定已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   }
 </script>
 </body>
