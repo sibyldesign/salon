@@ -17,7 +17,10 @@
               400: '#BCA38F', 500: '#A08875', 800: '#5C4B3C', 900: '#3D3126',
             }
           },
-          fontFamily: { sans: ['Noto Sans TC', 'sans-serif'], serif: ['Playfair Display', 'serif'] }
+          fontFamily: {
+            sans: ['Noto Sans TC', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
         }
       }
     }
@@ -25,58 +28,64 @@
   <style>
     body { background-color: #FDFBF7; }
     .carousel-slide { min-width: 100%; aspect-ratio: 4 / 5; background-size: cover; background-position: center; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
 <!-- 頂部商店名稱與 Logo 區塊 -->
-<header class="text-center pt-6 pb-4 px-4 bg-brand-50">
-  <!-- 高度 400px LOGO 容器 (由後台開關控制) -->
-  <div id="store-logo-wrapper" class="w-full h-[400px] mb-4 overflow-hidden rounded-3xl shadow-sm border border-brand-200" style="display: none;">
-    <img id="store-logo-img" class="w-full h-full object-cover" src="" alt="商店LOGO">
+<header class="w-full bg-brand-50 pt-0">
+  <div id="store-logo-wrapper" class="w-full h-[400px] overflow-hidden hidden relative">
+    <img id="store-logo-img" class="w-full h-full object-cover object-center" src="" alt="STORE LOGO">
   </div>
-  <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約</h1>
-  <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
+  
+  <div class="max-w-md mx-auto text-center pt-8 pb-4 px-4 relative">
+    <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約</h1>
+    <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
+  </div>
+
+  <!-- 公告色塊 (滿版置中) -->
+  <div id="promo" class="w-full bg-[#BCA38F] text-white py-3.5 px-4 shadow-sm hidden">
+    <div class="max-w-md mx-auto text-center flex flex-col items-center justify-center">
+      <div class="text-[13px] font-bold flex items-center justify-center gap-1.5 mb-1">
+        <svg class="w-4 h-4 text-white inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.39l6.553 3.276A1 1 0 0018 15V3z"/></svg>
+        <span>店家最新公告</span>
+      </div>
+      <div class="text-xs text-white/95 leading-relaxed tracking-wide" id="promo-text"></div>
+    </div>
+  </div>
 </header>
 
-<!-- 店家最新公告 (左右滿版置中) -->
-<div id="promo" class="w-full bg-[#BCA38F] text-white py-3.5 px-4 text-center tracking-wide shadow-sm" style="display: none;">
-  <div class="text-xs font-bold flex items-center justify-center gap-1.5 mb-0.5">
-    <svg class="w-4 h-4 text-white inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M18 3a1 1 0 00-1.447-.894L8.763 6H5a3 3 0 000 6h.28l1.771 5.316A1 1 0 008 18h1a1 1 0 001-1v-4.39l6.553 3.276A1 1 0 0018 15V3z"/></svg>
-    <span>店家最新公告</span>
-  </div>
-  <div class="text-xs text-white/95 leading-relaxed" id="promo-text"></div>
-</div>
+<div id="booking-ui" class="max-w-md mx-auto flex flex-col">
 
-<div id="booking-ui" class="max-w-md mx-auto min-h-screen flex flex-col">
-
-  <!-- PORTFOLIO 作品展示專區 (置於說明圖上方) -->
-  <div class="px-4 mt-6" id="portfolioSection" style="display: none;">
-    <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-3">PORTFOLIO</div>
-    <div class="flex gap-2 justify-center flex-wrap mb-3" id="portfolio-tabs"></div>
+  <!-- 作品展示專區 (說明圖上方) -->
+  <div class="px-4 mt-6 hidden" id="portfolioSection">
+    <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-4">PORTFOLIO</div>
+    <div class="flex gap-2 justify-center flex-wrap mb-4" id="portfolio-tabs"></div>
     <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
   </div>
 
-  <!-- 4:5 說明圖輪播 -->
-  <div class="px-4 mt-4" id="bannerWrapper" style="display: none;">
+  <!-- 說明圖輪播 -->
+  <div class="px-4 mt-4 hidden" id="bannerWrapper">
     <div class="bg-brand-100 p-3.5 rounded-3xl shadow-sm border border-brand-200/60">
       <div class="relative overflow-hidden rounded-2xl bg-white shadow-inner">
         <div class="flex transition-transform duration-300 ease-in-out" id="carouselTrack"></div>
-        <button class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-500/80 text-white flex items-center justify-center shadow-md backdrop-blur-sm" onclick="moveSlide(-1)">❮</button>
-        <button class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-500/80 text-white flex items-center justify-center shadow-md backdrop-blur-sm" onclick="moveSlide(1)">❯</button>
+        <button type="button" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-500/80 text-white flex items-center justify-center shadow-md backdrop-blur-sm" onclick="moveSlide(-1)">❮</button>
+        <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-brand-500/80 text-white flex items-center justify-center shadow-md backdrop-blur-sm" onclick="moveSlide(1)">❯</button>
       </div>
       <div class="flex justify-center gap-1.5 mt-3" id="carouselDots"></div>
     </div>
   </div>
 
-  <main class="flex-1 px-4 mt-4">
+  <main class="flex-1 px-4 mt-5">
     <div class="bg-white/95 rounded-3xl p-6 shadow-sm border border-white/80 backdrop-blur-md mb-6">
       <form id="bookForm" class="space-y-5">
         
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">手機號碼</label>
           <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)" onblur="checkCustomerByPhone()">
-          <div id="welcome-msg" class="text-xs font-bold text-brand-500 mt-2" style="display: none;"></div>
+          <div id="welcome-msg" class="text-xs font-bold text-brand-500 mt-2 hidden"></div>
         </div>
 
         <div>
@@ -89,8 +98,8 @@
           <input type="text" id="lineName" placeholder="例如：小美" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
-        <div id="emailSection" style="display: none;">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">電子信箱 (自動寄送預約副本)</label>
+        <div id="emailSection" class="hidden">
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">電子信箱 <span class="text-[10px] text-brand-400 font-normal">(自動寄送預約副本)</span></label>
           <input type="email" id="email" placeholder="例如：user@gmail.com" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
@@ -103,7 +112,7 @@
           <input type="hidden" id="custType" value="old">
         </div>
 
-        <div id="staffSection" style="display: none;">
+        <div id="staffSection" class="hidden">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">指定服務專員</label>
           <div class="grid grid-cols-3 gap-2" id="staffGrid"></div>
           <input type="hidden" id="staffId" value="all">
@@ -119,6 +128,7 @@
           <input type="hidden" id="service" required>
         </div>
 
+        <!-- 預約日期 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約日期</label>
           <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -141,19 +151,17 @@
           <input type="hidden" id="time" required>
         </div>
 
-        <!-- 居家保養小叮嚀 (原生收折 details 標籤，保證顯示在預約時段正下方) -->
-        <div id="careSection" class="mt-3" style="display: none;">
-          <details class="group bg-brand-50/80 rounded-2xl border border-brand-200 overflow-hidden transition">
-            <summary class="flex justify-between items-center p-3.5 cursor-pointer font-bold text-xs text-brand-800 select-none bg-brand-100/50 hover:bg-brand-100 transition">
-              <span>🌿 居家保養小叮嚀</span>
-              <span class="text-brand-400 group-open:rotate-180 transition transform">▼</span>
-            </summary>
-            <div class="p-3.5 text-xs text-brand-800/90 leading-relaxed bg-white/90 border-t border-brand-100 whitespace-pre-wrap" id="care-content"></div>
-          </details>
-        </div>
+        <!-- 居家保養小叮嚀 (原生收折 details 標籤) -->
+        <details id="careSection" class="group bg-brand-50/80 rounded-2xl border border-brand-200 overflow-hidden hidden outline-none mt-3">
+          <summary class="flex justify-between items-center p-3.5 cursor-pointer font-bold text-xs text-brand-800 select-none hover:bg-brand-100 transition outline-none">
+            <span class="flex items-center gap-1.5">🌿 居家保養小叮嚀</span>
+            <span class="text-brand-400 group-open:rotate-180 transition transform duration-300">▼</span>
+          </summary>
+          <div class="p-4 text-xs text-brand-800/90 leading-relaxed bg-white border-t border-brand-100 whitespace-pre-wrap" id="care-content"></div>
+        </details>
 
         <!-- 社群按鈕與店家資訊 -->
-        <div class="pt-2 border-t border-brand-100">
+        <div class="pt-3 border-t border-brand-100">
           <div class="flex justify-center gap-6 my-4">
             <a id="nav-line" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="官方 LINE">
               <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg></a>
@@ -162,8 +170,8 @@
           </div>
 
           <div class="text-center text-xs text-brand-800 space-y-1.5 mb-5 font-medium">
-            <div id="store-address" style="display: none;"></div>
-            <div id="store-hours" style="display: none;"></div>
+            <div id="store-address" class="hidden"></div>
+            <div id="store-hours" class="hidden"></div>
           </div>
 
           <button type="submit" id="subBtn" class="w-full py-4 bg-[#C2AB97] hover:bg-brand-500 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95">
@@ -182,14 +190,14 @@
 </div>
 
 <!-- 預約成功畫面 -->
-<div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
+<div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center hidden">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
   </div>
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
   <p class="text-xs text-brand-500 mb-4 leading-relaxed">店家確認排程後會立即與您聯繫確認❤️</p>
 
-  <div id="deposit-box" class="w-full max-w-xs bg-white p-4 rounded-2xl border border-brand-200 text-left space-y-3 mb-5 shadow-sm" style="display: none;">
+  <div id="deposit-box" class="w-full max-w-xs bg-white p-4 rounded-2xl border border-brand-200 text-left space-y-3 mb-5 shadow-sm hidden">
     <div class="text-xs font-bold text-brand-900 border-b border-brand-100 pb-1.5 flex items-center gap-1">
       <span class="text-amber-500 font-bold">⚠️</span> 訂金匯款資訊
     </div>
@@ -203,7 +211,7 @@
     </div>
   </div>
 
-  <button class="px-8 py-3 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
+  <button type="button" class="px-8 py-3 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
 </div>
 
 <script>
@@ -227,11 +235,6 @@
   }
 
   window.onload = async function() {
-    const cachedData = localStorage.getItem(`cache_${CURRENT_STORE_ID}`);
-    if (cachedData) {
-      try { db = JSON.parse(cachedData); renderStoreUI(); } catch (e) {}
-    }
-
     try {
       const nowIso = new Date().toISOString();
       const [stores, settings, services, portfolios, bookings] = await Promise.all([
@@ -297,7 +300,6 @@
         futureBookings: bookings || []
       };
 
-      localStorage.setItem(`cache_${CURRENT_STORE_ID}`, JSON.stringify(db));
       renderStoreUI();
     } catch (e) {
       console.error(e);
@@ -562,7 +564,7 @@
           </div>`;
       } else {
         html += `
-          <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed select-none opacity-60">
+          <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed select-none opacity-60 pointer-events-none">
             ${timeFormatted}
           </div>`;
       }
