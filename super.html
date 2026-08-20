@@ -9,12 +9,12 @@
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen p-4 md:p-8">
 
-<!-- 總管解鎖 (密鑰 888) -->
+<!-- 總管解鎖 (密碼框保持空白，不預填) -->
 <div id="super-lock" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-3xl max-w-xs w-full text-center space-y-4 shadow-2xl">
     <div class="text-4xl">👑</div>
     <h2 class="text-base font-bold text-gray-900">Sibyl 總管身分驗證</h2>
-    <input type="password" id="sa-secret-input" class="w-full text-center p-3 rounded-xl border border-gray-300 font-mono text-lg" placeholder="請輸入管理密碼 (888)">
+    <input type="password" id="sa-secret-input" class="w-full text-center p-3 rounded-xl border border-gray-300 font-mono text-lg" placeholder="請輸入管理密碼">
     <button onclick="authSuperAdmin()" class="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl text-xs shadow-md">驗證進入</button>
   </div>
 </div>
@@ -52,14 +52,16 @@
       loadAllStores();
     } else {
       Swal.fire('密碼錯誤', '預設密碼為 888', 'error');
+      document.getElementById('sa-secret-input').value = '';
     }
   }
 
   async function loadAllStores() {
     const container = document.getElementById('stores-list-container');
-    container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">載入數據中...</div>';
+    container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">直接從 Table Editor 撈取數據中...</div>';
     
     try {
+      // 直接直連 Supabase REST API 讀取最新 stores 資料
       const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?select=*&order=created_at.desc`, {
         headers: {
           "apikey": SUPABASE_ANON_KEY,
@@ -70,7 +72,7 @@
       document.getElementById('stores-count').innerText = `共 ${stores.length} 家租戶`;
 
       if (!stores || stores.length === 0) {
-        container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">目前尚無店家資料</div>';
+        container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">目前 Table Editor 尚無店家資料</div>';
         return;
       }
 
