@@ -32,16 +32,6 @@
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
-<!-- 系統維護畫面 -->
-<div id="expired-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
-  <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
-    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-  </div>
-  <h2 class="text-xl font-bold text-brand-900 mb-2">系統服務維護中</h2>
-  <p class="text-xs text-brand-500 mb-6 leading-relaxed">該店家的預約系統目前處於排程維護狀態。<br>若您是店家負責人，請登入管理後台確認。</p>
-  <a href="https://lin.ee/YoxX201" target="_blank" class="px-6 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md">聯繫客服專線</a>
-</div>
-
 <div id="booking-ui" class="max-w-md mx-auto min-h-screen flex flex-col">
   
   <header class="text-center pt-8 pb-5 px-4 bg-brand-50/90 backdrop-blur-md border-b border-brand-200 sticky top-0 z-30">
@@ -51,6 +41,14 @@
 
   <div id="promo" class="bg-brand-400 text-white text-xs font-medium py-2.5 px-4 text-center tracking-wide shadow-sm" style="display: none;"></div>
 
+  <!-- PORTFOLIO (依要求移至說明圖上方) -->
+  <div class="px-4 mt-6" id="portfolioSection" style="display: none;">
+    <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-3">PORTFOLIO</div>
+    <div class="flex gap-2 justify-center flex-wrap mb-3" id="portfolio-tabs"></div>
+    <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
+  </div>
+
+  <!-- 4:5 拍立得卡片輪播 -->
   <div class="px-4 mt-4" id="bannerWrapper" style="display: none;">
     <div class="bg-brand-100 p-3.5 rounded-3xl shadow-sm border border-brand-200/60">
       <div class="relative overflow-hidden rounded-2xl bg-white shadow-inner">
@@ -78,7 +76,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">LINE 顯示名稱 (方便核對預約)</label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">LINE 顯示名稱</label>
           <input type="text" id="lineName" placeholder="例如：小美" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
@@ -101,7 +99,7 @@
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="text-xs font-bold text-brand-800">選擇項目 (可複選)</label>
-            <span class="text-[11px] text-brand-400 font-medium" id="addonHint">※ 加購項目需先選主項目</span>
+            <span class="text-[11px] text-brand-400 font-medium">※ 加購項目需先選主項目</span>
           </div>
           <div class="grid grid-cols-2 gap-2" id="service-grid"></div>
           <input type="hidden" id="service" required>
@@ -121,37 +119,34 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">進場時段</label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">進場時段 (極速秒開)</label>
           <div class="grid grid-cols-3 gap-2" id="timePillGrid">
             <div class="col-span-3 text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>
           </div>
           <input type="hidden" id="time" required>
         </div>
 
-        <!-- 社群按鈕與店家資訊 (圖 2 質感三按鈕) -->
-        <div class="pt-4 border-t border-brand-100">
+        <!-- 居家保養小叮嚀 (依要求移至送出預約上方) -->
+        <div class="bg-brand-50/80 rounded-2xl overflow-hidden border border-brand-200" id="careSection" style="display: none;">
+          <div class="p-3.5 flex justify-between items-center cursor-pointer font-bold text-xs text-brand-800" onclick="toggleCare()">
+            <span>居家保養小叮嚀</span>
+            <span>▼</span>
+          </div>
+          <div class="p-3.5 text-xs text-brand-800/80 leading-relaxed bg-white/80 border-t border-brand-100 whitespace-pre-wrap hidden" id="care-content"></div>
+        </div>
+
+        <!-- 社群按鈕與店家資訊 -->
+        <div class="pt-2 border-t border-brand-100">
           <div class="flex justify-center gap-6 my-4">
-            
             <a id="nav-line" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="官方 LINE">
-              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/>
-              </svg>
+              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
             </a>
-
             <a id="nav-ig" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="Instagram">
-              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-              </svg>
+              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
             </a>
-
             <a id="nav-map" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="地圖導航">
-              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
+              <svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
             </a>
-
           </div>
 
           <div class="text-center text-xs text-brand-800 space-y-1.5 mb-5 font-medium">
@@ -159,30 +154,13 @@
             <div id="store-hours" style="display: none;"></div>
           </div>
 
+          <!-- 送出預約按鈕 (依要求改名為 送出預約) -->
           <button type="submit" id="subBtn" class="w-full py-4 bg-[#C2AB97] hover:bg-brand-500 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95">
-            送出預約申請
-          </button>
-          
-          <button type="button" onclick="openCheckModal()" class="w-full py-3 mt-3 bg-transparent border-2 border-brand-300 text-brand-800 font-bold rounded-2xl text-xs tracking-wider hover:bg-brand-50 transition">
-            查詢預約紀錄
+            送出預約
           </button>
         </div>
 
       </form>
-    </div>
-
-    <div class="bg-white/90 rounded-2xl overflow-hidden border border-brand-200 mb-6 shadow-sm" id="careSection" style="display: none;">
-      <div class="p-4 bg-white flex justify-between items-center cursor-pointer font-bold text-xs text-brand-800" onclick="toggleCare()">
-        <span>居家保養小叮嚀</span>
-        <span>▼</span>
-      </div>
-      <div class="p-4 text-xs text-brand-800/80 leading-relaxed bg-brand-50/50 border-t border-brand-100 whitespace-pre-wrap hidden" id="care-content"></div>
-    </div>
-
-    <div class="mb-8" id="portfolioSection" style="display: none;">
-      <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-4">PORTFOLIO</div>
-      <div class="flex gap-2 justify-center flex-wrap mb-4" id="portfolio-tabs"></div>
-      <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
     </div>
   </main>
 
@@ -192,13 +170,29 @@
 
 </div>
 
-<!-- 預約成功畫面 -->
+<!-- 預約成功 / 訂金匯款畫面 -->
 <div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
   </div>
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
-  <p class="text-xs text-brand-500 mb-6 leading-relaxed">請留意 LINE 訊息，<br>店家確認排程後會立即回覆您喔❤️</p>
+  <p class="text-xs text-brand-500 mb-4 leading-relaxed">店家確認排程後會立即與您聯繫確認❤️</p>
+
+  <!-- 訂金匯款區塊 -->
+  <div id="deposit-box" class="w-full max-w-xs bg-white p-4 rounded-2xl border border-brand-200 text-left space-y-3 mb-5 shadow-sm" style="display: none;">
+    <div class="text-xs font-bold text-brand-900 border-b border-brand-100 pb-1.5 flex items-center gap-1">
+      <span class="text-amber-500 font-bold">⚠️</span> 訂金匯款與帳號資訊
+    </div>
+    <div class="text-xs text-brand-800 whitespace-pre-wrap leading-relaxed" id="deposit-info-text"></div>
+    <div class="pt-2 border-t border-brand-100">
+      <label class="block text-[11px] font-bold text-brand-800 mb-1">已匯款請回報帳號後五碼：</label>
+      <div class="flex gap-2">
+        <input type="text" id="deposit-last5-input" maxlength="5" placeholder="例如: 12345" class="w-2/3 p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 text-center font-bold">
+        <button type="button" onclick="reportDeposit()" class="w-1/3 py-2 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-sm">送出</button>
+      </div>
+    </div>
+  </div>
+
   <button class="px-8 py-3 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
 </div>
 
@@ -207,21 +201,16 @@
   const urlParams = new URLSearchParams(window.location.search);
   const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
 
-  let db = { availableDates: [], services: [], portfolio: [], promoImgs: [], weeklyOffDays: [], customOffDates: [] };
+  let db = { availableDates: [], services: [], portfolio: [], promoImgs: [], weeklyOffDays: [], customOffDates: [], futureBookings: [] };
   let currentSlide = 0;
   let currentYear = new Date().getFullYear();
   let currentMonth = new Date().getMonth();
+  let lastSubmittedBookingId = "";
 
   window.onload = async function() {
     try {
       const res = await fetch(`${API_URL}?action=getInitialData&store_id=${CURRENT_STORE_ID}`);
       db = await res.json();
-
-      if (db.isExpired) {
-        document.getElementById('booking-ui').style.display = 'none';
-        document.getElementById('expired-screen').style.display = 'flex';
-        return;
-      }
 
       document.getElementById('brand-title').innerText = db.storeName || "線上預約";
       document.getElementById('brand-subtitle').innerText = db.subtitle || "專業美業服務";
@@ -293,7 +282,7 @@
     el.className = "staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-400 text-white border-brand-400 shadow-sm";
     document.getElementById('staffId').value = id;
     document.getElementById('staffName').value = name;
-    updateTimes();
+    calculateTimesLocally();
   }
 
   function renderServices() {
@@ -308,7 +297,7 @@
       svcGrid.innerHTML += `
         <label class="service-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-brand-50/50 cursor-pointer transition text-xs ${disabledClass}">
           <div class="flex items-center gap-2 truncate">
-            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" onchange="handleServiceChange(this)" class="accent-brand-400 rounded">
+            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="accent-brand-400 rounded">
             <span class="truncate font-medium">${isAddon ? '✨ ' : ''}${s.name}</span>
           </div>
           <span class="text-brand-500 font-bold ml-1 shrink-0">${s.price}元</span>
@@ -344,7 +333,7 @@
       }
     });
 
-    updateTimes();
+    calculateTimesLocally();
   }
 
   function moveSlide(direction) {
@@ -397,37 +386,93 @@
   function selectDate(dStr) {
     document.getElementById('date').value = dStr;
     renderFrontCalendar();
-    updateTimes();
+    calculateTimesLocally(); // 毫秒級極速本地計算
   }
 
-  async function updateTimes() {
+  /**
+   * 極速秒開：直接以本地記憶體快取的未來預約進行排程計算
+   */
+  function calculateTimesLocally() {
     const sStr = document.getElementById('service').value;
-    const d = document.getElementById('date').value;
+    const dStr = document.getElementById('date').value;
     const staffId = document.getElementById('staffId').value;
     const grid = document.getElementById('timePillGrid');
 
-    if (!sStr || !d) {
+    if (!sStr || !dStr) {
       grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
       return;
     }
-    grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-500">計算可用時段中...</div>';
 
-    try {
-      const res = await fetch(`${API_URL}?action=getAvailableTimes&store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(d)}&services=${encodeURIComponent(sStr)}&staff_id=${staffId}`);
-      const times = await res.json();
-      grid.innerHTML = '';
-      if (times.length === 0) {
-        grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-red-500 bg-red-50 rounded-2xl border border-red-100">所選項目總時長在該日已無足夠空檔</div>';
-      } else {
-        times.forEach(t => {
-          grid.innerHTML += `
-            <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm" onclick="selectTimePill('${t}', this)">
-              ${t}
-            </div>`;
+    let totalDuration = 0;
+    let hasGroupB = false;
+    document.querySelectorAll('#service-grid input:checked').forEach(cb => {
+      totalDuration += Number(cb.getAttribute('data-duration') || 60);
+      const svc = (db.services || []).find(s => s.name === cb.value);
+      if (svc && svc.type === 'Group_B') hasGroupB = true;
+    });
+    if (totalDuration === 0) totalDuration = 60;
+
+    const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
+    const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
+    const interval = Number(db.shiftInterval || 30);
+    const startMin = sH * 60 + sM;
+    const endMin = eH * 60 + eM;
+
+    const defaultSlots = [];
+    for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
+
+    const d = new Date(dStr.replace(/\//g, '-'));
+    const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
+    const maxCapacity = isWeekend ? 2 : 1;
+    const now = new Date();
+    const bufferMs = Number(db.bookingBufferHours || 1) * 60 * 60 * 1000;
+
+    // 篩選當日預約
+    const targetDateFormatted = dStr.replace(/\//g, '-');
+    const dayAppts = (db.futureBookings || []).filter(a => {
+      return a.appointment_time.startsWith(targetDateFormatted) && (staffId === 'all' || a.staff_id === staffId);
+    });
+
+    let availableStarts = [];
+    for (let i = 0; i < defaultSlots.length; i++) {
+      let t = defaultSlots[i];
+      if (t + totalDuration > endMin + interval) continue;
+
+      const slotHour = Math.floor(t / 60);
+      const slotMin = t % 60;
+      const slotDateTime = new Date(dStr.replace(/\//g, '-'));
+      slotDateTime.setHours(slotHour, slotMin, 0, 0);
+
+      if (slotDateTime.getTime() - now.getTime() < bufferMs) continue;
+
+      let isPossible = true;
+      for (let checkTime = t; checkTime < t + totalDuration; checkTime += interval) {
+        if (!defaultSlots.includes(checkTime)) { isPossible = false; break; }
+        let concurrent = [];
+        dayAppts.forEach(a => {
+          const aDate = new Date(a.appointment_time);
+          const aStart = aDate.getHours() * 60 + aDate.getMinutes();
+          if (checkTime >= aStart && checkTime < aStart + 90) concurrent.push("Group_B");
         });
+        if (concurrent.length >= maxCapacity || (hasGroupB && concurrent.length > 0)) {
+          isPossible = false; break;
+        }
       }
-    } catch (e) {
-      grid.innerHTML = '<div class="col-span-3 text-center py-3 text-xs text-red-500">時段載入失敗</div>';
+      if (isPossible) availableStarts.push(t);
+    }
+
+    grid.innerHTML = '';
+    if (availableStarts.length === 0) {
+      grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-red-500 bg-red-50 rounded-2xl border border-red-100">所選項目總時長在該日已無足夠空檔</div>';
+    } else {
+      availableStarts.forEach(m => {
+        const h = Math.floor(m / 60); const mm = m % 60;
+        const timeFormatted = (h < 10 ? "0" + h : h) + ":" + (mm === 0 ? "00" : mm);
+        grid.innerHTML += `
+          <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm" onclick="selectTimePill('${timeFormatted}', this)">
+            ${timeFormatted}
+          </div>`;
+      });
     }
   }
 
@@ -508,44 +553,10 @@
     });
   }
 
-  function openCheckModal() {
-    Swal.fire({
-      title: '查詢預約紀錄',
-      input: 'tel',
-      inputLabel: '請輸入您預約時的手機號碼',
-      inputPlaceholder: '例如：0912345678',
-      showCancelButton: true,
-      confirmButtonText: '查詢',
-      cancelButtonText: '返回',
-      confirmButtonColor: '#A08875'
-    }).then(async (result) => {
-      if (result.isConfirmed && result.value) {
-        Swal.fire({ title: '查詢中...', allowOutsideClick: false }); Swal.showLoading();
-        const res = await fetch(`${API_URL}?action=checkBooking&store_id=${CURRENT_STORE_ID}&phone=${result.value}`);
-        const data = await res.json();
-        if (!data.records || data.records.length === 0) {
-          Swal.fire('查無紀錄', '您目前沒有未來的預約紀錄唷！', 'info');
-        } else {
-          let html = '<div class="space-y-2 text-left">';
-          data.records.forEach(r => {
-            html += `
-              <div class="p-3 bg-brand-50 rounded-xl border border-brand-200">
-                <div class="font-bold text-sm text-brand-900">${r.date} ${r.time}</div>
-                <div class="text-xs text-brand-800 mt-0.5">項目：${r.service}</div>
-                <div class="text-xs font-bold text-green-600 mt-1">狀態：${r.status}</div>
-              </div>`;
-          });
-          html += '</div>';
-          Swal.fire({ title: '您的預約紀錄', html: html, confirmButtonText: '好的', confirmButtonColor: '#A08875' });
-        }
-      }
-    });
-  }
-
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
-    if (!document.getElementById('service').value) { alert("請至少勾選一項預約項目！"); return; }
-    if (!document.getElementById('date').value) { alert("請在月曆上點選預約日期！"); return; }
+    if (!document.getElementById('service').value) { alert("請至少選擇一項預約項目！"); return; }
+    if (!document.getElementById('date').value) { alert("請點選預約日期！"); return; }
     if (!document.getElementById('time').value) { alert("請選取進場時段！"); return; }
 
     const btn = document.getElementById('subBtn');
@@ -575,8 +586,14 @@
         body: JSON.stringify({ action: "submitBooking", store_id: CURRENT_STORE_ID, data: payload })
       });
       const resData = await res.json();
-      if (resData.status === "SUCCESS" || resData === "SUCCESS") {
+      if (resData.status === "SUCCESS") {
+        lastSubmittedBookingId = resData.bookingId;
         document.getElementById('booking-ui').style.display = 'none';
+        
+        if (resData.needDeposit && resData.depositInfo) {
+          document.getElementById('deposit-info-text').innerText = resData.depositInfo;
+          document.getElementById('deposit-box').style.display = 'block';
+        }
         document.getElementById('success-screen').style.display = 'flex';
       } else {
         alert("預約傳送發生問題，請稍候重試");
@@ -586,6 +603,17 @@
       btn.disabled = false;
     }
   };
+
+  async function reportDeposit() {
+    const last5 = document.getElementById('deposit-last5-input').value.trim();
+    if (last5.length !== 5) { Swal.fire('請填寫完整帳號後五碼', '', 'warning'); return; }
+    Swal.fire({ title: '回報中...', allowOutsideClick: false }); Swal.showLoading();
+    await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "reportDepositBank", id: lastSubmittedBookingId, last5: last5 })
+    });
+    Swal.fire('已收到回報', '店家核對無誤後會立即更新您的預約！', 'success').then(() => location.reload());
+  }
 </script>
 </body>
 </html>
