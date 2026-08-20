@@ -41,14 +41,14 @@
 
   <div id="promo" class="bg-brand-400 text-white text-xs font-medium py-2.5 px-4 text-center tracking-wide shadow-sm" style="display: none;"></div>
 
-  <!-- PORTFOLIO (依要求移至說明圖上方) -->
+  <!-- PORTFOLIO (說明圖上方) -->
   <div class="px-4 mt-6" id="portfolioSection" style="display: none;">
     <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-3">PORTFOLIO</div>
     <div class="flex gap-2 justify-center flex-wrap mb-3" id="portfolio-tabs"></div>
     <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
   </div>
 
-  <!-- 4:5 拍立得卡片輪播 -->
+  <!-- 4:5 說明圖輪播 -->
   <div class="px-4 mt-4" id="bannerWrapper" style="display: none;">
     <div class="bg-brand-100 p-3.5 rounded-3xl shadow-sm border border-brand-200/60">
       <div class="relative overflow-hidden rounded-2xl bg-white shadow-inner">
@@ -118,6 +118,7 @@
           <input type="hidden" id="date" required>
         </div>
 
+        <!-- 進場時段 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">進場時段 (極速秒開)</label>
           <div class="grid grid-cols-3 gap-2" id="timePillGrid">
@@ -126,10 +127,10 @@
           <input type="hidden" id="time" required>
         </div>
 
-        <!-- 居家保養小叮嚀 (依要求移至送出預約上方) -->
-        <div class="bg-brand-50/80 rounded-2xl overflow-hidden border border-brand-200" id="careSection" style="display: none;">
+        <!-- 居家保養小叮嚀 (進場時段正下方) -->
+        <div class="bg-brand-50/80 rounded-2xl overflow-hidden border border-brand-200 mt-3" id="careSection" style="display: none;">
           <div class="p-3.5 flex justify-between items-center cursor-pointer font-bold text-xs text-brand-800" onclick="toggleCare()">
-            <span>居家保養小叮嚀</span>
+            <span>🌿 居家保養小叮嚀</span>
             <span>▼</span>
           </div>
           <div class="p-3.5 text-xs text-brand-800/80 leading-relaxed bg-white/80 border-t border-brand-100 whitespace-pre-wrap hidden" id="care-content"></div>
@@ -154,7 +155,6 @@
             <div id="store-hours" style="display: none;"></div>
           </div>
 
-          <!-- 送出預約按鈕 (依要求改名為 送出預約) -->
           <button type="submit" id="subBtn" class="w-full py-4 bg-[#C2AB97] hover:bg-brand-500 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95">
             送出預約
           </button>
@@ -170,7 +170,7 @@
 
 </div>
 
-<!-- 預約成功 / 訂金匯款畫面 -->
+<!-- 預約成功畫面 -->
 <div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center" style="display: none;">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -178,7 +178,6 @@
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
   <p class="text-xs text-brand-500 mb-4 leading-relaxed">店家確認排程後會立即與您聯繫確認❤️</p>
 
-  <!-- 訂金匯款區塊 -->
   <div id="deposit-box" class="w-full max-w-xs bg-white p-4 rounded-2xl border border-brand-200 text-left space-y-3 mb-5 shadow-sm" style="display: none;">
     <div class="text-xs font-bold text-brand-900 border-b border-brand-100 pb-1.5 flex items-center gap-1">
       <span class="text-amber-500 font-bold">⚠️</span> 訂金匯款與帳號資訊
@@ -386,12 +385,9 @@
   function selectDate(dStr) {
     document.getElementById('date').value = dStr;
     renderFrontCalendar();
-    calculateTimesLocally(); // 毫秒級極速本地計算
+    calculateTimesLocally();
   }
 
-  /**
-   * 極速秒開：直接以本地記憶體快取的未來預約進行排程計算
-   */
   function calculateTimesLocally() {
     const sStr = document.getElementById('service').value;
     const dStr = document.getElementById('date').value;
@@ -427,7 +423,6 @@
     const now = new Date();
     const bufferMs = Number(db.bookingBufferHours || 1) * 60 * 60 * 1000;
 
-    // 篩選當日預約
     const targetDateFormatted = dStr.replace(/\//g, '-');
     const dayAppts = (db.futureBookings || []).filter(a => {
       return a.appointment_time.startsWith(targetDateFormatted) && (staffId === 'all' || a.staff_id === staffId);
@@ -560,7 +555,7 @@
     if (!document.getElementById('time').value) { alert("請選取進場時段！"); return; }
 
     const btn = document.getElementById('subBtn');
-    btn.disabled = true; btn.innerText = "正在傳送申請...";
+    btn.disabled = true; btn.innerText = "正在傳送預約...";
 
     let totalPrice = 0;
     document.querySelectorAll('#service-grid input:checked').forEach(cb => {
