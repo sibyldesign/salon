@@ -56,6 +56,7 @@
 </header>
 
 <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
+
   <!-- LINE 官方三合一防護綁定橫幅 -->
   <div id="line-bind-banner" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-3xl mb-4 shadow-sm space-y-2 text-xs" style="display: none;">
     <div class="flex items-center justify-between">
@@ -159,7 +160,6 @@
       <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveStoreSettings()">儲存關懷規則</button>
     </div>
   </div>
-
   <!-- 分頁 6. 服務項目與作品 -->
   <div id="page-services" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -342,20 +342,22 @@
       </div>
     </div>
 
-    <!-- 基本資料與 Logo 上傳 -->
+    <!-- 基本資料與 Logo 上傳 (高度 150px、背景留白) -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🏪 品牌資料與 LOGO 上傳</div>
       <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
       <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="副標題">
       
       <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-        <label class="block text-xs font-bold text-brand-800">前台頂部 LOGO 圖片 (高度400px)</label>
+        <label class="block text-xs font-bold text-brand-800">前台頂部 LOGO 圖片 (高度 150px、自動置中留白)</label>
         <div class="flex gap-2 items-center">
           <input type="file" id="logo-file-input" accept="image/*" class="text-xs text-brand-800 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-400 file:text-white hover:file:bg-brand-500 cursor-pointer">
           <button type="button" onclick="uploadLogoImgBB()" class="px-4 py-2 bg-brand-800 text-white text-xs font-bold rounded-xl shadow-sm">上傳轉網址</button>
         </div>
         <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 text-xs bg-white" placeholder="上傳後自動產生圖片網址" readonly>
-        <div id="logo-preview-box" class="w-full h-32 rounded-xl overflow-hidden border border-brand-200 bg-cover bg-center" style="display: none;"></div>
+        <div id="logo-preview-box" class="w-full h-[150px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2" style="display: none;">
+          <img id="logo-preview-img" class="max-h-full max-w-full object-contain" src="">
+        </div>
       </div>
 
       <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店面地址 (留空則不顯示)">
@@ -381,7 +383,7 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片 (高度400px)</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
@@ -566,7 +568,7 @@
     return await res.json();
   }
 
-  // 登入驗證 (雙通道容錯驗證)
+  // 登入驗證
   async function checkPin() {
     const input = document.getElementById('pin-input').value.trim();
     try {
@@ -654,13 +656,12 @@
     });
   }
 
-  // 雙通道自動切換撈取資料 (Supabase 直連 + GAS API 備援代理)
+  // 雙通道自動切換撈取資料
   async function fetchDataAndRender() {
     try {
       let stores = [], settings = [], services = [], portfolios = [], bookings = [];
       let isDirectSuccess = false;
 
-      // 1. 優先直連 Supabase 讀取
       try {
         [stores, settings, services, portfolios, bookings] = await Promise.all([
           directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
@@ -673,10 +674,9 @@
           isDirectSuccess = true;
         }
       } catch (err) {
-        console.warn("Supabase 直連未取回資料，無縫切換 GAS API 代理讀取...", err);
+        console.warn("Supabase 直連未取回資料，切換備援...", err);
       }
 
-      // 2. 若直連為空或異常，無縫切換 Google Apps Script 代理讀取 Table Editor
       if (!isDirectSuccess) {
         const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
         const gasData = await gasRes.json();
@@ -707,9 +707,16 @@
         }
       }
 
-      // 3. 組合直連數據物件
-      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: "", plan_status: "active", expires_at: "" };
-      const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+      let sCfg = (settings && settings.length > 0) ? settings[0] : {};
+      const localSnap = localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`);
+      if (localSnap) {
+        try {
+          const parsed = JSON.parse(localSnap);
+          sCfg = Object.assign({}, parsed, sCfg);
+        } catch(e){}
+      }
+
+      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "", plan_status: "active", expires_at: "" };
 
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
@@ -1213,12 +1220,10 @@
     container.innerHTML = svcs.map((s, idx) => `
       <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
         <div>
-          <div class="font-bold text-brand-900">${s.isAddon?'✨[加購] ':''}${s.name}</div>
-          <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration}分鐘 / ${s.type}</div>
+          <div class="font-bold text-brand-900">${s.is_addon ? '✨[加購] ' : ''}${s.service_name}</div>
+          <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration_minutes}分鐘</div>
         </div>
         <div class="flex gap-1">
-          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs" onclick="moveServiceOrder(${idx}, -1)">▲</button>
-          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs" onclick="moveServiceOrder(${idx}, 1)">▼</button>
           <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
           <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
         </div>
@@ -1226,33 +1231,15 @@
     `).join('');
   }
 
-  async function moveServiceOrder(idx, dir) {
-    try {
-      const svcs = backendData.services || [];
-      const targetIdx = idx + dir;
-      if (targetIdx < 0 || targetIdx >= svcs.length) return;
-      const temp = svcs[idx];
-      svcs[idx] = svcs[targetIdx];
-      svcs[targetIdx] = temp;
-      for (let i = 0; i < svcs.length; i++) {
-        svcs[i].sortOrder = i;
-        await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
-      }
-      renderServiceList();
-    } catch (e) {
-      Swal.fire('排序失敗', e.message, 'error');
-    }
-  }
-
   function editServiceItem(id) {
     const s = (backendData.services || []).find(item => item.id === id);
     if (!s) return;
     document.getElementById('edit-svc-id').value = s.id;
-    document.getElementById('svc-name').value = s.name;
+    document.getElementById('svc-name').value = s.service_name;
     document.getElementById('svc-price').value = s.price;
-    document.getElementById('svc-duration').value = s.duration;
-    document.getElementById('svc-type').value = s.type;
-    document.getElementById('svc-is-addon').checked = s.isAddon;
+    document.getElementById('svc-duration').value = s.duration_minutes;
+    document.getElementById('svc-type').value = s.service_type;
+    document.getElementById('svc-is-addon').checked = s.is_addon === true;
     document.getElementById('svc-form-title').innerText = "修改服務項目";
     document.getElementById('svc-cancel-btn').classList.remove('hidden');
   }
@@ -1267,7 +1254,6 @@
     document.getElementById('svc-cancel-btn').classList.add('hidden');
   }
 
-  // 關鍵修復：新增時不可帶空字串 id，避免 UUID 型別衝突
   async function saveServiceItem() {
     const id = document.getElementById('edit-svc-id').value.trim();
     const name = document.getElementById('svc-name').value.trim();
@@ -1275,8 +1261,9 @@
     const duration = document.getElementById('svc-duration').value;
     const type = document.getElementById('svc-type').value;
     const isAddon = document.getElementById('svc-is-addon').checked;
+
     if (!name || !price) { Swal.fire('名稱與金額為必填', '', 'warning'); return; }
-    
+
     const payload = {
       store_id: CURRENT_STORE_ID,
       service_name: name,
@@ -1288,26 +1275,19 @@
 
     try {
       if (id && id !== "") {
-        await directSupabasePatch('services', `id=eq.${id}`, payload);
+        await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
       } else {
-        // 新增服務時直接由 Supabase 自動產生 UUID，不傳 id 屬性
         await directSupabaseUpsert('services', payload, 'id');
       }
       resetServiceForm();
-      await fetchDataAndRender();
+      fetchDataAndRender();
       Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-    } catch (e) {
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "saveService", store_id: CURRENT_STORE_ID, data: Object.assign(id ? { id: id } : {}, payload) })
-        });
-        resetServiceForm();
-        await fetchDataAndRender();
-        Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-      } catch(err) {
-        Swal.fire('儲存失敗', e.message, 'error');
-      }
+    } catch(e) {
+      Swal.fire('儲存失敗', e.message, 'error');
     }
   }
 
@@ -1479,7 +1459,7 @@
   function renderQuickAddServices() {
     const sel = document.getElementById('quick-service');
     const svcs = backendData.services || [];
-    sel.innerHTML = '<option value="">請選擇服務項目...</option>' + svcs.map(s => `<option value="${s.name}" data-price="${s.price}">${s.name} (${s.price}元)</option>`).join('');
+    sel.innerHTML = '<option value="">請選擇服務項目...</option>' + svcs.map(s => `<option value="${s.service_name}">${s.service_name} (${s.price}元)</option>`).join('');
   }
 
   function autoFillPrice() {
@@ -1592,7 +1572,7 @@
   // 📷 上傳 LOGO 至 imgBB
   async function uploadLogoImgBB() {
     const file = document.getElementById('logo-file-input').files[0];
-    if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
+    if (!file) { Swal.fire('請先選擇圖檔', '', 'warning'); return; }
     Swal.fire({ title: '正在上傳 LOGO 圖片...', allowOutsideClick: false }); Swal.showLoading();
     try {
       const formData = new FormData();
@@ -1601,8 +1581,8 @@
       const data = await res.json();
       if (data.success) {
         document.getElementById('cfg-logo').value = data.data.url;
-        document.getElementById('logo-preview-box').style.backgroundImage = `url('${data.data.url}')`;
-        document.getElementById('logo-preview-box').style.display = 'block';
+        document.getElementById('logo-preview-img').src = data.data.url;
+        document.getElementById('logo-preview-box').style.display = 'flex';
         Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
       } else {
         throw new Error("ImgBB 圖片上傳未成功");
@@ -1675,15 +1655,14 @@
     saveStoreSettings();
   }
 
-  // 將資料庫撈回來的實際值回填入 input 欄位
   function populateSettings() {
     const s = backendData.settings || {};
     document.getElementById('cfg-title').value = s.storeName || '';
     document.getElementById('cfg-subtitle').value = s.subtitle || '';
     document.getElementById('cfg-logo').value = s.logoUrl || '';
     if (s.logoUrl) {
-      document.getElementById('logo-preview-box').style.backgroundImage = `url('${s.logoUrl}')`;
-      document.getElementById('logo-preview-box').style.display = 'block';
+      document.getElementById('logo-preview-img').src = s.logoUrl;
+      document.getElementById('logo-preview-box').style.display = 'flex';
     } else {
       document.getElementById('logo-preview-box').style.display = 'none';
     }
@@ -1797,13 +1776,13 @@
     }
   }
 
-  // 儲存設定至 Supabase (關鍵修正：payload 提升至函式最外層，並嚴格防呆)
+  // 儲存設定至 Supabase (雙向保護)
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
     
-    // 將變數提升至最外層，避免 catch 報 payload is not defined
     const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
     const storeNameVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
+    const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
     
     const payload = {
       store_id: CURRENT_STORE_ID,
@@ -1832,7 +1811,7 @@
       enable_care: document.getElementById('cfg-toggle-care')?.checked ?? true,
       enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked === true,
       line_channel_token: lineTokenVal,
-      weekly_off_days: Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value)),
+      weekly_off_days: checkedWeekly,
       custom_off_dates: customOffDatesArray,
       staff_list: backendData.settings.staffList || [{ id: "all", name: "不指定", pin: "8888" }],
       shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
@@ -1857,17 +1836,20 @@
       // 2. 強制以 on_conflict=store_id 寫入 store_settings
       await directSupabaseUpsert('store_settings', payload, 'store_id');
 
+      // 3. 儲存快照至 LocalStorage，確保重整時不被空值覆蓋
+      localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
+      backendData.settings = Object.assign({}, backendData.settings, payload);
+      populateSettings();
+
       Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
-      fetchDataAndRender();
     } catch (e) {
-      // 直連失敗時由 GAS 代理寫入備援
       try {
         await fetch(API_URL, {
           method: "POST",
           body: JSON.stringify({ action: "saveSettings", store_id: CURRENT_STORE_ID, data: payload })
         });
+        localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
         Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
-        fetchDataAndRender();
       } catch (err) {
         Swal.fire({
           icon: 'error',
