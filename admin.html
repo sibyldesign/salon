@@ -303,22 +303,33 @@
 
     <!-- 審核與訂金設定 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💳 預約審核與訂金規則</div>
-      <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <span class="font-medium">啟用 預約先由店家審核 (預設為待確認)</span>
-          <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <span class="font-medium">啟用 線下收取訂金機制</span>
-          <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
-        </label>
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold text-brand-800 mb-1">訂金規則與銀行帳號文字：</label>
-        <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="例如：請於預約後2小時內匯款訂金500元至...&#10;並於下方回報後五碼。"></textarea>
-      </div>
+  <div class="text-xs font-bold text-brand-900">預約審核與訂金規則</div>
+  <div class="space-y-2 text-xs">
+    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+      <span class="font-medium">啟用 預約先由店家審核</span>
+      <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
+    </label>
+    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+      <span class="font-medium">啟用 線下收取訂金機制</span>
+      <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
+    </label>
+  </div>
+  
+  <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+    <label class="block text-xs font-bold text-brand-800">訂金收取條件對象：</label>
+    <select id="cfg-deposit-mode" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white">
+      <option value="new_only">1. 僅「新朋友」需付訂金</option>
+      <option value="all">2. 「新朋友與舊朋友」皆需付訂金</option>
+    </select>
+    <div class="flex items-center gap-2 pt-1">
+      <span class="text-xs font-bold text-brand-800 shrink-0">每筆訂金金額：</span>
+      <input type="number" id="cfg-deposit-amount" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white" placeholder="例如：500">
+      <span class="text-xs text-brand-500 shrink-0">元</span>
     </div>
+  </div>
+
+  <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="匯款銀行帳號與說明文字..."></textarea>
+</div>
 
     <!-- 居家保養小叮嚀 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -399,6 +410,10 @@
       <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
         <span>💬</span> 官方 LINE 自動推播通知設定
       </div>
+      <div class="flex items-center justify-between">
+  <span class="text-xs font-bold text-brand-900">官方 LINE 自動推播通知設定</span>
+  <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 點我看設定 3 步驟</button>
+</div>
       <div class="space-y-2 text-xs">
         <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/80 border border-brand-200">
           <span class="font-bold text-brand-900">是否開通官方 LINE 自動通知客人 (預約成功 / 即將到來提醒)</span>
@@ -845,6 +860,39 @@
     }
   }
 
+  function showLineGuideModal() {
+  Swal.fire({
+    title: 'LINE 官方帳號 API 設定指南',
+    html: `
+      <div class="text-left text-xs text-brand-800 space-y-2.5 leading-relaxed overflow-y-auto max-h-[60vh] p-1">
+        <p class="font-bold text-brand-900">老闆您好！為了讓顧客預約成功或到來前自動收到 LINE 提醒（由您的官方帳號發送，安全且免費），請完成以下 3 步驟：</p>
+        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+          <b>第一步：準備 LINE 官方帳號</b>
+          <ul class="list-disc pl-4 mt-1 space-y-1">
+            <li>確認已擁有店家專屬 LINE 官方帳號。</li>
+            <li>使用電腦登入 <a href="https://developers.line.biz/" target="_blank" class="text-blue-600 underline font-bold">LINE Developers 開發者後台</a>（使用管理員帳號登入）。</li>
+          </ul>
+        </div>
+        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+          <b>第二步：建立 Messaging API 通道</b>
+          <ul class="list-disc pl-4 mt-1 space-y-1">
+            <li>點擊「Create a new provider」，輸入您的店名。</li>
+            <li>點擊「Create a Messaging API channel」，填寫 Channel Name（例：XX美學預約小幫手）。</li>
+          </ul>
+        </div>
+        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+          <b>第三步：取得 Channel Access Token</b>
+          <ul class="list-disc pl-4 mt-1 space-y-1">
+            <li>進入該 Channel 的「Messaging API」分頁。</li>
+            <li>拉到最下方點擊「Issue」發行長期 Token，複製後貼入下方欄位儲存即可！</li>
+          </ul>
+        </div>
+      </div>
+    `,
+    confirmButtonText: '我知道了'
+  });
+}
+
   function switchPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(n => {
@@ -1230,14 +1278,14 @@
   container.innerHTML = svcs.map((s, idx) => `
     <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
       <div>
-        <div class="font-bold text-brand-900">${s.isAddon ? '✨[加購] ' : ''}${s.name}</div>
-        <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration}分鐘 / ${s.type}</div>
+        <div class="font-bold text-brand-900">${s.is_addon || s.isAddon ? '[加購] ' : ''}${s.service_name || s.name}</div>
+        <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration_minutes || s.duration || 60}分鐘</div>
       </div>
       <div class="flex gap-1 items-center">
         <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
         <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
-        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
-        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
+        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">修改</button>
+        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪除</button>
       </div>
     </div>
   `).join('');
@@ -1258,17 +1306,17 @@ async function moveServiceOrder(idx, dir) {
 }
 
   function editServiceItem(id) {
-    const s = (backendData.services || []).find(item => item.id === id);
-    if (!s) return;
-    document.getElementById('edit-svc-id').value = s.id;
-    document.getElementById('svc-name').value = s.service_name;
-    document.getElementById('svc-price').value = s.price;
-    document.getElementById('svc-duration').value = s.duration_minutes;
-    document.getElementById('svc-type').value = s.service_type;
-    document.getElementById('svc-is-addon').checked = s.is_addon === true;
-    document.getElementById('svc-form-title').innerText = "修改服務項目";
-    document.getElementById('svc-cancel-btn').classList.remove('hidden');
-  }
+  const s = (backendData.services || []).find(item => String(item.id) === String(id));
+  if (!s) return;
+  document.getElementById('edit-svc-id').value = s.id;
+  document.getElementById('svc-name').value = s.service_name || s.name || '';
+  document.getElementById('svc-price').value = s.price || '';
+  document.getElementById('svc-duration').value = s.duration_minutes || s.duration || 60;
+  document.getElementById('svc-type').value = s.service_type || s.type || 'Group_A';
+  document.getElementById('svc-is-addon').checked = s.is_addon === true || s.isAddon === true;
+  document.getElementById('svc-form-title').innerText = "修改服務項目";
+  document.getElementById('svc-cancel-btn').classList.remove('hidden');
+}
 
   function resetServiceForm() {
     document.getElementById('edit-svc-id').value = '';
