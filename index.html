@@ -108,6 +108,11 @@
           <div id="welcome-msg" class="text-xs font-bold text-brand-500 mt-2 hidden"></div>
         </div>
 
+        <div class="flex justify-between items-center mt-1">
+  <div id="welcome-msg" class="text-xs font-bold text-brand-500 hidden"></div>
+  <button type="button" class="text-[11px] text-brand-500 underline ml-auto" onclick="promptQuickReportDeposit()">若已付訂金，點此直接回報後五碼</button>
+</div>
+
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">您的姓名</label>
           <input type="text" id="name" required placeholder="請輸入姓名" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
@@ -408,6 +413,37 @@
         </label>`;
     });
   }
+
+  function promptQuickReportDeposit() {
+  const phone = document.getElementById('phone').value.trim();
+  if (!phone) { Swal.fire('請先輸入您的手機號碼', '', 'warning'); return; }
+  Swal.fire({
+    title: '回報訂金匯款後五碼',
+    input: 'text',
+    inputPlaceholder: '請輸入帳號末 5 碼數字',
+    showCancelButton: true,
+    confirmButtonText: '確認送出',
+    preConfirm: (val) => {
+      if (!val || val.length !== 5) { Swal.showValidationMessage('請填寫完整 5 碼'); }
+      return val;
+    }
+  }).then(async r => {
+    if (r.isConfirmed) {
+      // 找出該電話最近一筆未取消預約並寫入 deposit_last5
+      const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=id`);
+      if (res && res.length > 0) {
+        await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${res[0].id}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ deposit_reported: true, deposit_last5: r.value.trim() })
+        });
+        Swal.fire('已收到回報！', '店家確認款項後會立即為您保留時段。', 'success');
+      } else {
+        Swal.fire('查無此號碼之待確認預約', '', 'error');
+      }
+    }
+  });
+}
 
   function handleServiceChange(cb) {
     const selectedMainCount = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length;
