@@ -167,7 +167,7 @@
       <input type="hidden" id="edit-svc-id">
       <div class="grid grid-cols-2 gap-2">
         <input type="text" id="svc-name" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="服務名稱">
-        <input type="number" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額">
+        <input type="text" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額">
       </div>
       <div class="grid grid-cols-2 gap-2">
         <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="時間 (分鐘)" value="60">
@@ -899,46 +899,56 @@
   // 2. 名單
   function renderCustomer() {
     const statusFilter = document.getElementById('filter-status').value;
-    const content = document.getElementById('cust-content-area');
     let appts = backendData.appointments || [];
-    if (statusFilter !== 'ALL') appts = appts.filter(a => a.status === statusFilter);
-    if (appts.length === 0) { content.innerHTML = '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無即將到來之預約紀錄</div>'; return; }
-    content.innerHTML = appts.map(a => renderSingleCardHTML(a)).join('');
+
+    // 預設全部狀態時，自動排除「已結單」與「已取消」，讓已結單跑去業績分頁
+    if (statusFilter === 'ALL') {
+      appts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消');
+    } else {
+      appts = appts.filter(a => a.status === statusFilter);
+    }
+
+    document.getElementById('cust-content-area').innerHTML = appts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無待處理預約</div>';
   }
 
   function renderSingleCardHTML(a) {
-  return `
-    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-      <div class="flex justify-between items-center">
-        <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-        </select>
-      </div>
-      <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
-      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-        <div class="font-bold text-brand-900">施作與加購項目：${a.service || '無'}</div>
-        <div class="text-brand-500 font-bold">預估總額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
-      </div>
-      ${a.depositReported ? `<div class="p-1.5 bg-red-50 text-red-600 font-bold rounded-lg text-[11px]">⚠️ 已回報後五碼：${a.depositLast5}</div>` : ''}
+    return `
+      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+          </select>
+        </div>
+        <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
+        <div class="text-[11px] text-brand-500 space-y-0.5">
+          <div>💬 LINE 名稱：<b>${a.lineName || '無'}</b></div>
+          <div>✉️ Email：<b>${a.notes && a.notes.includes('Email:') ? a.notes.split('Email:')[1].trim() : (a.email || '未填寫')}</b></div>
+          <div>👥 服務專員：<b>${a.staffName || '不指定'}</b></div>
+        </div>
+        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
+          <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+        </div>
+        ${a.depositReported ? `<div class="p-1.5 bg-red-50 text-red-600 font-bold rounded-lg text-[11px]">⚠️ 已回報後五碼：${a.depositLast5}</div>` : ''}
+        
+        <div class="pt-1 flex gap-1">
+          <input type="text" id="note-input-${a.id}" class="flex-1 p-1.5 text-[11px] border border-brand-200 rounded-lg bg-brand-50/50" placeholder="後台備註" value="${a.notes || ''}">
+          <button class="px-2.5 py-1 bg-brand-800 text-white text-[10px] font-bold rounded-lg shrink-0" onclick="saveBookingNote('${a.id}')">存備註</button>
+        </div>
 
-      <div class="pt-1 flex gap-1">
-        <input type="text" id="note-input-${a.id}" class="flex-1 p-1.5 text-[11px] border border-brand-200 rounded-lg bg-brand-50/50" placeholder="後台備註" value="${a.notes || ''}">
-        <button class="px-2.5 py-1 bg-brand-800 text-white text-[10px] font-bold rounded-lg shrink-0" onclick="saveBookingNote('${a.id}')">存備註</button>
-      </div>
-
-      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-        <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">結單</button>
-        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
-      </div>
-    </div>`;
-}
+        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
+          <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
+          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
+        </div>
+      </div>`;
+  }
 
   async function quickUpdateStatus(id, newStatus) {
     try {
@@ -1273,17 +1283,17 @@ async function moveServiceOrder(idx, dir) {
   async function saveServiceItem() {
     const id = document.getElementById('edit-svc-id').value.trim();
     const name = document.getElementById('svc-name').value.trim();
-    const price = document.getElementById('svc-price').value;
+    const priceStr = document.getElementById('svc-price').value.trim();
     const duration = document.getElementById('svc-duration').value;
     const type = document.getElementById('svc-type').value;
     const isAddon = document.getElementById('svc-is-addon').checked;
 
-    if (!name || !price) { Swal.fire('名稱與金額為必填', '', 'warning'); return; }
+    if (!name || !priceStr) { Swal.fire('名稱與金額為必填', '', 'warning'); return; }
 
     const payload = {
       store_id: CURRENT_STORE_ID,
       service_name: name,
-      price: Number(price),
+      price: priceStr,
       duration_minutes: Number(duration || 60),
       service_type: type,
       is_addon: isAddon
@@ -1293,18 +1303,7 @@ async function moveServiceOrder(idx, dir) {
       if (id && id !== "") {
         await directSupabasePatch('services', `id=eq.${id}`, payload);
       } else {
-        // 新增服務時不傳入 id，由 Supabase 自動指派 UUID
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/services`, {
-          method: "POST",
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=representation"
-          },
-          body: JSON.stringify(payload)
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await directSupabaseUpsert('services', payload, 'id');
       }
       resetServiceForm();
       await fetchDataAndRender();
@@ -1595,28 +1594,106 @@ async function moveServiceOrder(idx, dir) {
     });
   }
 
-  // 📷 上傳 LOGO 至 imgBB
-  async function uploadLogoImgBB() {
-    const file = document.getElementById('logo-file-input').files[0];
-    if (!file) { Swal.fire('請先選擇圖檔', '', 'warning'); return; }
-    Swal.fire({ title: '正在上傳 LOGO 圖片...', allowOutsideClick: false }); Swal.showLoading();
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById('cfg-logo').value = data.data.url;
-        document.getElementById('logo-preview-img').src = data.data.url;
-        document.getElementById('logo-preview-box').style.display = 'flex';
-        Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
-      } else {
-        throw new Error("ImgBB 圖片上傳未成功");
-      }
-    } catch (e) {
-      Swal.fire('上傳失敗', e.message, 'error');
+  function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = error => reject(error);
+  });
+}
+
+// LOGO 上傳
+async function uploadLogoImgBB() {
+  const file = document.getElementById('logo-file-input').files[0];
+  if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
+  Swal.fire({ title: '正在上傳 LOGO 圖片...', allowOutsideClick: false }); Swal.showLoading();
+
+  try {
+    const base64Data = await fileToBase64(file);
+    const formData = new FormData();
+    formData.append("image", base64Data);
+
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('cfg-logo').value = data.data.url;
+      document.getElementById('logo-preview-img').src = data.data.url;
+      document.getElementById('logo-preview-box').style.display = 'flex';
+      Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } else {
+      throw new Error(data.error?.message || "ImgBB 驗證未通過");
     }
+  } catch (e) {
+    Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
   }
+}
+
+// 作品集上傳
+async function uploadAndSavePortfolio() {
+  const file = document.getElementById('work-file').files[0];
+  const cat = document.getElementById('work-cat').value.trim();
+  const title = document.getElementById('work-title').value.trim();
+  const link = document.getElementById('work-link').value.trim();
+  if (!file || !cat || !title) { Swal.fire('分類、標題與照片為必填', '', 'warning'); return; }
+
+  Swal.fire({ title: '正在發布作品...', allowOutsideClick: false }); Swal.showLoading();
+  try {
+    const base64Data = await fileToBase64(file);
+    const formData = new FormData();
+    formData.append("image", base64Data);
+
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+      method: "POST",
+      body: formData
+    });
+    const imgData = await res.json();
+    if (imgData.success) {
+      await directSupabaseUpsert('portfolios', {
+        store_id: CURRENT_STORE_ID,
+        category: cat,
+        title: title,
+        link: link,
+        img_url: imgData.data.url
+      }, 'id');
+      document.getElementById('work-title').value = '';
+      document.getElementById('work-file').value = '';
+      await fetchDataAndRender();
+      Swal.fire({ title: '作品已發布！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } else {
+      throw new Error(imgData.error?.message || "上傳失敗");
+    }
+  } catch (e) {
+    Swal.fire({ title: '發布失敗', text: e.message, icon: 'error' });
+  }
+}
+
+// 說明圖上傳
+async function handleImgUpload(idx, input) {
+  const file = input.files[0];
+  if (!file) return;
+  Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false }); Swal.showLoading();
+  try {
+    const base64Data = await fileToBase64(file);
+    const formData = new FormData();
+    formData.append("image", base64Data);
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+    const data = await res.json();
+    if (data.success) {
+      promoImgsArray[idx] = data.data.url;
+      document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
+      document.getElementById(`slot-${idx}`).innerHTML = '';
+      Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+    } else {
+      throw new Error(data.error?.message || "上傳失敗");
+    }
+  } catch (e) {
+    Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
+  }
+}
 
   // ⚙️ 店休設定
   function addCustomOffDate() {
@@ -1754,11 +1831,15 @@ async function moveServiceOrder(idx, dir) {
     ];
     const careContainer = document.getElementById('care-rules-container');
     const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
-    careContainer.innerHTML = '';
+    careContainer.innerHTML = `
+      <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
+        💡 <b>變數小提示：</b> 文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 為自動帶入標籤，系統複製時會自動換成客人的名字與消費項目，請勿刪除括號符號。
+      </div>
+    `;
     for (let i = 0; i < 5; i++) {
       const r = rules[i] || { name: '', weeks: 4, msg: '' };
       careContainer.innerHTML += `
-        <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5">
+        <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5 mb-2">
           <div class="flex gap-2">
             <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="項目關鍵字" value="${r.name}">
             <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
@@ -1780,28 +1861,6 @@ async function moveServiceOrder(idx, dir) {
     }
   }
 
-  async function handleImgUpload(idx, input) {
-    const file = input.files[0];
-    if (!file) return;
-    Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false }); Swal.showLoading();
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (data.success) {
-        promoImgsArray[idx] = data.data.url;
-        document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
-        document.getElementById(`slot-${idx}`).innerHTML = '';
-        Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
-      } else {
-        throw new Error("ImgBB 圖片上傳未成功");
-      }
-    } catch (e) {
-      Swal.fire('上傳失敗', e.message, 'error');
-    }
-  }
-
   // 儲存設定至 Supabase (雙向保護)
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
@@ -1810,6 +1869,12 @@ async function moveServiceOrder(idx, dir) {
     const storeNameVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
     const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
     
+    const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
+      name: el.value.trim(),
+      weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
+      msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
+    })).filter(r => r.name !== '');
+
     const payload = {
       store_id: CURRENT_STORE_ID,
       display_title: storeNameVal,
@@ -1839,50 +1904,22 @@ async function moveServiceOrder(idx, dir) {
       line_channel_token: lineTokenVal,
       weekly_off_days: checkedWeekly,
       custom_off_dates: customOffDatesArray,
-      staff_list: backendData.settings.staffList || [{ id: "all", name: "不指定", pin: "8888" }],
+      staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
       shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
       shift_end_time: document.getElementById('cfg-shift-end')?.value || "19:00",
       shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
-      care_rules: Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
-        name: el.value.trim(),
-        weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
-        msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
-      })).filter(r => r.name !== '')
+      care_rules: careRulesArray
     };
 
     try {
-      // 1. 同步 Upsert 寫入 stores 主表
-      const storePayload = {
-        id: CURRENT_STORE_ID,
-        store_name: storeNameVal,
-        line_channel_token: lineTokenVal
-      };
-      await directSupabaseUpsert('stores', storePayload, 'id');
-
-      // 2. 強制以 on_conflict=store_id 寫入 store_settings
+      await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: storeNameVal, line_channel_token: lineTokenVal }, 'id');
       await directSupabaseUpsert('store_settings', payload, 'store_id');
-
-      // 3. 儲存快照至 LocalStorage，確保重整時不被空值覆蓋
       localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
       backendData.settings = Object.assign({}, backendData.settings, payload);
       populateSettings();
-
       Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch (e) {
-      try {
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "saveSettings", store_id: CURRENT_STORE_ID, data: payload })
-        });
-        localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
-        Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
-      } catch (err) {
-        Swal.fire({
-          icon: 'error',
-          title: '寫入失敗',
-          html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${err.message}</div>`
-        });
-      }
+      Swal.fire({ title: '寫入失敗', text: e.message, icon: 'error' });
     }
   }
 </script>
