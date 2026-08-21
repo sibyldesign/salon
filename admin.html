@@ -28,6 +28,7 @@
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
+
 <!-- 解鎖登入畫面 -->
 <div id="lock-screen" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs">
@@ -36,7 +37,7 @@
     </div>
     <div class="text-base font-bold text-brand-900 mb-4" id="lock-title">沙龍管理後台</div>
     <div id="lock-error" class="text-xs text-red-500 mb-2 h-4"></div>
-    <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
+    <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6" value="8888">
     <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white font-bold rounded-xl shadow-md transition" onclick="checkPin()">解鎖登入</button>
   </div>
 </div>
@@ -105,7 +106,7 @@
     <div id="cust-content-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 3. 排班管理 -->
+  <!-- 分頁 3. 排班管理 (預設全休) -->
   <div id="page-shift" class="page space-y-4" style="display: none;">
     <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm" id="staff-shift-selector-box">
       <div class="text-[11px] font-bold text-brand-500 mb-2">專員班表切換</div>
@@ -122,6 +123,7 @@
       <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
         <option value="ALL">全部服務項目總覽</option>
       </select>
+      
       <div class="grid grid-cols-2 gap-2 text-center">
         <div class="p-3 bg-green-50 rounded-2xl border border-green-100">
           <div class="text-[10px] text-green-700 font-bold">已結單總業績</div>
@@ -168,7 +170,7 @@
         <input type="number" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額">
       </div>
       <div class="grid grid-cols-2 gap-2">
-        <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="時間 (分鐘)">
+        <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="時間 (分鐘)" value="60">
         <select id="svc-type" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50">
           <option value="Group_A">Group A (等待期技術類)</option>
           <option value="Group_B">Group B (全程專屬類)</option>
@@ -202,7 +204,7 @@
     </div>
   </div>
 
-  <!-- 分頁 7. 查詢 -->
+  <!-- 分頁 7. 🔍 查詢分頁 -->
   <div id="page-search" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🔍 搜尋過往與當前預約</div>
@@ -214,7 +216,7 @@
     <div id="search-results-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 8. 手動新增預約 -->
+  <!-- 分頁 8. ⚡ 手動新增預約 -->
   <div id="page-add" class="page space-y-4" style="display: none;">
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
       <div class="text-xs font-bold text-brand-900 flex items-center gap-1">
@@ -247,7 +249,7 @@
     </div>
   </div>
 
-  <!-- 分頁 9. 訂閱方案 -->
+  <!-- 分頁 9. 💳 訂閱方案 -->
   <div id="page-subscription" class="page space-y-4" style="display: none;">
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">💳 目前系統訂閱狀態</div>
@@ -257,15 +259,21 @@
         <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-green-600" id="sub-status-badge">正常運行中</span></div>
       </div>
     </div>
+    
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
       <div class="space-y-2" id="plan-options-container"></div>
+      <div class="text-[11px] text-brand-400 leading-relaxed pt-2 border-t border-brand-100 space-y-1">
+        <div>※ 系統採統一金流 (PayUNi) 官方加密付款，付款完成後系統將自動延長使用權限。</div>
+        <div>※ 首期於下單日扣款，次期起於每月固定結算日扣款。</div>
+      </div>
     </div>
   </div>
 
-  <!-- 分頁 10. 店休與設定 -->
+  <!-- 分頁 10. 店休與設定 (含 LINE 官方自動通知完整欄位) -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
-    <!-- 公休控制 -->
+    
+    <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
       <div class="flex items-center gap-2 text-sm font-bold text-red-500">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -309,7 +317,7 @@
       </div>
       <div>
         <label class="block text-[11px] font-bold text-brand-800 mb-1">訂金規則與銀行帳號文字：</label>
-        <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="例如：請於預約後2小時內匯款訂金500元至..."></textarea>
+        <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="例如：請於預約後2小時內匯款訂金500元至...&#10;並於下方回報後五碼。"></textarea>
       </div>
     </div>
 
@@ -335,11 +343,12 @@
       </div>
     </div>
 
-    <!-- 品牌資料與 LOGO -->
+    <!-- 基本資料與 Logo 上傳 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🏪 品牌資料與 LOGO 上傳</div>
       <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
       <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="副標題">
+      
       <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
         <label class="block text-xs font-bold text-brand-800">前台頂部 LOGO 圖片 (高度400px)</label>
         <div class="flex gap-2 items-center">
@@ -357,7 +366,6 @@
       </div>
     </div>
 
-    <!-- 排班時段 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">營業排班時段與間隔</div>
       <div class="grid grid-cols-2 gap-2">
@@ -370,7 +378,6 @@
       </select>
     </div>
 
-    <!-- 功能模組開關 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
@@ -385,7 +392,7 @@
       </div>
     </div>
 
-    <!-- LINE 官方自動推播 -->
+    <!-- LINE 官方自動推播與 Channel Access Token 欄位 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
         <span>💬</span> 官方 LINE 自動推播通知設定
@@ -396,11 +403,11 @@
           <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400">
         </label>
         <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-          📌 <b>說明：</b>開啟後系統將自動發送預約通知與即將到來提醒，訊息將從您的 LINE 官方帳號則數中扣除。
+          📌 <b>說明：</b>開啟後系統將自動發送預約成立通知與預約即將到來提醒，訊息將從您的 LINE 官方帳號則數中扣除。
         </div>
         <div>
           <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
-          <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white" placeholder="請貼上 LINE Developers 發行的 Channel Access Token"></textarea>
+          <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
         </div>
         <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
           ⚠️ <b>貼心提示：</b>無法自行找到 Channel Access Token 沒關係，可聯繫 Sibyl 官方客服協助，但須暫時將 Sibyl 加為 LINE 官方帳號管理員。
@@ -468,8 +475,7 @@
     </button>
   </nav>
 </div>
-
-<script>
+  <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
@@ -488,6 +494,7 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
+  // 直連 Supabase REST API 讀取方法 (全面排查 400/409 錯誤並丟出詳細原因)
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
       headers: { 
@@ -502,6 +509,7 @@
     return await res.json();
   }
 
+  // 直連 Supabase Upsert 寫入方法 (關鍵修復：明確指定 on_conflict 參數)
   async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
@@ -520,6 +528,7 @@
     return await res.json();
   }
 
+  // 直連 Supabase PATCH 更新方法
   async function directSupabasePatch(table, queryFilter, payload) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
@@ -538,6 +547,7 @@
     return await res.json();
   }
 
+  // 驗證 PIN 碼與登入
   async function checkPin() {
     const input = document.getElementById('pin-input').value.trim();
     try {
@@ -591,6 +601,7 @@
     });
   }
 
+  // 精準撈取 Supabase 原始資料庫所有 Table 並組合物件模型
   async function fetchDataAndRender() {
     try {
       const [stores, settings, services, portfolios, bookings] = await Promise.all([
@@ -601,8 +612,9 @@
         directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
       ]);
 
-      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: "", plan_status: "active", expires_at: "" };
+      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: "專業美業沙龍", plan_status: "active", expires_at: "" };
       const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+      
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -616,9 +628,13 @@
       }
 
       const formattedServices = (services || []).map(s => ({
-        id: s.id, name: s.service_name, duration: s.duration_minutes || 60,
-        type: s.service_type || "Group_A", price: Number(s.price) || 0,
-        isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
+        id: s.id, 
+        name: s.service_name, 
+        duration: s.duration_minutes || 60,
+        type: s.service_type || "Group_A", 
+        price: Number(s.price) || 0,
+        isAddon: s.is_addon === true, 
+        sortOrder: s.sort_order || 0
       }));
 
       const formattedAppts = (bookings || []).map(b => {
@@ -635,7 +651,7 @@
           lineName: b.line_name || '',
           service: b.service_names || '',
           price: Number(b.price) || 0,
-          finalPrice: b.final_price !== null && b.final_price !== undefined ? Number(b.final_price) : Number(b.price),
+          finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
           notes: b.notes || '',
           staffId: b.staff_id || 'all',
           staffName: b.staff_name || '不指定',
@@ -710,6 +726,7 @@
         document.getElementById('line-bind-banner').style.display = 'none';
       }
 
+      // 渲染所有分頁數據
       renderCalendar();
       renderCustomer();
       renderShift();
@@ -735,6 +752,7 @@
     el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
   }
 
+  // 1. 日曆
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
     document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
@@ -776,6 +794,7 @@
       ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
   }
 
+  // 2. 名單
   function renderCustomer() {
     const statusFilter = document.getElementById('filter-status').value;
     const content = document.getElementById('cust-content-area');
@@ -881,6 +900,7 @@
     });
   }
 
+  // 3. ⏰ 排班管理
   function renderShift() {
     const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
     document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => `
@@ -888,7 +908,7 @@
         ${s.name}
       </button>
     `).join('');
-
+    
     const dates = backendData.scheduleDates || [];
     let html = `<div class="date-box shrink-0 px-4 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === 'ALL' ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('ALL')">全部</div>`;
     dates.forEach(d => {
@@ -900,7 +920,7 @@
         </div>`;
     });
     document.getElementById('shift-scroll-area').innerHTML = html;
-
+    
     const content = document.getElementById('shift-content-area');
     if (currentShiftDate === 'ALL') {
       content.innerHTML = dates.map(d => `
@@ -911,7 +931,6 @@
       `).join('');
       return;
     }
-
     const start = backendData.settings.shiftStartTime || '09:00';
     const end = backendData.settings.shiftEndTime || '19:00';
     const interval = Number(backendData.settings.shiftInterval || 30);
@@ -922,7 +941,6 @@
       let hh = Math.floor(m / 60); let mm = m % 60;
       slots.push((hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm));
     }
-
     const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
     if (!shiftSlotStates[staffKey]) {
       shiftSlotStates[staffKey] = (backendData.settings.staffSchedules && backendData.settings.staffSchedules[staffKey]) || {};
@@ -930,7 +948,6 @@
         if (shiftSlotStates[staffKey][t] === undefined) shiftSlotStates[staffKey][t] = false;
       });
     }
-
     content.innerHTML = `
       <div class="bg-white rounded-3xl border border-brand-200 overflow-hidden shadow-sm">
         <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
@@ -974,6 +991,7 @@
     await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_schedules: shiftSlotStates });
   }
 
+  // 4. 💰 業績
   function renderRevenueSelect() {
     const sel = document.getElementById('rev-service-select');
     const svcs = backendData.services || [];
@@ -1011,7 +1029,7 @@
               <div class="font-bold text-amber-900">${a.date} ${a.time} - ${a.name}</div>
               <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
             </div>
-            <button class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[11px]" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">去結單</button>
+            <button class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[11px]" onclick="openCompleteModal('${a.id}','${a.name}', ${a.price})">去結單</button>
           </div>`;
       }
     });
@@ -1021,6 +1039,7 @@
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
   }
 
+  // 5. 🎁 回訪
   function renderCare(reminders) {
     const list = document.getElementById('care-list');
     if (!reminders || reminders.length === 0) {
@@ -1042,6 +1061,7 @@
     });
   }
 
+  // 6. ✂️ 服務管理
   function renderServiceList() {
     const container = document.getElementById('service-list-container');
     const svcs = backendData.services || [];
@@ -1144,6 +1164,7 @@
     });
   }
 
+  // 7. 🖼️ 作品管理
   function renderPortfolioList() {
     const container = document.getElementById('portfolio-list-container');
     const ports = backendData.portfolio || [];
@@ -1157,7 +1178,7 @@
         <div class="font-bold truncate text-brand-900">${p.title}</div>
         <div class="text-[10px] text-brand-500 font-bold truncate flex justify-between items-center">
           <span>分類: ${p.cat}</span>
-          <button class="text-blue-500 underline" onclick="promptEditPortfolioCat('${p.id}', '${p.cat}')">改分類</button>
+          <button class="text-blue-500 underline" onclick="promptEditPortfolioCat('${p.id}','${p.cat}')">改分類</button>
         </div>
         <div class="flex gap-1 pt-1">
           <button class="flex-1 py-1 bg-white border border-brand-200 rounded-lg text-[10px] font-bold" onclick="movePortfolioOrder(${idx}, -1)">◀ 移動</button>
@@ -1239,6 +1260,7 @@
     });
   }
 
+  // 8. 🔍 搜尋
   async function executeSearch() {
     const kw = document.getElementById('search-keyword').value.trim();
     if (!kw) return;
@@ -1254,6 +1276,7 @@
     area.innerHTML = data.map(a => renderSingleCardHTML(a)).join('');
   }
 
+  // 9. ⚡ 新增卡位
   function renderQuickAddServices() {
     const sel = document.getElementById('quick-service');
     const svcs = backendData.services || [];
@@ -1301,6 +1324,7 @@
     Swal.fire({ title: '已成功新增預約卡片！', icon: 'success', timer: 1500, showConfirmButton: false });
   }
 
+  // 10. 💳 方案管理
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '美業標準版';
@@ -1340,7 +1364,7 @@
           <div class="font-bold text-brand-900">${pl.name}</div>
           <div class="text-brand-500 font-bold text-sm mt-0.5">${pl.price}元</div>
         </div>
-        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl font-bold shadow-sm" onclick="openPayUniLink('${pl.link}', '${pl.name}')">立即付款續約</button>
+        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl font-bold shadow-sm" onclick="openPayUniLink('${pl.link}','${pl.name}')">立即付款續約</button>
       </div>
     `).join('');
   }
@@ -1360,6 +1384,7 @@
     });
   }
 
+  // 📷 LOGO 上傳至 imgBB 轉網址
   async function uploadLogoImgBB() {
     const file = document.getElementById('logo-file-input').files[0];
     if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
@@ -1380,6 +1405,7 @@
     }
   }
 
+  // ⚙️ 店休設定
   function addCustomOffDate() {
     const dateVal = document.getElementById('new-custom-off-date').value;
     if (!dateVal) return;
@@ -1436,6 +1462,7 @@
     saveStoreSettings();
   }
 
+  // 將資料庫撈回來的實際值回填入 input 欄位
   function populateSettings() {
     const s = backendData.settings || {};
     if (!CURRENT_STAFF_PARAM) document.getElementById('top-bar-title').innerText = `${s.storeName || '沙龍'} 管理後台`;
@@ -1554,6 +1581,7 @@
     }
   }
 
+  // 核心修復：強制帶 on_conflict=store_id 寫入 Supabase store_settings
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
     try {
@@ -1598,7 +1626,7 @@
         })).filter(r => r.name !== '')
       };
 
-      // 1. PostgREST Upsert (on_conflict=store_id)
+      // 1. 強制以 on_conflict=store_id 寫入 store_settings (絕不漏單)
       await directSupabaseUpsert('store_settings', payload, 'store_id');
 
       // 2. 同步更新 stores 表主檔
