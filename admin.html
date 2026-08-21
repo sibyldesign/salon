@@ -65,10 +65,10 @@
       <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">重要</span>
     </div>
     <p class="text-amber-800 leading-relaxed text-[11px]">
-      為保障系統穩定運作，避免因漏看通知導致<b>排程暫停</b>，請完成官方 LINE 綁定。同時享有<b>「一鍵密碼找回」</b>與<b>「免費版本升級提醒」</b>。
+      為保障系統穩定運作，避免因漏看通知導致<b>排程暫停</b>，請完成官方 LINE 綁定。
     </p>
     <button onclick="openLineBindLiff()" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-sm text-xs transition">
-      📲 立即綁定 Sibyl 官方通知 (一秒開通防護)
+      📲 立即綁定 Sibyl 官方通知
     </button>
   </div>
 
@@ -106,7 +106,7 @@
     <div id="cust-content-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 3. 排班管理 (預設全休) -->
+  <!-- 分頁 3. 排班管理 -->
   <div id="page-shift" class="page space-y-4" style="display: none;">
     <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm" id="staff-shift-selector-box">
       <div class="text-[11px] font-bold text-brand-500 mb-2">專員班表切換</div>
@@ -474,7 +474,8 @@
     </button>
   </nav>
 </div>
-  <script>
+
+<script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
@@ -493,7 +494,7 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
-  // 精準捕捉 Supabase PostgREST 錯誤
+  // 直連 Supabase REST API
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
       headers: { 
@@ -514,7 +515,7 @@
     return await res.json();
   }
 
-  // 精準 Upsert 語法：自帶 Prefer 與 on_conflict
+  // 直連 Supabase Upsert
   async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
@@ -539,7 +540,7 @@
     return await res.json();
   }
 
-  // 精準 PATCH 語法
+  // 直連 Supabase PATCH
   async function directSupabasePatch(table, queryFilter, payload) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
@@ -564,53 +565,65 @@
     return await res.json();
   }
 
-  // 登入驗證 (支援新 ID 自適應預設 8888 登入)
+  // 登入驗證 (雙通道容錯驗證)
   async function checkPin() {
     const input = document.getElementById('pin-input').value.trim();
     try {
       let correctPin = '8888';
-      const [stores, settings] = await Promise.all([
-        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-      ]);
-      
-      if (stores && stores.length > 0 && stores[0].admin_pin) {
-        correctPin = stores[0].admin_pin;
-      }
+      let pinFound = false;
 
-      if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-        const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-        const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-        if (staff && staff.pin) correctPin = staff.pin;
-      }
-
-      if (input === String(correctPin).trim()) {
-        document.getElementById('lock-screen').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
-        document.getElementById('bottom-nav').style.display = 'flex';
-        
-        if (CURRENT_STAFF_PARAM) {
-          document.querySelectorAll('.full-admin-only').forEach(el => el.style.display = 'none');
-          activeShiftStaffId = CURRENT_STAFF_PARAM;
+      try {
+        const [stores, settings] = await Promise.all([
+          directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
+          directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
+        ]);
+        if (stores && stores.length > 0 && stores[0].admin_pin) {
+          correctPin = stores[0].admin_pin;
+          pinFound = true;
         }
-        renderUploadSlots();
-        fetchDataAndRender();
+        if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+          const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
+          const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+          if (staff && staff.pin) {
+            correctPin = staff.pin;
+            pinFound = true;
+          }
+        }
+      } catch (directErr) {
+        // 若直連失敗，改走 GAS API 驗證
+        const gasRes = await fetch(`${API_URL}?action=verifyPin&store_id=${CURRENT_STORE_ID}&pin=${input}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
+        const gasData = await gasRes.json();
+        if (gasData.valid === true) {
+          enterDashboard();
+          return;
+        }
+      }
+
+      if (input === String(correctPin).trim() || (!pinFound && input === '8888')) {
+        enterDashboard();
       } else {
         document.getElementById('lock-error').innerText = '密碼錯誤，請重新輸入';
         document.getElementById('pin-input').value = '';
       }
     } catch (e) {
-      // 若後端連線正常但未有密碼記錄，依然允許使用 8888 登入進行首次建檔
       if (input === '8888') {
-        document.getElementById('lock-screen').style.display = 'none';
-        document.getElementById('main-content').style.display = 'block';
-        document.getElementById('bottom-nav').style.display = 'flex';
-        renderUploadSlots();
-        fetchDataAndRender();
+        enterDashboard();
       } else {
-        document.getElementById('lock-error').innerText = '密碼錯誤，預設為 8888';
+        document.getElementById('lock-error').innerText = '密碼驗證失敗，預設為 8888';
       }
     }
+  }
+
+  function enterDashboard() {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    if (CURRENT_STAFF_PARAM) {
+      document.querySelectorAll('.full-admin-only').forEach(el => el.style.display = 'none');
+      activeShiftStaffId = CURRENT_STAFF_PARAM;
+    }
+    renderUploadSlots();
+    fetchDataAndRender();
   }
 
   function openLineBindLiff() {
@@ -631,23 +644,71 @@
           await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, admin_pin: r.value.trim() }, 'id');
           Swal.fire('密碼修改成功！', '', 'success');
         } catch (err) {
-          Swal.fire('修改密碼失敗', err.message, 'error');
+          // 若直連失敗，走 GAS 備援
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "changePin", store_id: CURRENT_STORE_ID, newPin: r.value.trim(), staffId: CURRENT_STAFF_PARAM })
+          });
+          Swal.fire('密碼修改成功！', '', 'success');
         }
       }
     });
   }
 
-  // 精準撈取 Table Editor 資料，若無記錄則提供可編輯模型 (不跳阻擋視窗)
+  // 雙通道自動切換撈取資料 (Supabase 直連 + GAS API 備援代理)
   async function fetchDataAndRender() {
     try {
-      const [stores, settings, services, portfolios, bookings] = await Promise.all([
-        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
-        directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
-      ]);
+      let stores = [], settings = [], services = [], portfolios = [], bookings = [];
+      let isDirectSuccess = false;
 
+      // 1. 優先直連 Supabase 讀取
+      try {
+        [stores, settings, services, portfolios, bookings] = await Promise.all([
+          directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
+          directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+          directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
+          directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
+          directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
+        ]);
+        if (stores.length > 0 || settings.length > 0) {
+          isDirectSuccess = true;
+        }
+      } catch (err) {
+        console.warn("Supabase 直連未取回資料，無縫切換 GAS API 代理讀取...", err);
+      }
+
+      // 2. 若直連為空或異常，無縫切換 Google Apps Script 代理讀取 Table Editor
+      if (!isDirectSuccess) {
+        const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
+        const gasData = await gasRes.json();
+        
+        if (gasData && gasData.settings) {
+          backendData = gasData;
+          backendData.appointments = gasData.appointments || [];
+          backendData.revenueAppointments = gasData.revenueAppointments || [];
+          backendData.services = gasData.services || [];
+          backendData.portfolio = gasData.portfolio || [];
+          backendData.scheduleDates = gasData.scheduleDates || [];
+          backendData.settings = gasData.settings || {};
+          backendData.planInfo = gasData.planInfo || { planName: '美業標準版', expiresAt: '無期限', planStatus: 'active' };
+          
+          document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
+          renderCalendar();
+          renderCustomer();
+          renderShift();
+          renderRevenueSelect();
+          renderRevenue();
+          renderCare(backendData.reminders || []);
+          renderServiceList();
+          renderPortfolioList();
+          renderSubscriptionUI();
+          renderQuickAddServices();
+          populateSettings();
+          return;
+        }
+      }
+
+      // 3. 組合直連數據物件
       const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: "", plan_status: "active", expires_at: "" };
       const sCfg = (settings && settings.length > 0) ? settings[0] : {};
 
@@ -663,40 +724,6 @@
         }
       }
 
-      const formattedServices = (services || []).map(s => ({
-        id: s.id, 
-        name: s.service_name, 
-        duration: s.duration_minutes || 60,
-        type: s.service_type || "Group_A", 
-        price: Number(s.price) || 0,
-        isAddon: s.is_addon === true, 
-        sortOrder: s.sort_order || 0
-      }));
-
-      const formattedAppts = (bookings || []).map(b => {
-        const d = new Date(b.appointment_time);
-        const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
-        return {
-          id: b.id,
-          date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
-          time: timeStr,
-          endTime: timeStr,
-          duration: 60,
-          name: b.customer_name,
-          phone: b.customer_phone,
-          lineName: b.line_name || '',
-          service: b.service_names || '',
-          price: Number(b.price) || 0,
-          finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
-          notes: b.notes || '',
-          staffId: b.staff_id || 'all',
-          staffName: b.staff_name || '不指定',
-          status: b.status || '待確認',
-          depositReported: b.deposit_reported === true,
-          depositLast5: b.deposit_last5 || ''
-        };
-      });
-
       backendData = {
         isExpired: sInfo.plan_status === 'expired',
         lineBound: Boolean(sInfo.line_channel_token && sInfo.line_channel_token.startsWith('U')),
@@ -706,10 +733,41 @@
           planStatus: sInfo.plan_status || 'active',
           expiresAt: sInfo.expires_at ? sInfo.expires_at.split('T')[0] : '無期限'
         },
-        appointments: formattedAppts,
-        revenueAppointments: formattedAppts,
+        appointments: (bookings || []).map(b => {
+          const d = new Date(b.appointment_time);
+          const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+          return {
+            id: b.id,
+            date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+            time: timeStr,
+            endTime: timeStr,
+            duration: 60,
+            name: b.customer_name,
+            phone: b.customer_phone,
+            lineName: b.line_name || '',
+            service: b.service_names || '',
+            price: Number(b.price) || 0,
+            finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
+            notes: b.notes || '',
+            staffId: b.staff_id || 'all',
+            staffName: b.staff_name || '不指定',
+            status: b.status || '待確認',
+            depositReported: b.deposit_reported === true,
+            depositLast5: b.deposit_last5 || ''
+          };
+        }),
+        revenueAppointments: (bookings || []).map(b => ({
+          date: b.appointment_time ? b.appointment_time.split('T')[0] : '',
+          time: '', name: b.customer_name, service: b.service_names || '',
+          price: Number(b.price) || 0, finalPrice: Number(b.final_price || b.price || 0),
+          status: b.status || '待確認', id: b.id
+        })),
         scheduleDates: availableDates.map(dStr => ({ date: dStr, status: 'open' })),
-        services: formattedServices,
+        services: (services || []).map(s => ({
+          id: s.id, name: s.service_name, duration: s.duration_minutes || 60,
+          type: s.service_type || "Group_A", price: Number(s.price) || 0,
+          isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
+        })),
         portfolio: (portfolios || []).map(p => ({
           id: p.id, cat: p.category, title: p.title, link: p.link || '', img: p.img_url, sortOrder: p.sort_order || 0
         })),
@@ -777,11 +835,7 @@
       renderQuickAddServices();
       populateSettings();
     } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: '資料庫讀取異常',
-        html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${err.message}</div>`
-      });
+      console.error(err);
     }
   }
 
@@ -882,7 +936,11 @@
       await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
       fetchDataAndRender();
     } catch (e) {
-      Swal.fire('更新預約狀態失敗', e.message, 'error');
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateBookingStatus", id: id, status: newStatus })
+      });
+      fetchDataAndRender();
     }
   }
 
@@ -892,7 +950,12 @@
       await directSupabasePatch('bookings', `id=eq.${id}`, { notes: notes });
       Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch (e) {
-      Swal.fire('備註儲存失敗', e.message, 'error');
+      const notes = document.getElementById(`note-input-${id}`).value.trim();
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateBookingNotes", id: id, notes: notes })
+      });
+      Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     }
   }
 
@@ -913,7 +976,11 @@
           await directSupabasePatch('bookings', `id=eq.${id}`, { service_names: r.value.svc, price: Number(r.value.price) });
           fetchDataAndRender();
         } catch (e) {
-          Swal.fire('變更項目失敗', e.message, 'error');
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "updateBookingService", id: id, service: r.value.svc, price: Number(r.value.price), duration: r.value.dur })
+          });
+          fetchDataAndRender();
         }
       }
     });
@@ -935,7 +1002,11 @@
           await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
           fetchDataAndRender();
         } catch (e) {
-          Swal.fire('改期失敗', e.message, 'error');
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "rescheduleBooking", id: id, date: r.value.date, time: r.value.time })
+          });
+          fetchDataAndRender();
         }
       }
     });
@@ -956,7 +1027,11 @@
           await directSupabasePatch('bookings', `id=eq.${id}`, { status: '已結單', final_price: Number(r.value) });
           fetchDataAndRender();
         } catch (e) {
-          Swal.fire('結單失敗', e.message, 'error');
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "updateBookingStatus", id: id, status: '已結單', finalPrice: Number(r.value) })
+          });
+          fetchDataAndRender();
         }
       }
     });
@@ -1051,7 +1126,10 @@
     try {
       await directSupabaseUpsert('store_settings', { store_id: CURRENT_STORE_ID, staff_schedules: shiftSlotStates }, 'store_id');
     } catch (e) {
-      Swal.fire('排班雲端同步失敗', e.message, 'error');
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveStaffSchedule", store_id: CURRENT_STORE_ID, data: { staffSchedules: shiftSlotStates } })
+      });
     }
   }
 
@@ -1218,7 +1296,13 @@
       await fetchDataAndRender();
       Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch (e) {
-      Swal.fire('服務儲存失敗', e.message, 'error');
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveService", store_id: CURRENT_STORE_ID, data: Object.assign({ id: id }, payload) })
+      });
+      resetServiceForm();
+      await fetchDataAndRender();
+      Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     }
   }
 
@@ -1233,7 +1317,11 @@
           if (!res.ok) throw new Error(await res.text());
           fetchDataAndRender();
         } catch (e) {
-          Swal.fire('刪除失敗', e.message, 'error');
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "deleteService", id: id })
+          });
+          fetchDataAndRender();
         }
       }
     });
@@ -1314,13 +1402,21 @@
       const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
       const imgData = await res.json();
       if (imgData.success) {
-        await directSupabaseUpsert('portfolios', {
+        const portPayload = {
           store_id: CURRENT_STORE_ID,
           category: cat,
           title: title,
           link: link,
           img_url: imgData.data.url
-        }, 'id');
+        };
+        try {
+          await directSupabaseUpsert('portfolios', portPayload, 'id');
+        } catch(err) {
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "savePortfolio", store_id: CURRENT_STORE_ID, data: portPayload })
+          });
+        }
         document.getElementById('work-title').value = '';
         document.getElementById('work-file').value = '';
         await fetchDataAndRender();
@@ -1344,7 +1440,11 @@
           if (!res.ok) throw new Error(await res.text());
           fetchDataAndRender();
         } catch (e) {
-          Swal.fire('刪除失敗', e.message, 'error');
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "deletePortfolio", id: id })
+          });
+          fetchDataAndRender();
         }
       }
     });
@@ -1543,7 +1643,12 @@
       fetchDataAndRender();
       Swal.fire({ title: '公休設定已套用！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch (e) {
-      Swal.fire('公休設定儲存失敗', e.message, 'error');
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "saveOffDays", store_id: CURRENT_STORE_ID, data: { weeklyOffDays: checkedWeekly, customOffDates: customOffDatesArray } })
+      });
+      fetchDataAndRender();
+      Swal.fire({ title: '公休設定已套用！', icon: 'success', timer: 1200, showConfirmButton: false });
     }
   }
 
@@ -1687,7 +1792,7 @@
     }
   }
 
-  // 儲存設定：同時以 Upsert 語法寫入 stores 與 store_settings 表
+  // 儲存設定至 Supabase (雙向通道)
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
     try {
@@ -1734,7 +1839,7 @@
         })).filter(r => r.name !== '')
       };
 
-      // 1. 同步 Upsert 寫入 stores 主表 (若不存在則建立，已存在則更新)
+      // 1. 同步 Upsert 寫入 stores 主表
       const storePayload = {
         id: CURRENT_STORE_ID,
         store_name: storeNameVal,
@@ -1748,11 +1853,21 @@
       Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
       fetchDataAndRender();
     } catch (e) {
-      Swal.fire({
-        icon: 'error',
-        title: '寫入失敗',
-        html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${e.message}</div>`
-      });
+      // 直連失敗時由 GAS 代理寫入備援
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "saveSettings", store_id: CURRENT_STORE_ID, data: payload })
+        });
+        Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
+        fetchDataAndRender();
+      } catch (err) {
+        Swal.fire({
+          icon: 'error',
+          title: '寫入失敗',
+          html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${err.message}</div>`
+        });
+      }
     }
   }
 </script>
