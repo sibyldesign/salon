@@ -345,13 +345,13 @@
     
     // 頂部 LOGO (固定高度 150px、背景留白、圖片自適應 contain 不變形)
     if (db.logoUrl) {
-      document.getElementById('store-logo-img').src = db.logoUrl;
-      document.getElementById('store-logo-img').classList.remove('hidden');
-      document.getElementById('store-logo-placeholder').classList.add('hidden');
-    } else {
-      document.getElementById('store-logo-img').classList.add('hidden');
-      document.getElementById('store-logo-placeholder').classList.remove('hidden');
-    }
+  document.getElementById('store-logo-img').src = db.logoUrl;
+  document.getElementById('store-logo-img').classList.remove('hidden');
+  document.getElementById('store-logo-placeholder').classList.add('hidden');
+} else {
+  document.getElementById('store-logo-img').classList.add('hidden');
+  document.getElementById('store-logo-placeholder').classList.remove('hidden');
+}
 
     document.getElementById('promo-text').innerText = db.promoText;
     document.getElementById('nav-ig').href = db.ig || '#';
@@ -501,6 +501,18 @@
     const selectedDate = document.getElementById('date').value;
     for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
+      // 若為「不指定」，只要任一專員在班即開放該時段
+let isAvailable = false;
+if (staffId === 'all') {
+  const allStaffSchedules = db.staffSchedules || {};
+  Object.keys(allStaffSchedules).forEach(key => {
+    if (key.endsWith(`_${dStr}`) && allStaffSchedules[key][timeFormatted] === true) {
+      isAvailable = true;
+    }
+  });
+} else {
+  isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
+}
       let isAvailable = (db.availableDates || []).includes(dStr) || (db.availableDates.length === 0);
       let isActive = (dStr === selectedDate);
       
