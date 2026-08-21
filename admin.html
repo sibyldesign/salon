@@ -162,7 +162,6 @@
       <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveStoreSettings()">儲存關懷規則</button>
     </div>
   </div>
-
   <!-- 分頁 6. 服務項目與作品 -->
   <div id="page-services" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -500,10 +499,13 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
-  // 直連 Supabase 讀取工具
+  // 直連 Supabase REST API 讀取方法
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      headers: { 
+        "apikey": SUPABASE_ANON_KEY, 
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}` 
+      }
     });
     if (!res.ok) {
       const err = await res.text();
@@ -512,7 +514,7 @@
     return await res.json();
   }
 
-  // 直連 Supabase Upsert 寫入工具 (帶 on_conflict，確保 100% 寫入 Table Editor)
+  // 直連 Supabase Upsert 寫入方法 (關鍵修復：明確指定 on_conflict 參數)
   async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
@@ -531,7 +533,7 @@
     return await res.json();
   }
 
-  // 直連 Supabase Patch 工具
+  // 直連 Supabase PATCH 更新方法
   async function directSupabasePatch(table, queryFilter, payload) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
