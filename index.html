@@ -501,20 +501,8 @@
     const selectedDate = document.getElementById('date').value;
     for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
-      // 若為「不指定」，只要任一專員在班即開放該時段
-let isAvailable = false;
-if (staffId === 'all') {
-  const allStaffSchedules = db.staffSchedules || {};
-  Object.keys(allStaffSchedules).forEach(key => {
-    if (key.endsWith(`_${dStr}`) && allStaffSchedules[key][timeFormatted] === true) {
-      isAvailable = true;
-    }
-  });
-} else {
-  isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
-}
-      let isAvailable = (db.availableDates || []).includes(dStr) || (db.availableDates.length === 0);
-      let isActive = (dStr === selectedDate);
+let isAvailable = (db.availableDates || []).includes(dStr) || (db.availableDates.length === 0);
+let isActive = (dStr === selectedDate);
       
       if (isAvailable) {
         html += `
@@ -577,37 +565,46 @@ if (staffId === 'all') {
 
     let html = '';
     defaultSlots.forEach(t => {
-      const slotHour = Math.floor(t / 60);
-      const slotMin = t % 60;
-      const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
-      
-      // 預設全休：只有在後台排班中被明確設為 true 的時段才開放
-      let isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
-
-      // 超出營業時間防呆
-      if (t + totalDuration > endMin + interval) isAvailable = false;
-      
-      // 客滿防呆 (同時段 2 人)
-      let concurrent = 0;
-      dayAppts.forEach(a => {
-        const aDate = new Date(a.appointment_time);
-        const aStart = aDate.getHours() * 60 + aDate.getMinutes();
-        if (t >= aStart && t < aStart + 60) concurrent++;
-      });
-      if (concurrent >= 2) isAvailable = false;
-
-      if (isAvailable) {
-        html += `
-          <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm" onclick="selectTimePill('${timeFormatted}', this)">
-            ${timeFormatted}
-          </div>`;
+    const slotHour = Math.floor(t / 60);
+    const slotMin = t % 60;
+    const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
+    
+    let isAvailable = false;
+    if (staffId === 'all') {
+      // 不指定：只要任一專員在班即開放
+      const allStaffSchedules = db.staffSchedules || {};
+      const staffKeys = Object.keys(allStaffSchedules).filter(k => k.endsWith(`_${dStr}`));
+      if (staffKeys.length > 0) {
+        isAvailable = staffKeys.some(k => allStaffSchedules[k] && allStaffSchedules[k][timeFormatted] === true);
       } else {
-        html += `
-          <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none select-none opacity-60">
-            ${timeFormatted}
-          </div>`;
+        isAvailable = false; // 該日無人排班則全休
       }
+    } else {
+      isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
+    }
+
+    if (t + totalDuration > endMin + interval) isAvailable = false;
+
+    let concurrent = 0;
+    dayAppts.forEach(a => {
+      const aDate = new Date(a.appointment_time);
+      const aStart = aDate.getHours() * 60 + aDate.getMinutes();
+      if (t >= aStart && t < aStart + 60) concurrent++;
     });
+    if (concurrent >= 2) isAvailable = false;
+
+    if (isAvailable) {
+      html += `
+        <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm" onclick="selectTimePill('${timeFormatted}', this)">
+          ${timeFormatted}
+        </div>`;
+    } else {
+      html += `
+        <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none select-none opacity-60">
+          ${timeFormatted}
+        </div>`;
+    }
+  });
 
     grid.innerHTML = html || '<div class="col-span-3 text-center py-4 text-xs text-brand-400">當日無開放預約時段</div>';
   }
@@ -625,30 +622,30 @@ if (staffId === 'all') {
   function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerByPhone(); }
 
   async function checkCustomerByPhone() {
-    let phone = document.getElementById('phone').value.trim();
-    if (phone.length >= 8) {
-      document.getElementById('welcome-msg').style.display = 'block';
-      document.getElementById('welcome-msg').innerText = '尋找紀錄中...';
-      try {
-        const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`);
-        if (Array.isArray(res) && res.length > 0) {
-          document.getElementById('name').value = res[0].customer_name || '';
-          if (res[0].line_name) document.getElementById('lineName').value = res[0].line_name;
-          if (res[0].notes && res[0].notes.includes('Email:')) {
-            const emailPart = res[0].notes.split('Email:')[1].trim();
-            if (document.getElementById('email')) document.getElementById('email').value = emailPart;
-          }
-          document.getElementById('welcome-msg').innerHTML = `歡迎回來，<b>${res[0].customer_name}</b>！`;
-          setType('old', document.querySelectorAll('.type-btn')[0]);
-        } else {
-          document.getElementById('welcome-msg').style.display = 'none';
-          setType('new', document.querySelectorAll('.type-btn')[1]);
+  let phone = document.getElementById('phone').value.trim();
+  if (phone.length >= 8) {
+    document.getElementById('welcome-msg').style.display = 'block';
+    document.getElementById('welcome-msg').innerText = '尋找紀錄中...';
+    try {
+      const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`);
+      if (Array.isArray(res) && res.length > 0) {
+        document.getElementById('name').value = res[0].customer_name || '';
+        if (res[0].line_name) document.getElementById('lineName').value = res[0].line_name;
+        if (res[0].notes && res[0].notes.includes('Email:')) {
+          const emailStr = res[0].notes.split('Email:')[1].trim();
+          if (document.getElementById('email')) document.getElementById('email').value = emailStr;
         }
-      } catch (err) {
+        document.getElementById('welcome-msg').innerHTML = `歡迎回來，<b>${res[0].customer_name}</b>！`;
+        setType('old', document.querySelectorAll('.type-btn')[0]);
+      } else {
         document.getElementById('welcome-msg').style.display = 'none';
+        setType('new', document.querySelectorAll('.type-btn')[1]);
       }
+    } catch (err) {
+      document.getElementById('welcome-msg').style.display = 'none';
     }
   }
+}
 
   function setType(t, e) {
     document.querySelectorAll('.type-btn').forEach(b => {
