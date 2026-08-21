@@ -270,7 +270,7 @@
 
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 mt-4">
   <div class="text-xs font-bold text-brand-900">功能許願池 (直接發送給 Sibyl 開發團隊)</div>
-  <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="告訴我們您希望增加什麼功能？例如：新增多張發票列印模組..."></textarea>
+  <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="告訴我們您希望增加什麼功能？"></textarea>
   <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 text-white font-bold rounded-xl text-xs shadow-md">送出功能願望</button>
 </div>
     
@@ -408,16 +408,17 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
-      </div>
-    </div>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 預約先由店家審核</span><input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 線下收取訂金機制</span><input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
+</div>
 
     <!-- LINE 官方自動推播與 Channel Access Token 欄位 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -1297,20 +1298,29 @@ async function submitWish() {
     container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
     return;
   }
-  container.innerHTML = svcs.map((s, idx) => `
-    <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-      <div>
-        <div class="font-bold text-brand-900">${s.is_addon || s.isAddon ? '[加購] ' : ''}${s.service_name || s.name}</div>
-        <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration_minutes || s.duration || 60}分鐘</div>
-      </div>
-      <div class="flex gap-1 items-center">
-        <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
-        <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
-        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">修改</button>
-        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪除</button>
-      </div>
-    </div>
-  `).join('');
+  container.innerHTML = svcs.map((s, idx) => {
+    const typeLabel = (s.service_type === 'Group_B' || s.type === 'Group_B') ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Group B 專屬類</span>' : '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">Group A 技術類</span>';
+    const sName = s.service_name || s.name || '';
+    const sDur = s.duration_minutes || s.duration || 60;
+    const isAddon = s.is_addon === true || s.isAddon === true;
+    return `
+      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+        <div>
+          <div class="font-bold text-brand-900 flex items-center gap-1.5">
+            ${isAddon ? '<span class="text-amber-600 font-bold">[加購]</span>' : ''}
+            <span>${sName}</span>
+            ${typeLabel}
+          </div>
+          <div class="text-[11px] text-brand-500 mt-0.5">${s.price}元 / ${sDur}分鐘</div>
+        </div>
+        <div class="flex gap-1 items-center">
+          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
+          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
+          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
+          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 async function moveServiceOrder(idx, dir) {
@@ -1335,11 +1345,10 @@ async function moveServiceOrder(idx, dir) {
   document.getElementById('svc-price').value = s.price || '';
   document.getElementById('svc-duration').value = s.duration_minutes || s.duration || 60;
   document.getElementById('svc-type').value = s.service_type || s.type || 'Group_A';
-  document.getElementById('svc-is-addon').checked = s.is_addon === true || s.isAddon === true;
+  document.getElementById('svc-is-addon').checked = (s.is_addon === true || s.isAddon === true);
   document.getElementById('svc-form-title').innerText = "修改服務項目";
   document.getElementById('svc-cancel-btn').classList.remove('hidden');
 }
-
   function resetServiceForm() {
     document.getElementById('edit-svc-id').value = '';
     document.getElementById('svc-name').value = '';
@@ -1933,65 +1942,73 @@ async function handleImgUpload(idx, input) {
 
   // 儲存設定至 Supabase (雙向保護)
   async function saveStoreSettings() {
-    Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
-    
-    const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
-    const storeNameVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
-    const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
-    
-    const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
-      name: el.value.trim(),
-      weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
-      msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
-    })).filter(r => r.name !== '');
+  Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
+  
+  const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
+  const storeNameVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
+  const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
+  
+  const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
+    name: el.value.trim(),
+    weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
+    msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
+  })).filter(r => r.name !== '');
 
-    const payload = {
-      store_id: CURRENT_STORE_ID,
-      display_title: storeNameVal,
-      display_subtitle: document.getElementById('cfg-subtitle')?.value || '',
-      enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? true,
-      logo_url: document.getElementById('cfg-logo')?.value || '',
-      address: document.getElementById('cfg-address')?.value || '',
-      business_hours: document.getElementById('cfg-hours')?.value || '',
-      booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
-      care_text: document.getElementById('cfg-care')?.value || '',
-      deposit_info: document.getElementById('cfg-deposit-info')?.value || '',
-      promo_text: document.getElementById('cfg-promo')?.value || '',
-      promo_imgs: promoImgsArray.filter(u => u !== ""),
-      line_url: document.getElementById('cfg-line')?.value || '',
-      ig_url: document.getElementById('cfg-ig')?.value || '',
-      map_url: document.getElementById('cfg-map')?.value || '',
-      enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? true,
-      enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? true,
-      enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? true,
-      enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? true,
-      enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? true,
-      enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? true,
-      enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? true,
-      enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? true,
-      enable_care: document.getElementById('cfg-toggle-care')?.checked ?? true,
-      enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked === true,
-      line_channel_token: lineTokenVal,
-      weekly_off_days: checkedWeekly,
-      custom_off_dates: customOffDatesArray,
-      staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
-      shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
-      shift_end_time: document.getElementById('cfg-shift-end')?.value || "19:00",
-      shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
-      care_rules: careRulesArray
-    };
+  const payload = {
+    store_id: CURRENT_STORE_ID,
+    display_title: storeNameVal,
+    display_subtitle: document.getElementById('cfg-subtitle')?.value || '',
+    enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? true,
+    logo_url: document.getElementById('cfg-logo')?.value || '',
+    address: document.getElementById('cfg-address')?.value || '',
+    business_hours: document.getElementById('cfg-hours')?.value || '',
+    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
+    care_text: document.getElementById('cfg-care')?.value || '',
+    deposit_info: document.getElementById('cfg-deposit-info')?.value || '',
+    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
+    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
+    promo_text: document.getElementById('cfg-promo')?.value || '',
+    promo_imgs: promoImgsArray.filter(u => u !== ""),
+    line_url: document.getElementById('cfg-line')?.value || '',
+    ig_url: document.getElementById('cfg-ig')?.value || '',
+    map_url: document.getElementById('cfg-map')?.value || '',
+    enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? true,
+    enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? true,
+    enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? true,
+    enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? true,
+    enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? true,
+    enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? true,
+    enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? true,
+    enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? true,
+    enable_care: document.getElementById('cfg-toggle-care')?.checked ?? true,
+    enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked === true,
+    line_channel_token: lineTokenVal,
+    weekly_off_days: checkedWeekly,
+    custom_off_dates: customOffDatesArray,
+    staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
+    shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
+    shift_end_time: document.getElementById('cfg-shift-end')?.value || "19:00",
+    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
+    care_rules: careRulesArray
+  };
 
-    try {
-      await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: storeNameVal, line_channel_token: lineTokenVal }, 'id');
-      await directSupabaseUpsert('store_settings', payload, 'store_id');
-      localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
-      backendData.settings = Object.assign({}, backendData.settings, payload);
-      populateSettings();
-      Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
-    } catch (e) {
-      Swal.fire({ title: '寫入失敗', text: e.message, icon: 'error' });
-    }
+  try {
+    // 1. 同步寫入 stores 表
+    await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: storeNameVal, industry_type: 'beauty', line_channel_token: lineTokenVal }, 'id');
+
+    // 2. 寫入 store_settings
+    await directSupabaseUpsert('store_settings', payload, 'store_id');
+
+    // 3. 本地快照雙重保護
+    localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
+    backendData.settings = Object.assign({}, backendData.settings, payload);
+    populateSettings();
+
+    Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
+  } catch (e) {
+    Swal.fire({ title: '寫入失敗', text: e.message, icon: 'error' });
   }
+}
 </script>
 </body>
 </html>
