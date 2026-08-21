@@ -36,15 +36,15 @@
 
 <!-- 頂部 Header 與 Logo 區塊 (固定高度 150px、背景留白、圖片自適應 contain 不變形) -->
 <header class="w-full bg-brand-50 pt-0">
-  <div id="store-logo-wrapper" class="w-full h-[150px] overflow-hidden relative bg-brand-50 flex items-center justify-center border-b border-brand-200/60 p-2">
+  <div id="store-logo-wrapper" class="w-full h-[150px] overflow-hidden relative bg-brand-50 flex items-center justify-center p-2">
     <img id="store-logo-img" class="max-h-full max-w-full object-contain object-center hidden" src="" alt="STORE LOGO">
     <div id="store-logo-placeholder" class="text-xs font-bold text-brand-400 flex flex-col items-center gap-1">
       <span class="text-2xl">🖼️</span>
-      <span>STORE LOGO (高度 150px)</span>
+      <span>STORE LOGO (150px)</span>
     </div>
   </div>
   
-  <div class="max-w-md mx-auto text-center pt-6 pb-4 px-4 relative bg-brand-50">
+  <div class="max-w-md mx-auto text-center pt-2 pb-4 px-4 relative bg-brand-50">
     <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約</h1>
     <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
   </div>
@@ -505,11 +505,8 @@
     }
 
     let totalDuration = 0;
-    let hasGroupB = false;
     document.querySelectorAll('#service-grid input:checked').forEach(cb => {
       totalDuration += Number(cb.getAttribute('data-duration') || 60);
-      const svc = (db.services || []).find(s => s.name === cb.value);
-      if (svc && svc.type === 'Group_B') hasGroupB = true;
     });
     if (totalDuration === 0) totalDuration = 60;
 
@@ -521,12 +518,6 @@
 
     const defaultSlots = [];
     for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
-
-    const d = new Date(dStr.replace(/\//g, '-'));
-    const isWeekend = (d.getDay() === 0 || d.getDay() === 6);
-    const maxCapacity = isWeekend ? 2 : 1;
-    const now = new Date();
-    const bufferMs = Number(db.bookingBufferHours || 1) * 60 * 60 * 1000;
 
     const targetDateFormatted = dStr.replace(/\//g, '-');
     const dayAppts = (db.futureBookings || []).filter(a => {
@@ -541,21 +532,21 @@
       const slotHour = Math.floor(t / 60);
       const slotMin = t % 60;
       const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
-      const slotDateTime = new Date(dStr.replace(/\//g, '-'));
-      slotDateTime.setHours(slotHour, slotMin, 0, 0);
+      
+      // 預設全休：只有在後台排班中被明確設為 true 的時段才開放
+      let isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
 
-      let isAvailable = true;
-      if (slotDateTime.getTime() - now.getTime() < bufferMs) isAvailable = false;
-      if (customStaffSlots && customStaffSlots[timeFormatted] === false) isAvailable = false;
+      // 超出營業時間防呆
       if (t + totalDuration > endMin + interval) isAvailable = false;
       
-      let concurrent = [];
+      // 客滿防呆 (同時段 2 人)
+      let concurrent = 0;
       dayAppts.forEach(a => {
         const aDate = new Date(a.appointment_time);
         const aStart = aDate.getHours() * 60 + aDate.getMinutes();
-        if (t >= aStart && t < aStart + 90) concurrent.push("Group_B");
+        if (t >= aStart && t < aStart + 60) concurrent++;
       });
-      if (concurrent.length >= maxCapacity || (hasGroupB && concurrent.length > 0)) isAvailable = false;
+      if (concurrent >= 2) isAvailable = false;
 
       if (isAvailable) {
         html += `
@@ -570,7 +561,7 @@
       }
     });
 
-    grid.innerHTML = html;
+    grid.innerHTML = html || '<div class="col-span-3 text-center py-4 text-xs text-brand-400">當日無開放預約時段</div>';
   }
 
   function selectTimePill(timeStr, el) {
@@ -593,8 +584,12 @@
       try {
         const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`);
         if (Array.isArray(res) && res.length > 0) {
-          document.getElementById('name').value = res[0].customer_name;
+          document.getElementById('name').value = res[0].customer_name || '';
           if (res[0].line_name) document.getElementById('lineName').value = res[0].line_name;
+          if (res[0].notes && res[0].notes.includes('Email:')) {
+            const emailPart = res[0].notes.split('Email:')[1].trim();
+            if (document.getElementById('email')) document.getElementById('email').value = emailPart;
+          }
           document.getElementById('welcome-msg').innerHTML = `歡迎回來，<b>${res[0].customer_name}</b>！`;
           setType('old', document.querySelectorAll('.type-btn')[0]);
         } else {
@@ -648,9 +643,9 @@
 
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
-    if (!document.getElementById('service').value) { alert("請至少選擇一項預約項目！"); return; }
-    if (!document.getElementById('date').value) { alert("請點選預約日期！"); return; }
-    if (!document.getElementById('time').value) { alert("請選取預約時段！"); return; }
+    if (!document.getElementById('service').value) { Swal.fire('請至少選擇一項預約項目', '', 'warning'); return; }
+    if (!document.getElementById('date').value) { Swal.fire('請點選預約日期', '', 'warning'); return; }
+    if (!document.getElementById('time').value) { Swal.fire('請選取預約時段', '', 'warning'); return; }
 
     const btn = document.getElementById('subBtn');
     btn.disabled = true; btn.innerText = "正在傳送預約...";
@@ -663,12 +658,14 @@
     const dVal = document.getElementById('date').value.replace(/\//g, '-');
     const tVal = document.getElementById('time').value;
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
+    const emailVal = document.getElementById('email')?.value.trim() || '';
 
     const bookingPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: document.getElementById('name').value.trim(),
       customer_phone: document.getElementById('phone').value.trim(),
       line_name: document.getElementById('lineName').value.trim(),
+      notes: emailVal ? `Email: ${emailVal}` : '',
       service_names: document.getElementById('service').value,
       price: totalPrice,
       appointment_time: appointmentIso,
@@ -690,20 +687,32 @@
       });
 
       if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText);
+        const errJson = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(errJson.message || "資料庫寫入失敗");
       }
 
-      // 同步發送 LINE/Email 通知 (非同步觸發)
+      // 同步觸發 GAS 發送通知 (非同步背景執行)
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "submitBooking", store_id: CURRENT_STORE_ID, data: bookingPayload })
       }).catch(() => {});
 
-      document.getElementById('booking-ui').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'flex';
+      Swal.fire({
+        title: '預約申請已送出！',
+        text: '店家確認排程後會立即與您聯繫確認❤️',
+        icon: 'success',
+        confirmButtonText: '確定'
+      }).then(() => {
+        document.getElementById('booking-ui').style.display = 'none';
+        document.getElementById('success-screen').style.display = 'flex';
+      });
     } catch (err) {
-      alert("預約傳送失敗：" + err.message);
+      Swal.fire({
+        title: '預約傳送失敗',
+        text: err.message,
+        icon: 'error',
+        confirmButtonText: '重試'
+      });
       btn.disabled = false;
       btn.innerText = "送出預約";
     }
