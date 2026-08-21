@@ -181,7 +181,7 @@
         <label class="text-xs font-medium text-brand-800">設為「加購項目」</label>
       </div>
       <div class="flex gap-2">
-        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="()">儲存服務項目</button>
+        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveServiceItem()">儲存服務項目</button>
         <button class="px-3 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
       </div>
     </div>
@@ -907,35 +907,38 @@
   }
 
   function renderSingleCardHTML(a) {
-    return `
-      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-        <div class="flex justify-between items-center">
-          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-          </select>
-        </div>
-        <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
-        <div class="text-[11px] text-brand-500">專員：<b>${a.staffName || '不指定'}</b> | LINE：<b>${a.lineName || '無'}</b> | 金額：<b class="text-brand-900">${a.price}元</b> ${a.status==='已結單'?`(實收:<b class="text-red-500">${a.finalPrice}元</b>)`:''}</div>
-        <div class="text-brand-800">項目：<b>${a.service}</b></div>
-        ${a.depositReported ? `<div class="p-1.5 bg-red-50 text-red-600 font-bold rounded-lg text-[11px]">⚠️ 客人已回報匯款後五碼：${a.depositLast5}</div>` : ''}
-        
-        <div class="pt-1 flex gap-1">
-          <input type="text" id="note-input-${a.id}" class="flex-1 p-1.5 text-[11px] border border-brand-200 rounded-lg bg-brand-50/50" placeholder="後台備註(僅老闆/後台可見)" value="${a.notes || ''}">
-          <button class="px-2.5 py-1 bg-brand-800 text-white text-[10px] font-bold rounded-lg shrink-0" onclick="saveBookingNote('${a.id}')">儲存備註</button>
-        </div>
-        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-          <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">結單/改金額</button>
-          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
-        </div>
-      </div>`;
-  }
+  return `
+    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+      <div class="flex justify-between items-center">
+        <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+        </select>
+      </div>
+      <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
+      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+        <div class="font-bold text-brand-900">施作與加購項目：${a.service || '無'}</div>
+        <div class="text-brand-500 font-bold">預估總額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+      </div>
+      ${a.depositReported ? `<div class="p-1.5 bg-red-50 text-red-600 font-bold rounded-lg text-[11px]">⚠️ 已回報後五碼：${a.depositLast5}</div>` : ''}
+
+      <div class="pt-1 flex gap-1">
+        <input type="text" id="note-input-${a.id}" class="flex-1 p-1.5 text-[11px] border border-brand-200 rounded-lg bg-brand-50/50" placeholder="後台備註" value="${a.notes || ''}">
+        <button class="px-2.5 py-1 bg-brand-800 text-white text-[10px] font-bold rounded-lg shrink-0" onclick="saveBookingNote('${a.id}')">存備註</button>
+      </div>
+
+      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
+        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+        <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', ${a.price})">結單</button>
+        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
+      </div>
+    </div>`;
+}
 
   async function quickUpdateStatus(id, newStatus) {
     try {
@@ -993,30 +996,27 @@
   }
 
   function openRescheduleModal(id, name, oldDate, oldTime) {
-    Swal.fire({
-      title: `幫 ${name} 改期`,
-      html: `
-        <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${oldDate.replace(/\//g, '-')}">
-        <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime}">
-      `,
-      showCancelButton: true, confirmButtonText: '確定改期',
-      preConfirm: () => ({ date: document.getElementById('resched-date').value.replace(/-/g, '/'), time: document.getElementById('resched-time').value })
-    }).then(async r => {
-      if (r.isConfirmed) {
-        try {
-          const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
-          await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
-          fetchDataAndRender();
-        } catch (e) {
-          await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "rescheduleBooking", id: id, date: r.value.date, time: r.value.time })
-          });
-          fetchDataAndRender();
-        }
-      }
-    });
-  }
+  Swal.fire({
+    title: `幫 ${name} 改期`,
+    html: `
+      <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-bold mb-3">
+        ⚠️ 務必先核對前台空檔再改時！
+      </div>
+      <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${oldDate.replace(/\//g, '-')}">
+      <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime}">
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定改期',
+    confirmButtonColor: '#A08875',
+    preConfirm: () => ({ date: document.getElementById('resched-date').value.replace(/-/g, '/'), time: document.getElementById('resched-time').value })
+  }).then(async r => {
+    if (r.isConfirmed) {
+      const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
+      await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
+      fetchDataAndRender();
+    }
+  });
+}
 
   function openCompleteModal(id, name, originalPrice) {
     Swal.fire({
@@ -1211,25 +1211,41 @@
 
   // 6. ✂️ 服務管理
   function renderServiceList() {
-    const container = document.getElementById('service-list-container');
-    const svcs = backendData.services || [];
-    if (svcs.length === 0) {
-      container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
-      return;
-    }
-    container.innerHTML = svcs.map((s, idx) => `
-      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-        <div>
-          <div class="font-bold text-brand-900">${s.is_addon ? '✨[加購] ' : ''}${s.service_name}</div>
-          <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration_minutes}分鐘</div>
-        </div>
-        <div class="flex gap-1">
-          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
-          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
-        </div>
-      </div>
-    `).join('');
+  const container = document.getElementById('service-list-container');
+  const svcs = backendData.services || [];
+  if (svcs.length === 0) {
+    container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
+    return;
   }
+  container.innerHTML = svcs.map((s, idx) => `
+    <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+      <div>
+        <div class="font-bold text-brand-900">${s.isAddon ? '✨[加購] ' : ''}${s.name}</div>
+        <div class="text-[11px] text-brand-500">${s.price}元 / ${s.duration}分鐘 / ${s.type}</div>
+      </div>
+      <div class="flex gap-1 items-center">
+        <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
+        <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
+        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
+        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function moveServiceOrder(idx, dir) {
+  const svcs = backendData.services || [];
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= svcs.length) return;
+  const temp = svcs[idx];
+  svcs[idx] = svcs[targetIdx];
+  svcs[targetIdx] = temp;
+  for (let i = 0; i < svcs.length; i++) {
+    svcs[i].sortOrder = i;
+    await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+  }
+  renderServiceList();
+}
 
   function editServiceItem(id) {
     const s = (backendData.services || []).find(item => item.id === id);
@@ -1490,31 +1506,34 @@
   }
 
   async function submitQuickBooking() {
-    const phone = document.getElementById('quick-phone').value.trim();
-    const name = document.getElementById('quick-name').value.trim();
-    const line = document.getElementById('quick-line').value.trim();
-    const service = document.getElementById('quick-service').value;
-    const price = document.getElementById('quick-price').value;
-    const date = document.getElementById('quick-date').value;
-    const time = document.getElementById('quick-time').value;
-    if (!phone || !name || !service || !date || !time) {
-      Swal.fire('請填寫完整預約資料', '', 'warning'); return;
-    }
-    try {
-      await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "forceAddBooking",
-          store_id: CURRENT_STORE_ID,
-          data: { name, phone, lineName: line, service, price, date: date.replace(/-/g, '/'), time }
-        })
-      });
-      fetchDataAndRender();
-      Swal.fire({ title: '已成功新增預約卡片！', icon: 'success', timer: 1500, showConfirmButton: false });
-    } catch (e) {
-      Swal.fire('新增失敗', e.message, 'error');
-    }
+  const phone = document.getElementById('quick-phone').value.trim();
+  const name = document.getElementById('quick-name').value.trim();
+  const line = document.getElementById('quick-line').value.trim();
+  const service = document.getElementById('quick-service').value;
+  const price = document.getElementById('quick-price').value;
+  const date = document.getElementById('quick-date').value;
+  const time = document.getElementById('quick-time').value;
+
+  if (!phone || !name || !service || !date || !time) {
+    Swal.fire('請填寫完整預約資料', '', 'warning');
+    return;
   }
+
+  const appointmentIso = `${date.replace(/\//g, '-')}T${time}:00+08:00`;
+  await directSupabaseUpsert('bookings', {
+    store_id: CURRENT_STORE_ID,
+    customer_name: name,
+    customer_phone: phone,
+    line_name: line,
+    service_names: service,
+    price: Number(price || 0),
+    appointment_time: appointmentIso,
+    status: '已確認'
+  }, 'id');
+
+  Swal.fire({ title: '已成功新增預約卡位！', icon: 'success', timer: 1500, showConfirmButton: false });
+  fetchDataAndRender();
+}
 
   // 10. 💳 方案管理
   function renderSubscriptionUI() {
