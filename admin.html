@@ -270,7 +270,7 @@
     </div>
   </div>
 
-  <!-- 分頁 10. 店休與設定 (含 LINE 官方自動通知完整欄位) -->
+  <!-- 分頁 10. 店休與設定 -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
     <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
@@ -357,6 +357,7 @@
         <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 text-xs bg-white" placeholder="上傳後自動產生圖片網址" readonly>
         <div id="logo-preview-box" class="w-full h-32 rounded-xl overflow-hidden border border-brand-200 bg-cover bg-center" style="display: none;"></div>
       </div>
+
       <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店面地址 (留空則不顯示)">
       <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="營業時間文字">
       <div>
@@ -644,7 +645,6 @@
           await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, admin_pin: r.value.trim() }, 'id');
           Swal.fire('密碼修改成功！', '', 'success');
         } catch (err) {
-          // 若直連失敗，走 GAS 備援
           await fetch(API_URL, {
             method: "POST",
             body: JSON.stringify({ action: "changePin", store_id: CURRENT_STORE_ID, newPin: r.value.trim(), staffId: CURRENT_STAFF_PARAM })
@@ -1600,7 +1600,7 @@
         document.getElementById('logo-preview-box').style.display = 'block';
         Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
       } else {
-        throw new Error("ImgBB 上傳失敗");
+        throw new Error("ImgBB 圖片上傳未成功");
       }
     } catch (e) {
       Swal.fire('上傳失敗', e.message, 'error');
