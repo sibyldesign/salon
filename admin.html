@@ -181,7 +181,7 @@
         <label class="text-xs font-medium text-brand-800">設為「加購項目」</label>
       </div>
       <div class="flex gap-2">
-        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveServiceItem()">儲存服務項目</button>
+        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="()">儲存服務項目</button>
         <button class="px-3 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
       </div>
     </div>
@@ -1275,16 +1275,23 @@
 
     try {
       if (id && id !== "") {
-        await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
-          method: "PATCH",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        await directSupabasePatch('services', `id=eq.${id}`, payload);
+      } else {
+        // 新增服務時不傳入 id，由 Supabase 自動指派 UUID
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/services`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+          },
           body: JSON.stringify(payload)
         });
-      } else {
-        await directSupabaseUpsert('services', payload, 'id');
+        if (!res.ok) throw new Error(await res.text());
       }
       resetServiceForm();
-      fetchDataAndRender();
+      await fetchDataAndRender();
       Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch(e) {
       Swal.fire('儲存失敗', e.message, 'error');
