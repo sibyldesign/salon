@@ -106,7 +106,7 @@
     <div id="cust-content-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 3. 排班管理 (預設全休) -->
+  <!-- 分頁 3. 排班管理 -->
   <div id="page-shift" class="page space-y-4" style="display: none;">
     <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm" id="staff-shift-selector-box">
       <div class="text-[11px] font-bold text-brand-500 mb-2">專員班表切換</div>
@@ -272,7 +272,6 @@
 
   <!-- 分頁 10. 店休與設定 (含 LINE 官方自動通知完整欄位) -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
-    
     <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
       <div class="flex items-center gap-2 text-sm font-bold text-red-500">
@@ -494,7 +493,7 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
-  // 直連 Supabase REST API 讀取方法 (全面排查 400/409 錯誤並丟出詳細原因)
+  // 精準捕捉 Supabase PostgREST 錯誤並回傳詳細 JSON 字串
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
       headers: { 
@@ -503,13 +502,19 @@
       }
     });
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`讀取失敗 [${res.status}]: ${err}`);
+      let errDetail = "";
+      try {
+        const errJson = await res.json();
+        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
+      } catch (e) {
+        errDetail = await res.text();
+      }
+      throw new Error(`[Supabase 讀取錯誤 HTTP ${res.status}] 路由：${endpoint}。原因：${errDetail}`);
     }
     return await res.json();
   }
 
-  // 直連 Supabase Upsert 寫入方法 (關鍵修復：明確指定 on_conflict 參數)
+  // 精準 Upsert 語法：自帶 Prefer 與 on_conflict
   async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
@@ -522,13 +527,19 @@
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`寫入失敗 [${res.status}]: ${err}`);
+      let errDetail = "";
+      try {
+        const errJson = await res.json();
+        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
+      } catch (e) {
+        errDetail = await res.text();
+      }
+      throw new Error(`[Supabase 寫入錯誤 HTTP ${res.status}] 表格：${table}。原因：${errDetail}`);
     }
     return await res.json();
   }
 
-  // 直連 Supabase PATCH 更新方法
+  // 精準 PATCH 語法
   async function directSupabasePatch(table, queryFilter, payload) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
@@ -541,13 +552,18 @@
       body: JSON.stringify(payload)
     });
     if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`更新失敗 [${res.status}]: ${err}`);
+      let errDetail = "";
+      try {
+        const errJson = await res.json();
+        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
+      } catch (e) {
+        errDetail = await res.text();
+      }
+      throw new Error(`[Supabase 更新錯誤 HTTP ${res.status}] 表格：${table}。原因：${errDetail}`);
     }
     return await res.json();
   }
 
-  // 驗證 PIN 碼與登入
   async function checkPin() {
     const input = document.getElementById('pin-input').value.trim();
     try {
@@ -555,12 +571,14 @@
         directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
         directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
       ]);
+      
       let correctPin = (stores && stores.length > 0) ? (stores[0].admin_pin || '8888') : '8888';
       if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
         const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
         const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
         if (staff && staff.pin) correctPin = staff.pin;
       }
+
       if (input === String(correctPin).trim()) {
         document.getElementById('lock-screen').style.display = 'none';
         document.getElementById('main-content').style.display = 'block';
@@ -577,7 +595,12 @@
         document.getElementById('pin-input').value = '';
       }
     } catch (e) {
-      document.getElementById('lock-error').innerText = '連線驗證失敗: ' + e.message;
+      document.getElementById('lock-error').innerText = '驗證異常，請檢視彈窗報錯';
+      Swal.fire({
+        icon: 'error',
+        title: '登入驗證連線失敗',
+        html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${e.message}</div>`
+      });
     }
   }
 
@@ -595,13 +618,17 @@
       confirmButtonColor: '#A08875'
     }).then(async r => {
       if (r.isConfirmed && r.value && r.value.length >= 4) {
-        await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { admin_pin: r.value.trim() });
-        Swal.fire('密碼修改成功！', '', 'success');
+        try {
+          await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { admin_pin: r.value.trim() });
+          Swal.fire('密碼修改成功！', '', 'success');
+        } catch (err) {
+          Swal.fire('修改密碼失敗', err.message, 'error');
+        }
       }
     });
   }
 
-  // 精準撈取 Supabase 原始資料庫所有 Table 並組合物件模型
+  // 完整撈取原始 Supabase 資料，並進行空值診斷
   async function fetchDataAndRender() {
     try {
       const [stores, settings, services, portfolios, bookings] = await Promise.all([
@@ -612,9 +639,17 @@
         directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
       ]);
 
+      if (!stores || stores.length === 0) {
+        Swal.fire({
+          icon: 'warning',
+          title: '找不到該店家記錄',
+          html: `<div class="text-xs text-gray-600 text-left">資料庫 stores 表內無此 UUID：<br><code class="text-red-500 font-mono">${CURRENT_STORE_ID}</code><br><br>請確認網址帶入的 store_id 是否正確，或至 Supabase SQL Editor 執行初始化指令。</div>`
+        });
+      }
+
       const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: "專業美業沙龍", plan_status: "active", expires_at: "" };
       const sCfg = (settings && settings.length > 0) ? settings[0] : {};
-      
+
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -719,14 +754,16 @@
         const staffObj = (backendData.settings.staffList || []).find(s => s.id === CURRENT_STAFF_PARAM);
         const displayName = staffObj ? staffObj.name : CURRENT_STAFF_PARAM;
         document.getElementById('top-bar-title').innerText = `✂️ 專員管理：${displayName}`;
+      } else {
+        document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
       }
+
       if (!backendData.lineBound && !CURRENT_STAFF_PARAM) {
         document.getElementById('line-bind-banner').style.display = 'block';
       } else {
         document.getElementById('line-bind-banner').style.display = 'none';
       }
 
-      // 渲染所有分頁數據
       renderCalendar();
       renderCustomer();
       renderShift();
@@ -739,7 +776,11 @@
       renderQuickAddServices();
       populateSettings();
     } catch (err) {
-      Swal.fire('資料庫讀取異常', err.message, 'error');
+      Swal.fire({
+        icon: 'error',
+        title: '資料庫讀取異常',
+        html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${err.message}</div>`
+      });
     }
   }
 
@@ -752,7 +793,6 @@
     el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
   }
 
-  // 1. 日曆
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
     document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
@@ -794,7 +834,6 @@
       ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
   }
 
-  // 2. 名單
   function renderCustomer() {
     const statusFilter = document.getElementById('filter-status').value;
     const content = document.getElementById('cust-content-area');
@@ -836,14 +875,22 @@
   }
 
   async function quickUpdateStatus(id, newStatus) {
-    await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
-    fetchDataAndRender();
+    try {
+      await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
+      fetchDataAndRender();
+    } catch (e) {
+      Swal.fire('更新預約狀態失敗', e.message, 'error');
+    }
   }
 
   async function saveBookingNote(id) {
-    const notes = document.getElementById(`note-input-${id}`).value.trim();
-    await directSupabasePatch('bookings', `id=eq.${id}`, { notes: notes });
-    Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+    try {
+      const notes = document.getElementById(`note-input-${id}`).value.trim();
+      await directSupabasePatch('bookings', `id=eq.${id}`, { notes: notes });
+      Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire('備註儲存失敗', e.message, 'error');
+    }
   }
 
   function openEditServiceModal(id) {
@@ -859,8 +906,12 @@
       }
     }).then(async r => {
       if (r.isConfirmed) {
-        await directSupabasePatch('bookings', `id=eq.${id}`, { service_names: r.value.svc, price: Number(r.value.price) });
-        fetchDataAndRender();
+        try {
+          await directSupabasePatch('bookings', `id=eq.${id}`, { service_names: r.value.svc, price: Number(r.value.price) });
+          fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('變更項目失敗', e.message, 'error');
+        }
       }
     });
   }
@@ -876,9 +927,13 @@
       preConfirm: () => ({ date: document.getElementById('resched-date').value.replace(/-/g, '/'), time: document.getElementById('resched-time').value })
     }).then(async r => {
       if (r.isConfirmed) {
-        const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
-        await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
-        fetchDataAndRender();
+        try {
+          const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
+          await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
+          fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('改期失敗', e.message, 'error');
+        }
       }
     });
   }
@@ -894,13 +949,16 @@
       preConfirm: () => document.getElementById('swal-final-price').value
     }).then(async r => {
       if (r.isConfirmed) {
-        await directSupabasePatch('bookings', `id=eq.${id}`, { status: '已結單', final_price: Number(r.value) });
-        fetchDataAndRender();
+        try {
+          await directSupabasePatch('bookings', `id=eq.${id}`, { status: '已結單', final_price: Number(r.value) });
+          fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('結單失敗', e.message, 'error');
+        }
       }
     });
   }
 
-  // 3. ⏰ 排班管理
   function renderShift() {
     const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
     document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => `
@@ -908,7 +966,6 @@
         ${s.name}
       </button>
     `).join('');
-    
     const dates = backendData.scheduleDates || [];
     let html = `<div class="date-box shrink-0 px-4 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === 'ALL' ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('ALL')">全部</div>`;
     dates.forEach(d => {
@@ -920,7 +977,6 @@
         </div>`;
     });
     document.getElementById('shift-scroll-area').innerHTML = html;
-    
     const content = document.getElementById('shift-content-area');
     if (currentShiftDate === 'ALL') {
       content.innerHTML = dates.map(d => `
@@ -988,10 +1044,13 @@
   }
 
   async function syncShiftStatesToCloud() {
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_schedules: shiftSlotStates });
+    try {
+      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_schedules: shiftSlotStates });
+    } catch (e) {
+      Swal.fire('排班雲端同步失敗', e.message, 'error');
+    }
   }
 
-  // 4. 💰 業績
   function renderRevenueSelect() {
     const sel = document.getElementById('rev-service-select');
     const svcs = backendData.services || [];
@@ -1039,7 +1098,6 @@
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
   }
 
-  // 5. 🎁 回訪
   function renderCare(reminders) {
     const list = document.getElementById('care-list');
     if (!reminders || reminders.length === 0) {
@@ -1061,7 +1119,6 @@
     });
   }
 
-  // 6. ✂️ 服務管理
   function renderServiceList() {
     const container = document.getElementById('service-list-container');
     const svcs = backendData.services || [];
@@ -1086,17 +1143,21 @@
   }
 
   async function moveServiceOrder(idx, dir) {
-    const svcs = backendData.services || [];
-    const targetIdx = idx + dir;
-    if (targetIdx < 0 || targetIdx >= svcs.length) return;
-    const temp = svcs[idx];
-    svcs[idx] = svcs[targetIdx];
-    svcs[targetIdx] = temp;
-    for (let i = 0; i < svcs.length; i++) {
-      svcs[i].sortOrder = i;
-      await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+    try {
+      const svcs = backendData.services || [];
+      const targetIdx = idx + dir;
+      if (targetIdx < 0 || targetIdx >= svcs.length) return;
+      const temp = svcs[idx];
+      svcs[idx] = svcs[targetIdx];
+      svcs[targetIdx] = temp;
+      for (let i = 0; i < svcs.length; i++) {
+        svcs[i].sortOrder = i;
+        await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+      }
+      renderServiceList();
+    } catch (e) {
+      Swal.fire('排序失敗', e.message, 'error');
     }
-    renderServiceList();
   }
 
   function editServiceItem(id) {
@@ -1116,7 +1177,7 @@
     document.getElementById('edit-svc-id').value = '';
     document.getElementById('svc-name').value = '';
     document.getElementById('svc-price').value = '';
-    document.getElementById('svc-duration').value = '';
+    document.getElementById('svc-duration').value = '60';
     document.getElementById('svc-is-addon').checked = false;
     document.getElementById('svc-form-title').innerText = "新增服務項目";
     document.getElementById('svc-cancel-btn').classList.add('hidden');
@@ -1130,6 +1191,7 @@
     const type = document.getElementById('svc-type').value;
     const isAddon = document.getElementById('svc-is-addon').checked;
     if (!name || !price) { Swal.fire('名稱與金額為必填', '', 'warning'); return; }
+    
     const payload = {
       store_id: CURRENT_STORE_ID,
       service_name: name,
@@ -1138,33 +1200,38 @@
       service_type: type,
       is_addon: isAddon
     };
-    if (id) {
-      await directSupabasePatch('services', `id=eq.${id}`, payload);
-    } else {
-      await directSupabaseUpsert('services', payload, 'id');
+
+    try {
+      if (id) {
+        await directSupabasePatch('services', `id=eq.${id}`, payload);
+      } else {
+        await directSupabaseUpsert('services', payload, 'id');
+      }
+      resetServiceForm();
+      await fetchDataAndRender();
+      Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire('服務儲存失敗', e.message, 'error');
     }
-    resetServiceForm();
-    await fetchDataAndRender();
-    Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   }
 
   async function deleteServiceItem(id) {
     Swal.fire({ title: '確定刪除此服務?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f44336', confirmButtonText: '確定刪除' }).then(async r => {
       if (r.isConfirmed) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
-          method: "DELETE",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (!res.ok) {
-          Swal.fire('刪除失敗', await res.text(), 'error');
-          return;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
+            method: "DELETE",
+            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          if (!res.ok) throw new Error(await res.text());
+          fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('刪除失敗', e.message, 'error');
         }
-        fetchDataAndRender();
       }
     });
   }
 
-  // 7. 🖼️ 作品管理
   function renderPortfolioList() {
     const container = document.getElementById('portfolio-list-container');
     const ports = backendData.portfolio || [];
@@ -1190,17 +1257,21 @@
   }
 
   async function movePortfolioOrder(idx, dir) {
-    const ports = backendData.portfolio || [];
-    const targetIdx = idx + dir;
-    if (targetIdx < 0 || targetIdx >= ports.length) return;
-    const temp = ports[idx];
-    ports[idx] = ports[targetIdx];
-    ports[targetIdx] = temp;
-    for (let i = 0; i < ports.length; i++) {
-      ports[i].sortOrder = i;
-      await directSupabasePatch('portfolios', `id=eq.${ports[i].id}`, { sort_order: i });
+    try {
+      const ports = backendData.portfolio || [];
+      const targetIdx = idx + dir;
+      if (targetIdx < 0 || targetIdx >= ports.length) return;
+      const temp = ports[idx];
+      ports[idx] = ports[targetIdx];
+      ports[targetIdx] = temp;
+      for (let i = 0; i < ports.length; i++) {
+        ports[i].sortOrder = i;
+        await directSupabasePatch('portfolios', `id=eq.${ports[i].id}`, { sort_order: i });
+      }
+      renderPortfolioList();
+    } catch (e) {
+      Swal.fire('移動失敗', e.message, 'error');
     }
-    renderPortfolioList();
   }
 
   function promptEditPortfolioCat(id, oldCat) {
@@ -1212,8 +1283,12 @@
       confirmButtonText: '確定更新'
     }).then(async r => {
       if (r.isConfirmed && r.value) {
-        await directSupabasePatch('portfolios', `id=eq.${id}`, { category: r.value.trim() });
-        await fetchDataAndRender();
+        try {
+          await directSupabasePatch('portfolios', `id=eq.${id}`, { category: r.value.trim() });
+          await fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('更新分類失敗', e.message, 'error');
+        }
       }
     });
   }
@@ -1225,58 +1300,67 @@
     const link = document.getElementById('work-link').value.trim();
     if (!file || !cat || !title) { Swal.fire('分類、標題與照片為必填', '', 'warning'); return; }
     Swal.fire({ title: '正在上傳作品照片...', allowOutsideClick: false }); Swal.showLoading();
-    const formData = new FormData();
-    formData.append("image", file);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-    const imgData = await res.json();
-    if (imgData.success) {
-      await directSupabaseUpsert('portfolios', {
-        store_id: CURRENT_STORE_ID,
-        category: cat,
-        title: title,
-        link: link,
-        img_url: imgData.data.url
-      }, 'id');
-      document.getElementById('work-title').value = '';
-      document.getElementById('work-file').value = '';
-      await fetchDataAndRender();
-      Swal.fire({ title: '作品已發布！', icon: 'success', timer: 1200, showConfirmButton: false });
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+      const imgData = await res.json();
+      if (imgData.success) {
+        await directSupabaseUpsert('portfolios', {
+          store_id: CURRENT_STORE_ID,
+          category: cat,
+          title: title,
+          link: link,
+          img_url: imgData.data.url
+        }, 'id');
+        document.getElementById('work-title').value = '';
+        document.getElementById('work-file').value = '';
+        await fetchDataAndRender();
+        Swal.fire({ title: '作品已發布！', icon: 'success', timer: 1200, showConfirmButton: false });
+      } else {
+        throw new Error("ImgBB 圖床回應錯誤");
+      }
+    } catch (e) {
+      Swal.fire('發布作品失敗', e.message, 'error');
     }
   }
 
   async function deletePortfolioItem(id) {
     Swal.fire({ title: '確定刪除此作品?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f44336', confirmButtonText: '確定刪除' }).then(async r => {
       if (r.isConfirmed) {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?id=eq.${id}`, {
-          method: "DELETE",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (!res.ok) {
-          Swal.fire('刪除失敗', await res.text(), 'error');
-          return;
+        try {
+          const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?id=eq.${id}`, {
+            method: "DELETE",
+            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          if (!res.ok) throw new Error(await res.text());
+          fetchDataAndRender();
+        } catch (e) {
+          Swal.fire('刪除失敗', e.message, 'error');
         }
-        fetchDataAndRender();
       }
     });
   }
 
-  // 8. 🔍 搜尋
   async function executeSearch() {
     const kw = document.getElementById('search-keyword').value.trim();
     if (!kw) return;
     Swal.fire({ title: '搜尋中...', allowOutsideClick: false }); Swal.showLoading();
-    const res = await fetch(`${API_URL}?action=searchBookings&store_id=${CURRENT_STORE_ID}&keyword=${encodeURIComponent(kw)}`);
-    const data = await res.json();
-    Swal.close();
-    const area = document.getElementById('search-results-area');
-    if (!data || data.length === 0) {
-      area.innerHTML = '<div class="text-center text-xs text-brand-400 py-4 bg-white rounded-3xl border border-brand-200">查無相符預約紀錄</div>';
-      return;
+    try {
+      const res = await fetch(`${API_URL}?action=searchBookings&store_id=${CURRENT_STORE_ID}&keyword=${encodeURIComponent(kw)}`);
+      const data = await res.json();
+      Swal.close();
+      const area = document.getElementById('search-results-area');
+      if (!data || data.length === 0) {
+        area.innerHTML = '<div class="text-center text-xs text-brand-400 py-4 bg-white rounded-3xl border border-brand-200">查無相符預約紀錄</div>';
+        return;
+      }
+      area.innerHTML = data.map(a => renderSingleCardHTML(a)).join('');
+    } catch (e) {
+      Swal.fire('搜尋失敗', e.message, 'error');
     }
-    area.innerHTML = data.map(a => renderSingleCardHTML(a)).join('');
   }
 
-  // 9. ⚡ 新增卡位
   function renderQuickAddServices() {
     const sel = document.getElementById('quick-service');
     const svcs = backendData.services || [];
@@ -1292,12 +1376,14 @@
   async function quickCheckCustomer() {
     const phone = document.getElementById('quick-phone').value.trim();
     if (phone.length >= 8) {
-      const res = await fetch(`${API_URL}?action=getCustomerName&store_id=${CURRENT_STORE_ID}&phone=${phone}`);
-      const data = await res.json();
-      if (data.found) {
-        document.getElementById('quick-name').value = data.name;
-        if (data.lineName) document.getElementById('quick-line').value = data.lineName;
-      }
+      try {
+        const res = await fetch(`${API_URL}?action=getCustomerName&store_id=${CURRENT_STORE_ID}&phone=${phone}`);
+        const data = await res.json();
+        if (data.found) {
+          document.getElementById('quick-name').value = data.name;
+          if (data.lineName) document.getElementById('quick-line').value = data.lineName;
+        }
+      } catch (e) {}
     }
   }
 
@@ -1312,19 +1398,22 @@
     if (!phone || !name || !service || !date || !time) {
       Swal.fire('請填寫完整預約資料', '', 'warning'); return;
     }
-    await fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "forceAddBooking",
-        store_id: CURRENT_STORE_ID,
-        data: { name, phone, lineName: line, service, price, date: date.replace(/-/g, '/'), time }
-      })
-    });
-    fetchDataAndRender();
-    Swal.fire({ title: '已成功新增預約卡片！', icon: 'success', timer: 1500, showConfirmButton: false });
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "forceAddBooking",
+          store_id: CURRENT_STORE_ID,
+          data: { name, phone, lineName: line, service, price, date: date.replace(/-/g, '/'), time }
+        })
+      });
+      fetchDataAndRender();
+      Swal.fire({ title: '已成功新增預約卡片！', icon: 'success', timer: 1500, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire('新增失敗', e.message, 'error');
+    }
   }
 
-  // 10. 💳 方案管理
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '美業標準版';
@@ -1384,7 +1473,6 @@
     });
   }
 
-  // 📷 LOGO 上傳至 imgBB 轉網址
   async function uploadLogoImgBB() {
     const file = document.getElementById('logo-file-input').files[0];
     if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
@@ -1399,13 +1487,14 @@
         document.getElementById('logo-preview-box').style.backgroundImage = `url('${data.data.url}')`;
         document.getElementById('logo-preview-box').style.display = 'block';
         Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
+      } else {
+        throw new Error("ImgBB 上傳失敗");
       }
     } catch (e) {
       Swal.fire('上傳失敗', e.message, 'error');
     }
   }
 
-  // ⚙️ 店休設定
   function addCustomOffDate() {
     const dateVal = document.getElementById('new-custom-off-date').value;
     if (!dateVal) return;
@@ -1462,10 +1551,8 @@
     saveStoreSettings();
   }
 
-  // 將資料庫撈回來的實際值回填入 input 欄位
   function populateSettings() {
     const s = backendData.settings || {};
-    if (!CURRENT_STAFF_PARAM) document.getElementById('top-bar-title').innerText = `${s.storeName || '沙龍'} 管理後台`;
     document.getElementById('cfg-title').value = s.storeName || '';
     document.getElementById('cfg-subtitle').value = s.subtitle || '';
     document.getElementById('cfg-logo').value = s.logoUrl || '';
@@ -1575,13 +1662,15 @@
         document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
         document.getElementById(`slot-${idx}`).innerHTML = '';
         Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+      } else {
+        throw new Error("ImgBB 圖片上傳未成功");
       }
     } catch (e) {
       Swal.fire('上傳失敗', e.message, 'error');
     }
   }
 
-  // 核心修復：強制帶 on_conflict=store_id 寫入 Supabase store_settings
+  // 儲存設定至 Supabase
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
     try {
@@ -1626,7 +1715,7 @@
         })).filter(r => r.name !== '')
       };
 
-      // 1. 強制以 on_conflict=store_id 寫入 store_settings (絕不漏單)
+      // 1. 強制以 on_conflict=store_id 寫入 store_settings
       await directSupabaseUpsert('store_settings', payload, 'store_id');
 
       // 2. 同步更新 stores 表主檔
@@ -1640,7 +1729,11 @@
       Swal.fire({ title: '設定已儲存並永久生效！', icon: 'success', timer: 1200, showConfirmButton: false });
       fetchDataAndRender();
     } catch (e) {
-      Swal.fire('寫入失敗', '資料庫錯誤：' + e.message, 'error');
+      Swal.fire({
+        icon: 'error',
+        title: '寫入失敗',
+        html: `<div class="text-left text-xs text-red-600 bg-red-50 p-3 rounded-xl overflow-x-auto">${e.message}</div>`
+      });
     }
   }
 </script>
