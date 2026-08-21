@@ -9,7 +9,6 @@
 </head>
 <body class="bg-gray-100 text-gray-900 min-h-screen p-4 md:p-8">
 
-<!-- 總管解鎖 (密碼框保持空白) -->
 <div id="super-lock" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-3xl max-w-xs w-full text-center space-y-4 shadow-2xl">
     <div class="text-4xl">👑</div>
@@ -22,19 +21,13 @@
 <div class="max-w-3xl mx-auto space-y-6" id="super-panel" style="display: none;">
   <div class="bg-gray-900 text-white p-6 rounded-3xl shadow-lg flex justify-between items-center">
     <div>
-      <h1 class="text-lg font-bold flex items-center gap-2">
-        <span>👑</span> Sibyl SaaS 全客戶營運監控
-      </h1>
-      <p class="text-xs text-gray-400 mt-1">獨立管理所有店家的到期狀態、即時延期與催繳推播</p>
+      <h1 class="text-lg font-bold">👑 Sibyl SaaS 全客戶營運監控</h1>
+      <p class="text-xs text-gray-400 mt-1">直接監控 Supabase stores 資料表</p>
     </div>
-    <button onclick="loadAllStores()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-bold rounded-xl border border-gray-700">重新整理</button>
+    <button onclick="loadAllStores()" class="px-4 py-2 bg-gray-800 text-xs font-bold rounded-xl border border-gray-700">重新整理</button>
   </div>
 
   <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-    <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-      <span class="text-xs font-bold text-gray-700">店家訂閱清單</span>
-      <span class="text-xs font-bold text-gray-400" id="stores-count">讀取中...</span>
-    </div>
     <div id="stores-list-container" class="space-y-3"></div>
   </div>
 </div>
@@ -52,86 +45,47 @@
       loadAllStores();
     } else {
       Swal.fire('密碼錯誤', '', 'error');
-      document.getElementById('sa-secret-input').value = '';
     }
   }
 
   async function loadAllStores() {
     const container = document.getElementById('stores-list-container');
-    container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">載入數據中...</div>';
-    
+    container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">載入中...</div>';
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?select=*&order=created_at.desc`, {
         headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
       });
       const stores = await res.json();
-      document.getElementById('stores-count').innerText = `共 ${stores.length} 家租戶`;
-
-      if (!stores || stores.length === 0) {
-        container.innerHTML = '<div class="text-center text-xs text-gray-400 py-6">目前尚無店家資料</div>';
-        return;
-      }
-
-      const now = new Date();
-      container.innerHTML = stores.map(st => {
-        const expDate = st.expires_at ? new Date(st.expires_at) : null;
-        const diffDays = expDate ? Math.ceil((expDate - now) / (1000 * 60 * 60 * 24)) : -999;
-        
-        let badgeHtml = '';
-        if (st.plan_status === 'expired' || diffDays <= 0) {
-          badgeHtml = '<span class="px-2.5 py-1 bg-red-100 text-red-700 font-bold rounded-lg text-[10px]">🔴 已逾期停權</span>';
-        } else if (diffDays <= 7) {
-          badgeHtml = `<span class="px-2.5 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg text-[10px]">🟡 剩 ${diffDays} 天到期</span>`;
-        } else {
-          badgeHtml = `<span class="px-2.5 py-1 bg-green-100 text-green-800 font-bold rounded-lg text-[10px]">🟢 正常 (剩${diffDays}天)</span>`;
-        }
-
-        return `
-          <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs space-y-2">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-gray-900 text-sm">${st.store_name} <code class="text-gray-400 font-normal">(${st.industry_type || 'beauty'})</code></span>
-              ${badgeHtml}
-            </div>
-            <div class="text-[11px] text-gray-500">
-              到期日：<b>${st.expires_at ? st.expires_at.split('T')[0] : '無'}</b> | 方案：<b>${st.plan_name || '標準版'}</b> | 後台密碼：<code>${st.admin_pin || '8888'}</code>
-            </div>
-            <div class="text-[11px] text-gray-500">
-              負責人信箱：<b>${st.owner_email || '未填'}</b> | 電話：<b>${st.owner_phone || '未填'}</b>
-            </div>
-            <div class="text-[10px] text-gray-400 font-mono">Store ID: ${st.id}</div>
-            <div class="flex gap-2 pt-1 flex-wrap">
-              <button class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold text-[11px]" onclick="saRenew('${st.id}', 30)">+30天</button>
-              <button class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-[11px]" onclick="saRenew('${st.id}', 365)">+1年</button>
-              <button class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-[11px]" onclick="copyNoticeText('${st.store_name}')">📋 複製催繳文案</button>
-              <button class="px-3 py-1.5 bg-gray-800 hover:bg-black text-white rounded-xl font-bold text-[11px]" onclick="window.open('admin.html?store_id=${st.id}', '_blank')">直達店家後台</button>
-            </div>
-          </div>`;
-      }).join('');
-    } catch (err) {
-      container.innerHTML = `<div class="text-center text-xs text-red-500 py-6">載入失敗：${err.message}</div>`;
+      container.innerHTML = stores.map(st => `
+        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs space-y-2">
+          <div class="flex justify-between items-center font-bold text-sm">
+            <span>${st.store_name} (${st.industry_type || 'beauty'})</span>
+            <span class="px-2 py-0.5 rounded text-[10px] ${st.plan_status==='active'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'}">${st.plan_status}</span>
+          </div>
+          <div class="text-gray-500">密碼: <code>${st.admin_pin || '8888'}</code> | 到期: ${st.expires_at ? st.expires_at.split('T')[0] : '無'}</div>
+          <div class="text-gray-400 font-mono text-[10px]">ID: ${st.id}</div>
+          <div class="flex gap-2 pt-1">
+            <button class="px-3 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="saRenew('${st.id}', 30)">+30天</button>
+            <button class="px-3 py-1 bg-blue-600 text-white rounded-lg font-bold" onclick="saRenew('${st.id}', 365)">+1年</button>
+            <button class="px-3 py-1 bg-gray-800 text-white rounded-lg font-bold" onclick="window.open('admin.html?store_id=${st.id}', '_blank')">開啟後台</button>
+          </div>
+        </div>
+      `).join('');
+    } catch(e) {
+      container.innerHTML = `<div class="text-red-500 text-xs">讀取失敗: ${e.message}</div>`;
     }
   }
 
-  async function saRenew(targetStoreId, days) {
-    Swal.fire({ title: '處理中...', allowOutsideClick: false }); Swal.showLoading();
+  async function saRenew(storeId, days) {
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() + Number(days));
-    
-    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${targetStoreId}`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
       method: "PATCH",
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({ plan_status: "active", expires_at: baseDate.toISOString() })
     });
-
-    Swal.fire('已成功延長！', `新到期日：${baseDate.toISOString().split('T')[0]}`, 'success');
+    Swal.fire('已延長！', '', 'success');
     loadAllStores();
-  }
-
-  function copyNoticeText(storeName) {
-    const text = `親愛的 ${storeName} 負責人您好：\n提醒您，您的預約系統方案即將到期。\n為避免前台預約排程中斷，請點選以下 PayUNi 官方安全連結完成續約：\nhttps://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ\n完成後系統將自動延長使用權限，謝謝您！`;
-    navigator.clipboard.writeText(text).then(() => {
-      Swal.fire({ title: '催繳文案已複製！', icon: 'success', timer: 1500, showConfirmButton: false });
-    });
   }
 </script>
 </body>
