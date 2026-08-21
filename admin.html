@@ -37,7 +37,7 @@
     </div>
     <div class="text-base font-bold text-brand-900 mb-4" id="lock-title">沙龍管理後台</div>
     <div id="lock-error" class="text-xs text-red-500 mb-2 h-4"></div>
-    <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6" value="8888">
+    <input type="password" <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6"> class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6" value="8888">
     <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white font-bold rounded-xl shadow-md transition" onclick="checkPin()">解鎖登入</button>
   </div>
 </div>
@@ -55,6 +55,14 @@
   </div>
 </header>
 
+<!-- 系統即時廣播通知橫幅 (由 super.html 發送) -->
+<div id="system-announcement-banner" class="bg-amber-100/80 border border-amber-300 p-3.5 rounded-2xl mb-4 shadow-sm text-xs text-amber-900 hidden">
+  <div class="flex items-center gap-2">
+    <span class="font-bold shrink-0">[系統公告]</span>
+    <span id="announcement-content" class="flex-1"></span>
+  </div>
+</div>
+  
 <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
 
   <!-- LINE 官方三合一防護綁定橫幅 -->
@@ -259,6 +267,12 @@
         <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-green-600" id="sub-status-badge">正常運行中</span></div>
       </div>
     </div>
+
+    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 mt-4">
+  <div class="text-xs font-bold text-brand-900">功能許願池 (直接發送給 Sibyl 開發團隊)</div>
+  <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="告訴我們您希望增加什麼功能？例如：新增多張發票列印模組..."></textarea>
+  <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 text-white font-bold rounded-xl text-xs shadow-md">送出功能願望</button>
+</div>
     
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
@@ -631,6 +645,19 @@
     }
   }
 
+async function submitWish() {
+  const text = document.getElementById('wish-input').value.trim();
+  if (!text) return Swal.fire('請填寫許願內容', '', 'warning');
+  await directSupabaseUpsert('feature_wishes', {
+    store_id: CURRENT_STORE_ID,
+    store_name: backendData.settings.storeName || '沙龍店家',
+    content: text,
+    status: '評估中'
+  }, 'id');
+  document.getElementById('wish-input').value = '';
+  Swal.fire('收到您的願望！', 'Sibyl 開發團隊將盡速評估排程開發。', 'success');
+}
+  
   function enterDashboard() {
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
@@ -960,43 +987,38 @@
   }
 
   function renderSingleCardHTML(a) {
-    return `
-      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-        <div class="flex justify-between items-center">
-          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-          </select>
-        </div>
-        <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
-        <div class="text-[11px] text-brand-500 space-y-0.5">
-          <div>💬 LINE 名稱：<b>${a.lineName || '無'}</b></div>
-          <div>✉️ Email：<b>${a.notes && a.notes.includes('Email:') ? a.notes.split('Email:')[1].trim() : (a.email || '未填寫')}</b></div>
-          <div>👥 服務專員：<b>${a.staffName || '不指定'}</b></div>
-        </div>
-        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-          <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
-        </div>
-        ${a.depositReported ? `<div class="p-1.5 bg-red-50 text-red-600 font-bold rounded-lg text-[11px]">⚠️ 已回報後五碼：${a.depositLast5}</div>` : ''}
-        
-        <div class="pt-1 flex gap-1">
-          <input type="text" id="note-input-${a.id}" class="flex-1 p-1.5 text-[11px] border border-brand-200 rounded-lg bg-brand-50/50" placeholder="後台備註" value="${a.notes || ''}">
-          <button class="px-2.5 py-1 bg-brand-800 text-white text-[10px] font-bold rounded-lg shrink-0" onclick="saveBookingNote('${a.id}')">存備註</button>
-        </div>
-
-        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-          <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
-          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
-        </div>
-      </div>`;
-  }
+  const emailStr = a.notes && a.notes.includes('Email:') ? a.notes.split('Email:')[1].trim() : (a.email || '未填寫');
+  return `
+    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+      <div class="flex justify-between items-center">
+        <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+        </select>
+      </div>
+      <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
+      <div class="text-[11px] text-brand-500 space-y-0.5">
+        <div>LINE 名稱：<b>${a.lineName || '無'}</b></div>
+        <div>電子信箱：<b>${emailStr}</b></div>
+        <div>服務專員：<b>${a.staffName || '不指定'}</b></div>
+      </div>
+      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+        <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
+        <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+      </div>
+      ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
+      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
+        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+        <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
+        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
+      </div>
+    </div>`;
+}
 
   async function quickUpdateStatus(id, newStatus) {
     try {
