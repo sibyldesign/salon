@@ -344,24 +344,33 @@
           <input type="email" id="buyerEmail" placeholder="例如：owner@gmail.com" required class="w-full p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 outline-none">
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1">發票開立類型</label>
-          <select id="invoiceType" onchange="toggleCompanyInvoice(this.value)" class="w-full p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 outline-none">
-            <option value="personal">個人雲端電子發票 (B2C)</option>
-            <option value="company">公司發票 (需填統一編號與抬頭)</option>
-          </select>
-        </div>
+        <!-- 發票開立類型與載具填寫欄位 -->
+<div>
+  <label class="block text-xs font-bold text-brand-800 mb-1">發票開立類型</label>
+  <select id="invoiceType" onchange="toggleInvoiceFields(this.value)" class="w-full p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 outline-none">
+    <option value="personal">個人雲端電子發票 (會員載具/寄送信箱)</option>
+    <option value="mobile">手機條碼共通載具 (例如: /AB12345)</option>
+    <option value="company">公司發票 (需填統一編號與抬頭)</option>
+  </select>
+</div>
 
-        <div id="companyInvoiceFields" class="hidden p-4 rounded-xl border border-dashed border-brand-300 bg-brand-50/60 space-y-3">
-          <div>
-            <label class="block text-xs font-bold text-brand-800 mb-1">公司抬頭</label>
-            <input type="text" id="companyTitle" placeholder="請輸入完整公司名稱" class="w-full p-2.5 rounded-lg border border-brand-200 bg-white text-xs outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-brand-800 mb-1">統一編號</label>
-            <input type="text" id="companyTaxId" maxlength="8" placeholder="請輸入 8 碼統一編號" class="w-full p-2.5 rounded-lg border border-brand-200 bg-white text-xs outline-none">
-          </div>
-        </div>
+<!-- 手機條碼載具欄位 (預設隱藏) -->
+<div id="mobileCarrierField" class="hidden p-3.5 rounded-xl border border-dashed border-brand-300 bg-brand-50/60">
+  <label class="block text-xs font-bold text-brand-800 mb-1">手機條碼載具 (請包含斜線 /)</label>
+  <input type="text" id="mobileCarrier" placeholder="例如：/AB12345" maxlength="8" class="w-full p-2.5 rounded-lg border border-brand-200 bg-white text-xs outline-none uppercase font-mono">
+</div>
+
+<!-- 公司發票欄位 (預設隱藏) -->
+<div id="companyInvoiceFields" class="hidden p-4 rounded-xl border border-dashed border-brand-300 bg-brand-50/60 space-y-3">
+  <div>
+    <label class="block text-xs font-bold text-brand-800 mb-1">公司抬頭</label>
+    <input type="text" id="companyTitle" placeholder="請輸入完整公司名稱" class="w-full p-2.5 rounded-lg border border-brand-200 bg-white text-xs outline-none">
+  </div>
+  <div>
+    <label class="block text-xs font-bold text-brand-800 mb-1">統一編號</label>
+    <input type="text" id="companyTaxId" maxlength="8" placeholder="請輸入 8 碼統一編號" class="w-full p-2.5 rounded-lg border border-brand-200 bg-white text-xs outline-none">
+  </div>
+</div>
 
         <button type="button" onclick="submitAndPay()" class="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-2xl shadow-lg transition text-sm flex items-center justify-center gap-2">
           <span>確認無誤，前往 PayUNi 安全付款</span>
@@ -478,6 +487,11 @@
         Swal.fire('連線異常', e.message, 'error');
       }
     }
+
+    function toggleInvoiceFields(val) {
+  document.getElementById('mobileCarrierField').classList.toggle('hidden', val !== 'mobile');
+  document.getElementById('companyInvoiceFields').classList.toggle('hidden', val !== 'company');
+}
   </script>
 </body>
 </html>
