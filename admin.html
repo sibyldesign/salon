@@ -55,17 +55,17 @@
   </div>
 </header>
 
-<!-- 系統即時廣播通知橫幅 (由 super.html 發送) -->
-<div id="system-announcement-banner" class="bg-amber-100/80 border border-amber-300 p-3.5 rounded-2xl mb-4 shadow-sm text-xs text-amber-900 hidden">
-  <div class="flex items-center gap-2">
-    <span class="font-bold shrink-0">[系統公告]</span>
-    <span id="announcement-content" class="flex-1"></span>
-  </div>
-</div>
-  
 <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
 
-  <!-- LINE 官方三合一防護綁定橫幅 -->
+  <!-- 系統即時廣播通知橫幅 (由 super.html 發送) -->
+  <div id="system-announcement-banner" class="bg-amber-100/90 border border-amber-300 p-3.5 rounded-2xl mb-4 shadow-sm text-xs text-amber-900 hidden">
+    <div class="flex items-center gap-2">
+      <span class="font-bold shrink-0">📢 [系統公告]</span>
+      <span id="announcement-content" class="flex-1 font-medium leading-relaxed"></span>
+    </div>
+  </div>
+
+  <!-- LINE 官方防護綁定橫幅 -->
   <div id="line-bind-banner" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-3xl mb-4 shadow-sm space-y-2 text-xs" style="display: none;">
     <div class="flex items-center justify-between">
       <span class="font-bold text-amber-900 flex items-center gap-1.5 text-sm">
@@ -103,9 +103,9 @@
   <!-- 分頁 2. 名單 -->
   <div id="page-customer" class="page space-y-3" style="display: none;">
     <div class="flex justify-between items-center bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm">
-      <span class="text-xs font-bold text-brand-900">📋 預約即將到來名單</span>
+      <span class="text-xs font-bold text-brand-900">📋 預約名單與審核</span>
       <select id="filter-status" class="text-xs border border-brand-200 rounded-lg px-2 py-1 bg-brand-50" onchange="renderCustomer()">
-        <option value="ALL">全部狀態</option>
+        <option value="ALL">全部狀態 (未結單)</option>
         <option value="待確認">待確認</option>
         <option value="已確認">已確認</option>
         <option value="已結單">已結單</option>
@@ -132,7 +132,6 @@
       <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
         <option value="ALL">全部服務項目總覽</option>
       </select>
-      
       <div class="grid grid-cols-2 gap-2 text-center">
         <div class="p-3 bg-green-50 rounded-2xl border border-green-100">
           <div class="text-[10px] text-green-700 font-bold">已結單總業績</div>
@@ -165,9 +164,10 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">⚙️ 自訂 5 組關懷週期與文案 (單位：週)</div>
       <div id="care-rules-container" class="space-y-2"></div>
-      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="()">儲存關懷規則</button>
+      <button class="w-full py-2.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition" onclick="saveCareRulesSetting()">儲存關懷規則</button>
     </div>
   </div>
+
   <!-- 分頁 6. 服務項目與作品 -->
   <div id="page-services" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -175,7 +175,7 @@
       <input type="hidden" id="edit-svc-id">
       <div class="grid grid-cols-2 gap-2">
         <input type="text" id="svc-name" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="服務名稱">
-        <input type="text" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額">
+        <input type="text" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="金額 (例: 800 或 2000-4500)">
       </div>
       <div class="grid grid-cols-2 gap-2">
         <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="時間 (分鐘)" value="60">
@@ -189,7 +189,7 @@
         <label class="text-xs font-medium text-brand-800">設為「加購項目」</label>
       </div>
       <div class="flex gap-2">
-        <button class="flex-1 py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveServiceItem()">儲存服務項目</button>
+        <button class="flex-1 py-2.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition" onclick="saveServiceItem()">儲存服務項目</button>
         <button class="px-3 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
       </div>
     </div>
@@ -200,14 +200,14 @@
     
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">新增作品集</div>
-      <input type="text" id="work-cat" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="分類 (例如：染髮設計 / 美甲光療)">
+      <input type="text" id="work-cat" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="分類 (例如：女生染髮 / 美甲光療)">
       <input type="text" id="work-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="作品標題">
       <input type="text" id="work-link" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="IG 連結 (選填)">
       <input type="file" id="work-file" class="w-full p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50" accept="image/*">
-      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="uploadAndSavePortfolio()">發布作品</button>
+      <button class="w-full py-2.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition" onclick="uploadAndSavePortfolio()">發布作品</button>
     </div>
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-      <div class="text-xs font-bold text-brand-900 mb-2">作品展示列表 (支援左右移動與修改分類)</div>
+      <div class="text-xs font-bold text-brand-900 mb-2">作品展示列表 (支援移動排序與修改分類)</div>
       <div id="portfolio-list-container" class="grid grid-cols-2 gap-2"></div>
     </div>
   </div>
@@ -218,7 +218,7 @@
       <div class="text-xs font-bold text-brand-900">🔍 搜尋過往與當前預約</div>
       <div class="flex gap-2">
         <input type="text" id="search-keyword" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="輸入 電話 / 姓名 / LINE名稱">
-        <button class="px-4 py-2 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-sm" onclick="executeSearch()">搜尋</button>
+        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-sm transition" onclick="executeSearch()">搜尋</button>
       </div>
     </div>
     <div id="search-results-area" class="space-y-3"></div>
@@ -253,7 +253,7 @@
         <label class="block text-xs font-bold text-brand-800 mb-1">6. 進場時間：</label>
         <input type="time" id="quick-time" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50">
       </div>
-      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="submitQuickBooking()">確定新增卡位</button>
+      <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="submitQuickBooking()">確定新增卡位</button>
     </div>
   </div>
 
@@ -269,10 +269,10 @@
     </div>
 
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 mt-4">
-  <div class="text-xs font-bold text-brand-900">功能許願池 (直接發送給 Sibyl 開發團隊)</div>
-  <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="告訴我們您希望增加什麼功能？"></textarea>
-  <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 text-white font-bold rounded-xl text-xs shadow-md">送出功能願望</button>
-</div>
+      <div class="text-xs font-bold text-brand-900">功能許願池 (直接發送給 Sibyl 開發團隊)</div>
+      <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="告訴我們您希望增加什麼功能？"></textarea>
+      <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs shadow-md transition">送出功能願望</button>
+    </div>
     
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
@@ -284,7 +284,7 @@
     </div>
   </div>
 
-  <!-- 分頁 10. 店休與設定 (含 LINE 官方自動通知完整欄位) -->
+  <!-- 分頁 10. 店休與設定 -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
     <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
@@ -308,7 +308,7 @@
         <div class="text-xs font-bold text-brand-900">2. 指定特殊公休日</div>
         <div class="flex gap-2">
           <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white">
-          <button class="px-3.5 py-2 bg-brand-400 text-white rounded-xl text-xs font-bold" onclick="addCustomOffDate()">+ 新增</button>
+          <button class="px-3.5 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition" onclick="addCustomOffDate()">+ 新增</button>
         </div>
         <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
       </div>
@@ -317,33 +317,32 @@
 
     <!-- 審核與訂金設定 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="text-xs font-bold text-brand-900">預約審核與訂金規則</div>
-  <div class="space-y-2 text-xs">
-    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-      <span class="font-medium">啟用 預約先由店家審核</span>
-      <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
-    </label>
-    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-      <span class="font-medium">啟用 線下收取訂金機制</span>
-      <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
-    </label>
-  </div>
-  
-  <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-    <label class="block text-xs font-bold text-brand-800">訂金收取條件對象：</label>
-    <select id="cfg-deposit-mode" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white">
-      <option value="new_only">1. 僅「新朋友」需付訂金</option>
-      <option value="all">2. 「新朋友與舊朋友」皆需付訂金</option>
-    </select>
-    <div class="flex items-center gap-2 pt-1">
-      <span class="text-xs font-bold text-brand-800 shrink-0">每筆訂金金額：</span>
-      <input type="number" id="cfg-deposit-amount" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white" placeholder="例如：500">
-      <span class="text-xs text-brand-500 shrink-0">元</span>
+      <div class="text-xs font-bold text-brand-900">預約審核與訂金規則</div>
+      <div class="space-y-2 text-xs">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <span class="font-medium">啟用 預約先由店家審核</span>
+          <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <span class="font-medium">啟用 線下收取訂金機制</span>
+          <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
+        </label>
+      </div>
+      
+      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+        <label class="block text-xs font-bold text-brand-800">訂金收取條件對象：</label>
+        <select id="cfg-deposit-mode" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white">
+          <option value="new_only">1. 僅「新朋友」需付訂金</option>
+          <option value="all">2. 「新朋友與舊朋友」皆需付訂金</option>
+        </select>
+        <div class="flex items-center gap-2 pt-1">
+          <span class="text-xs font-bold text-brand-800 shrink-0">每筆訂金金額：</span>
+          <input type="number" id="cfg-deposit-amount" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white" placeholder="例如：500">
+          <span class="text-xs text-brand-500 shrink-0">元</span>
+        </div>
+      </div>
+      <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="匯款銀行帳號與說明文字..."></textarea>
     </div>
-  </div>
-
-  <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="匯款銀行帳號與說明文字..."></textarea>
-</div>
 
     <!-- 居家保養小叮嚀 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -363,11 +362,11 @@
         <input type="text" id="new-staff-id" class="w-1/3 p-2 rounded-xl border border-brand-200 text-xs" placeholder="代號 (如 a)">
         <input type="text" id="new-staff-name" class="w-1/3 p-2 rounded-xl border border-brand-200 text-xs" placeholder="姓名 (如 店長)">
         <input type="text" id="new-staff-pin" class="w-1/4 p-2 rounded-xl border border-brand-200 text-xs" placeholder="密碼" value="8888">
-        <button class="flex-1 py-2 bg-brand-400 text-white text-xs font-bold rounded-xl" onclick="addStaffMember()">新增</button>
+        <button class="flex-1 py-2 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition" onclick="addStaffMember()">新增</button>
       </div>
     </div>
 
-    <!-- 基本資料與 Logo 上傳 (高度 150px、背景留白) -->
+    <!-- 基本資料與 Logo 上傳 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🏪 品牌資料與 LOGO 上傳</div>
       <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
@@ -377,7 +376,7 @@
         <label class="block text-xs font-bold text-brand-800">前台頂部 LOGO 圖片 (高度 150px、自動置中留白)</label>
         <div class="flex gap-2 items-center">
           <input type="file" id="logo-file-input" accept="image/*" class="text-xs text-brand-800 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-400 file:text-white hover:file:bg-brand-500 cursor-pointer">
-          <button type="button" onclick="uploadLogoImgBB()" class="px-4 py-2 bg-brand-800 text-white text-xs font-bold rounded-xl shadow-sm">上傳轉網址</button>
+          <button type="button" onclick="uploadLogoImgBB()" class="px-4 py-2 bg-brand-800 hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm transition">上傳轉網址</button>
         </div>
         <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 text-xs bg-white" placeholder="上傳後自動產生圖片網址" readonly>
         <div id="logo-preview-box" class="w-full h-[150px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2" style="display: none;">
@@ -405,67 +404,61 @@
       </select>
     </div>
 
+    <!-- 模組開關 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 預約先由店家審核</span><input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 線下收取訂金機制</span><input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
-  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-  <div>
-    <span class="font-bold text-brand-900 block">啟用 LINE 對話框「一鍵接單/婉拒」</span>
-    <span class="text-[10px] text-brand-500">預約成立自動推播審核卡片至老闆 LINE 對話框</span>
-  </div>
-  <input type="checkbox" id="cfg-toggle-line-one-click" class="accent-brand-400" checked>
-</label>
-
-<label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-  <div>
-    <span class="font-bold text-brand-900 block">啟用 前台設計師熱推選品專區</span>
-    <span class="text-[10px] text-brand-500">於前台呈現精選商品並引導至專屬商城 (shop.html)</span>
-  </div>
-  <input type="checkbox" id="cfg-toggle-featured-shop" class="accent-brand-400" checked>
-</label>
-</div>
-
-      <!-- 進階自動化模組開關 (已移除模組 3) -->
-<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="text-xs font-bold text-brand-900">進階自動化模組開關</div>
-  <div class="space-y-2 text-xs">
-    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-      <div>
-        <span class="font-bold text-brand-900 block">模組 1：LINE 互動式價目表 (Flex Menu)</span>
-        <span class="text-[10px] text-brand-500">自動將服務列表轉為精美卡片按鈕 (預設啟用)</span>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 預約先由店家審核</span><input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 線下收取訂金機制</span><input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <div>
+            <span class="font-bold text-brand-900 block">啟用 LINE 對話框「一鍵接單/婉拒」</span>
+            <span class="text-[10px] text-brand-500">預約成立自動推播審核卡片至老闆 LINE 對話框</span>
+          </div>
+          <input type="checkbox" id="cfg-toggle-line-one-click" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <div>
+            <span class="font-bold text-brand-900 block">啟用 前台設計師熱推選品專區</span>
+            <span class="text-[10px] text-brand-500">於前台呈現精選商品並引導至專屬商城 (shop.html)</span>
+          </div>
+          <input type="checkbox" id="cfg-toggle-featured-shop" class="accent-brand-400" checked>
+        </label>
       </div>
-      <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
-    </label>
 
-    <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-      <div>
-        <span class="font-bold text-brand-900 block">模組 2：自動化排程預約提醒引擎</span>
-        <span class="text-[10px] text-brand-500">預約日前一天早上 9:00 自動推播提醒 (需填寫下方 LINE Token)</span>
+      <div class="text-xs font-bold text-brand-900 pt-2 border-t border-brand-100">進階自動化模組開關</div>
+      <div class="space-y-2 text-xs">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <div>
+            <span class="font-bold text-brand-900 block">模組 1：LINE 互動式價目表 (Flex Menu)</span>
+            <span class="text-[10px] text-brand-500">自動將服務列表轉為精美卡片按鈕 (預設啟用)</span>
+          </div>
+          <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+          <div>
+            <span class="font-bold text-brand-900 block">模組 2：自動化排程預約提醒引擎</span>
+            <span class="text-[10px] text-brand-500">預約日前一天早上 9:00 自動推播提醒 (需填寫下方 LINE Token)</span>
+          </div>
+          <input type="checkbox" id="cfg-toggle-auto-reminder" class="accent-brand-400">
+        </label>
       </div>
-      <input type="checkbox" id="cfg-toggle-auto-reminder" class="accent-brand-400">
-    </label>
-  </div>
-</div>
+    </div>
 
     <!-- LINE 官方自動推播與 Channel Access Token 欄位 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-        <span>💬</span> 官方 LINE 自動推播通知設定
-      </div>
       <div class="flex items-center justify-between">
-  <span class="text-xs font-bold text-brand-900">官方 LINE 自動推播通知設定</span>
-  <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 點我看設定 3 步驟</button>
-</div>
+        <span class="text-xs font-bold text-brand-900">💬 官方 LINE 自動推播通知設定</span>
+        <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 設定 3 步驟</button>
+      </div>
       <div class="space-y-2 text-xs">
         <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/80 border border-brand-200">
           <span class="font-bold text-brand-900">是否開通官方 LINE 自動通知客人 (預約成功 / 即將到來提醒)</span>
@@ -484,18 +477,26 @@
       </div>
     </div>
 
+    <!-- 說明圖與換行公告設定 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">說明圖管理 (4:5 比例)</div>
-      <input type="text" id="cfg-promo" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="跑馬燈公告文字">
-      <div class="grid grid-cols-4 gap-2" id="promo-upload-grid"></div>
+      <div class="text-xs font-bold text-brand-900">說明圖管理與滿版公告</div>
+      <div>
+        <label class="block text-xs font-bold text-brand-800 mb-1">前台公告文字 (支援換行)：</label>
+        <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white" placeholder="填寫店家最新公告（支援直接按 Enter 換行）"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-brand-800 mb-1.5">活動說明圖 (9:16 直式長條比例，最多 7 張)：</label>
+        <div class="grid grid-cols-4 gap-2" id="promo-upload-grid"></div>
+      </div>
     </div>
 
+    <!-- 社群與存檔按鈕 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">通知與社群連結</div>
       <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="官方 LINE 連結網址">
       <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Instagram 網址">
       <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Google 地圖網址">
-      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="()">儲存全部設定</button>
+      <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="saveStoreSettings()">儲存全部設定</button>
     </div>
   </div>
 </main>
@@ -544,7 +545,6 @@
     </button>
   </nav>
 </div>
-
 <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
@@ -564,7 +564,6 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
-  // 直連 Supabase REST API
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
       headers: { 
@@ -572,20 +571,10 @@
         "Authorization": `Bearer ${SUPABASE_ANON_KEY}` 
       }
     });
-    if (!res.ok) {
-      let errDetail = "";
-      try {
-        const errJson = await res.json();
-        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
-      } catch (e) {
-        errDetail = await res.text();
-      }
-      throw new Error(`[Supabase 讀取錯誤 HTTP ${res.status}] 路由：${endpoint}。原因：${errDetail}`);
-    }
+    if (!res.ok) throw new Error(await res.text());
     return await res.json();
   }
 
-  // 直連 Supabase Upsert
   async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
@@ -597,20 +586,10 @@
       },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) {
-      let errDetail = "";
-      try {
-        const errJson = await res.json();
-        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
-      } catch (e) {
-        errDetail = await res.text();
-      }
-      throw new Error(`[Supabase 寫入錯誤 HTTP ${res.status}] 表格：${table}。原因：${errDetail}`);
-    }
+    if (!res.ok) throw new Error(await res.text());
     return await res.json();
   }
 
-  // 直連 Supabase PATCH
   async function directSupabasePatch(table, queryFilter, payload) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
@@ -622,20 +601,10 @@
       },
       body: JSON.stringify(payload)
     });
-    if (!res.ok) {
-      let errDetail = "";
-      try {
-        const errJson = await res.json();
-        errDetail = errJson.message || errJson.hint || JSON.stringify(errJson);
-      } catch (e) {
-        errDetail = await res.text();
-      }
-      throw new Error(`[Supabase 更新錯誤 HTTP ${res.status}] 表格：${table}。原因：${errDetail}`);
-    }
+    if (!res.ok) throw new Error(await res.text());
     return await res.json();
   }
 
-  // 登入驗證
   async function checkPin() {
     const input = document.getElementById('pin-input').value.trim();
     try {
@@ -683,19 +652,19 @@
     }
   }
 
-async function submitWish() {
-  const text = document.getElementById('wish-input').value.trim();
-  if (!text) return Swal.fire('請填寫許願內容', '', 'warning');
-  await directSupabaseUpsert('feature_wishes', {
-    store_id: CURRENT_STORE_ID,
-    store_name: backendData.settings.storeName || '沙龍店家',
-    content: text,
-    status: '評估中'
-  }, 'id');
-  document.getElementById('wish-input').value = '';
-  Swal.fire('收到您的願望！', 'Sibyl 開發團隊將盡速評估排程開發。', 'success');
-}
-  
+  async function submitWish() {
+    const text = document.getElementById('wish-input').value.trim();
+    if (!text) return Swal.fire('請填寫許願內容', '', 'warning');
+    await directSupabaseUpsert('feature_wishes', {
+      store_id: CURRENT_STORE_ID,
+      store_name: backendData.settings.storeName || '沙龍店家',
+      content: text,
+      status: '評估中'
+    }, 'id');
+    document.getElementById('wish-input').value = '';
+    Swal.fire('收到您的願望！', 'Sibyl 開發團隊將盡速評估排程開發。', 'success');
+  }
+
   function enterDashboard() {
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('main-content').style.display = 'block';
@@ -706,6 +675,20 @@ async function submitWish() {
     }
     renderUploadSlots();
     fetchDataAndRender();
+    fetchSystemAnnouncement();
+  }
+
+  // 抓取 super.html 發布的即時公告
+  async function fetchSystemAnnouncement() {
+    try {
+      const data = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
+      if (data && data.length > 0 && data[0].content) {
+        document.getElementById('announcement-content').innerText = data[0].content;
+        document.getElementById('system-announcement-banner').classList.remove('hidden');
+      } else {
+        document.getElementById('system-announcement-banner').classList.add('hidden');
+      }
+    } catch(e){}
   }
 
   function openLineBindLiff() {
@@ -736,7 +719,6 @@ async function submitWish() {
     });
   }
 
-  // 雙通道自動切換撈取資料
   async function fetchDataAndRender() {
     try {
       let stores = [], settings = [], services = [], portfolios = [], bookings = [];
@@ -760,7 +742,6 @@ async function submitWish() {
       if (!isDirectSuccess) {
         const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
         const gasData = await gasRes.json();
-        
         if (gasData && gasData.settings) {
           backendData = gasData;
           backendData.appointments = gasData.appointments || [];
@@ -797,7 +778,6 @@ async function submitWish() {
       }
 
       const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "", plan_status: "active", expires_at: "" };
-
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -830,6 +810,7 @@ async function submitWish() {
             duration: 60,
             name: b.customer_name,
             phone: b.customer_phone,
+            customer_type: b.customer_type || 'old',
             lineName: b.line_name || '',
             service: b.service_names || '',
             price: Number(b.price) || 0,
@@ -851,7 +832,7 @@ async function submitWish() {
         scheduleDates: availableDates.map(dStr => ({ date: dStr, status: 'open' })),
         services: (services || []).map(s => ({
           id: s.id, name: s.service_name, duration: s.duration_minutes || 60,
-          type: s.service_type || "Group_A", price: Number(s.price) || 0,
+          type: s.service_type || "Group_A", price: s.price || 0,
           isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
         })),
         portfolio: (portfolios || []).map(p => ({
@@ -868,13 +849,15 @@ async function submitWish() {
           businessHours: sCfg.business_hours || "",
           bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
           careText: sCfg.care_text || "",
+          depositInfo: sCfg.deposit_info || "",
+          depositMode: sCfg.deposit_mode || "all",
+          depositAmount: Number(sCfg.deposit_amount || 0),
           ig: sCfg.ig_url || "",
           line: sCfg.line_url || "",
           map: sCfg.map_url || "",
           enableEmailCopy: sCfg.enable_email_copy ?? true,
           enableAuditBooking: sCfg.enable_audit_booking ?? true,
           enableDeposit: sCfg.enable_deposit ?? true,
-          depositInfo: sCfg.deposit_info || "",
           enableStaffSelect: sCfg.enable_staff_select ?? true,
           enableMultiStaffSchedule: sCfg.enable_multi_staff_schedule ?? true,
           enableCarousel: sCfg.enable_carousel ?? true,
@@ -882,6 +865,10 @@ async function submitWish() {
           enablePortfolio: sCfg.enable_portfolio ?? true,
           enableCare: sCfg.enable_care ?? true,
           enableLineAutoNotify: sCfg.enable_line_auto_notify === true,
+          enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
+          enableFeaturedShop: sCfg.enable_featured_shop ?? true,
+          enableFlexMenu: sCfg.enable_flex_menu ?? true,
+          enableAutoReminder: sCfg.enable_auto_reminder === true,
           lineChannelToken: sInfo.line_channel_token || sCfg.line_channel_token || "",
           staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
           staffSchedules: sCfg.staff_schedules || {},
@@ -926,37 +913,35 @@ async function submitWish() {
   }
 
   function showLineGuideModal() {
-  Swal.fire({
-    title: 'LINE 官方帳號 API 設定指南',
-    html: `
-      <div class="text-left text-xs text-brand-800 space-y-2.5 leading-relaxed overflow-y-auto max-h-[60vh] p-1">
-        <p class="font-bold text-brand-900">老闆您好！為了讓顧客預約成功或到來前自動收到 LINE 提醒（由您的官方帳號發送，安全且免費），請完成以下 3 步驟：</p>
-        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
-          <b>第一步：準備 LINE 官方帳號</b>
-          <ul class="list-disc pl-4 mt-1 space-y-1">
-            <li>確認已擁有店家專屬 LINE 官方帳號。</li>
-            <li>使用電腦登入 <a href="https://developers.line.biz/" target="_blank" class="text-blue-600 underline font-bold">LINE Developers 開發者後台</a>（使用管理員帳號登入）。</li>
-          </ul>
+    Swal.fire({
+      title: 'LINE 官方帳號 API 設定指南',
+      html: `
+        <div class="text-left text-xs text-brand-800 space-y-2.5 leading-relaxed overflow-y-auto max-h-[60vh] p-1">
+          <p class="font-bold text-brand-900">為了讓顧客預約成功或到來前自動收到 LINE 提醒，請完成以下 3 步驟：</p>
+          <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+            <b>第一步：準備 LINE 官方帳號</b>
+            <ul class="list-disc pl-4 mt-1 space-y-1">
+              <li>登入 <a href="https://developers.line.biz/" target="_blank" class="text-blue-600 underline font-bold">LINE Developers 後台</a>。</li>
+            </ul>
+          </div>
+          <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+            <b>第二步：建立 Messaging API 通道</b>
+            <ul class="list-disc pl-4 mt-1 space-y-1">
+              <li>點擊「Create a new provider」輸入店名，再點選「Create a Messaging API channel」。</li>
+            </ul>
+          </div>
+          <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+            <b>第三步：發行權杖</b>
+            <ul class="list-disc pl-4 mt-1 space-y-1">
+              <li>在「Messaging API」分頁最下方點擊「Issue」取得 Channel access token，貼入後台欄位儲存即可。</li>
+            </ul>
+          </div>
         </div>
-        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
-          <b>第二步：建立 Messaging API 通道</b>
-          <ul class="list-disc pl-4 mt-1 space-y-1">
-            <li>點擊「Create a new provider」，輸入您的店名。</li>
-            <li>點擊「Create a Messaging API channel」，填寫 Channel Name（例：XX美學預約小幫手）。</li>
-          </ul>
-        </div>
-        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
-          <b>第三步：取得 Channel Access Token</b>
-          <ul class="list-disc pl-4 mt-1 space-y-1">
-            <li>進入該 Channel 的「Messaging API」分頁。</li>
-            <li>拉到最下方點擊「Issue」發行長期 Token，複製後貼入下方欄位儲存即可！</li>
-          </ul>
-        </div>
-      </div>
-    `,
-    confirmButtonText: '我知道了'
-  });
-}
+      `,
+      confirmButtonText: '我知道了',
+      confirmButtonColor: '#A08875'
+    });
+  }
 
   function switchPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
@@ -967,7 +952,6 @@ async function submitWish() {
     el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
   }
 
-  // 1. 日曆
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
     document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
@@ -1009,60 +993,56 @@ async function submitWish() {
       ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
   }
 
-  // 2. 名單
   function renderCustomer() {
     const statusFilter = document.getElementById('filter-status').value;
     let appts = backendData.appointments || [];
-
-    // 預設全部狀態時，自動排除「已結單」與「已取消」，讓已結單跑去業績分頁
     if (statusFilter === 'ALL') {
       appts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消');
     } else {
       appts = appts.filter(a => a.status === statusFilter);
     }
-
     document.getElementById('cust-content-area').innerHTML = appts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無待處理預約</div>';
   }
 
   function renderSingleCardHTML(a) {
-  const isNewCust = (a.customer_type === 'new');
-  const custTypeBadge = isNewCust 
-    ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
-    : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
+    const isNewCust = (a.customer_type === 'new');
+    const custTypeBadge = isNewCust 
+      ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
+      : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
 
-  return `
-    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-1.5">
-          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-          ${custTypeBadge}
+    return `
+      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-1.5">
+            <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+            ${custTypeBadge}
+          </div>
+          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+          </select>
         </div>
-        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-        </select>
-      </div>
-      <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
-      <div class="text-[11px] text-brand-500 space-y-0.5">
-        <div>LINE 名稱：<b>${a.lineName || '無'}</b></div>
-        <div>服務專員：<b>${a.staffName || '不指定'}</b></div>
-      </div>
-      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-        <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-        <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
-      </div>
-      ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
-      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-        <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-        <button class="px-2.5 py-1 bg-brand-500 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-        <button class="px-2.5 py-1 bg-green-600 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
-        <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
-      </div>
-    </div>`;
-}
+        <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
+        <div class="text-[11px] text-brand-500 space-y-0.5">
+          <div>LINE 名稱：<b>${a.lineName || '無'}</b></div>
+          <div>服務專員：<b>${a.staffName || '不指定'}</b></div>
+        </div>
+        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
+          <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+        </div>
+        ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
+        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+          <button class="px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
+          <button class="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button class="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
+          <button class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold" onclick="quickUpdateStatus('${a.id}', '已取消')">取消</button>
+        </div>
+      </div>`;
+  }
 
   async function quickUpdateStatus(id, newStatus) {
     try {
@@ -1077,28 +1057,13 @@ async function submitWish() {
     }
   }
 
-  async function saveBookingNote(id) {
-    try {
-      const notes = document.getElementById(`note-input-${id}`).value.trim();
-      await directSupabasePatch('bookings', `id=eq.${id}`, { notes: notes });
-      Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-    } catch (e) {
-      const notes = document.getElementById(`note-input-${id}`).value.trim();
-      await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "updateBookingNotes", id: id, notes: notes })
-      });
-      Swal.fire({ title: '備註已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-    }
-  }
-
   function openEditServiceModal(id) {
     const svcs = backendData.services || [];
     let opts = svcs.map(s => `<option value="${s.name}" data-price="${s.price}" data-dur="${s.duration}">${s.name} (${s.price}元)</option>`).join('');
     Swal.fire({
       title: '變更預約項目',
       html: `<select id="swal-new-svc" class="swal2-input text-xs" style="width:85%;">${opts}</select>`,
-      showCancelButton: true, confirmButtonText: '確定更新',
+      showCancelButton: true, confirmButtonText: '確定更新', confirmButtonColor: '#A08875',
       preConfirm: () => {
         const sel = document.getElementById('swal-new-svc');
         return { svc: sel.value, price: sel.options[sel.selectedIndex].getAttribute('data-price'), dur: sel.options[sel.selectedIndex].getAttribute('data-dur') };
@@ -1120,27 +1085,25 @@ async function submitWish() {
   }
 
   function openRescheduleModal(id, name, oldDate, oldTime) {
-  Swal.fire({
-    title: `幫 ${name} 改期`,
-    html: `
-      <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-bold mb-3">
-        ⚠️ 務必先核對前台空檔再改時！
-      </div>
-      <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${oldDate.replace(/\//g, '-')}">
-      <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime}">
-    `,
-    showCancelButton: true,
-    confirmButtonText: '確定改期',
-    confirmButtonColor: '#A08875',
-    preConfirm: () => ({ date: document.getElementById('resched-date').value.replace(/-/g, '/'), time: document.getElementById('resched-time').value })
-  }).then(async r => {
-    if (r.isConfirmed) {
-      const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
-      await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
-      fetchDataAndRender();
-    }
-  });
-}
+    Swal.fire({
+      title: `幫 ${name} 改期`,
+      html: `
+        <div class="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-bold mb-3">
+          ⚠️ 務必先核對前台空檔再改時！
+        </div>
+        <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${oldDate.replace(/\//g, '-')}">
+        <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime}">
+      `,
+      showCancelButton: true, confirmButtonText: '確定改期', confirmButtonColor: '#A08875',
+      preConfirm: () => ({ date: document.getElementById('resched-date').value.replace(/-/g, '/'), time: document.getElementById('resched-time').value })
+    }).then(async r => {
+      if (r.isConfirmed) {
+        const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
+        await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
+        fetchDataAndRender();
+      }
+    });
+  }
 
   function openCompleteModal(id, name, originalPrice) {
     Swal.fire({
@@ -1167,7 +1130,6 @@ async function submitWish() {
     });
   }
 
-  // 3. ⏰ 排班管理
   function renderShift() {
     const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
     document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => `
@@ -1191,7 +1153,7 @@ async function submitWish() {
       content.innerHTML = dates.map(d => `
         <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center shadow-sm">
           <div><div class="font-bold text-xs">${d.date}</div><div class="text-[11px] text-brand-400">時段排班設定 (預設全休)</div></div>
-          <button class="px-3 py-1.5 bg-brand-400 text-white text-xs font-bold rounded-xl" onclick="selectShiftDate('${d.date}')">設定時段</button>
+          <button class="px-3 py-1.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition" onclick="selectShiftDate('${d.date}')">設定時段</button>
         </div>
       `).join('');
       return;
@@ -1218,8 +1180,8 @@ async function submitWish() {
         <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
           <div class="font-bold text-xs text-brand-900">${currentShiftDate} 排班 (預設全休)</div>
           <div class="flex gap-1.5">
-            <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold" onclick="toggleAllShift('${staffKey}', false)">全休</button>
-            <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold bg-brand-400 text-white" onclick="toggleAllShift('${staffKey}', true)">全開</button>
+            <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="toggleAllShift('${staffKey}', false)">全休</button>
+            <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold bg-brand-400 hover:bg-brand-500 text-white" onclick="toggleAllShift('${staffKey}', true)">全開</button>
           </div>
         </div>
         <div class="divide-y divide-brand-100">${slots.map(t => {
@@ -1263,7 +1225,6 @@ async function submitWish() {
     }
   }
 
-  // 4. 💰 業績
   function renderRevenueSelect() {
     const sel = document.getElementById('rev-service-select');
     const svcs = backendData.services || [];
@@ -1301,7 +1262,7 @@ async function submitWish() {
               <div class="font-bold text-amber-900">${a.date} ${a.time} - ${a.name}</div>
               <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
             </div>
-            <button class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[11px]" onclick="openCompleteModal('${a.id}','${a.name}', ${a.price})">去結單</button>
+            <button class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition" onclick="openCompleteModal('${a.id}','${a.name}', ${a.price})">去結單</button>
           </div>`;
       }
     });
@@ -1311,7 +1272,6 @@ async function submitWish() {
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
   }
 
-  // 5. 🎁 回訪
   function renderCare(reminders) {
     const list = document.getElementById('care-list');
     if (!reminders || reminders.length === 0) {
@@ -1322,7 +1282,7 @@ async function submitWish() {
       <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1 text-xs">
         <div class="flex justify-between font-bold"><span class="text-brand-900">${r.name} (${r.phone})</span><span class="text-brand-500">${r.followUpStr}前消費</span></div>
         <div class="text-[11px] text-brand-400">上次項目：${r.service} (${r.lastDate})</div>
-        <button class="w-full py-2 bg-brand-400 text-white rounded-xl text-xs font-bold mt-1 shadow-sm" onclick="copyCareMsg(\`${r.msg}\`)">📋 複製關懷文案</button>
+        <button class="w-full py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-xs font-bold mt-1 shadow-sm transition" onclick="copyCareMsg(\`${r.msg}\`)">📋 複製關懷文案</button>
       </div>
     `).join('');
   }
@@ -1333,65 +1293,81 @@ async function submitWish() {
     });
   }
 
-  // 6. ✂️ 服務管理
-  function renderServiceList() {
-  const container = document.getElementById('service-list-container');
-  const svcs = backendData.services || [];
-  if (svcs.length === 0) {
-    container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
-    return;
-  }
-  container.innerHTML = svcs.map((s, idx) => {
-    const typeLabel = (s.service_type === 'Group_B' || s.type === 'Group_B') ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Group B 專屬類</span>' : '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">Group A 技術類</span>';
-    const sName = s.service_name || s.name || '';
-    const sDur = s.duration_minutes || s.duration || 60;
-    const isAddon = s.is_addon === true || s.isAddon === true;
-    return `
-      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-        <div>
-          <div class="font-bold text-brand-900 flex items-center gap-1.5">
-            ${isAddon ? '<span class="text-amber-600 font-bold">[加購]</span>' : ''}
-            <span>${sName}</span>
-            ${typeLabel}
-          </div>
-          <div class="text-[11px] text-brand-500 mt-0.5">${s.price}元 / ${sDur}分鐘</div>
-        </div>
-        <div class="flex gap-1 items-center">
-          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
-          <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
-          <button class="px-2.5 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold" onclick="editServiceItem('${s.id}')">改</button>
-          <button class="px-2.5 py-1 bg-red-500 text-white rounded-lg text-xs font-bold" onclick="deleteServiceItem('${s.id}')">刪</button>
-        </div>
-      </div>`;
-  }).join('');
-}
+  async function saveCareRulesSetting() {
+    const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
+      name: el.value.trim(),
+      weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
+      msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
+    })).filter(r => r.name !== '');
 
-async function moveServiceOrder(idx, dir) {
-  const svcs = backendData.services || [];
-  const targetIdx = idx + dir;
-  if (targetIdx < 0 || targetIdx >= svcs.length) return;
-  const temp = svcs[idx];
-  svcs[idx] = svcs[targetIdx];
-  svcs[targetIdx] = temp;
-  for (let i = 0; i < svcs.length; i++) {
-    svcs[i].sortOrder = i;
-    await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+    try {
+      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { care_rules: careRulesArray });
+      backendData.settings.careRules = careRulesArray;
+      Swal.fire({ title: '關懷規則已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } catch(e) {
+      Swal.fire('儲存失敗', e.message, 'error');
+    }
   }
-  renderServiceList();
-}
+
+  function renderServiceList() {
+    const container = document.getElementById('service-list-container');
+    const svcs = backendData.services || [];
+    if (svcs.length === 0) {
+      container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
+      return;
+    }
+    container.innerHTML = svcs.map((s, idx) => {
+      const typeLabel = (s.service_type === 'Group_B' || s.type === 'Group_B') ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Group B 專屬類</span>' : '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">Group A 技術類</span>';
+      const sName = s.service_name || s.name || '';
+      const sDur = s.duration_minutes || s.duration || 60;
+      const isAddon = s.is_addon === true || s.isAddon === true;
+      return `
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+          <div>
+            <div class="font-bold text-brand-900 flex items-center gap-1.5">
+              ${isAddon ? '<span class="text-amber-600 font-bold">[加購]</span>' : ''}
+              <span>${sName}</span>
+              ${typeLabel}
+            </div>
+            <div class="text-[11px] text-brand-500 mt-0.5">${s.price}元 / ${sDur}分鐘</div>
+          </div>
+          <div class="flex gap-1 items-center">
+            <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
+            <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, 1)">▼</button>
+            <button class="px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition" onclick="editServiceItem('${s.id}')">改</button>
+            <button class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition" onclick="deleteServiceItem('${s.id}')">刪</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function moveServiceOrder(idx, dir) {
+    const svcs = backendData.services || [];
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= svcs.length) return;
+    const temp = svcs[idx];
+    svcs[idx] = svcs[targetIdx];
+    svcs[targetIdx] = temp;
+    for (let i = 0; i < svcs.length; i++) {
+      svcs[i].sortOrder = i;
+      await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+    }
+    renderServiceList();
+  }
 
   function editServiceItem(id) {
-  const s = (backendData.services || []).find(item => String(item.id) === String(id));
-  if (!s) return;
-  document.getElementById('edit-svc-id').value = s.id;
-  document.getElementById('svc-name').value = s.service_name || s.name || '';
-  document.getElementById('svc-price').value = s.price || '';
-  document.getElementById('svc-duration').value = s.duration_minutes || s.duration || 60;
-  document.getElementById('svc-type').value = s.service_type || s.type || 'Group_A';
-  document.getElementById('svc-is-addon').checked = (s.is_addon === true || s.isAddon === true);
-  document.getElementById('svc-form-title').innerText = "修改服務項目";
-  document.getElementById('svc-cancel-btn').classList.remove('hidden');
-}
+    const s = (backendData.services || []).find(item => String(item.id) === String(id));
+    if (!s) return;
+    document.getElementById('edit-svc-id').value = s.id;
+    document.getElementById('svc-name').value = s.service_name || s.name || '';
+    document.getElementById('svc-price').value = s.price || '';
+    document.getElementById('svc-duration').value = s.duration_minutes || s.duration || 60;
+    document.getElementById('svc-type').value = s.service_type || s.type || 'Group_A';
+    document.getElementById('svc-is-addon').checked = (s.is_addon === true || s.isAddon === true);
+    document.getElementById('svc-form-title').innerText = "修改服務項目";
+    document.getElementById('svc-cancel-btn').classList.remove('hidden');
+  }
+
   function resetServiceForm() {
     document.getElementById('edit-svc-id').value = '';
     document.getElementById('svc-name').value = '';
@@ -1456,7 +1432,6 @@ async function moveServiceOrder(idx, dir) {
     });
   }
 
-  // 7. 🖼️ 作品管理
   function renderPortfolioList() {
     const container = document.getElementById('portfolio-list-container');
     const ports = backendData.portfolio || [];
@@ -1476,7 +1451,7 @@ async function moveServiceOrder(idx, dir) {
           <button class="flex-1 py-1 bg-white border border-brand-200 rounded-lg text-[10px] font-bold" onclick="movePortfolioOrder(${idx}, -1)">◀ 移動</button>
           <button class="flex-1 py-1 bg-white border border-brand-200 rounded-lg text-[10px] font-bold" onclick="movePortfolioOrder(${idx}, 1)">移動 ▶</button>
         </div>
-        <button class="w-full py-1 bg-red-500 text-white rounded-lg text-[10px] font-bold mt-1" onclick="deletePortfolioItem('${p.id}')">刪除作品</button>
+        <button class="w-full py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-[10px] font-bold mt-1 transition" onclick="deletePortfolioItem('${p.id}')">刪除作品</button>
       </div>
     `).join('');
   }
@@ -1505,7 +1480,8 @@ async function moveServiceOrder(idx, dir) {
       input: 'text',
       inputValue: oldCat,
       showCancelButton: true,
-      confirmButtonText: '確定更新'
+      confirmButtonText: '確定更新',
+      confirmButtonColor: '#A08875'
     }).then(async r => {
       if (r.isConfirmed && r.value) {
         try {
@@ -1524,37 +1500,32 @@ async function moveServiceOrder(idx, dir) {
     const title = document.getElementById('work-title').value.trim();
     const link = document.getElementById('work-link').value.trim();
     if (!file || !cat || !title) { Swal.fire('分類、標題與照片為必填', '', 'warning'); return; }
-    Swal.fire({ title: '正在上傳作品照片...', allowOutsideClick: false }); Swal.showLoading();
+
+    Swal.fire({ title: '正在發布作品...', allowOutsideClick: false }); Swal.showLoading();
     try {
+      const base64Data = await fileToBase64(file);
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", base64Data);
+
       const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
       const imgData = await res.json();
       if (imgData.success) {
-        const portPayload = {
+        await directSupabaseUpsert('portfolios', {
           store_id: CURRENT_STORE_ID,
           category: cat,
           title: title,
           link: link,
           img_url: imgData.data.url
-        };
-        try {
-          await directSupabaseUpsert('portfolios', portPayload, 'id');
-        } catch(err) {
-          await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "savePortfolio", store_id: CURRENT_STORE_ID, data: portPayload })
-          });
-        }
+        }, 'id');
         document.getElementById('work-title').value = '';
         document.getElementById('work-file').value = '';
         await fetchDataAndRender();
         Swal.fire({ title: '作品已發布！', icon: 'success', timer: 1200, showConfirmButton: false });
       } else {
-        throw new Error("ImgBB 圖片上傳未成功");
+        throw new Error(imgData.error?.message || "上傳失敗");
       }
     } catch (e) {
-      Swal.fire('發布作品失敗', e.message, 'error');
+      Swal.fire({ title: '發布失敗', text: e.message, icon: 'error' });
     }
   }
 
@@ -1579,7 +1550,6 @@ async function moveServiceOrder(idx, dir) {
     });
   }
 
-  // 8. 🔍 搜尋
   async function executeSearch() {
     const kw = document.getElementById('search-keyword').value.trim();
     if (!kw) return;
@@ -1599,7 +1569,6 @@ async function moveServiceOrder(idx, dir) {
     }
   }
 
-  // 9. ⚡ 手動新增預約
   function renderQuickAddServices() {
     const sel = document.getElementById('quick-service');
     const svcs = backendData.services || [];
@@ -1627,36 +1596,35 @@ async function moveServiceOrder(idx, dir) {
   }
 
   async function submitQuickBooking() {
-  const phone = document.getElementById('quick-phone').value.trim();
-  const name = document.getElementById('quick-name').value.trim();
-  const line = document.getElementById('quick-line').value.trim();
-  const service = document.getElementById('quick-service').value;
-  const price = document.getElementById('quick-price').value;
-  const date = document.getElementById('quick-date').value;
-  const time = document.getElementById('quick-time').value;
+    const phone = document.getElementById('quick-phone').value.trim();
+    const name = document.getElementById('quick-name').value.trim();
+    const line = document.getElementById('quick-line').value.trim();
+    const service = document.getElementById('quick-service').value;
+    const price = document.getElementById('quick-price').value;
+    const date = document.getElementById('quick-date').value;
+    const time = document.getElementById('quick-time').value;
 
-  if (!phone || !name || !service || !date || !time) {
-    Swal.fire('請填寫完整預約資料', '', 'warning');
-    return;
+    if (!phone || !name || !service || !date || !time) {
+      Swal.fire('請填寫完整預約資料', '', 'warning');
+      return;
+    }
+
+    const appointmentIso = `${date.replace(/\//g, '-')}T${time}:00+08:00`;
+    await directSupabaseUpsert('bookings', {
+      store_id: CURRENT_STORE_ID,
+      customer_name: name,
+      customer_phone: phone,
+      line_name: line,
+      service_names: service,
+      price: Number(price || 0),
+      appointment_time: appointmentIso,
+      status: '已確認'
+    }, 'id');
+
+    Swal.fire({ title: '已成功新增預約卡位！', icon: 'success', timer: 1500, showConfirmButton: false });
+    fetchDataAndRender();
   }
 
-  const appointmentIso = `${date.replace(/\//g, '-')}T${time}:00+08:00`;
-  await directSupabaseUpsert('bookings', {
-    store_id: CURRENT_STORE_ID,
-    customer_name: name,
-    customer_phone: phone,
-    line_name: line,
-    service_names: service,
-    price: Number(price || 0),
-    appointment_time: appointmentIso,
-    status: '已確認'
-  }, 'id');
-
-  Swal.fire({ title: '已成功新增預約卡位！', icon: 'success', timer: 1500, showConfirmButton: false });
-  fetchDataAndRender();
-}
-
-  // 10. 💳 方案管理
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '美業標準版';
@@ -1696,7 +1664,7 @@ async function moveServiceOrder(idx, dir) {
           <div class="font-bold text-brand-900">${pl.name}</div>
           <div class="text-brand-500 font-bold text-sm mt-0.5">${pl.price}元</div>
         </div>
-        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl font-bold shadow-sm" onclick="openPayUniLink('${pl.link}','${pl.name}')">立即付款續約</button>
+        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl font-bold shadow-sm transition" onclick="openPayUniLink('${pl.link}','${pl.name}')">立即付款續約</button>
       </div>
     `).join('');
   }
@@ -1717,107 +1685,62 @@ async function moveServiceOrder(idx, dir) {
   }
 
   function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-  });
-}
-
-// LOGO 上傳
-async function uploadLogoImgBB() {
-  const file = document.getElementById('logo-file-input').files[0];
-  if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
-  Swal.fire({ title: '正在上傳 LOGO 圖片...', allowOutsideClick: false }); Swal.showLoading();
-
-  try {
-    const base64Data = await fileToBase64(file);
-    const formData = new FormData();
-    formData.append("image", base64Data);
-
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = error => reject(error);
     });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById('cfg-logo').value = data.data.url;
-      document.getElementById('logo-preview-img').src = data.data.url;
-      document.getElementById('logo-preview-box').style.display = 'flex';
-      Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
-    } else {
-      throw new Error(data.error?.message || "ImgBB 驗證未通過");
-    }
-  } catch (e) {
-    Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
   }
-}
 
-// 作品集上傳
-async function uploadAndSavePortfolio() {
-  const file = document.getElementById('work-file').files[0];
-  const cat = document.getElementById('work-cat').value.trim();
-  const title = document.getElementById('work-title').value.trim();
-  const link = document.getElementById('work-link').value.trim();
-  if (!file || !cat || !title) { Swal.fire('分類、標題與照片為必填', '', 'warning'); return; }
+  async function uploadLogoImgBB() {
+    const file = document.getElementById('logo-file-input').files[0];
+    if (!file) { Swal.fire('請先選擇 LOGO 圖檔', '', 'warning'); return; }
+    Swal.fire({ title: '正在上傳 LOGO 圖片...', allowOutsideClick: false }); Swal.showLoading();
 
-  Swal.fire({ title: '正在發布作品...', allowOutsideClick: false }); Swal.showLoading();
-  try {
-    const base64Data = await fileToBase64(file);
-    const formData = new FormData();
-    formData.append("image", base64Data);
+    try {
+      const base64Data = await fileToBase64(file);
+      const formData = new FormData();
+      formData.append("image", base64Data);
 
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-      method: "POST",
-      body: formData
-    });
-    const imgData = await res.json();
-    if (imgData.success) {
-      await directSupabaseUpsert('portfolios', {
-        store_id: CURRENT_STORE_ID,
-        category: cat,
-        title: title,
-        link: link,
-        img_url: imgData.data.url
-      }, 'id');
-      document.getElementById('work-title').value = '';
-      document.getElementById('work-file').value = '';
-      await fetchDataAndRender();
-      Swal.fire({ title: '作品已發布！', icon: 'success', timer: 1200, showConfirmButton: false });
-    } else {
-      throw new Error(imgData.error?.message || "上傳失敗");
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('cfg-logo').value = data.data.url;
+        document.getElementById('logo-preview-img').src = data.data.url;
+        document.getElementById('logo-preview-box').style.display = 'flex';
+        Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1200, showConfirmButton: false });
+      } else {
+        throw new Error(data.error?.message || "ImgBB 驗證未通過");
+      }
+    } catch (e) {
+      Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
     }
-  } catch (e) {
-    Swal.fire({ title: '發布失敗', text: e.message, icon: 'error' });
   }
-}
 
-// 說明圖上傳
-async function handleImgUpload(idx, input) {
-  const file = input.files[0];
-  if (!file) return;
-  Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false }); Swal.showLoading();
-  try {
-    const base64Data = await fileToBase64(file);
-    const formData = new FormData();
-    formData.append("image", base64Data);
-    const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.success) {
-      promoImgsArray[idx] = data.data.url;
-      document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
-      document.getElementById(`slot-${idx}`).innerHTML = '';
-      Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
-    } else {
-      throw new Error(data.error?.message || "上傳失敗");
+  async function handleImgUpload(idx, input) {
+    const file = input.files[0];
+    if (!file) return;
+    Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false }); Swal.showLoading();
+    try {
+      const base64Data = await fileToBase64(file);
+      const formData = new FormData();
+      formData.append("image", base64Data);
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        promoImgsArray[idx] = data.data.url;
+        document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
+        document.getElementById(`slot-${idx}`).innerHTML = '';
+        Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+      } else {
+        throw new Error(data.error?.message || "上傳失敗");
+      }
+    } catch (e) {
+      Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
     }
-  } catch (e) {
-    Swal.fire({ title: '上傳失敗', text: e.message, icon: 'error' });
   }
-}
 
-  // ⚙️ 店休設定
   function addCustomOffDate() {
     const dateVal = document.getElementById('new-custom-off-date').value;
     if (!dateVal) return;
@@ -1896,6 +1819,8 @@ async function handleImgUpload(idx, input) {
     document.getElementById('cfg-buffer').value = s.bookingBufferHours ?? 1;
     document.getElementById('cfg-care').value = s.careText || '';
     document.getElementById('cfg-deposit-info').value = s.depositInfo || '';
+    document.getElementById('cfg-deposit-mode').value = s.depositMode || 'all';
+    document.getElementById('cfg-deposit-amount').value = s.depositAmount || '';
     document.getElementById('cfg-shift-start').value = s.shiftStartTime || '09:00';
     document.getElementById('cfg-shift-end').value = s.shiftEndTime || '19:00';
     document.getElementById('cfg-shift-interval').value = String(s.shiftInterval || 30);
@@ -1903,6 +1828,7 @@ async function handleImgUpload(idx, input) {
     document.getElementById('cfg-line').value = s.line || '';
     document.getElementById('cfg-ig').value = s.ig || '';
     document.getElementById('cfg-map').value = s.map || '';
+    
     document.getElementById('cfg-toggle-logo').checked = s.enableLogo ?? true;
     document.getElementById('cfg-toggle-email').checked = s.enableEmailCopy ?? true;
     document.getElementById('cfg-toggle-audit-booking').checked = s.enableAuditBooking ?? true;
@@ -1913,6 +1839,10 @@ async function handleImgUpload(idx, input) {
     document.getElementById('cfg-toggle-custtype').checked = s.enableCustType ?? true;
     document.getElementById('cfg-toggle-portfolio').checked = s.enablePortfolio ?? true;
     document.getElementById('cfg-toggle-care').checked = s.enableCare ?? true;
+    document.getElementById('cfg-toggle-line-one-click').checked = s.enableLineOneClickAudit ?? true;
+    document.getElementById('cfg-toggle-featured-shop').checked = s.enableFeaturedShop ?? true;
+    document.getElementById('cfg-toggle-flex-menu').checked = s.enableFlexMenu ?? true;
+    document.getElementById('cfg-toggle-auto-reminder').checked = s.enableAutoReminder === true;
     document.getElementById('cfg-toggle-line-auto-notify').checked = s.enableLineAutoNotify === true;
     document.getElementById('cfg-line-token').value = s.lineChannelToken || '';
 
@@ -1955,7 +1885,7 @@ async function handleImgUpload(idx, input) {
     const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
     careContainer.innerHTML = `
       <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
-        💡 <b>變數小提示：</b> 文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 為自動帶入標籤，系統複製時會自動換成客人的名字與消費項目，請勿刪除括號符號。
+        💡 <b>變數小提示：</b> 文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 為自動帶入標籤，系統複製時會自動換成客人的名字與消費項目。
       </div>
     `;
     for (let i = 0; i < 5; i++) {
@@ -1976,85 +1906,86 @@ async function handleImgUpload(idx, input) {
     grid.innerHTML = '';
     for (let i = 0; i < 7; i++) {
       grid.innerHTML += `
-        <div class="aspect-[4/5] rounded-xl border-2 border-dashed border-brand-200 flex items-center justify-center bg-cover bg-center cursor-pointer bg-brand-50 relative" id="slot-${i}" onclick="document.getElementById('file-${i}').click()">
-          <span class="text-[10px] bg-black/50 text-white px-2 py-0.5 rounded-md">圖${i+1}</span>
+        <div class="aspect-[9/16] rounded-xl border-2 border-dashed border-brand-200 flex items-center justify-center bg-cover bg-center cursor-pointer bg-brand-50 relative overflow-hidden" id="slot-${i}" onclick="document.getElementById('file-${i}').click()">
+          <span class="text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded-md">圖${i+1}</span>
           <input type="file" id="file-${i}" class="hidden" accept="image/*" onchange="handleImgUpload(${i}, this)">
         </div>`;
     }
   }
 
-  // 儲存設定至 Supabase (雙向保護)
+  // 儲存設定至 Supabase
   async function saveStoreSettings() {
-  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false }); Swal.showLoading();
-  
-  // 抓取各輸入欄位，若為空或未讀到則保持既有值
-  const currentSettings = backendData.settings || {};
-  const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
-  
-  const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
-    name: el.value.trim(),
-    weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
-    msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
-  })).filter(r => r.name !== '');
+    Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false }); Swal.showLoading();
+    
+    const currentSettings = backendData.settings || {};
+    const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
+    
+    const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
+      name: el.value.trim(),
+      weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
+      msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
+    })).filter(r => r.name !== '');
 
-  const payload = {
-    store_id: CURRENT_STORE_ID,
-    display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
-    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() ?? currentSettings.subtitle ?? '',
-    enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? currentSettings.enableLogo ?? true,
-    logo_url: document.getElementById('cfg-logo')?.value.trim() ?? currentSettings.logoUrl ?? '',
-    address: document.getElementById('cfg-address')?.value.trim() ?? currentSettings.address ?? '',
-    business_hours: document.getElementById('cfg-hours')?.value.trim() ?? currentSettings.businessHours ?? '',
-    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || currentSettings.bookingBufferHours || 1),
-    care_text: document.getElementById('cfg-care')?.value.trim() ?? currentSettings.careText ?? '',
-    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() ?? currentSettings.depositInfo ?? '',
-    deposit_mode: document.getElementById('cfg-deposit-mode')?.value ?? currentSettings.depositMode ?? 'all',
-    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || currentSettings.depositAmount || 0),
-    promo_text: document.getElementById('cfg-promo')?.value.trim() ?? currentSettings.promoText ?? '',
-    promo_imgs: promoImgsArray.filter(Boolean).length > 0 ? promoImgsArray.filter(Boolean) : (currentSettings.promoImgs || []),
-    line_url: document.getElementById('cfg-line')?.value.trim() ?? currentSettings.line ?? '',
-    ig_url: document.getElementById('cfg-ig')?.value.trim() ?? currentSettings.ig ?? '',
-    map_url: document.getElementById('cfg-map')?.value.trim() ?? currentSettings.map ?? '',
-    enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? currentSettings.enableEmailCopy ?? true,
-    enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true,
-    enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true,
-    enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? currentSettings.enableStaffSelect ?? true,
-    enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? currentSettings.enableMultiStaffSchedule ?? true,
-    enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? currentSettings.enableCarousel ?? true,
-    enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? currentSettings.enableCustType ?? true,
-    enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? currentSettings.enablePortfolio ?? true,
-    enable_care: document.getElementById('cfg-toggle-care')?.checked ?? currentSettings.enableCare ?? true,
-    enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked ?? currentSettings.enableLineAutoNotify ?? false,
-    enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
-    enable_featured_shop: document.getElementById('cfg-toggle-featured-shop')?.checked ?? currentSettings.enableFeaturedShop ?? true,
-    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() ?? currentSettings.lineChannelToken ?? '',
-    weekly_off_days: checkedWeekly,
-    custom_off_dates: customOffDatesArray,
-    staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
-    shift_start_time: document.getElementById('cfg-shift-start')?.value || currentSettings.shiftStartTime || "09:00",
-    shift_end_time: document.getElementById('cfg-shift-end')?.value || currentSettings.shiftEndTime || "19:00",
-    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || currentSettings.shiftInterval || 30),
-    care_rules: careRulesArray.length > 0 ? careRulesArray : (currentSettings.careRules || [])
-  };
+    const payload = {
+      store_id: CURRENT_STORE_ID,
+      display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
+      display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() ?? currentSettings.subtitle ?? '',
+      enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? currentSettings.enableLogo ?? true,
+      logo_url: document.getElementById('cfg-logo')?.value.trim() ?? currentSettings.logoUrl ?? '',
+      address: document.getElementById('cfg-address')?.value.trim() ?? currentSettings.address ?? '',
+      business_hours: document.getElementById('cfg-hours')?.value.trim() ?? currentSettings.businessHours ?? '',
+      booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || currentSettings.bookingBufferHours || 1),
+      care_text: document.getElementById('cfg-care')?.value.trim() ?? currentSettings.careText ?? '',
+      deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() ?? currentSettings.depositInfo ?? '',
+      deposit_mode: document.getElementById('cfg-deposit-mode')?.value ?? currentSettings.depositMode ?? 'all',
+      deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || currentSettings.depositAmount || 0),
+      promo_text: document.getElementById('cfg-promo')?.value ?? currentSettings.promoText ?? '',
+      promo_imgs: promoImgsArray.filter(Boolean).length > 0 ? promoImgsArray.filter(Boolean) : (currentSettings.promoImgs || []),
+      line_url: document.getElementById('cfg-line')?.value.trim() ?? currentSettings.line ?? '',
+      ig_url: document.getElementById('cfg-ig')?.value.trim() ?? currentSettings.ig ?? '',
+      map_url: document.getElementById('cfg-map')?.value.trim() ?? currentSettings.map ?? '',
+      enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? currentSettings.enableEmailCopy ?? true,
+      enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true,
+      enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true,
+      enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? currentSettings.enableStaffSelect ?? true,
+      enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? currentSettings.enableMultiStaffSchedule ?? true,
+      enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? currentSettings.enableCarousel ?? true,
+      enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? currentSettings.enableCustType ?? true,
+      enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? currentSettings.enablePortfolio ?? true,
+      enable_care: document.getElementById('cfg-toggle-care')?.checked ?? currentSettings.enableCare ?? true,
+      enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked ?? currentSettings.enableLineAutoNotify ?? false,
+      enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
+      enable_featured_shop: document.getElementById('cfg-toggle-featured-shop')?.checked ?? currentSettings.enableFeaturedShop ?? true,
+      enable_flex_menu: document.getElementById('cfg-toggle-flex-menu')?.checked ?? currentSettings.enableFlexMenu ?? true,
+      enable_auto_reminder: document.getElementById('cfg-toggle-auto-reminder')?.checked ?? currentSettings.enableAutoReminder ?? false,
+      line_channel_token: document.getElementById('cfg-line-token')?.value.trim() ?? currentSettings.lineChannelToken ?? '',
+      weekly_off_days: checkedWeekly,
+      custom_off_dates: customOffDatesArray,
+      staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
+      shift_start_time: document.getElementById('cfg-shift-start')?.value || currentSettings.shiftStartTime || "09:00",
+      shift_end_time: document.getElementById('cfg-shift-end')?.value || currentSettings.shiftEndTime || "19:00",
+      shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || currentSettings.shiftInterval || 30),
+      care_rules: careRulesArray.length > 0 ? careRulesArray : (currentSettings.careRules || [])
+    };
 
-  try {
-    await directSupabaseUpsert('stores', { 
-      id: CURRENT_STORE_ID, 
-      store_name: payload.display_title, 
-      industry_type: 'beauty', 
-      line_channel_token: payload.line_channel_token 
-    }, 'id');
+    try {
+      await directSupabaseUpsert('stores', { 
+        id: CURRENT_STORE_ID, 
+        store_name: payload.display_title, 
+        industry_type: 'beauty', 
+        line_channel_token: payload.line_channel_token 
+      }, 'id');
 
-    await directSupabaseUpsert('store_settings', payload, 'store_id');
-    localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
-    backendData.settings = Object.assign({}, backendData.settings, payload);
-    populateSettings();
+      await directSupabaseUpsert('store_settings', payload, 'store_id');
+      localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
+      backendData.settings = Object.assign({}, backendData.settings, payload);
+      populateSettings();
 
-    Swal.fire({ title: '設定已完整儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-  } catch (e) {
-    Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
+      Swal.fire({ title: '設定已完整儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
+    }
   }
-}
 </script>
 </body>
 </html>
