@@ -6,6 +6,7 @@
   <title>線上預約系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
     tailwind.config = {
@@ -94,6 +95,30 @@
   </style>
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
+
+<!-- 🛠️ 全螢幕系統維護遮罩層 (當 super.html 開啟維護鎖定時強制覆蓋) -->
+<div id="maintenance-screen" class="fixed inset-0 bg-brand-50/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
+  <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-brand-200/60">
+    <i class="fa-solid fa-screwdriver-wrench"></i>
+  </div>
+  <h2 class="text-xl font-bold text-brand-900 mb-2">系統例行性維護中</h2>
+  <p class="text-xs text-brand-700 leading-relaxed max-w-xs mb-3" id="maintenance-desc">
+    為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。
+  </p>
+  <div class="p-3 bg-white/80 rounded-2xl border border-brand-200 text-[11px] text-brand-500 max-w-xs mb-5">
+    造成您的不便敬請見諒！若有即時預約或諮詢需求，請點擊下方按鈕直接聯繫店家。
+  </div>
+  <a id="maintenance-line-btn" href="#" target="_blank" class="px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
+    <i class="fa-brands fa-line text-sm"></i>
+    <span>聯繫店家官方 LINE</span>
+  </a>
+</div>
+
+<!-- 頂部即時系統全域廣播橫幅 (預告期顯示) -->
+<div id="system-banner" class="bg-amber-100 text-amber-900 px-4 py-2 text-[11px] font-medium text-center border-b border-amber-200 hidden">
+  <span class="font-bold mr-1">📢 [系統公告]</span>
+  <span id="system-banner-text"></span>
+</div>
 
 <!-- 頂部 Header 與 Logo 區塊 -->
 <header class="w-full bg-brand-50 pt-0">
@@ -254,7 +279,7 @@
           <input type="hidden" id="time" required>
         </div>
 
-        <!-- ✨ 新增：線下收取訂金說明卡片 (前台醒目展示) -->
+        <!-- 線下收取訂金說明卡片 -->
         <div id="frontDepositSection" class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-2 hidden">
           <div class="flex items-center justify-between font-bold text-amber-900">
             <span class="flex items-center gap-1.5">
@@ -344,6 +369,33 @@
     }
   }
 
+  // 自動偵測全域維護與全域廣播狀態
+  async function checkMaintenanceAndAnnouncement() {
+    try {
+      const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
+      if (Array.isArray(announcements) && announcements.length > 0) {
+        const item = announcements[0];
+        
+        // 🛠️ 1. 若開啟「維護鎖定」：強制覆蓋前台，完全不可點選
+        if (item.is_maintenance === true) {
+          document.getElementById('maintenance-desc').innerText = item.content || "為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。";
+          document.getElementById('maintenance-screen').classList.remove('hidden');
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('maintenance-line-btn').href = db.line || '#';
+          return;
+        }
+
+        // 📢 2. 若為「一般公告」：於頁面最上方顯示優雅提示小橫幅
+        if (item.content) {
+          document.getElementById('system-banner-text').innerText = item.content;
+          document.getElementById('system-banner').classList.remove('hidden');
+        }
+      }
+    } catch (err) {
+      console.warn("無法取得系統全域公告: ", err);
+    }
+  }
+
   window.onload = async function() {
     try {
       const nowIso = new Date().toISOString();
@@ -429,6 +481,7 @@
       };
 
       renderStoreUI();
+      checkMaintenanceAndAnnouncement(); // 檢查全域公告與維護鎖定狀態
     } catch (e) {
       console.error("前台初始化異常: ", e);
     }
@@ -459,7 +512,6 @@
       depositBtn.classList.toggle('hidden', !db.enableDeposit);
     }
 
-    // 檢查並渲染前台訂金提示專區
     updateDepositSectionDisplay();
 
     const featuredShop = document.getElementById('featuredShopSection');
@@ -507,7 +559,6 @@
     renderFrontCalendar();
   }
 
-  // 判斷是否顯示前台訂金提示卡片
   function updateDepositSectionDisplay() {
     const depositBox = document.getElementById('frontDepositSection');
     if (!depositBox) return;
@@ -815,7 +866,7 @@
     });
     e.className = "type-btn py-2.5 rounded-xl border border-brand-400 text-xs font-bold transition bg-brand-400 text-white shadow-sm";
     document.getElementById('custType').value = t;
-    updateDepositSectionDisplay(); // 切換新舊客時同步更新訂金區塊顯示
+    updateDepositSectionDisplay();
   }
 
   function setupPortfolio() {
@@ -935,7 +986,6 @@
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
     const custTypeVal = document.getElementById('custType')?.value || 'old';
 
-    // ✅ 完整封裝 payload，確保無論前台 Supabase 或後台 GAS 都不會出現 undefined！
     const bookingPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: document.getElementById('name').value.trim(),
@@ -950,7 +1000,6 @@
       staff_id: document.getElementById('staffId').value || 'all',
       staff_name: document.getElementById('staffName').value || '不指定',
       status: "待確認",
-      // 同步提供相容參數給 GAS
       name: document.getElementById('name').value.trim(),
       phone: document.getElementById('phone').value.trim(),
       custType: custTypeVal,
@@ -978,13 +1027,11 @@
         throw new Error(errJson.message || "資料庫寫入失敗");
       }
 
-      // 發送給 GAS 執行 LINE 推播通知
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "submitBooking", store_id: CURRENT_STORE_ID, data: bookingPayload })
       }).catch(() => {});
 
-      // 判斷是否需要提示訂金
       const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
       
       let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
