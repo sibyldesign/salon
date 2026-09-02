@@ -95,7 +95,7 @@
       <div id="stores-container" class="space-y-3"></div>
     </section>
 
-    <!-- 店家功能許願池接收區 (具備刪除按鈕) -->
+    <!-- 店家功能許願池接收區 -->
     <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
         <i class="fa-solid fa-lightbulb text-amber-500"></i>
@@ -206,10 +206,10 @@
               </div>
               <div class="flex gap-1.5">
                 <button onclick="manualActivateStore('${s.id}', 30)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition">
-                  開通/加 30 天
+                  手動開通 (+30天)
                 </button>
                 <button onclick="manualActivateStore('${s.id}', 365)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">
-                  開通/加 1 年
+                  手動開通 (+1年)
                 </button>
                 <button onclick="deleteStorePrompt('${s.id}', '${s.store_name}')" class="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl font-bold transition">
                   刪除
@@ -220,17 +220,23 @@
       }).join('');
     }
 
+    // 方案 B：總管一鍵手動開通 (直接更新 Supabase 並發信)
     async function manualActivateStore(storeId, days) {
+      Swal.fire({ title: '正在開通帳號並寄送通知信...', allowOutsideClick: false });
+      Swal.showLoading();
+
       const baseDate = new Date();
       baseDate.setDate(baseDate.getDate() + Number(days));
 
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        // 1. 直連 Supabase 更新為 active 與到期日
+        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
           method: "PATCH",
           headers: {
             "apikey": SUPABASE_ANON_KEY,
             "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
           },
           body: JSON.stringify({
             plan_status: "active",
@@ -238,12 +244,19 @@
           })
         });
 
-        fetch(API_URL, {
+        if (!patchRes.ok) throw new Error("資料庫更新失敗");
+
+        // 2. 呼叫 GAS 補寄開通信件與推播
+        await fetch(API_URL, {
           method: "POST",
           body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
-        }).catch(() => {});
+        });
 
-        Swal.fire({ title: '開通成功！', text: `已順延 ${days} 天並指派為 active。`, icon: 'success', timer: 1200, showConfirmButton: false });
+        Swal.fire({ 
+          title: '店家已成功開通！', 
+          text: `狀態已轉為 active，到期日延長至 ${baseDate.toISOString().split('T')[0]}，開通信件已正式寄出！`, 
+          icon: 'success' 
+        });
         loadStores();
       } catch(e) {
         Swal.fire('開通失敗', e.message, 'error');
