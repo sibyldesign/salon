@@ -26,6 +26,45 @@
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 後台 SweetAlert2 系統統一低飽和大地棕美感按鈕與彈窗 */
+    .swal2-popup {
+      border-radius: 1.5rem !important;
+      font-family: 'Noto Sans TC', sans-serif !important;
+      padding: 1.75rem !important;
+      border: 1px solid #EBE5DF !important;
+    }
+    .swal2-title {
+      color: #3D3126 !important;
+      font-size: 1.15rem !important;
+      font-weight: 700 !important;
+    }
+    .swal2-html-container {
+      color: #5C4B3C !important;
+    }
+    .swal2-confirm, .swal2-styled.swal2-confirm {
+      background-color: #A08875 !important;
+      color: #FFFFFF !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.6rem 1.6rem !important;
+      box-shadow: 0 2px 4px rgba(160, 136, 117, 0.2) !important;
+      border: none !important;
+    }
+    .swal2-confirm:hover {
+      background-color: #8C7355 !important;
+    }
+    .swal2-cancel, .swal2-styled.swal2-cancel {
+      background-color: #EBE5DF !important;
+      color: #5C4B3C !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.6rem 1.4rem !important;
+      border: none !important;
+    }
+    .swal2-cancel:hover {
+      background-color: #DFD1C0 !important;
+    }
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
@@ -1112,26 +1151,36 @@
   }
 
   function renderCalendar() {
-    const grid = document.getElementById('cal-grid');
-    document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
-    const headers = ['日', '一', '二', '三', '四', '五', '六'];
-    let html = headers.map(h => `<div class="py-1 font-bold text-brand-400 text-[11px]">${h}</div>`).join('');
-    const firstDay = new Date(calYear, calMonth, 1).getDay();
-    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-    for (let i = 0; i < firstDay; i++) html += `<div class="py-2.5"></div>`;
+  const grid = document.getElementById('cal-grid');
+  document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
+  const headers = ['日', '一', '二', '三', '四', '五', '六'];
+  let html = headers.map(h => `<div class="py-1 font-bold text-brand-400 text-[11px]">${h}</div>`).join('');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) html += `<div class="py-2.5"></div>`;
+  
+  for (let i = 1; i <= daysInMonth; i++) {
+    let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
+    let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
     
-    for (let i = 1; i <= daysInMonth; i++) {
-      let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
-      let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
-      let dotsHtml = apptsToday.map(() => `<span class="w-1.5 h-1.5 bg-red-500 rounded-full inline-block"></span>`).join('');
-      html += `
-        <div class="py-2 rounded-xl hover:bg-brand-100 cursor-pointer flex flex-col items-center transition border border-transparent hover:border-brand-200" onclick="showApptsInCalendar('${dStr}')">
-          <span class="font-bold">${i}</span>
-          <div class="flex gap-0.5 mt-0.5 h-1.5">${dotsHtml}</div>
-        </div>`;
+    // 依專員提取專屬莫蘭迪色點
+    let dotsHtml = apptsToday.slice(0, 4).map(a => {
+      const color = getStaffColor(a.staffId);
+      return `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color: ${color.dot};" title="${a.staffName || '不指定'}"></span>`;
+    }).join('');
+
+    if (apptsToday.length > 4) {
+      dotsHtml += `<span class="text-[8px] text-brand-400 font-bold leading-none">+</span>`;
     }
-    grid.innerHTML = html;
+
+    html += `
+      <div class="py-2 rounded-xl hover:bg-brand-100 cursor-pointer flex flex-col items-center transition border border-transparent hover:border-brand-200" onclick="showApptsInCalendar('${dStr}')">
+        <span class="font-bold text-xs">${i}</span>
+        <div class="flex items-center gap-0.5 mt-1 h-1.5">${dotsHtml}</div>
+      </div>`;
   }
+  grid.innerHTML = html;
+}
 
   function changeCalMonth(dir) {
     calMonth += dir;
@@ -1164,98 +1213,89 @@
   }
 
   function renderSingleCardHTML(a) {
-    const s = backendData.settings || {};
-    const isNewCust = (a.customer_type === 'new');
-    const custTypeBadge = isNewCust 
-      ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
-      : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
+  const s = backendData.settings || {};
+  const isNewCust = (a.customer_type === 'new');
+  const custTypeBadge = isNewCust 
+    ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
+    : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
 
-    const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
-    const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+  // 取得專員莫蘭迪顏色
+  const staffColor = getStaffColor(a.staffId);
+  const staffBadgeHtml = `
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border" style="background-color: ${staffColor.bg}; color: ${staffColor.text}; border-color: ${staffColor.border};">
+      <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${staffColor.dot};"></span>
+      <span>服務專員：${a.staffName || '不指定'}</span>
+    </span>
+  `;
 
-    const quickContactHtml = (s.enableQuickContact !== false && rawPhone) ? `
-      <div class="flex items-center gap-1.5 pt-0.5">
-        <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-          <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
-        </a>
-        <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-          <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
-        </a>
-        ${a.lineName ? `<span class="text-[10px] text-brand-400 ml-1">LINE: <b>${a.lineName}</b></span>` : ''}
+  const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
+  const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+
+  const quickContactHtml = (s.enableQuickContact !== false && rawPhone) ? `
+    <div class="flex items-center gap-1.5 pt-0.5">
+      <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
+        <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
+      </a>
+      <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
+        <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
+      </a>
+      ${a.lineName ? `<span class="text-[10px] text-brand-400 ml-1">LINE: <b>${a.lineName}</b></span>` : ''}
+    </div>
+  ` : '';
+
+  const custNotesHtml = (s.enableCustNotes !== false && a.customer_notes) ? `
+    <div class="p-2 bg-amber-50/90 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
+      <span class="font-bold text-amber-800">📝 顧客備註/膚況：</span>${a.customer_notes}
+    </div>
+  ` : '';
+
+  const cancelReasonHtml = (a.status === '已取消' && a.cancel_reason) ? `
+    <div class="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800">
+      <span class="font-bold">❌ 取消原因：</span>${a.cancel_reason}
+    </div>
+  ` : '';
+
+  const priceDisplayHtml = (s.enableShowPrice !== false) ? `
+    <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+  ` : '';
+
+  return `
+    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-1.5">
+          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+          ${custTypeBadge}
+        </div>
+        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+        </select>
       </div>
-    ` : '';
-
-    const custNotesHtml = (s.enableCustNotes !== false && a.customer_notes) ? `
-      <div class="p-2 bg-amber-50/90 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
-        <span class="font-bold text-amber-800">📝 顧客備註/膚況：</span>${a.customer_notes}
+      <div class="font-bold text-brand-900 text-sm flex items-center justify-between">
+        <span>${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></span>
       </div>
-    ` : '';
-
-    const cancelReasonHtml = (a.status === '已取消' && a.cancel_reason) ? `
-      <div class="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800">
-        <span class="font-bold">❌ 取消原因：</span>${a.cancel_reason}
+      ${quickContactHtml}
+      <div class="pt-0.5">
+        ${staffBadgeHtml}
       </div>
-    ` : '';
-
-    const priceDisplayHtml = (s.enableShowPrice !== false) ? `
-      <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
-    ` : '';
-
-    return `
-      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-1.5">
-            <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-            ${custTypeBadge}
-          </div>
-          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-          </select>
-        </div>
-        <div class="font-bold text-brand-900 text-sm flex items-center justify-between">
-          <span>${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></span>
-        </div>
-        ${quickContactHtml}
-        <div class="text-[11px] text-brand-500 space-y-0.5">
-          <div>服務專員：<b>${a.staffName || '不指定'}</b></div>
-        </div>
-        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-          ${priceDisplayHtml}
-        </div>
-        ${custNotesHtml}
-        ${cancelReasonHtml}
-        ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
-        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-          <button class="px-2.5 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-          <button class="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button class="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
-          <button class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg font-bold" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
-        </div>
-      </div>`;
-  }
-
-  async function quickUpdateStatus(id, newStatus) {
-    if (newStatus === '已取消') {
-      const appt = (backendData.appointments || []).find(a => a.id === id);
-      handleCancelBookingPrompt(id, appt ? appt.name : '');
-      return;
-    }
-    try {
-      await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
-      fetchDataAndRender();
-    } catch (e) {
-      await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({ action: "updateBookingStatus", id: id, status: newStatus })
-      });
-      fetchDataAndRender();
-    }
-  }
+      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+        <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
+        ${priceDisplayHtml}
+      </div>
+      ${custNotesHtml}
+      ${cancelReasonHtml}
+      ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
+      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+        <button class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5B6B78] text-white rounded-lg font-bold transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
+        <button class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+        <button class="px-2.5 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold transition" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
+        <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold transition" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
+      </div>
+    </div>`;
+}
 
   function handleCancelBookingPrompt(id, name) {
     const s = backendData.settings || {};
@@ -1388,13 +1428,40 @@
     });
   }
 
+  // 莫蘭迪低飽和專員專用色系清單
+const STAFF_MORANDI_PALETTE = [
+  { dot: '#BCA38F', bg: '#F5EFEB', text: '#5C483A', border: '#DFD1C4' }, // 陶土杏棕
+  { dot: '#8FA38F', bg: '#EDF2ED', text: '#405440', border: '#C7D4C7' }, // 鼠尾草綠
+  { dot: '#8F9CA3', bg: '#EDF1F3', text: '#3E4E57', border: '#C5D0D6' }, // 莫蘭迪霧藍
+  { dot: '#A38F99', bg: '#F3EDF1', text: '#59444F', border: '#D6C5CE' }, // 玫瑰藕灰
+  { dot: '#A39A8F', bg: '#F3F0EC', text: '#595044', border: '#D6CDC2' }  // 燕麥暖灰
+];
+const DEFAULT_STAFF_COLOR = { dot: '#A8A29E', bg: '#F5F5F4', text: '#57534E', border: '#E7E5E4' };
+
+function getStaffColor(staffId) {
+  if (!staffId || staffId === 'all') return DEFAULT_STAFF_COLOR;
+  const staffList = (backendData.settings && backendData.settings.staffList) || [];
+  const validStaffs = staffList.filter(s => s.id !== 'all');
+  const index = validStaffs.findIndex(s => s.id === staffId);
+  if (index === -1) return DEFAULT_STAFF_COLOR;
+  return STAFF_MORANDI_PALETTE[index % STAFF_MORANDI_PALETTE.length];
+}
+  
   function renderShift() {
-    const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
-    document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => `
-      <button class="px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId===s.id?'bg-brand-400 text-white border-brand-400':'bg-brand-50 border-brand-200 text-brand-800'}" onclick="switchShiftStaff('${s.id}')">
-        ${s.name}
+  const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
+  
+  document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => {
+    const color = getStaffColor(s.id);
+    const isSelected = (activeShiftStaffId === s.id);
+    return `
+      <button class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
+        isSelected ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+      }" onclick="switchShiftStaff('${s.id}')">
+        <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${isSelected ? '#FFFFFF' : color.dot};"></span>
+        <span>${s.name}</span>
       </button>
-    `).join('');
+    `;
+  }).join('');
     const dates = backendData.scheduleDates || [];
     let html = `<div class="date-box shrink-0 px-4 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === 'ALL' ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('ALL')">全部</div>`;
     dates.forEach(d => {
