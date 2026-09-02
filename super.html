@@ -125,7 +125,7 @@
         loadAnnouncement();
         loadWishes();
       } else {
-        Swal.fire('金鑰錯誤', '請輸入正確的總管金鑰', 'error');
+        Swal.fire('金鑰錯誤', '請輸入正確的管理金鑰', 'error');
       }
     }
 
@@ -152,9 +152,6 @@
     }
 
     function renderStores() {
-      const adminToken = s.admin_token || s.id; // 如果舊店家沒有 token 則向下相容用 id
-const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
-const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
       const container = document.getElementById('stores-container');
       let filtered = (currentFilter === 'ALL') ? allStores : allStores.filter(s => s.plan_status === currentFilter);
 
@@ -172,7 +169,9 @@ const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
         if (isActive) statusBadge = '<span class="px-2.5 py-0.5 bg-green-100 text-green-800 rounded-full text-[10px] font-bold">已付款開通 (運行中)</span>';
         if (isExpired) statusBadge = '<span class="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-[10px] font-bold">已過期停權</span>';
 
-        const adminUrl = `https://salon.heysibyl.com/admin.html?store_id=${s.id}`;
+        // 支援 32 碼私密 Token（若舊店家沒有 admin_token 則向下相容使用 id）
+        const adminToken = s.admin_token || s.id;
+        const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
         const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
 
         return `
@@ -201,7 +200,7 @@ const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
             <div class="flex gap-2 flex-wrap items-center justify-between pt-1">
               <div class="flex gap-2">
                 <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 開啟後台
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 開啟後台 (Token)
                 </a>
                 <a href="${bookingUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
                   <i class="fa-solid fa-mobile-screen text-[10px]"></i> 開啟前台
@@ -223,7 +222,6 @@ const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
       }).join('');
     }
 
-    // 方案 B：總管一鍵手動開通 (直接更新 Supabase 並發信)
     async function manualActivateStore(storeId, days) {
       Swal.fire({ title: '正在開通帳號並寄送通知信...', allowOutsideClick: false });
       Swal.showLoading();
@@ -232,7 +230,6 @@ const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
       baseDate.setDate(baseDate.getDate() + Number(days));
 
       try {
-        // 1. 直連 Supabase 更新為 active 與到期日
         const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
           method: "PATCH",
           headers: {
@@ -249,7 +246,6 @@ const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
 
         if (!patchRes.ok) throw new Error("資料庫更新失敗");
 
-        // 2. 呼叫 GAS 補寄開通信件與推播
         await fetch(API_URL, {
           method: "POST",
           body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
