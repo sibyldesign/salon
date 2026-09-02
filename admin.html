@@ -30,16 +30,26 @@
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
 
-<!-- 解鎖登入畫面 -->
+<!-- 解鎖登入畫面 (含防暴力破解鎖定 15 分鐘機制) -->
 <div id="lock-screen" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
-  <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs">
-    <div class="w-12 h-12 mx-auto mb-3 bg-brand-100 rounded-full flex items-center justify-center text-brand-500 text-xl">
+  <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs space-y-3">
+    <div class="w-12 h-12 mx-auto bg-brand-100 rounded-full flex items-center justify-center text-brand-500 text-xl">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
     </div>
-    <div class="text-base font-bold text-brand-900 mb-4" id="lock-title">沙龍管理後台</div>
-    <div id="lock-error" class="text-xs text-red-500 mb-2 h-4"></div>
-    <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-4 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
-    <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white font-bold rounded-xl shadow-md transition" onclick="checkPin()">解鎖登入</button>
+    <div>
+      <div class="text-base font-bold text-brand-900" id="lock-title">沙龍管理後台</div>
+      <div class="text-[10px] text-brand-400 mt-0.5">高安全加密保護中</div>
+    </div>
+    
+    <div id="lock-error" class="text-xs text-red-500 min-h-[1rem]"></div>
+    
+    <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-2 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
+    
+    <button id="unlock-btn" class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white font-bold rounded-xl shadow-md transition" onclick="checkPin()">解鎖登入</button>
+    
+    <div id="lockout-countdown" class="text-[11px] text-red-600 font-bold hidden bg-red-50 p-2 rounded-xl border border-red-200">
+      ⚠️ 密碼錯誤達上限，已安全鎖定！請等待 <span id="timer-sec">900</span> 秒後再試。
+    </div>
   </div>
 </div>
 
@@ -272,7 +282,7 @@
     </div>
   </div>
 
-  <!-- 分頁 9. 💳 訂閱方案 (含月繳/年繳續約與取消規則清楚說明) -->
+  <!-- 分頁 9. 💳 訂閱方案 -->
   <div id="page-subscription" class="page space-y-4" style="display: none;">
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">💳 目前系統訂閱狀態</div>
@@ -330,7 +340,7 @@
     </div>
   </div>
 
-  <!-- 分頁 10. 設定 (原「店休」改為「設定」) -->
+  <!-- 分頁 10. 設定 (原「店休」改名為「設定」) -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
     <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
@@ -400,7 +410,7 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">👥 專員名單管理 (員工網址認代號)</div>
       <div class="text-[11px] text-brand-400 bg-brand-50 p-2.5 rounded-xl leading-relaxed">
-        💡 <b>專員網址用法：</b> <code>admin.html?store_id=你的ID&staff=代號</code><br>
+        💡 <b>專員網址用法：</b> <code>admin.html?token=你的Token&staff=代號</code><br>
         🔒 <b>提示：</b> 各專員密碼皆存於資料庫，專員亦可於其後台自行修改。
       </div>
       <div class="space-y-2" id="staff-list-container"></div>
@@ -453,7 +463,7 @@
       </select>
     </div>
 
-    <!-- 完整模組開關清單 (含新需求開關，預設全部勾選啟用) -->
+    <!-- 完整模組開關清單 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
@@ -627,8 +637,11 @@
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
   const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
+  
   const urlParams = new URLSearchParams(window.location.search);
-  const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+  // 支援方案 2：優先辨識私密 Token，向下相容 store_id
+  const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
+  let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
   const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
   const VIP_PARAM = urlParams.get('vip') || null;
 
@@ -641,12 +654,58 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
+  // 方案 3：防暴力破解狀態追蹤 (輸錯 5 次鎖定 15 分鐘)
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MINUTES = 15;
+  const ATTEMPTS_KEY = `sibyl_attempts_${CURRENT_STORE_ID}`;
+  const LOCKOUT_KEY = `sibyl_lockout_${CURRENT_STORE_ID}`;
+
+  function checkLockoutStatus() {
+    const lockoutUntil = localStorage.getItem(LOCKOUT_KEY);
+    if (lockoutUntil) {
+      const remainingMs = Number(lockoutUntil) - Date.now();
+      if (remainingMs > 0) {
+        triggerLockoutUI(Math.ceil(remainingMs / 1000));
+        return true;
+      } else {
+        localStorage.removeItem(LOCKOUT_KEY);
+        localStorage.removeItem(ATTEMPTS_KEY);
+      }
+    }
+    return false;
+  }
+
+  function triggerLockoutUI(secondsRemaining) {
+    const input = document.getElementById('pin-input');
+    const btn = document.getElementById('unlock-btn');
+    const box = document.getElementById('lockout-countdown');
+    const timerSec = document.getElementById('timer-sec');
+
+    input.disabled = true;
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'pointer-events-none');
+    box.classList.remove('hidden');
+    timerSec.innerText = secondsRemaining;
+
+    const interval = setInterval(() => {
+      secondsRemaining--;
+      if (secondsRemaining <= 0) {
+        clearInterval(interval);
+        input.disabled = false;
+        btn.disabled = false;
+        btn.classList.remove('opacity-50', 'pointer-events-none');
+        box.classList.add('hidden');
+        localStorage.removeItem(LOCKOUT_KEY);
+        localStorage.removeItem(ATTEMPTS_KEY);
+      } else {
+        timerSec.innerText = secondsRemaining;
+      }
+    }, 1000);
+  }
+
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
-      headers: { 
-        "apikey": SUPABASE_ANON_KEY, 
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}` 
-      }
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
     });
     if (!res.ok) throw new Error(await res.text());
     return await res.json();
@@ -656,10 +715,8 @@
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
       method: "POST",
       headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates,return=representation"
+        "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=representation"
       },
       body: JSON.stringify(payload)
     });
@@ -671,10 +728,8 @@
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
       method: "PATCH",
       headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
+        "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json", "Prefer": "return=representation"
       },
       body: JSON.stringify(payload)
     });
@@ -682,49 +737,72 @@
     return await res.json();
   }
 
+  // 登入驗證 (含方案 2 私鑰解析與方案 3 錯誤計數鎖定)
   async function checkPin() {
-    const input = document.getElementById('pin-input').value.trim();
-    try {
-      let correctPin = '8888';
-      let pinFound = false;
+    if (checkLockoutStatus()) return;
 
-      try {
-        const [stores, settings] = await Promise.all([
-          directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-          directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-        ]);
-        if (stores && stores.length > 0 && stores[0].admin_pin) {
-          correctPin = stores[0].admin_pin;
-          pinFound = true;
-        }
-        if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-          const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-          const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-          if (staff && staff.pin) {
-            correctPin = staff.pin;
-            pinFound = true;
-          }
-        }
-      } catch (directErr) {
-        const gasRes = await fetch(`${API_URL}?action=verifyPin&store_id=${CURRENT_STORE_ID}&pin=${input}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
-        const gasData = await gasRes.json();
-        if (gasData.valid === true) {
-          enterDashboard();
+    const input = document.getElementById('pin-input').value.trim();
+    if (!input) return;
+
+    try {
+      // 方案 2：若網址有帶 Token，先解析出真實 store_id
+      if (CURRENT_ADMIN_TOKEN) {
+        const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
+        if (tokenRes && tokenRes.length > 0) {
+          CURRENT_STORE_ID = tokenRes[0].id;
+        } else {
+          document.getElementById('lock-error').innerText = '無效或未授權的後台管理金鑰 (Token)';
           return;
         }
       }
 
-      if (input === String(correctPin).trim() || (!pinFound && input === '8888')) {
+      let correctPin = '8888';
+      let pinFound = false;
+
+      const [stores, settings] = await Promise.all([
+        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
+        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
+      ]);
+
+      if (stores && stores.length > 0 && stores[0].admin_pin) {
+        correctPin = stores[0].admin_pin;
+        pinFound = true;
+      }
+      if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+        const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
+        const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+        if (staff && staff.pin) {
+          correctPin = staff.pin;
+          pinFound = true;
+        }
+      }
+
+      if (input === String(correctPin).trim()) {
+        // 驗證成功，清除錯誤計數
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCKOUT_KEY);
         enterDashboard();
       } else {
-        document.getElementById('lock-error').innerText = '密碼錯誤，請重新輸入';
-        document.getElementById('pin-input').value = '';
+        // 方案 3：錯誤次數累計與 15 分鐘鎖定判斷
+        let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
+        localStorage.setItem(ATTEMPTS_KEY, attempts);
+
+        if (attempts >= MAX_ATTEMPTS) {
+          const lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
+          localStorage.setItem(LOCKOUT_KEY, lockoutUntil);
+          document.getElementById('lock-error').innerText = '';
+          triggerLockoutUI(LOCKOUT_MINUTES * 60);
+        } else {
+          const left = MAX_ATTEMPTS - attempts;
+          document.getElementById('lock-error').innerText = `密碼錯誤！剩餘 ${left} 次嘗試機會`;
+          document.getElementById('pin-input').value = '';
+        }
       }
     } catch (e) {
       if (input === '8888') {
         enterDashboard();
       } else {
-        document.getElementById('lock-error').innerText = '密碼驗證失敗，預設為 8888';
+        document.getElementById('lock-error').innerText = '連線異常，請稍後重試';
       }
     }
   }
@@ -942,13 +1020,12 @@
           enableCustType: sCfg.enable_cust_type ?? true,
           enablePortfolio: sCfg.enable_portfolio ?? true,
           enableCare: sCfg.enable_care ?? true,
-          enableLineAutoNotify: sCfg.enable_line_auto_notify === true,
-          enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
-          enableFeaturedShop: sCfg.enable_featured_shop ?? true,
           enableShowPrice: sCfg.enable_show_price ?? true,
           enableCustNotes: sCfg.enable_cust_notes ?? true,
           enableQuickContact: sCfg.enable_quick_contact ?? true,
           enableCancelReason: sCfg.enable_cancel_reason ?? true,
+          enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
+          enableFeaturedShop: sCfg.enable_featured_shop ?? true,
           enableFlexMenu: sCfg.enable_flex_menu ?? true,
           enableAutoReminder: sCfg.enable_auto_reminder === true,
           lineChannelToken: sInfo.line_channel_token || sCfg.line_channel_token || "",
@@ -1453,7 +1530,6 @@
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
   }
 
-  // 回訪名單比對 (支援多組關鍵字以逗號分隔比對)
   function renderCare() {
     const list = document.getElementById('care-list');
     const s = backendData.settings || {};
@@ -1475,7 +1551,6 @@
 
       rules.forEach(r => {
         if (!r.name) return;
-        // 拆分多組關鍵字（支援半形逗號與全形逗號）
         const keywords = r.name.split(/[,，]/).map(k => k.trim()).filter(Boolean);
         const matchKeyword = keywords.find(kw => a.service.includes(kw));
 
@@ -1895,7 +1970,7 @@
 
   function openPayUniLink(link, planName) {
     Swal.fire({
-      title: '前往 PayUNi 官方安全付款',
+      title: '前往 PAYUNi 官方安全付款',
       text: `即將開啟【${planName}】付款頁面`,
       icon: 'info',
       showCancelButton: true,
@@ -2104,11 +2179,11 @@
     }
 
     const defaultCareRules = [
-  { name: "染髮造型,染髮, 漂髮, 挑染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
-  { name: "洗剪設計,剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
-  { name: "深層護理,頭皮SPA", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
-  { name: "光療美甲,凝膠", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
-];
+      { name: "染髮造型,染髮, 漂髮, 挑染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
+      { name: "洗剪設計,剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
+      { name: "深層護理,頭皮SPA", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
+      { name: "光療美甲,凝膠", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
+    ];
     const careContainer = document.getElementById('care-rules-container');
     const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
     careContainer.innerHTML = `
@@ -2219,6 +2294,11 @@
       Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
     }
   }
+
+  // 頁面載入時檢查是否處於鎖定倒數狀態
+  window.addEventListener('DOMContentLoaded', () => {
+    checkLockoutStatus();
+  });
 </script>
 </body>
 </html>
