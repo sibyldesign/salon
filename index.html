@@ -95,12 +95,22 @@
 
 <div id="booking-ui" class="max-w-md mx-auto flex flex-col">
 
-  <!-- PORTFOLIO 作品展示專區 -->
+  <!-- PORTFOLIO 作品展示專區 (預設 2 張 + 展開更多 + 智慧連結提示) -->
   <div class="px-4 mt-6" id="portfolioSection">
-    <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-1">PORTFOLIO</div>
-    <div class="text-center text-[11px] text-brand-500 font-medium mb-3">點擊作品即可開啟 Instagram 查看詳細設計</div>
+    <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-0.5">PORTFOLIO</div>
+    <div class="text-center text-[9.5px] text-brand-400 font-normal mb-3 tracking-wider hidden" id="portfolio-hint-text">點擊作品即可開啟 Instagram 查看詳細設計</div>
     <div class="flex gap-2 justify-center flex-wrap mb-4" id="portfolio-tabs"></div>
+    
+    <!-- 作品網格 -->
     <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
+    
+    <!-- 查看更多作品按鈕 (超過 2 張自動顯示) -->
+    <div class="text-center mt-3.5 hidden" id="portfolio-more-wrapper">
+      <button type="button" id="portfolio-toggle-btn" class="px-5 py-2 rounded-full text-xs font-bold border border-brand-300 text-brand-600 bg-white hover:bg-brand-50 shadow-sm transition inline-flex items-center gap-1.5" onclick="togglePortfolioExpand()">
+        <span>查看更多作品</span>
+        <span class="text-[10px] transform transition-transform duration-200" id="portfolio-arrow">▼</span>
+      </button>
+    </div>
   </div>
 
   <!-- 設計師熱推選品專區 (支援開關) -->
@@ -277,6 +287,8 @@
   let currentSlide = 0;
   let currentYear = new Date().getFullYear();
   let currentMonth = new Date().getMonth();
+  let currentPortfolioList = [];
+  let isPortfolioExpanded = false;
 
   async function directSupabaseFetch(endpoint) {
     try {
@@ -740,6 +752,12 @@
     const rawCats = (db.portfolio || []).map(p => p.cat).filter(Boolean);
     const categories = ['全部', ...new Set(rawCats)];
     
+    if (categories.length <= 1 && (!db.portfolio || db.portfolio.length === 0)) {
+      document.getElementById('portfolioSection').style.display = 'none';
+      return;
+    }
+    document.getElementById('portfolioSection').style.display = 'block';
+
     tabs.innerHTML = categories.map((cat, idx) => `
       <button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold border transition ${idx === 0 ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white text-brand-800 border-brand-200'}" onclick="filterWork('${cat}', this)">
         ${cat}
@@ -755,25 +773,67 @@
       });
       el.className = "px-3.5 py-1.5 rounded-full text-xs font-bold border transition bg-brand-400 text-white border-brand-400 shadow-sm";
     }
-    const grid = document.getElementById('portfolio-grid');
-    grid.innerHTML = '';
-    
-    const filtered = (cat === '全部') 
+
+    currentPortfolioList = (cat === '全部') 
       ? (db.portfolio || []) 
       : (db.portfolio || []).filter(w => w.cat === cat);
 
-    if (filtered.length === 0) {
+    // 智慧偵測：若此分類內完全沒有任何有效 IG 連結，則隱藏提示小字
+    const hasAnyLink = currentPortfolioList.some(w => w.link && w.link.trim() !== '' && w.link.trim() !== '#');
+    const hintEl = document.getElementById('portfolio-hint-text');
+    if (hintEl) {
+      hintEl.classList.toggle('hidden', !hasAnyLink);
+    }
+
+    // 切換分類時預設重置為收折狀態 (只顯 2 張)
+    isPortfolioExpanded = false;
+    renderPortfolioGrid();
+  }
+
+  function renderPortfolioGrid() {
+    const grid = document.getElementById('portfolio-grid');
+    const moreWrapper = document.getElementById('portfolio-more-wrapper');
+    const toggleBtnText = document.querySelector('#portfolio-toggle-btn span:first-child');
+    const arrow = document.getElementById('portfolio-arrow');
+
+    grid.innerHTML = '';
+
+    if (currentPortfolioList.length === 0) {
       grid.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-4">尚無作品展示</div>';
+      moreWrapper.classList.add('hidden');
       return;
     }
 
-    filtered.forEach(w => {
+    // 若展開顯示全部，否則只取前 2 張 (一排兩圖)
+    const displayList = isPortfolioExpanded ? currentPortfolioList : currentPortfolioList.slice(0, 2);
+
+    displayList.forEach(w => {
+      const hasLink = (w.link && w.link.trim() !== '' && w.link.trim() !== '#');
       grid.innerHTML += `
-        <div class="bg-white rounded-2xl overflow-hidden border border-brand-200 shadow-sm cursor-pointer hover:-translate-y-1 transition group" onclick="${w.link && w.link !== '#' ? `window.open('${w.link}', '_blank')` : ''}">
+        <div class="bg-white rounded-2xl overflow-hidden border border-brand-200 shadow-sm transition group ${hasLink ? 'cursor-pointer hover:-translate-y-1' : ''}" onclick="${hasLink ? `window.open('${w.link}', '_blank')` : ''}">
           <div class="w-full aspect-[3/4] bg-cover bg-center" style="background-image:url('${w.img}')"></div>
           <div class="p-2.5 text-center text-xs font-bold text-brand-900 truncate group-hover:text-brand-500">${w.title}</div>
         </div>`;
     });
+
+    // 超過 2 張時才顯示「查看更多」按鈕
+    if (currentPortfolioList.length > 2) {
+      moreWrapper.classList.remove('hidden');
+      if (isPortfolioExpanded) {
+        toggleBtnText.innerText = '收折作品';
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        toggleBtnText.innerText = `查看更多作品 (${currentPortfolioList.length - 2})`;
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    } else {
+      moreWrapper.classList.add('hidden');
+    }
+  }
+
+  function togglePortfolioExpand() {
+    isPortfolioExpanded = !isPortfolioExpanded;
+    renderPortfolioGrid();
   }
 
   document.getElementById('bookForm').onsubmit = async function(e) {
