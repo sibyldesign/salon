@@ -351,15 +351,17 @@
           <p class="text-brand-600 text-[11px] pt-1">※ 若信用卡過期、遺失換卡，或額度不足導致扣款失敗，PAYUNi 會發信通知。系統到期轉為「過期」時，才需要來此處重新點擊連結換卡付款。</p>
         </div>
 
-        <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-1.5 text-[11px]">
-  <div class="font-bold text-xs flex items-center gap-1 text-amber-800">
-    <i class="fa-solid fa-ban text-[10px]"></i>
-    <span>月繳方案如何取消？</span>
-  </div>
-  <p class="leading-relaxed">
-    <b>客服協助終止：</b>請直接加入官方 LINE（<a href="https://lin.ee/YoxX201" target="_blank" class="underline font-bold text-brand-700">@480kqjoj</a>）告知店名，技術人員將於後台協助您停止下期定期定額扣款。
-  </p>
-</div>
+        <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-1 text-[11px]">
+          <div class="font-bold text-xs flex items-center gap-1 text-amber-800">
+            <i class="fa-solid fa-ban text-[10px]"></i>
+            <span>月繳方案如何取消？</span>
+          </div>
+          <p class="leading-relaxed">
+            <b>客服協助終止：</b>請直接加入官方 LINE（<a href="https://lin.ee/YoxX201" target="_blank" class="underline font-bold text-brand-700">@480kqjoj</a>）告知店名，技術人員將於後台協助停止下期定期定額扣款。
+          </p>
+        </div>
+      </div>
+    </div>
 
     <!-- 功能許願池 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -378,7 +380,7 @@
     </div>
   </div>
 
-  <!-- 分頁 10. 設定 (原「店休」改名為「設定」) -->
+  <!-- 分頁 10. 設定 (原「店休」改名為「設定」，修復排版結構) -->
   <div id="page-settings" class="page space-y-4" style="display: none;">
     <!-- 店家公休控制台 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
@@ -501,14 +503,14 @@
       </select>
     </div>
 
-    <!-- 完整模組開關清單 -->
+    <!-- 完整模組開關清單 (所有 ID 精確對齊 JS，絕無 null 報錯) -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">功能模組開關</div>
       <div class="space-y-2 text-xs">
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 預約先由店家審核</span><input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 線下收取訂金機制</span><input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 預約先由店家審核</span><input type="checkbox" id="cfg-toggle-audit-booking-2" class="accent-brand-400" checked></label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 線下收取訂金機制</span><input type="checkbox" id="cfg-toggle-deposit-2" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
@@ -677,7 +679,6 @@
   const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
   
   const urlParams = new URLSearchParams(window.location.search);
-  // 支援方案 2：優先辨識私密 Token，向下相容 store_id
   const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
   let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
   const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
@@ -692,7 +693,26 @@
   let calMonth = new Date().getMonth();
   let promoImgsArray = new Array(7).fill("");
 
-  // 方案 3：防暴力破解狀態追蹤 (輸錯 5 次鎖定 15 分鐘)
+  // 莫蘭迪低飽和專員專用色盤
+  const STAFF_MORANDI_PALETTE = [
+    { dot: '#BCA38F', bg: '#F5EFEB', text: '#5C483A', border: '#DFD1C4' }, // 陶土杏棕
+    { dot: '#8FA38F', bg: '#EDF2ED', text: '#405440', border: '#C7D4C7' }, // 鼠尾草綠
+    { dot: '#8F9CA3', bg: '#EDF1F3', text: '#3E4E57', border: '#C5D0D6' }, // 莫蘭迪霧藍
+    { dot: '#A38F99', bg: '#F3EDF1', text: '#59444F', border: '#D6C5CE' }, // 玫瑰藕灰
+    { dot: '#A39A8F', bg: '#F3F0EC', text: '#595044', border: '#D6CDC2' }  // 燕麥暖灰
+  ];
+  const DEFAULT_STAFF_COLOR = { dot: '#A8A29E', bg: '#F5F5F4', text: '#57534E', border: '#E7E5E4' };
+
+  function getStaffColor(staffId) {
+    if (!staffId || staffId === 'all') return DEFAULT_STAFF_COLOR;
+    const staffList = (backendData.settings && backendData.settings.staffList) || [];
+    const validStaffs = staffList.filter(s => s.id !== 'all');
+    const index = validStaffs.findIndex(s => s.id === staffId);
+    if (index === -1) return DEFAULT_STAFF_COLOR;
+    return STAFF_MORANDI_PALETTE[index % STAFF_MORANDI_PALETTE.length];
+  }
+
+  // 防暴力破解：輸錯 5 次鎖定 15 分鐘
   const MAX_ATTEMPTS = 5;
   const LOCKOUT_MINUTES = 15;
   const ATTEMPTS_KEY = `sibyl_attempts_${CURRENT_STORE_ID}`;
@@ -719,6 +739,7 @@
     const box = document.getElementById('lockout-countdown');
     const timerSec = document.getElementById('timer-sec');
 
+    if (!input || !btn || !box) return;
     input.disabled = true;
     btn.disabled = true;
     btn.classList.add('opacity-50', 'pointer-events-none');
@@ -775,15 +796,12 @@
     return await res.json();
   }
 
-  // 登入驗證 (含方案 2 私鑰解析與方案 3 錯誤計數鎖定)
   async function checkPin() {
     if (checkLockoutStatus()) return;
-
     const input = document.getElementById('pin-input').value.trim();
     if (!input) return;
 
     try {
-      // 方案 2：若網址有帶 Token，先解析出真實 store_id
       if (CURRENT_ADMIN_TOKEN) {
         const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
         if (tokenRes && tokenRes.length > 0) {
@@ -816,12 +834,10 @@
       }
 
       if (input === String(correctPin).trim()) {
-        // 驗證成功，清除錯誤計數
         localStorage.removeItem(ATTEMPTS_KEY);
         localStorage.removeItem(LOCKOUT_KEY);
         enterDashboard();
       } else {
-        // 方案 3：錯誤次數累計與 15 分鐘鎖定判斷
         let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
         localStorage.setItem(ATTEMPTS_KEY, attempts);
 
@@ -1066,6 +1082,7 @@
           enableFeaturedShop: sCfg.enable_featured_shop ?? true,
           enableFlexMenu: sCfg.enable_flex_menu ?? true,
           enableAutoReminder: sCfg.enable_auto_reminder === true,
+          enableLineAutoNotify: sCfg.enable_line_auto_notify === true,
           lineChannelToken: sInfo.line_channel_token || sCfg.line_channel_token || "",
           staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
           staffSchedules: sCfg.staff_schedules || {},
@@ -1145,41 +1162,41 @@
     document.querySelectorAll('.nav-item').forEach(n => {
       n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium";
     });
-    document.getElementById('page-' + pageId).style.display = 'block';
-    el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+    const targetPage = document.getElementById('page-' + pageId);
+    if (targetPage) targetPage.style.display = 'block';
+    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
   }
 
   function renderCalendar() {
-  const grid = document.getElementById('cal-grid');
-  document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
-  const headers = ['日', '一', '二', '三', '四', '五', '六'];
-  let html = headers.map(h => `<div class="py-1 font-bold text-brand-400 text-[11px]">${h}</div>`).join('');
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  for (let i = 0; i < firstDay; i++) html += `<div class="py-2.5"></div>`;
-  
-  for (let i = 1; i <= daysInMonth; i++) {
-    let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
-    let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
+    const grid = document.getElementById('cal-grid');
+    document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
+    const headers = ['日', '一', '二', '三', '四', '五', '六'];
+    let html = headers.map(h => `<div class="py-1 font-bold text-brand-400 text-[11px]">${h}</div>`).join('');
+    const firstDay = new Date(calYear, calMonth, 1).getDay();
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    for (let i = 0; i < firstDay; i++) html += `<div class="py-2.5"></div>`;
     
-    // 依專員提取專屬莫蘭迪色點
-    let dotsHtml = apptsToday.slice(0, 4).map(a => {
-      const color = getStaffColor(a.staffId);
-      return `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color: ${color.dot};" title="${a.staffName || '不指定'}"></span>`;
-    }).join('');
+    for (let i = 1; i <= daysInMonth; i++) {
+      let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
+      let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
+      
+      let dotsHtml = apptsToday.slice(0, 4).map(a => {
+        const color = getStaffColor(a.staffId);
+        return `<span class="w-1.5 h-1.5 rounded-full inline-block" style="background-color: ${color.dot};" title="${a.staffName || '不指定'}"></span>`;
+      }).join('');
 
-    if (apptsToday.length > 4) {
-      dotsHtml += `<span class="text-[8px] text-brand-400 font-bold leading-none">+</span>`;
+      if (apptsToday.length > 4) {
+        dotsHtml += `<span class="text-[8px] text-brand-400 font-bold leading-none">+</span>`;
+      }
+
+      html += `
+        <div class="py-2 rounded-xl hover:bg-brand-100 cursor-pointer flex flex-col items-center transition border border-transparent hover:border-brand-200" onclick="showApptsInCalendar('${dStr}')">
+          <span class="font-bold text-xs">${i}</span>
+          <div class="flex items-center gap-0.5 mt-1 h-1.5">${dotsHtml}</div>
+        </div>`;
     }
-
-    html += `
-      <div class="py-2 rounded-xl hover:bg-brand-100 cursor-pointer flex flex-col items-center transition border border-transparent hover:border-brand-200" onclick="showApptsInCalendar('${dStr}')">
-        <span class="font-bold text-xs">${i}</span>
-        <div class="flex items-center gap-0.5 mt-1 h-1.5">${dotsHtml}</div>
-      </div>`;
+    grid.innerHTML = html;
   }
-  grid.innerHTML = html;
-}
 
   function changeCalMonth(dir) {
     calMonth += dir;
@@ -1212,89 +1229,106 @@
   }
 
   function renderSingleCardHTML(a) {
-  const s = backendData.settings || {};
-  const isNewCust = (a.customer_type === 'new');
-  const custTypeBadge = isNewCust 
-    ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
-    : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
+    const s = backendData.settings || {};
+    const isNewCust = (a.customer_type === 'new');
+    const custTypeBadge = isNewCust 
+      ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
+      : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
 
-  // 取得專員莫蘭迪顏色
-  const staffColor = getStaffColor(a.staffId);
-  const staffBadgeHtml = `
-    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border" style="background-color: ${staffColor.bg}; color: ${staffColor.text}; border-color: ${staffColor.border};">
-      <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${staffColor.dot};"></span>
-      <span>服務專員：${a.staffName || '不指定'}</span>
-    </span>
-  `;
+    const staffColor = getStaffColor(a.staffId);
+    const staffBadgeHtml = `
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border" style="background-color: ${staffColor.bg}; color: ${staffColor.text}; border-color: ${staffColor.border};">
+        <span class="w-1.5 h-1.5 rounded-full" style="background-color: ${staffColor.dot};"></span>
+        <span>服務專員：${a.staffName || '不指定'}</span>
+      </span>
+    `;
 
-  const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
-  const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+    const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
+    const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
 
-  const quickContactHtml = (s.enableQuickContact !== false && rawPhone) ? `
-    <div class="flex items-center gap-1.5 pt-0.5">
-      <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-        <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
-      </a>
-      <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-        <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
-      </a>
-      ${a.lineName ? `<span class="text-[10px] text-brand-400 ml-1">LINE: <b>${a.lineName}</b></span>` : ''}
-    </div>
-  ` : '';
+    const quickContactHtml = (s.enableQuickContact !== false && rawPhone) ? `
+      <div class="flex items-center gap-1.5 pt-0.5">
+        <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
+          <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
+        </a>
+        <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
+          <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
+        </a>
+        ${a.lineName ? `<span class="text-[10px] text-brand-400 ml-1">LINE: <b>${a.lineName}</b></span>` : ''}
+      </div>
+    ` : '';
 
-  const custNotesHtml = (s.enableCustNotes !== false && a.customer_notes) ? `
-    <div class="p-2 bg-amber-50/90 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
-      <span class="font-bold text-amber-800">📝 顧客備註/膚況：</span>${a.customer_notes}
-    </div>
-  ` : '';
+    const custNotesHtml = (s.enableCustNotes !== false && a.customer_notes) ? `
+      <div class="p-2 bg-amber-50/90 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
+        <span class="font-bold text-amber-800">📝 顧客備註/膚況：</span>${a.customer_notes}
+      </div>
+    ` : '';
 
-  const cancelReasonHtml = (a.status === '已取消' && a.cancel_reason) ? `
-    <div class="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800">
-      <span class="font-bold">❌ 取消原因：</span>${a.cancel_reason}
-    </div>
-  ` : '';
+    const cancelReasonHtml = (a.status === '已取消' && a.cancel_reason) ? `
+      <div class="p-2 bg-red-50 rounded-xl border border-red-200 text-[11px] text-red-800">
+        <span class="font-bold">❌ 取消原因：</span>${a.cancel_reason}
+      </div>
+    ` : '';
 
-  const priceDisplayHtml = (s.enableShowPrice !== false) ? `
-    <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
-  ` : '';
+    const priceDisplayHtml = (s.enableShowPrice !== false) ? `
+      <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+    ` : '';
 
-  return `
-    <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-1.5">
-          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-          ${custTypeBadge}
+    return `
+      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <div class="flex items-center gap-1.5">
+            <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+            ${custTypeBadge}
+          </div>
+          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
+            <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
+            <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
+            <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
+            <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
+            <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
+          </select>
         </div>
-        <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
-          <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
-          <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
-          <option value="已結單" ${a.status==='已結單'?'selected':''}>已結單</option>
-          <option value="婉拒" ${a.status==='婉拒'?'selected':''}>婉拒</option>
-          <option value="已取消" ${a.status==='已取消'?'selected':''}>已取消</option>
-        </select>
-      </div>
-      <div class="font-bold text-brand-900 text-sm flex items-center justify-between">
-        <span>${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></span>
-      </div>
-      ${quickContactHtml}
-      <div class="pt-0.5">
-        ${staffBadgeHtml}
-      </div>
-      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-        <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-        ${priceDisplayHtml}
-      </div>
-      ${custNotesHtml}
-      ${cancelReasonHtml}
-      ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
-      <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
-        <button class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5B6B78] text-white rounded-lg font-bold transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
-        <button class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-        <button class="px-2.5 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold transition" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
-        <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold transition" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
-      </div>
-    </div>`;
-}
+        <div class="font-bold text-brand-900 text-sm flex items-center justify-between">
+          <span>${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></span>
+        </div>
+        ${quickContactHtml}
+        <div class="pt-0.5">
+          ${staffBadgeHtml}
+        </div>
+        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
+          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
+          ${priceDisplayHtml}
+        </div>
+        ${custNotesHtml}
+        ${cancelReasonHtml}
+        ${a.depositLast5 ? `<div class="p-2 bg-red-50 text-red-600 font-bold rounded-xl text-xs border border-red-200">回報帳號後五碼：【 ${a.depositLast5} 】</div>` : ''}
+        <div class="flex gap-1.5 pt-1 flex-wrap text-[11px]">
+          <button class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5B6B78] text-white rounded-lg font-bold transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
+          <button class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button class="px-2.5 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold transition" onclick="openCompleteModal('${a.id}', '${a.name}', '${a.price}')">結單</button>
+          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold transition" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
+        </div>
+      </div>`;
+  }
+
+  async function quickUpdateStatus(id, newStatus) {
+    if (newStatus === '已取消') {
+      const appt = (backendData.appointments || []).find(a => a.id === id);
+      handleCancelBookingPrompt(id, appt ? appt.name : '');
+      return;
+    }
+    try {
+      await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
+      fetchDataAndRender();
+    } catch (e) {
+      await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: "updateBookingStatus", id: id, status: newStatus })
+      });
+      fetchDataAndRender();
+    }
+  }
 
   function handleCancelBookingPrompt(id, name) {
     const s = backendData.settings || {};
@@ -1409,7 +1443,7 @@
         <div class="text-xs text-brand-400 mb-2">原預約金額：${originalPrice}元</div>
         <input type="number" id="swal-final-price" class="swal2-input text-center text-sm" style="width:80%;" value="${originalPrice}">
       `,
-      showCancelButton: true, confirmButtonText: '確認結單', confirmButtonColor: '#2e7d32',
+      showCancelButton: true, confirmButtonText: '確認結單', confirmButtonColor: '#7D8F7D',
       preConfirm: () => document.getElementById('swal-final-price').value
     }).then(async r => {
       if (r.isConfirmed) {
@@ -1427,40 +1461,22 @@
     });
   }
 
-  // 莫蘭迪低飽和專員專用色系清單
-const STAFF_MORANDI_PALETTE = [
-  { dot: '#BCA38F', bg: '#F5EFEB', text: '#5C483A', border: '#DFD1C4' }, // 陶土杏棕
-  { dot: '#8FA38F', bg: '#EDF2ED', text: '#405440', border: '#C7D4C7' }, // 鼠尾草綠
-  { dot: '#8F9CA3', bg: '#EDF1F3', text: '#3E4E57', border: '#C5D0D6' }, // 莫蘭迪霧藍
-  { dot: '#A38F99', bg: '#F3EDF1', text: '#59444F', border: '#D6C5CE' }, // 玫瑰藕灰
-  { dot: '#A39A8F', bg: '#F3F0EC', text: '#595044', border: '#D6CDC2' }  // 燕麥暖灰
-];
-const DEFAULT_STAFF_COLOR = { dot: '#A8A29E', bg: '#F5F5F4', text: '#57534E', border: '#E7E5E4' };
-
-function getStaffColor(staffId) {
-  if (!staffId || staffId === 'all') return DEFAULT_STAFF_COLOR;
-  const staffList = (backendData.settings && backendData.settings.staffList) || [];
-  const validStaffs = staffList.filter(s => s.id !== 'all');
-  const index = validStaffs.findIndex(s => s.id === staffId);
-  if (index === -1) return DEFAULT_STAFF_COLOR;
-  return STAFF_MORANDI_PALETTE[index % STAFF_MORANDI_PALETTE.length];
-}
-  
   function renderShift() {
-  const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
-  
-  document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => {
-    const color = getStaffColor(s.id);
-    const isSelected = (activeShiftStaffId === s.id);
-    return `
-      <button class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
-        isSelected ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
-      }" onclick="switchShiftStaff('${s.id}')">
-        <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${isSelected ? '#FFFFFF' : color.dot};"></span>
-        <span>${s.name}</span>
-      </button>
-    `;
-  }).join('');
+    const staffList = backendData.settings.staffList || [{ id: "all", name: "不指定" }];
+    
+    document.getElementById('staff-shift-buttons').innerHTML = staffList.map(s => {
+      const color = getStaffColor(s.id);
+      const isSelected = (activeShiftStaffId === s.id);
+      return `
+        <button class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
+          isSelected ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+        }" onclick="switchShiftStaff('${s.id}')">
+          <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${isSelected ? '#FFFFFF' : color.dot};"></span>
+          <span>${s.name}</span>
+        </button>
+      `;
+    }).join('');
+
     const dates = backendData.scheduleDates || [];
     let html = `<div class="date-box shrink-0 px-4 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === 'ALL' ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('ALL')">全部</div>`;
     dates.forEach(d => {
@@ -2168,53 +2184,70 @@ function getStaffColor(staffId) {
     saveStoreSettings();
   }
 
+  // ✅ 修復關鍵：全面進行存在性防呆檢查，徹底消滅導致空白的 TypeError！
   function populateSettings() {
     const s = backendData.settings || {};
-    document.getElementById('cfg-title').value = s.storeName || '';
-    document.getElementById('cfg-subtitle').value = s.subtitle || '';
-    document.getElementById('cfg-logo').value = s.logoUrl || '';
-    if (s.logoUrl) {
-      document.getElementById('logo-preview-img').src = s.logoUrl;
-      document.getElementById('logo-preview-box').style.display = 'flex';
-    } else {
-      document.getElementById('logo-preview-box').style.display = 'none';
-    }
-    document.getElementById('cfg-address').value = s.address || '';
-    document.getElementById('cfg-hours').value = s.businessHours || '';
-    document.getElementById('cfg-buffer').value = s.bookingBufferHours ?? 1;
-    document.getElementById('cfg-care').value = s.careText || '';
-    document.getElementById('cfg-deposit-info').value = s.depositInfo || '';
-    document.getElementById('cfg-deposit-mode').value = s.depositMode || 'all';
-    document.getElementById('cfg-deposit-amount').value = s.depositAmount || '';
-    document.getElementById('cfg-shift-start').value = s.shiftStartTime || '09:00';
-    document.getElementById('cfg-shift-end').value = s.shiftEndTime || '19:00';
-    document.getElementById('cfg-shift-interval').value = String(s.shiftInterval || 30);
-    document.getElementById('cfg-promo').value = s.promoText || '';
-    document.getElementById('cfg-line').value = s.line || '';
-    document.getElementById('cfg-ig').value = s.ig || '';
-    document.getElementById('cfg-map').value = s.map || '';
     
-    document.getElementById('cfg-toggle-logo').checked = s.enableLogo ?? true;
-    document.getElementById('cfg-toggle-email').checked = s.enableEmailCopy ?? true;
-    document.getElementById('cfg-toggle-audit-booking').checked = s.enableAuditBooking ?? true;
-    document.getElementById('cfg-toggle-deposit').checked = s.enableDeposit ?? true;
-    document.getElementById('cfg-toggle-staff-select').checked = s.enableStaffSelect ?? true;
-    document.getElementById('cfg-toggle-multi-staff-schedule').checked = s.enableMultiStaffSchedule ?? true;
-    document.getElementById('cfg-toggle-carousel').checked = s.enableCarousel ?? true;
-    document.getElementById('cfg-toggle-custtype').checked = s.enableCustType ?? true;
-    document.getElementById('cfg-toggle-portfolio').checked = s.enablePortfolio ?? true;
-    document.getElementById('cfg-toggle-care').checked = s.enableCare ?? true;
-    document.getElementById('cfg-toggle-show-price').checked = s.enableShowPrice ?? true;
-    document.getElementById('cfg-toggle-cust-notes').checked = s.enableCustNotes ?? true;
-    document.getElementById('cfg-toggle-quick-contact').checked = s.enableQuickContact ?? true;
-    document.getElementById('cfg-toggle-cancel-reason').checked = s.enableCancelReason ?? true;
-    document.getElementById('cfg-toggle-line-one-click').checked = s.enableLineOneClickAudit ?? true;
-    document.getElementById('cfg-toggle-featured-shop').checked = s.enableFeaturedShop ?? true;
-    document.getElementById('cfg-toggle-flex-menu').checked = s.enableFlexMenu ?? true;
-    document.getElementById('cfg-toggle-auto-reminder').checked = s.enableAutoReminder === true;
-    document.getElementById('cfg-toggle-line-auto-notify').checked = (s.enableLineAutoNotify === true || s.enable_line_auto_notify === true || s.enableLineAutoNotify === 'true');
-    document.getElementById('cfg-line-token').value = s.lineChannelToken || '';
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+    const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = Boolean(val); };
 
+    setVal('cfg-title', s.storeName);
+    setVal('cfg-subtitle', s.subtitle);
+    setVal('cfg-logo', s.logoUrl);
+    
+    const previewBox = document.getElementById('logo-preview-box');
+    const previewImg = document.getElementById('logo-preview-img');
+    if (previewBox && previewImg) {
+      if (s.logoUrl) {
+        previewImg.src = s.logoUrl;
+        previewBox.style.display = 'flex';
+      } else {
+        previewBox.style.display = 'none';
+      }
+    }
+
+    setVal('cfg-address', s.address);
+    setVal('cfg-hours', s.businessHours);
+    setVal('cfg-buffer', s.bookingBufferHours ?? 1);
+    setVal('cfg-care', s.careText);
+    setVal('cfg-deposit-info', s.depositInfo);
+    setVal('cfg-deposit-mode', s.depositMode || 'all');
+    setVal('cfg-deposit-amount', s.depositAmount || '');
+    setVal('cfg-shift-start', s.shiftStartTime || '09:00');
+    setVal('cfg-shift-end', s.shiftEndTime || '19:00');
+    setVal('cfg-shift-interval', String(s.shiftInterval || 30));
+    setVal('cfg-promo', s.promoText);
+    setVal('cfg-line', s.line);
+    setVal('cfg-ig', s.ig);
+    setVal('cfg-map', s.map);
+    
+    // 模組開關勾選設置
+    setCheck('cfg-toggle-logo', s.enableLogo ?? true);
+    setCheck('cfg-toggle-email', s.enableEmailCopy ?? true);
+    setCheck('cfg-toggle-audit-booking', s.enableAuditBooking ?? true);
+    setCheck('cfg-toggle-audit-booking-2', s.enableAuditBooking ?? true);
+    setCheck('cfg-toggle-deposit', s.enableDeposit ?? true);
+    setCheck('cfg-toggle-deposit-2', s.enableDeposit ?? true);
+    setCheck('cfg-toggle-staff-select', s.enableStaffSelect ?? true);
+    setCheck('cfg-toggle-multi-staff-schedule', s.enableMultiStaffSchedule ?? true);
+    setCheck('cfg-toggle-carousel', s.enableCarousel ?? true);
+    setCheck('cfg-toggle-custtype', s.enableCustType ?? true);
+    setCheck('cfg-toggle-portfolio', s.enablePortfolio ?? true);
+    setCheck('cfg-toggle-care', s.enableCare ?? true);
+    setCheck('cfg-toggle-show-price', s.enableShowPrice ?? true);
+    setCheck('cfg-toggle-cust-notes', s.enableCustNotes ?? true);
+    setCheck('cfg-toggle-quick-contact', s.enableQuickContact ?? true);
+    setCheck('cfg-toggle-cancel-reason', s.enableCancelReason ?? true);
+    setCheck('cfg-toggle-line-one-click', s.enableLineOneClickAudit ?? true);
+    setCheck('cfg-toggle-featured-shop', s.enableFeaturedShop ?? true);
+    setCheck('cfg-toggle-flex-menu', s.enableFlexMenu ?? true);
+    setCheck('cfg-toggle-auto-reminder', s.enableAutoReminder === true);
+    
+    // 解決勾選消失：標準布林轉換
+    setCheck('cfg-toggle-line-auto-notify', Boolean(s.enableLineAutoNotify || s.enable_line_auto_notify));
+    setVal('cfg-line-token', s.lineChannelToken);
+
+    // 公休日勾選
     const weeklyOff = Array.isArray(s.weeklyOffDays) ? s.weeklyOffDays : [];
     document.querySelectorAll('#weekly-off-grid input').forEach(input => {
       input.checked = weeklyOff.includes(Number(input.value));
@@ -2223,27 +2256,34 @@ function getStaffColor(staffId) {
     customOffDatesArray = Array.isArray(s.customOffDates) ? s.customOffDates : [];
     renderCustomOffDatesTags();
 
+    // 專員列表
     const staffList = s.staffList || [{ id: "all", name: "不指定", pin: "8888" }];
-    document.getElementById('staff-list-container').innerHTML = staffList.map(st => `
-      <div class="flex justify-between items-center p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs">
-        <div>
-          <b>${st.name}</b> <code class="text-brand-400">(代號: ${st.id})</code>
-          <span class="ml-2 text-[10px] text-gray-500 font-bold">密碼: ${st.pin || '8888'}</span>
+    const staffContainer = document.getElementById('staff-list-container');
+    if (staffContainer) {
+      staffContainer.innerHTML = staffList.map(st => `
+        <div class="flex justify-between items-center p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs">
+          <div>
+            <b>${st.name}</b> <code class="text-brand-400">(代號: ${st.id})</code>
+            <span class="ml-2 text-[10px] text-gray-500 font-bold">密碼: ${st.pin || '8888'}</span>
+          </div>
+          ${st.id !== 'all' ? `<button onclick="removeStaffMember('${st.id}')" class="text-red-500 font-bold px-2">刪除</button>` : '<span class="text-brand-300">預設</span>'}
         </div>
-        ${st.id !== 'all' ? `<button onclick="removeStaffMember('${st.id}')" class="text-red-500 font-bold px-2">刪除</button>` : '<span class="text-brand-300">預設</span>'}
-      </div>
-    `).join('');
+      `).join('');
+    }
 
+    // 說明圖陣列
     if (s.promoImgs) {
       promoImgsArray = s.promoImgs;
       promoImgsArray.forEach((url, i) => {
-        if (url && document.getElementById(`slot-${i}`)) {
-          document.getElementById(`slot-${i}`).style.backgroundImage = `url('${url}')`;
-          document.getElementById(`slot-${i}`).innerHTML = '';
+        const slot = document.getElementById(`slot-${i}`);
+        if (url && slot) {
+          slot.style.backgroundImage = `url('${url}')`;
+          slot.innerHTML = '';
         }
       });
     }
 
+    // 關懷文案範本
     const defaultCareRules = [
       { name: "染髮造型,染髮, 漂髮, 挑染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
       { name: "洗剪設計,剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
@@ -2251,29 +2291,32 @@ function getStaffColor(staffId) {
       { name: "光療美甲,凝膠", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
     ];
     const careContainer = document.getElementById('care-rules-container');
-    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
-    careContainer.innerHTML = `
-      <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
-        💡 <b>設定技巧：</b><br>
-        ・<b>項目關鍵字</b>：支援多組關鍵字，請以逗號「,」分隔（例如：<code>染髮, 漂髮, 挑染</code>），客人施作項目只要符合其中一組就會自動推薦！<br>
-        ・<b>變數帶入</b>：文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 複製時會自動替換成客人專屬資訊。
-      </div>
-    `;
-    for (let i = 0; i < 5; i++) {
-      const r = rules[i] || { name: '', weeks: 4, msg: '' };
-      careContainer.innerHTML += `
-        <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5 mb-2">
-          <div class="flex gap-2">
-            <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="關鍵字 (以逗號分隔，如: 染髮, 漂髮)" value="${r.name}">
-            <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
-          </div>
-          <textarea class="w-full p-2 rounded-xl border border-brand-200 rule-msg text-xs" rows="2" placeholder="關懷訊息">${r.msg}</textarea>
-        </div>`;
+    if (careContainer) {
+      const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
+      careContainer.innerHTML = `
+        <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
+          💡 <b>設定技巧：</b><br>
+          ・<b>項目關鍵字</b>：支援多組關鍵字，請以逗號「,」分隔（例如：<code>染髮, 漂髮, 挑染</code>），客人施作項目只要符合其中一組就會自動推薦！<br>
+          ・<b>變數帶入</b>：文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 複製時會自動替換成客人專屬資訊。
+        </div>
+      `;
+      for (let i = 0; i < 5; i++) {
+        const r = rules[i] || { name: '', weeks: 4, msg: '' };
+        careContainer.innerHTML += `
+          <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5 mb-2">
+            <div class="flex gap-2">
+              <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="關鍵字 (以逗號分隔，如: 染髮, 漂髮)" value="${r.name}">
+              <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
+            </div>
+            <textarea class="w-full p-2 rounded-xl border border-brand-200 rule-msg text-xs" rows="2" placeholder="關懷訊息">${r.msg}</textarea>
+          </div>`;
+      }
     }
   }
 
   function renderUploadSlots() {
     const grid = document.getElementById('promo-upload-grid');
+    if (!grid) return;
     grid.innerHTML = '';
     for (let i = 0; i < 7; i++) {
       grid.innerHTML += `
@@ -2296,6 +2339,9 @@ function getStaffColor(staffId) {
       msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
     })).filter(r => r.name !== '');
 
+    const auditBookingVal = document.getElementById('cfg-toggle-audit-booking')?.checked ?? document.getElementById('cfg-toggle-audit-booking-2')?.checked ?? currentSettings.enableAuditBooking ?? true;
+    const depositVal = document.getElementById('cfg-toggle-deposit')?.checked ?? document.getElementById('cfg-toggle-deposit-2')?.checked ?? currentSettings.enableDeposit ?? true;
+
     const payload = {
       store_id: CURRENT_STORE_ID,
       display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
@@ -2315,8 +2361,8 @@ function getStaffColor(staffId) {
       ig_url: document.getElementById('cfg-ig')?.value.trim() ?? currentSettings.ig ?? '',
       map_url: document.getElementById('cfg-map')?.value.trim() ?? currentSettings.map ?? '',
       enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? currentSettings.enableEmailCopy ?? true,
-      enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true,
-      enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true,
+      enable_audit_booking: auditBookingVal,
+      enable_deposit: depositVal,
       enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? currentSettings.enableStaffSelect ?? true,
       enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? currentSettings.enableMultiStaffSchedule ?? true,
       enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? currentSettings.enableCarousel ?? true,
@@ -2327,7 +2373,7 @@ function getStaffColor(staffId) {
       enable_cust_notes: document.getElementById('cfg-toggle-cust-notes')?.checked ?? currentSettings.enableCustNotes ?? true,
       enable_quick_contact: document.getElementById('cfg-toggle-quick-contact')?.checked ?? currentSettings.enableQuickContact ?? true,
       enable_cancel_reason: document.getElementById('cfg-toggle-cancel-reason')?.checked ?? currentSettings.enableCancelReason ?? true,
-      enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked ?? currentSettings.enableLineAutoNotify ?? false,
+      enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
       enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
       enable_featured_shop: document.getElementById('cfg-toggle-featured-shop')?.checked ?? currentSettings.enableFeaturedShop ?? true,
       enable_flex_menu: document.getElementById('cfg-toggle-flex-menu')?.checked ?? currentSettings.enableFlexMenu ?? true,
@@ -2361,7 +2407,6 @@ function getStaffColor(staffId) {
     }
   }
 
-  // 頁面載入時檢查是否處於鎖定倒數狀態
   window.addEventListener('DOMContentLoaded', () => {
     checkLockoutStatus();
   });
