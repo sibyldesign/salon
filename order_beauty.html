@@ -431,125 +431,131 @@
     }
 
     async function submitAndPay() {
-      const storeName = document.getElementById('storeName').value.trim();
-      const selectedPlanRadio = document.querySelector('input[name="planChoice"]:checked');
-      const planChoice = selectedPlanRadio ? selectedPlanRadio.value : 'yearly';
-      
-      const buyerName = document.getElementById('buyerName').value.trim();
-      const buyerPhone = document.getElementById('buyerPhone').value.trim();
-      const buyerEmail = document.getElementById('buyerEmail').value.trim();
+  const storeName = document.getElementById('storeName').value.trim();
+  const selectedPlanRadio = document.querySelector('input[name="planChoice"]:checked');
+  const planChoice = selectedPlanRadio ? selectedPlanRadio.value : 'yearly';
+  
+  const buyerName = document.getElementById('buyerName').value.trim();
+  const buyerPhone = document.getElementById('buyerPhone').value.trim();
+  const buyerEmail = document.getElementById('buyerEmail').value.trim();
 
-      if (!storeName || !buyerName || !buyerPhone || !buyerEmail) {
-        return Swal.fire('請填寫完整資料', '店家名稱、姓名、手機與電子信箱為必填！', 'warning');
-      }
+  if (!storeName || !buyerName || !buyerPhone || !buyerEmail) {
+    return Swal.fire('請填寫完整資料', '店家名稱、姓名、手機與電子信箱為必填！', 'warning');
+  }
 
-      Swal.fire({ title: '正在建立專屬系統帳號與服務範本...', allowOutsideClick: false }); 
-      Swal.showLoading();
+  Swal.fire({ title: '正在建立專屬系統帳號與服務範本...', allowOutsideClick: false }); 
+  Swal.showLoading();
 
-      try {
-        const storeId = crypto.randomUUID();
-        let planTitle = (planChoice === 'yearly') ? '年度旗艦方案' : '月繳方案';
+  try {
+    const storeId = crypto.randomUUID();
+    // 方案 2 資安升級：生成 32 位高強度後台專用私鑰 Token，徹底阻絕有心人以前台 ID 猜密碼
+    const adminToken = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
 
-        // 1. 建立 stores 店家記錄 (預設 pending，未付款前不開通)
-        const storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
-          method: "POST",
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=representation"
-          },
-          body: JSON.stringify({
-            id: storeId,
-            store_name: storeName,
-            industry_type: 'beauty',
-            plan_name: planTitle,
-            plan_status: 'pending',
-            expires_at: null,
-            owner_email: buyerEmail,
-            owner_phone: buyerPhone,
-            admin_pin: '8888'
-          })
-        });
+    let planTitle = (planChoice === 'yearly') ? '年度旗艦方案' : '月繳方案';
 
-        if (!storeRes.ok) {
-          throw new Error("建立店家帳號失敗，請稍候重試！");
-        }
+    // 1. 建立 stores 店家記錄 (預設 pending，寫入 admin_token)
+    const storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify({
+        id: storeId,
+        store_name: storeName,
+        admin_token: adminToken, // 存入私鑰 Token
+        industry_type: 'beauty',
+        plan_name: planTitle,
+        plan_status: 'pending',
+        expires_at: null,
+        owner_email: buyerEmail,
+        owner_phone: buyerPhone,
+        admin_pin: '8888'
+      })
+    });
 
-        // 2. 自動植入 3 項基礎服務
-        await fetch(`${SUPABASE_URL}/rest/v1/services`, {
-          method: "POST",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify([
-            { store_id: storeId, service_name: "洗剪造型設計", price: "800", duration_minutes: 60, service_type: "Group_B", is_addon: false, sort_order: 0 },
-            { store_id: storeId, service_name: "深層水光護髮", price: "1200", duration_minutes: 60, service_type: "Group_A", is_addon: false, sort_order: 1 },
-            { store_id: storeId, service_name: "頭皮淨化舒壓SPA", price: "600", duration_minutes: 30, service_type: "Group_A", is_addon: true, sort_order: 2 }
-          ])
-        });
-
-        // 3. 初始化 store_settings (除 LINE Token 相關外，全數預設啟用)
-        await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
-          method: "POST",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            store_id: storeId,
-            display_title: storeName,
-            display_subtitle: "專業美業線上預約",
-            enable_logo: true,
-            enable_email_copy: true,
-            enable_audit_booking: true,
-            enable_deposit: true,
-            deposit_mode: "all",
-            deposit_amount: 500,
-            deposit_info: "請於預約後 24 小時內完成匯款並於系統回報後五碼。\n銀行代號：012 (富邦)\n帳號：1234-5678-9012",
-            enable_staff_select: true,
-            enable_multi_staff_schedule: true,
-            enable_carousel: true,
-            enable_cust_type: true,
-            enable_portfolio: true,
-            enable_care: true,
-            enable_show_price: true,
-            enable_cust_notes: true,
-            enable_quick_contact: true,
-            enable_cancel_reason: true,
-            enable_line_one_click_audit: true,
-            enable_featured_shop: true,
-            enable_flex_menu: true,
-            enable_auto_reminder: false,
-            enable_line_auto_notify: false,
-            shift_start_time: "09:00",
-            shift_end_time: "19:00",
-            shift_interval: 30,
-            booking_buffer_hours: 1
-          })
-        });
-
-        const adminLink = `https://salon.heysibyl.com/admin.html?store_id=${storeId}`;
-        const frontLink = `https://salon.heysibyl.com/?store_id=${storeId}`;
-        const targetPayUrl = PAYUNI_LINKS[planChoice] || PAYUNI_LINKS.yearly;
-
-        Swal.fire({
-          title: '帳號建立成功！請確認專屬連結',
-          html: `
-            <div class="text-xs text-brand-800 text-left space-y-2 bg-brand-50 p-3.5 rounded-2xl border border-brand-200">
-              <div><b>🏪 店家名稱：</b>${storeName}</div>
-              <div><b>🔑 專屬後台：</b><a href="${adminLink}" target="_blank" class="text-blue-600 underline break-all">${adminLink}</a></div>
-              <div><b>📱 預約前台：</b><a href="${frontLink}" target="_blank" class="text-blue-600 underline break-all">${frontLink}</a></div>
-              <div class="p-2 bg-amber-100/80 rounded-xl text-amber-900 border border-amber-200 text-[11px] leading-relaxed">
-                📧 <b>收信提示：</b>付款完成後，系統將寄送主旨為<b>【🎉【Sibyl 數位管家】美業預約排程系統已開通！請查收專屬後台與前台連結】</b>的信件至您的信箱（<code>${buyerEmail}</code>）。若未看到，請務必至<b>「垃圾郵件」</b>或<b>「促銷內容」</b>查找！
-              </div>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonText: '確定，前往 PAYUNi 付款'
-        }).then(() => {
-          window.location.href = targetPayUrl;
-        });
-
-      } catch(e) {
-        Swal.fire('系統連線異常', e.message, 'error');
-      }
+    if (!storeRes.ok) {
+      throw new Error("建立店家帳號失敗，請稍候重試！");
     }
+
+    // 2. 自動植入 3 項基礎服務 (解決前台空白問題)
+    await fetch(`${SUPABASE_URL}/rest/v1/services`, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify([
+        { store_id: storeId, service_name: "洗剪造型設計", price: "800", duration_minutes: 60, service_type: "Group_B", is_addon: false, sort_order: 0 },
+        { store_id: storeId, service_name: "深層水光護髮", price: "1200", duration_minutes: 60, service_type: "Group_A", is_addon: false, sort_order: 1 },
+        { store_id: storeId, service_name: "頭皮淨化舒壓SPA", price: "600", duration_minutes: 30, service_type: "Group_A", is_addon: true, sort_order: 2 }
+      ])
+    });
+
+    // 3. 初始化 store_settings (除 LINE Token 相關外，全數預設啟用)
+    await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        store_id: storeId,
+        display_title: storeName,
+        display_subtitle: "專業美業線上預約",
+        enable_logo: true,
+        enable_email_copy: true,
+        enable_audit_booking: true,
+        enable_deposit: true,
+        deposit_mode: "all",
+        deposit_amount: 500,
+        deposit_info: "請於預約後 24 小時內完成匯款並於系統回報後五碼。\n銀行代號：012 (富邦)\n帳號：1234-5678-9012",
+        enable_staff_select: true,
+        enable_multi_staff_schedule: true,
+        enable_carousel: true,
+        enable_cust_type: true,
+        enable_portfolio: true,
+        enable_care: true,
+        enable_show_price: true,
+        enable_cust_notes: true,
+        enable_quick_contact: true,
+        enable_cancel_reason: true,
+        enable_line_one_click_audit: true,
+        enable_featured_shop: true,
+        enable_flex_menu: true,
+        enable_auto_reminder: false,
+        enable_line_auto_notify: false,
+        shift_start_time: "09:00",
+        shift_end_time: "19:00",
+        shift_interval: 30,
+        booking_buffer_hours: 1
+      })
+    });
+
+    // 方案 2 安全連結：後台採用私密 token 網址，前台公開 store_id
+    const adminLink = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
+    const frontLink = `https://salon.heysibyl.com/?store_id=${storeId}`;
+    const targetPayUrl = PAYUNI_LINKS[planChoice] || PAYUNI_LINKS.yearly;
+
+    Swal.fire({
+      title: '帳號建立成功！請確認專屬連結',
+      html: `
+        <div class="text-xs text-brand-800 text-left space-y-2 bg-brand-50 p-3.5 rounded-2xl border border-brand-200">
+          <div><b>🏪 店家名稱：</b>${storeName}</div>
+          <div><b>🔑 專屬後台 (含安全私鑰)：</b><a href="${adminLink}" target="_blank" class="text-blue-600 underline break-all">${adminLink}</a></div>
+          <div><b>📱 預約前台：</b><a href="${frontLink}" target="_blank" class="text-blue-600 underline break-all">${frontLink}</a></div>
+          <div class="p-2 bg-amber-100/80 rounded-xl text-amber-900 border border-amber-200 text-[11px] leading-relaxed">
+            📧 <b>收信提示：</b>付款完成後，系統將寄送主旨為<b>【🎉【Sibyl 數位管家】美業預約排程系統已開通！請查收專屬後台與前台連結】</b>的信件至您的信箱（<code>${buyerEmail}</code>）。若未看到，請務必至<b>「垃圾郵件」</b>或<b>「促銷內容」</b>查找！
+          </div>
+        </div>
+      `,
+      icon: 'success',
+      confirmButtonText: '確定，前往 PAYUNi 付款'
+    }).then(() => {
+      window.location.href = targetPayUrl;
+    });
+
+  } catch(e) {
+    Swal.fire('系統連線異常', e.message, 'error');
+  }
+}
   </script>
 </body>
 </html>
