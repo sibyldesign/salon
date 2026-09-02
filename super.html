@@ -58,19 +58,26 @@
 
   <main class="max-w-4xl mx-auto p-4 space-y-6">
 
-    <!-- 全域廣播發布區 -->
+    <!-- 全域廣播發布與全平台維護控制區 -->
     <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
           <i class="fa-solid fa-bullhorn text-brand-500"></i>
-          <span>發布系統即時公告橫幅 (所有店家後台同步顯示)</span>
+          <span>全平台即時公告與維護鎖定</span>
         </h2>
         <span id="current-announcement-status" class="text-[10px] text-gray-400">讀取中...</span>
       </div>
-      <div class="flex gap-2">
-        <input type="text" id="announcement-input" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none" placeholder="例如：系統將於今晚 02:00 進行伺服器升級，預計耗時 10 分鐘。">
-        <button onclick="publishAnnouncement()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition">發布</button>
-        <button onclick="clearAnnouncement()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition">下架</button>
+      
+      <div class="flex gap-2 flex-wrap sm:flex-nowrap">
+        <input type="text" id="announcement-input" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none w-full sm:w-auto" placeholder="輸入公告內容（例：系統將於今晚 02:00 進行升級，維護期間暫停預約）">
+        <div class="flex gap-1.5 w-full sm:w-auto shrink-0">
+          <button onclick="publishAnnouncement(false)" class="flex-1 sm:flex-none px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">一般公告</button>
+          <button onclick="publishAnnouncement(true)" class="flex-1 sm:flex-none px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">🛠️ 維護鎖定</button>
+          <button onclick="clearAnnouncement()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition whitespace-nowrap">下架/解除</button>
+        </div>
+      </div>
+      <div class="text-[10px] text-gray-400 leading-relaxed">
+        💡 <b>操作說明：</b>「一般公告」僅於前後台頂部顯示提示小橫幅；點擊「維護鎖定」會即時覆蓋所有店家前台全螢幕遮罩，完全禁止任何預約操作。
       </div>
     </section>
 
@@ -85,11 +92,11 @@
       </div>
 
       <!-- 快速篩選標籤 -->
-      <div class="flex gap-2">
-        <button onclick="filterStores('ALL', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs">全部店家</button>
-        <button onclick="filterStores('pending', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">待開通 (未付款)</button>
-        <button onclick="filterStores('active', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">運行中 (已開通)</button>
-        <button onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">已過期</button>
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button onclick="filterStores('ALL', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs whitespace-nowrap">全部店家</button>
+        <button onclick="filterStores('pending', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">待開通 (未付款)</button>
+        <button onclick="filterStores('active', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">運行中 (已開通)</button>
+        <button onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已過期</button>
       </div>
 
       <div id="stores-container" class="space-y-3"></div>
@@ -145,9 +152,9 @@
     function filterStores(status, btn) {
       currentFilter = status;
       document.querySelectorAll('.store-filter-btn').forEach(b => {
-        b.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200";
+        b.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap";
       });
-      btn.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs";
+      btn.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs whitespace-nowrap";
       renderStores();
     }
 
@@ -169,7 +176,7 @@
         if (isActive) statusBadge = '<span class="px-2.5 py-0.5 bg-green-100 text-green-800 rounded-full text-[10px] font-bold">已付款開通 (運行中)</span>';
         if (isExpired) statusBadge = '<span class="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-[10px] font-bold">已過期停權</span>';
 
-        // 支援 32 碼私密 Token（若舊店家沒有 admin_token 則向下相容使用 id）
+        // 支援 32 碼私密 Token（舊店家若無則向下相容使用 id）
         const adminToken = s.admin_token || s.id;
         const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
         const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
@@ -199,10 +206,10 @@
 
             <div class="flex gap-2 flex-wrap items-center justify-between pt-1">
               <div class="flex gap-2">
-                <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
-                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 開啟後台 (Token)
+                <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
+                  <i class="fa-solid fa-key text-[10px]"></i> 開啟後台 (Token)
                 </a>
-                <a href="${bookingUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
+                <a href="${bookingUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
                   <i class="fa-solid fa-mobile-screen text-[10px]"></i> 開啟前台
                 </a>
               </div>
@@ -222,6 +229,7 @@
       }).join('');
     }
 
+    // 總管一鍵手動開通 (直連更新 Supabase 並發送開通信)
     async function manualActivateStore(storeId, days) {
       Swal.fire({ title: '正在開通帳號並寄送通知信...', allowOutsideClick: false });
       Swal.showLoading();
@@ -283,6 +291,7 @@
       });
     }
 
+    // 公告與維護鎖定狀態載入
     async function loadAnnouncement() {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
@@ -291,7 +300,10 @@
         const data = await res.json();
         const statusEl = document.getElementById('current-announcement-status');
         if (data.length > 0 && data[0].content) {
-          statusEl.innerHTML = `<span class="text-green-600 font-bold">當前上架中：${data[0].content}</span>`;
+          const isMaint = data[0].is_maintenance === true;
+          statusEl.innerHTML = isMaint 
+            ? `<span class="text-amber-600 font-bold">🛠️ [維護鎖定中]：${data[0].content}</span>`
+            : `<span class="text-green-600 font-bold">📢 [一般公告中]：${data[0].content}</span>`;
           document.getElementById('announcement-input').value = data[0].content;
         } else {
           statusEl.innerText = "目前無上架公告";
@@ -299,15 +311,19 @@
       } catch(e){}
     }
 
-    async function publishAnnouncement() {
+    async function publishAnnouncement(isMaintenance = false) {
       const text = document.getElementById('announcement-input').value.trim();
       if (!text) return Swal.fire('請輸入公告文字', '', 'warning');
+      
       await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
         method: "POST",
         headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text, is_active: true })
+        body: JSON.stringify({ content: text, is_active: true, is_maintenance: isMaintenance })
       });
-      Swal.fire('公告發布成功！', '所有店家後台將即刻同步顯示。', 'success');
+      
+      const title = isMaintenance ? '已啟動全平台維護鎖定！' : '公告發布成功！';
+      const desc = isMaintenance ? '所有店家前台即刻被鎖定，顧客將無法填單並呈現維護畫面。' : '前後台頂部橫幅已同步顯示。';
+      Swal.fire(title, desc, 'success');
       loadAnnouncement();
     }
 
@@ -315,13 +331,14 @@
       await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
         method: "PATCH",
         headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: false })
+        body: JSON.stringify({ is_active: false, is_maintenance: false })
       });
       document.getElementById('announcement-input').value = '';
-      Swal.fire('公告已下架', '', 'success');
+      Swal.fire('已解除公告與維護鎖定', '所有店家前台已恢復正常營運！', 'success');
       loadAnnouncement();
     }
 
+    // 許願池管理
     async function loadWishes() {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?order=created_at.desc&limit=30`, {
