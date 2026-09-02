@@ -2,178 +2,340 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sibyl SaaS 總管控制台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sibyl SaaS 總管中心</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#FAF6F0', 100: '#EFE6DC', 200: '#DFD1C0', 300: '#CBB8A1',
+              400: '#A68A68', 500: '#8C7355', 600: '#755F46', 700: '#5E4C38',
+              800: '#4A3B2C', 900: '#33271C',
+            }
+          },
+          fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
 </head>
-<body class="bg-gray-100 text-gray-900 min-h-screen p-4 md:p-8">
+<body class="bg-brand-50 text-brand-900 antialiased pb-20">
 
-<div id="super-lock" class="fixed inset-0 bg-gray-900 z-50 flex items-center justify-center p-4">
-  <div class="bg-white p-8 rounded-3xl max-w-xs w-full text-center space-y-4 shadow-2xl">
-    <div class="text-4xl">👑</div>
-    <h2 class="text-base font-bold text-gray-900">Sibyl 總管身分驗證</h2>
-    <input type="password" id="sa-secret-input" class="w-full text-center p-3 rounded-xl border border-gray-300 font-mono text-lg" placeholder="請輸入管理密碼">
-    <button onclick="authSuperAdmin()" class="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl text-xs shadow-md">驗證進入</button>
-  </div>
-</div>
-
-<div class="max-w-5xl mx-auto space-y-6" id="super-panel" style="display: none;">
-  <div class="bg-gray-900 text-white p-6 rounded-3xl shadow-lg flex justify-between items-center">
-    <div>
-      <h1 class="text-lg font-bold">Sibyl SaaS 營運總管中心</h1>
-      <p class="text-xs text-gray-400 mt-1">監控全體訂單、即時金流狀態、接收功能許願與發布全域廣播</p>
+  <!-- 登入鎖定層 -->
+  <div id="super-lock" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs space-y-4">
+      <div class="w-12 h-12 mx-auto bg-brand-100 rounded-2xl flex items-center justify-center text-brand-600 text-xl">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-brand-900">Sibyl SaaS 總管系統</h1>
+        <p class="text-xs text-brand-400 mt-0.5">請輸入管理金鑰</p>
+      </div>
+      <input type="password" id="super-key-input" class="w-full text-center text-xl tracking-[0.2em] py-2.5 rounded-xl border border-brand-200 focus:ring-2 focus:ring-brand-400 outline-none" placeholder="金鑰" maxlength="10">
+      <button onclick="checkSuperKey()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-md transition text-xs">驗證進入</button>
     </div>
-    <button onclick="loadSuperData()" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-xs font-bold rounded-xl border border-gray-700">重新整理</button>
   </div>
 
-  <!-- 1. 全域廣播發布區 -->
-  <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-3">
-    <h2 class="text-sm font-bold text-gray-900">📢 發布全體店家後台廣播公告</h2>
-    <div class="flex gap-2">
-      <input type="text" id="broadcast-input" class="flex-1 p-2.5 text-xs rounded-xl border border-gray-200" placeholder="例如：【系統維護】週二凌晨進行雲端主機效能優化升級...">
-      <button onclick="sendBroadcast()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md">發布公告</button>
+  <header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 bg-brand-500 text-white rounded-lg flex items-center justify-center text-xs shadow-sm">
+          <i class="fa-solid fa-crown"></i>
+        </span>
+        <span class="font-bold text-sm text-brand-900">Sibyl 數位管家 | 租戶營運總控台</span>
+      </div>
+      <button onclick="loadStores()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="重新整理">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
     </div>
-    <div id="current-broadcast" class="text-xs text-gray-500">目前運作中的公告：載入中...</div>
-  </div>
+  </header>
 
-  <!-- 2. 線上訂單與客戶開通清單 (含未付款/已開通區分) -->
-  <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-    <div class="flex justify-between items-center">
-      <h2 class="text-sm font-bold text-gray-900">🏪 全客戶訂閱與開通監控</h2>
+  <main class="max-w-4xl mx-auto p-4 space-y-6">
+
+    <!-- 全域廣播發布區 -->
+    <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-bullhorn text-brand-500"></i>
+          <span>發布系統即時公告橫幅 (所有店家後台同步顯示)</span>
+        </h2>
+        <span id="current-announcement-status" class="text-[10px] text-gray-400">讀取中...</span>
+      </div>
       <div class="flex gap-2">
-        <span class="px-2.5 py-1 bg-green-100 text-green-800 text-[11px] font-bold rounded-lg" id="stat-active-count">已開通: 0</span>
-        <span class="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-lg" id="stat-pending-count">未付款/飄走: 0</span>
+        <input type="text" id="announcement-input" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none" placeholder="例如：系統將於今晚 02:00 進行伺服器升級，預計耗時 10 分鐘。">
+        <button onclick="publishAnnouncement()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition">發布</button>
+        <button onclick="clearAnnouncement()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition">下架</button>
       </div>
-    </div>
-    <div id="stores-list-container" class="space-y-3"></div>
-  </div>
+    </section>
 
-  <!-- 3. 店家功能許願池 -->
-  <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-3">
-    <h2 class="text-sm font-bold text-gray-900">🎁 店家功能許願清單</h2>
-    <div id="wishes-container" class="space-y-2 text-xs"></div>
-  </div>
-</div>
-
-<script>
-  const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
-  const SUPER_ADMIN_SECRET = "888";
-
-  function authSuperAdmin() {
-    if (document.getElementById('sa-secret-input').value.trim() === SUPER_ADMIN_SECRET) {
-      document.getElementById('super-lock').style.display = 'none';
-      document.getElementById('super-panel').style.display = 'block';
-      loadSuperData();
-    } else {
-      Swal.fire('密碼錯誤', '', 'error');
-    }
-  }
-
-  async function loadSuperData() {
-    loadBroadcast();
-    loadWishes();
-    loadAllStores();
-  }
-
-  async function loadBroadcast() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const data = await res.json();
-    if (data && data.length > 0) {
-      document.getElementById('current-broadcast').innerHTML = `目前公告：<b class="text-gray-800">${data[0].content}</b> (${data[0].created_at.split('T')[0]})`;
-    } else {
-      document.getElementById('current-broadcast').innerText = '目前無任何生效中公告。';
-    }
-  }
-
-  async function sendBroadcast() {
-    const text = document.getElementById('broadcast-input').value.trim();
-    if (!text) return Swal.fire('請填寫公告內容', '', 'warning');
-    await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
-      method: "POST",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text, is_active: true })
-    });
-    document.getElementById('broadcast-input').value = '';
-    Swal.fire('廣播公告已送出！', '所有店家登入後台即可即時看見。', 'success');
-    loadBroadcast();
-  }
-
-  async function loadWishes() {
-    const container = document.getElementById('wishes-container');
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?order=created_at.desc&select=*`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const wishes = await res.json();
-    if (!wishes || wishes.length === 0) {
-      container.innerHTML = '<div class="text-gray-400 py-2">目前尚無店家許願。</div>';
-      return;
-    }
-    container.innerHTML = wishes.map(w => `
-      <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 flex justify-between items-start">
-        <div class="space-y-1">
-          <div class="font-bold text-gray-900">${w.content}</div>
-          <div class="text-[11px] text-gray-500">店家：<b>${w.store_name || '未命名'}</b> | <code>Store ID: ${w.store_id || '無'}</code> | 時間：${w.created_at ? w.created_at.split('T')[0] : ''}</div>
-        </div>
-        <span class="px-2 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-bold">${w.status || '評估中'}</span>
+    <!-- 租戶店家總覽 -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-users-rectangle text-brand-500"></i>
+          <span>全租戶店家名冊與開通狀態</span>
+        </h2>
+        <span id="store-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
       </div>
-    `).join('');
-  }
 
-  async function loadAllStores() {
-    const container = document.getElementById('stores-list-container');
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?select=*&order=created_at.desc`, {
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const stores = await res.json();
-    
-    let activeCount = 0;
-    let pendingCount = 0;
+      <!-- 快速篩選標籤 -->
+      <div class="flex gap-2">
+        <button onclick="filterStores('ALL', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs">全部店家</button>
+        <button onclick="filterStores('pending', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">待開通 (未付款)</button>
+        <button onclick="filterStores('active', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">運行中 (已開通)</button>
+        <button onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">已過期</button>
+      </div>
 
-    container.innerHTML = stores.map(st => {
-      const isAct = st.plan_status === 'active';
-      if (isAct) activeCount++; else pendingCount++;
+      <div id="stores-container" class="space-y-3"></div>
+    </section>
 
-      return `
-        <div class="p-4 bg-gray-50 rounded-2xl border border-gray-200 text-xs space-y-2">
-          <div class="flex justify-between items-center font-bold text-sm">
-            <span>${st.store_name} (${st.plan_name || '標準方案'})</span>
-            <span class="px-2.5 py-0.5 rounded-full text-[10px] ${isAct ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800 font-bold'}">
-              ${isAct ? '已付款開通' : '下單未付款 (未結案)'}
-            </span>
+    <!-- 店家功能許願池接收區 -->
+    <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-lightbulb text-amber-500"></i>
+        <span>店家功能許願池清單</span>
+      </h2>
+      <div id="wishes-container" class="space-y-2 text-xs">
+        <div class="text-center py-4 text-brand-400">目前尚無許願回報</div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+    const SUPER_KEY = "888";
+
+    let allStores = [];
+    let currentFilter = 'ALL';
+
+    function checkSuperKey() {
+      const val = document.getElementById('super-key-input').value.trim();
+      if (val === SUPER_KEY) {
+        document.getElementById('super-lock').style.display = 'none';
+        loadStores();
+        loadAnnouncement();
+        loadWishes();
+      } else {
+        Swal.fire('金鑰錯誤', '請輸入正確的總管金鑰', 'error');
+      }
+    }
+
+    async function loadStores() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        allStores = await res.json();
+        document.getElementById('store-count-badge').innerText = `共 ${allStores.length} 間店家`;
+        renderStores();
+      } catch(e) {
+        console.error(e);
+      }
+    }
+
+    function filterStores(status, btn) {
+      currentFilter = status;
+      document.querySelectorAll('.store-filter-btn').forEach(b => {
+        b.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200";
+      });
+      btn.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs";
+      renderStores();
+    }
+
+    function renderStores() {
+      const container = document.getElementById('stores-container');
+      let filtered = (currentFilter === 'ALL') ? allStores : allStores.filter(s => s.plan_status === currentFilter);
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center text-xs text-brand-400 py-8 bg-white rounded-3xl border border-brand-200">查無此狀態的店家資料</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(s => {
+        const isPending = (s.plan_status === 'pending');
+        const isActive = (s.plan_status === 'active');
+        const isExpired = (s.plan_status === 'expired');
+
+        let statusBadge = '<span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">下單未付款 (未結案)</span>';
+        if (isActive) statusBadge = '<span class="px-2.5 py-0.5 bg-green-100 text-green-800 rounded-full text-[10px] font-bold">已付款開通 (運行中)</span>';
+        if (isExpired) statusBadge = '<span class="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-[10px] font-bold">已過期停權</span>';
+
+        const adminUrl = `https://salon.heysibyl.com/admin.html?store_id=${s.id}`;
+        const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
+
+        return `
+          <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-sm text-brand-900 flex items-center gap-2">
+                  <span>${s.store_name}</span>
+                  ${statusBadge}
+                </div>
+                <div class="text-[11px] text-brand-400 mt-0.5 font-mono">ID: ${s.id}</div>
+              </div>
+              <div class="text-right">
+                <span class="font-bold text-brand-500">${s.plan_name || '標準版'}</span>
+                <div class="text-[10px] text-gray-400">到期日：${s.expires_at ? s.expires_at.split('T')[0] : '無期限 (未付款)'}</div>
+              </div>
+            </div>
+
+            <div class="p-3 bg-brand-50 rounded-2xl border border-brand-100 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+              <div><b>負責人手機：</b><a href="tel:${s.owner_phone}" class="text-blue-600 underline">${s.owner_phone || '無'}</a></div>
+              <div><b>電子信箱：</b>${s.owner_email || '無'}</div>
+              <div><b>後台密碼：</b><code>${s.admin_pin || '8888'}</code></div>
+              <div><b>建立時間：</b>${s.created_at ? s.created_at.replace('T', ' ').substring(0, 16) : '未知'}</div>
+            </div>
+
+            <div class="flex gap-2 flex-wrap items-center justify-between pt-1">
+              <div class="flex gap-2">
+                <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
+                  <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 開啟後台
+                </a>
+                <a href="${bookingUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">
+                  <i class="fa-solid fa-mobile-screen text-[10px]"></i> 開啟前台
+                </a>
+              </div>
+              <div class="flex gap-1.5">
+                <button onclick="manualActivateStore('${s.id}', 30)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition">
+                  開通/加 30 天
+                </button>
+                <button onclick="manualActivateStore('${s.id}', 365)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">
+                  開通/加 1 年
+                </button>
+                <button onclick="deleteStorePrompt('${s.id}', '${s.store_name}')" class="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl font-bold transition">
+                  刪除
+                </button>
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // 方案 B：總管手動開通與展延天數
+    async function manualActivateStore(storeId, days) {
+      const baseDate = new Date();
+      baseDate.setDate(baseDate.getDate() + Number(days));
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+          method: "PATCH",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            plan_status: "active",
+            expires_at: baseDate.toISOString()
+          })
+        });
+
+        // 觸發 GAS 派發信件與通知
+        fetch(API_URL, {
+          method: "POST",
+          body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
+        }).catch(() => {});
+
+        Swal.fire({ title: '開通成功！', text: `已順延 ${days} 天並指派為 active。`, icon: 'success', timer: 1200, showConfirmButton: false });
+        loadStores();
+      } catch(e) {
+        Swal.fire('開通失敗', e.message, 'error');
+      }
+    }
+
+    function deleteStorePrompt(storeId, name) {
+      Swal.fire({
+        title: `確定永久刪除【${name}】？`,
+        text: '刪除後該店所有服務項目、作品、預約紀錄將連帶清除且無法復原！',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: '確定刪除',
+        cancelButtonText: '取消'
+      }).then(async r => {
+        if (r.isConfirmed) {
+          await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+            method: "DELETE",
+            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          Swal.fire('已成功刪除', '', 'success');
+          loadStores();
+        }
+      });
+    }
+
+    // 公告管理
+    async function loadAnnouncement() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const data = await res.json();
+        const statusEl = document.getElementById('current-announcement-status');
+        if (data.length > 0 && data[0].content) {
+          statusEl.innerHTML = `<span class="text-green-600 font-bold">當前上架中：${data[0].content}</span>`;
+          document.getElementById('announcement-input').value = data[0].content;
+        } else {
+          statusEl.innerText = "目前無上架公告";
+        }
+      } catch(e){}
+    }
+
+    async function publishAnnouncement() {
+      const text = document.getElementById('announcement-input').value.trim();
+      if (!text) return Swal.fire('請輸入公告文字', '', 'warning');
+      await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text, is_active: true })
+      });
+      Swal.fire('公告發布成功！', '所有店家後台將即刻同步顯示。', 'success');
+      loadAnnouncement();
+    }
+
+    async function clearAnnouncement() {
+      await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false })
+      });
+      document.getElementById('announcement-input').value = '';
+      Swal.fire('公告已下架', '', 'success');
+      loadAnnouncement();
+    }
+
+    // 許願池管理
+    async function loadWishes() {
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?order=created_at.desc&limit=20`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const wishes = await res.json();
+        const container = document.getElementById('wishes-container');
+        if (wishes.length === 0) {
+          container.innerHTML = '<div class="text-center py-4 text-brand-400">目前尚無許願回報</div>';
+          return;
+        }
+        container.innerHTML = wishes.map(w => `
+          <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
+            <div class="flex justify-between font-bold text-brand-900">
+              <span>🏪 ${w.store_name || '店家'}</span>
+              <span class="text-[10px] text-brand-500">${w.created_at ? w.created_at.split('T')[0] : ''}</span>
+            </div>
+            <p class="text-brand-700 leading-relaxed">${w.content}</p>
           </div>
-          <div class="text-gray-600 space-y-0.5 text-[11px]">
-            <div>負責人信箱：<b>${st.owner_email || '未填寫'}</b> | 電話：<b>${st.owner_phone || '未填寫'}</b></div>
-            <div>到期日：${st.expires_at ? st.expires_at.split('T')[0] : '無期限'} | 後台密碼：<code>${st.admin_pin || '8888'}</code></div>
-            <div class="text-gray-400 font-mono">Store ID: ${st.id}</div>
-          </div>
-          <div class="flex gap-2 pt-1 flex-wrap">
-            <button class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold" onclick="saUpdateStatus('${st.id}', 'active', 365)">手動開通 (+1年)</button>
-            <button class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold" onclick="saUpdateStatus('${st.id}', 'active', 30)">手動開通 (+30天)</button>
-            <button class="px-3 py-1.5 bg-gray-800 hover:bg-black text-white rounded-lg font-bold" onclick="window.open('admin.html?store_id=${st.id}', '_blank')">直通後台</button>
-            <button class="px-3 py-1.5 bg-brand-500 border border-gray-300 text-gray-800 rounded-lg font-bold" onclick="window.open('index.html?store_id=${st.id}', '_blank')">預覽前台</button>
-          </div>
-        </div>`;
-    }).join('');
-
-    document.getElementById('stat-active-count').innerText = `已開通: ${activeCount}`;
-    document.getElementById('stat-pending-count').innerText = `未付款/飄走: ${pendingCount}`;
-  }
-
-  async function saUpdateStatus(storeId, status, addDays) {
-    const baseDate = new Date();
-    baseDate.setDate(baseDate.getDate() + Number(addDays));
-    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-      method: "PATCH",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ plan_status: status, expires_at: baseDate.toISOString() })
-    });
-    Swal.fire('已更新開通狀態！', `已將方案設定為 ${status}，到期日已順延。`, 'success');
-    loadAllStores();
-  }
-</script>
+        `).join('');
+      } catch(e){}
+    }
+  </script>
 </body>
 </html>
