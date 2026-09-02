@@ -165,7 +165,7 @@
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">⚙️ 自訂 5 組關懷週期與文案 (單位：週)</div>
       <div id="care-rules-container" class="space-y-2"></div>
-      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="saveStoreSettings()">儲存關懷規則</button>
+      <button class="w-full py-2.5 bg-brand-400 text-white text-xs font-bold rounded-xl shadow-md" onclick="()">儲存關懷規則</button>
     </div>
   </div>
   <!-- 分頁 6. 服務項目與作品 -->
@@ -418,6 +418,21 @@
   <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
   <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
   <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
+  <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+  <div>
+    <span class="font-bold text-brand-900 block">啟用 LINE 對話框「一鍵接單/婉拒」</span>
+    <span class="text-[10px] text-brand-500">預約成立自動推播審核卡片至老闆 LINE 對話框</span>
+  </div>
+  <input type="checkbox" id="cfg-toggle-line-one-click" class="accent-brand-400" checked>
+</label>
+
+<label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+  <div>
+    <span class="font-bold text-brand-900 block">啟用 前台設計師熱推選品專區</span>
+    <span class="text-[10px] text-brand-500">於前台呈現精選商品並引導至專屬商城 (shop.html)</span>
+  </div>
+  <input type="checkbox" id="cfg-toggle-featured-shop" class="accent-brand-400" checked>
+</label>
 </div>
 
       <!-- 進階自動化模組開關 (已移除模組 3) -->
@@ -480,7 +495,7 @@
       <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="官方 LINE 連結網址">
       <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Instagram 網址">
       <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Google 地圖網址">
-      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="saveStoreSettings()">儲存全部設定</button>
+      <button class="w-full py-3 bg-brand-400 text-white text-xs font-bold rounded-2xl shadow-md" onclick="()">儲存全部設定</button>
     </div>
   </div>
 </main>
@@ -1010,11 +1025,18 @@ async function submitWish() {
   }
 
   function renderSingleCardHTML(a) {
-  const emailStr = a.notes && a.notes.includes('Email:') ? a.notes.split('Email:')[1].trim() : (a.email || '未填寫');
+  const isNewCust = (a.customer_type === 'new');
+  const custTypeBadge = isNewCust 
+    ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
+    : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
+
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
       <div class="flex justify-between items-center">
-        <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+          ${custTypeBadge}
+        </div>
         <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50" onchange="quickUpdateStatus('${a.id}', this.value)">
           <option value="待確認" ${a.status==='待確認'?'selected':''}>待確認</option>
           <option value="已確認" ${a.status==='已確認'?'selected':''}>已確認</option>
@@ -1026,7 +1048,6 @@ async function submitWish() {
       <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span></div>
       <div class="text-[11px] text-brand-500 space-y-0.5">
         <div>LINE 名稱：<b>${a.lineName || '無'}</b></div>
-        <div>電子信箱：<b>${emailStr}</b></div>
         <div>服務專員：<b>${a.staffName || '不指定'}</b></div>
       </div>
       <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
@@ -1964,10 +1985,10 @@ async function handleImgUpload(idx, input) {
 
   // 儲存設定至 Supabase (雙向保護)
   async function saveStoreSettings() {
-  Swal.fire({ title: '正在儲存設定至資料庫...', allowOutsideClick: false }); Swal.showLoading();
+  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false }); Swal.showLoading();
   
-  const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
-  const storeNameVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
+  // 抓取各輸入欄位，若為空或未讀到則保持既有值
+  const currentSettings = backendData.settings || {};
   const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
   
   const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
@@ -1978,57 +1999,60 @@ async function handleImgUpload(idx, input) {
 
   const payload = {
     store_id: CURRENT_STORE_ID,
-    display_title: storeNameVal,
-    display_subtitle: document.getElementById('cfg-subtitle')?.value || '',
-    enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? true,
-    logo_url: document.getElementById('cfg-logo')?.value || '',
-    address: document.getElementById('cfg-address')?.value || '',
-    business_hours: document.getElementById('cfg-hours')?.value || '',
-    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
-    care_text: document.getElementById('cfg-care')?.value || '',
-    deposit_info: document.getElementById('cfg-deposit-info')?.value || '',
-    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
-    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
-    promo_text: document.getElementById('cfg-promo')?.value || '',
-    promo_imgs: promoImgsArray.filter(u => u !== ""),
-    line_url: document.getElementById('cfg-line')?.value || '',
-    ig_url: document.getElementById('cfg-ig')?.value || '',
-    map_url: document.getElementById('cfg-map')?.value || '',
-    enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? true,
-    enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? true,
-    enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? true,
-    enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? true,
-    enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? true,
-    enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? true,
-    enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? true,
-    enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? true,
-    enable_care: document.getElementById('cfg-toggle-care')?.checked ?? true,
-    enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked === true,
-    line_channel_token: lineTokenVal,
+    display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
+    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() ?? currentSettings.subtitle ?? '',
+    enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? currentSettings.enableLogo ?? true,
+    logo_url: document.getElementById('cfg-logo')?.value.trim() ?? currentSettings.logoUrl ?? '',
+    address: document.getElementById('cfg-address')?.value.trim() ?? currentSettings.address ?? '',
+    business_hours: document.getElementById('cfg-hours')?.value.trim() ?? currentSettings.businessHours ?? '',
+    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || currentSettings.bookingBufferHours || 1),
+    care_text: document.getElementById('cfg-care')?.value.trim() ?? currentSettings.careText ?? '',
+    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() ?? currentSettings.depositInfo ?? '',
+    deposit_mode: document.getElementById('cfg-deposit-mode')?.value ?? currentSettings.depositMode ?? 'all',
+    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || currentSettings.depositAmount || 0),
+    promo_text: document.getElementById('cfg-promo')?.value.trim() ?? currentSettings.promoText ?? '',
+    promo_imgs: promoImgsArray.filter(Boolean).length > 0 ? promoImgsArray.filter(Boolean) : (currentSettings.promoImgs || []),
+    line_url: document.getElementById('cfg-line')?.value.trim() ?? currentSettings.line ?? '',
+    ig_url: document.getElementById('cfg-ig')?.value.trim() ?? currentSettings.ig ?? '',
+    map_url: document.getElementById('cfg-map')?.value.trim() ?? currentSettings.map ?? '',
+    enable_email_copy: document.getElementById('cfg-toggle-email')?.checked ?? currentSettings.enableEmailCopy ?? true,
+    enable_audit_booking: document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true,
+    enable_deposit: document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true,
+    enable_staff_select: document.getElementById('cfg-toggle-staff-select')?.checked ?? currentSettings.enableStaffSelect ?? true,
+    enable_multi_staff_schedule: document.getElementById('cfg-toggle-multi-staff-schedule')?.checked ?? currentSettings.enableMultiStaffSchedule ?? true,
+    enable_carousel: document.getElementById('cfg-toggle-carousel')?.checked ?? currentSettings.enableCarousel ?? true,
+    enable_cust_type: document.getElementById('cfg-toggle-custtype')?.checked ?? currentSettings.enableCustType ?? true,
+    enable_portfolio: document.getElementById('cfg-toggle-portfolio')?.checked ?? currentSettings.enablePortfolio ?? true,
+    enable_care: document.getElementById('cfg-toggle-care')?.checked ?? currentSettings.enableCare ?? true,
+    enable_line_auto_notify: document.getElementById('cfg-toggle-line-auto-notify')?.checked ?? currentSettings.enableLineAutoNotify ?? false,
+    enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
+    enable_featured_shop: document.getElementById('cfg-toggle-featured-shop')?.checked ?? currentSettings.enableFeaturedShop ?? true,
+    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() ?? currentSettings.lineChannelToken ?? '',
     weekly_off_days: checkedWeekly,
     custom_off_dates: customOffDatesArray,
     staff_list: (backendData.settings && backendData.settings.staffList) ? backendData.settings.staffList : [{ id: "all", name: "不指定", pin: "8888" }],
-    shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
-    shift_end_time: document.getElementById('cfg-shift-end')?.value || "19:00",
-    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
-    care_rules: careRulesArray
+    shift_start_time: document.getElementById('cfg-shift-start')?.value || currentSettings.shiftStartTime || "09:00",
+    shift_end_time: document.getElementById('cfg-shift-end')?.value || currentSettings.shiftEndTime || "19:00",
+    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || currentSettings.shiftInterval || 30),
+    care_rules: careRulesArray.length > 0 ? careRulesArray : (currentSettings.careRules || [])
   };
 
   try {
-    // 1. 同步寫入 stores 表
-    await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: storeNameVal, industry_type: 'beauty', line_channel_token: lineTokenVal }, 'id');
+    await directSupabaseUpsert('stores', { 
+      id: CURRENT_STORE_ID, 
+      store_name: payload.display_title, 
+      industry_type: 'beauty', 
+      line_channel_token: payload.line_channel_token 
+    }, 'id');
 
-    // 2. 寫入 store_settings
     await directSupabaseUpsert('store_settings', payload, 'store_id');
-
-    // 3. 本地快照雙重保護
     localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
     backendData.settings = Object.assign({}, backendData.settings, payload);
     populateSettings();
 
-    Swal.fire({ title: '設定已成功儲存至資料庫！', icon: 'success', timer: 1200, showConfirmButton: false });
+    Swal.fire({ title: '設定已完整儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
-    Swal.fire({ title: '寫入失敗', text: e.message, icon: 'error' });
+    Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
   }
 }
 </script>
