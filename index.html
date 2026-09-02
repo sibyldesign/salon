@@ -27,8 +27,6 @@
   </script>
   <style>
     body { background-color: #FDFBF7; }
-    
-    /* 9:16 直式限動比例容器與自適應模糊背景 */
     .carousel-slide-916 {
       min-width: 100%;
       aspect-ratio: 9 / 16;
@@ -56,7 +54,6 @@
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
 
-    /* SweetAlert2 系統統一低飽和大地棕美感按鈕與彈窗 */
     .swal2-popup {
       border-radius: 1.5rem !important;
       font-family: 'Noto Sans TC', sans-serif !important;
@@ -113,7 +110,6 @@
     <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
   </div>
 
-  <!-- 滿版公告色塊 (支援換行顯示) -->
   <div id="promo" class="w-full bg-[#BCA38F] text-white py-3.5 px-4 shadow-sm">
     <div class="max-w-md mx-auto text-center flex flex-col items-center justify-center">
       <div class="text-[13px] font-bold flex items-center justify-center gap-1.5 mb-1">
@@ -132,9 +128,7 @@
     <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-0.5">PORTFOLIO</div>
     <div class="text-center text-[9.5px] text-brand-400 font-normal mb-3 tracking-wider hidden" id="portfolio-hint-text">點擊作品即可開啟 Instagram 查看詳細設計</div>
     <div class="flex gap-2 justify-center flex-wrap mb-4" id="portfolio-tabs"></div>
-    
     <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
-    
     <div class="text-center mt-3.5 hidden" id="portfolio-more-wrapper">
       <button type="button" id="portfolio-toggle-btn" class="px-5 py-2 rounded-full text-xs font-bold border border-brand-300 text-brand-600 bg-white hover:bg-brand-50 shadow-sm transition inline-flex items-center gap-1.5" onclick="togglePortfolioExpand()">
         <span>查看更多作品</span>
@@ -260,6 +254,18 @@
           <input type="hidden" id="time" required>
         </div>
 
+        <!-- ✨ 新增：線下收取訂金說明卡片 (前台醒目展示) -->
+        <div id="frontDepositSection" class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-2 hidden">
+          <div class="flex items-center justify-between font-bold text-amber-900">
+            <span class="flex items-center gap-1.5">
+              <span>💳</span> 預約訂金須知
+            </span>
+            <span class="text-brand-500" id="depositAmountTag">訂金：0元</span>
+          </div>
+          <div class="text-[11px] text-amber-800/90 whitespace-pre-wrap leading-relaxed" id="depositInfoText"></div>
+          <div class="text-[10px] text-amber-700 font-medium">※ 送出預約後，請於期限內完成匯款，並回首頁點擊「回報後五碼」以利店家快速保留時段。</div>
+        </div>
+
         <!-- 居家保養小叮嚀 -->
         <details id="careSection" class="group bg-brand-50/80 rounded-2xl border border-brand-200 overflow-hidden outline-none mt-3" open>
           <summary class="flex justify-between items-center p-3.5 cursor-pointer font-bold text-xs text-brand-800 select-none hover:bg-brand-100 transition outline-none">
@@ -303,7 +309,7 @@
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
   </div>
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
-  <p class="text-xs text-brand-500 mb-4 leading-relaxed">店家確認排程後會立即與您聯繫確認❤️</p>
+  <p class="text-xs text-brand-500 mb-4 leading-relaxed" id="successScreenMsg">店家確認排程後會立即與您聯繫確認❤️</p>
   <button type="button" class="px-8 py-3 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
 </div>
 <script>
@@ -316,7 +322,8 @@
   let db = { 
     availableDates: [], services: [], portfolio: [], promoImgs: [], 
     weeklyOffDays: [], customOffDates: [], futureBookings: [], staffSchedules: {},
-    enableDeposit: false, enableStaffSelect: true, enableFeaturedShop: true,
+    enableDeposit: false, depositMode: 'all', depositAmount: 0, depositInfo: '',
+    enableStaffSelect: true, enableFeaturedShop: true,
     enableShowPrice: true, enableCustNotes: true
   };
   let currentSlide = 0;
@@ -377,7 +384,6 @@
         isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
       }));
 
-      // 如果店家尚未設置任何服務，提供友善預設範本
       if (formattedServices.length === 0) {
         formattedServices = [
           { id: "def-1", name: "剪髮造型設計", duration: 60, type: "Group_A", price: "800", isAddon: false, sortOrder: 0 },
@@ -402,6 +408,9 @@
         map: sCfg.map_url || "#",
         enableEmailCopy: sCfg.enable_email_copy !== false,
         enableDeposit: sCfg.enable_deposit === true,
+        depositMode: sCfg.deposit_mode || 'all',
+        depositAmount: Number(sCfg.deposit_amount || 0),
+        depositInfo: sCfg.deposit_info || '',
         enableStaffSelect: sCfg.enable_staff_select !== false,
         enableFeaturedShop: sCfg.enable_featured_shop !== false,
         enableShowPrice: sCfg.enable_show_price !== false,
@@ -421,7 +430,7 @@
 
       renderStoreUI();
     } catch (e) {
-      console.error("前台初始化發生例外: ", e);
+      console.error("前台初始化異常: ", e);
     }
   };
 
@@ -447,12 +456,11 @@
 
     const depositBtn = document.getElementById('quick-report-deposit-btn');
     if (depositBtn) {
-      if (db.enableDeposit) {
-        depositBtn.classList.remove('hidden');
-      } else {
-        depositBtn.classList.add('hidden');
-      }
+      depositBtn.classList.toggle('hidden', !db.enableDeposit);
     }
+
+    // 檢查並渲染前台訂金提示專區
+    updateDepositSectionDisplay();
 
     const featuredShop = document.getElementById('featuredShopSection');
     if (featuredShop) {
@@ -499,6 +507,28 @@
     renderFrontCalendar();
   }
 
+  // 判斷是否顯示前台訂金提示卡片
+  function updateDepositSectionDisplay() {
+    const depositBox = document.getElementById('frontDepositSection');
+    if (!depositBox) return;
+
+    if (!db.enableDeposit) {
+      depositBox.classList.add('hidden');
+      return;
+    }
+
+    const currentType = document.getElementById('custType')?.value || 'old';
+    const isNeedDeposit = (db.depositMode === 'all') || (db.depositMode === 'new_only' && currentType === 'new');
+
+    if (isNeedDeposit) {
+      depositBox.classList.remove('hidden');
+      document.getElementById('depositAmountTag').innerText = `需預付訂金：${db.depositAmount} 元`;
+      document.getElementById('depositInfoText').innerText = db.depositInfo || '請完成匯款後於首頁點擊回報後五碼。';
+    } else {
+      depositBox.classList.add('hidden');
+    }
+  }
+
   function selectStaff(id, name, el) {
     document.querySelectorAll('.staff-btn').forEach(b => {
       b.className = "staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-50/50 border-brand-200 text-brand-800";
@@ -509,7 +539,6 @@
     calculateTimesLocally();
   }
 
-  // ✅ 修復重點：徹底移除迴圈外的非法 s.price 呼叫，並支援「前台是否顯示金額 (enableShowPrice)」
   function renderServices() {
     const svcGrid = document.getElementById('service-grid');
     svcGrid.innerHTML = '';
@@ -534,12 +563,7 @@
   function promptQuickReportDeposit() {
     const phone = document.getElementById('phone').value.trim();
     if (!phone) { 
-      Swal.fire({
-        text: '請先輸入您的手機號碼', 
-        icon: 'warning',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
-      }); 
+      Swal.fire({ text: '請先輸入您的手機號碼', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
       return; 
     }
     Swal.fire({
@@ -572,12 +596,7 @@
             buttonsStyling: false
           });
         } else {
-          Swal.fire({
-            text: '查無此號碼之待確認預約', 
-            icon: 'error',
-            customClass: { confirmButton: 'swal2-confirm-brown' },
-            buttonsStyling: false
-          });
+          Swal.fire({ text: '查無此號碼之待確認預約', icon: 'error', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
         }
       }
     });
@@ -708,11 +727,10 @@
       const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
       
       let isAvailable = false;
-      // 容錯機制：若尚未自訂個別班表，預設時段全部開放！
       const hasCustomSchedule = db.staffSchedules && Object.keys(db.staffSchedules).some(k => k.endsWith(`_${dStr}`));
 
       if (!hasCustomSchedule) {
-        isAvailable = true; // 預設營業中
+        isAvailable = true;
       } else {
         if (staffId === 'all') {
           const allStaffSchedules = db.staffSchedules || {};
@@ -797,6 +815,7 @@
     });
     e.className = "type-btn py-2.5 rounded-xl border border-brand-400 text-xs font-bold transition bg-brand-400 text-white shadow-sm";
     document.getElementById('custType').value = t;
+    updateDepositSectionDisplay(); // 切換新舊客時同步更新訂金區塊顯示
   }
 
   function setupPortfolio() {
@@ -887,30 +906,15 @@
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
     if (!document.getElementById('service').value) { 
-      Swal.fire({
-        text: '請至少選擇一項預約項目', 
-        icon: 'warning',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
-      }); 
+      Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
       return; 
     }
     if (!document.getElementById('date').value) { 
-      Swal.fire({
-        text: '請點選預約日期', 
-        icon: 'warning',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
-      }); 
+      Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
       return; 
     }
     if (!document.getElementById('time').value) { 
-      Swal.fire({
-        text: '請選取預約時段', 
-        icon: 'warning',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
-      }); 
+      Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
       return; 
     }
 
@@ -929,12 +933,14 @@
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
     const emailVal = document.getElementById('email')?.value.trim() || '';
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
+    const custTypeVal = document.getElementById('custType')?.value || 'old';
 
+    // ✅ 完整封裝 payload，確保無論前台 Supabase 或後台 GAS 都不會出現 undefined！
     const bookingPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: document.getElementById('name').value.trim(),
       customer_phone: document.getElementById('phone').value.trim(),
-      customer_type: document.getElementById('custType')?.value || 'old',
+      customer_type: custTypeVal,
       customer_notes: custNotesVal,
       line_name: document.getElementById('lineName').value.trim(),
       notes: emailVal ? `Email: ${emailVal}` : '',
@@ -943,7 +949,16 @@
       appointment_time: appointmentIso,
       staff_id: document.getElementById('staffId').value || 'all',
       staff_name: document.getElementById('staffName').value || '不指定',
-      status: "待確認"
+      status: "待確認",
+      // 同步提供相容參數給 GAS
+      name: document.getElementById('name').value.trim(),
+      phone: document.getElementById('phone').value.trim(),
+      custType: custTypeVal,
+      service: document.getElementById('service').value,
+      date: document.getElementById('date').value,
+      time: tVal,
+      staffName: document.getElementById('staffName').value || '不指定',
+      email: emailVal
     };
 
     try {
@@ -963,20 +978,38 @@
         throw new Error(errJson.message || "資料庫寫入失敗");
       }
 
+      // 發送給 GAS 執行 LINE 推播通知
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: "submitBooking", store_id: CURRENT_STORE_ID, data: bookingPayload })
       }).catch(() => {});
 
+      // 判斷是否需要提示訂金
+      const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+      
+      let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
+      if (isNeedDeposit) {
+        successHtml = `
+          <div class="text-left text-xs space-y-2 text-brand-800">
+            <p class="font-bold text-amber-800">📌 本次預約需預付訂金：${db.depositAmount} 元</p>
+            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap leading-relaxed">${db.depositInfo}</div>
+            <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到預約頁面輸入手機回報後五碼，以便店家保留時段！</p>
+          </div>
+        `;
+      }
+
       Swal.fire({
         title: '預約申請已送出！',
-        text: '店家確認排程後會立即與您聯繫確認❤️',
+        html: successHtml,
         icon: 'success',
         confirmButtonText: '確定',
         customClass: { confirmButton: 'swal2-confirm-brown' },
         buttonsStyling: false
       }).then(() => {
         document.getElementById('booking-ui').style.display = 'none';
+        if (isNeedDeposit) {
+          document.getElementById('successScreenMsg').innerHTML = `預約已送出！請完成訂金匯款以保留時段。<br>匯款完成後請隨時透過首頁回報後五碼。`;
+        }
         document.getElementById('success-screen').style.display = 'flex';
       });
     } catch (err) {
