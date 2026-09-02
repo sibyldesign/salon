@@ -316,12 +316,45 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1">選擇訂購方案 (必填)</label>
-          <select id="planChoice" class="w-full p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 outline-none">
-            <option value="yearly" selected>美業年度旗艦方案 (NT$ 6,600 / 年) - 最推薦</option>
-            <option value="monthly">美業標準月繳方案 (NT$ 680 / 月)</option>
-          </select>
-        </div>
+          <!-- 選擇訂購方案 (已加入 測試專用 10 元驗證方案) -->
+<div class="space-y-2">
+  <label class="block text-xs font-bold text-brand-800 mb-1.5">選擇訂購方案</label>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+    
+    <!-- 方案 1: 月繳方案 -->
+    <label class="plan-card flex flex-col justify-between p-3.5 rounded-2xl border-2 border-brand-200 bg-brand-50/50 cursor-pointer transition relative">
+      <input type="radio" name="planChoice" value="monthly" class="hidden" onchange="handlePlanChange(this)">
+      <div>
+        <div class="text-xs font-bold text-brand-900">月繳方案</div>
+        <div class="text-xs text-brand-500 mt-0.5">彈性月結・無合約負擔</div>
+      </div>
+      <div class="text-sm font-black text-brand-900 mt-2">680 <span class="text-[10px] font-normal text-brand-500">元/月</span></div>
+    </label>
+
+    <!-- 方案 2: 年度旗艦方案 (推薦) -->
+    <label class="plan-card flex flex-col justify-between p-3.5 rounded-2xl border-2 border-brand-400 bg-brand-100/60 cursor-pointer transition relative shadow-sm">
+      <div class="absolute -top-2.5 right-2 px-2 py-0.5 bg-brand-500 text-white rounded-full text-[9.5px] font-bold">最推薦</div>
+      <input type="radio" name="planChoice" value="yearly" class="hidden" checked onchange="handlePlanChange(this)">
+      <div>
+        <div class="text-xs font-bold text-brand-900">年度旗艦方案</div>
+        <div class="text-xs text-brand-500 mt-0.5">現省 1,560 元・全年無休維護</div>
+      </div>
+      <div class="text-sm font-black text-brand-900 mt-2">6,600 <span class="text-[10px] font-normal text-brand-500">元/年</span></div>
+    </label>
+
+    <!-- 方案 3: 測試專用通道 (10元實測驗證全鏈路) -->
+    <label class="plan-card flex flex-col justify-between p-3.5 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/60 cursor-pointer transition relative">
+      <div class="absolute -top-2.5 right-2 px-2 py-0.5 bg-amber-600 text-white rounded-full text-[9.5px] font-bold">測試専用</div>
+      <input type="radio" name="planChoice" value="test" class="hidden" onchange="handlePlanChange(this)">
+      <div>
+        <div class="text-xs font-bold text-amber-900">全流程測試方案</div>
+        <div class="text-[10px] text-amber-700 mt-0.5">10 元刷卡實測開通與發信</div>
+      </div>
+      <div class="text-sm font-black text-amber-900 mt-2">10 <span class="text-[10px] font-normal text-amber-700">元/單次</span></div>
+    </label>
+
+  </div>
+</div>
 
         <div class="text-xs font-bold text-brand-500 pb-1 pt-3 border-b border-brand-100 flex items-center gap-1.5">
           <i class="fa-solid fa-file-invoice"></i> 2. 負責人與電子發票寄送資訊
@@ -407,51 +440,100 @@
   <script>
     const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
-    const PAYUNI_MONTHLY_LINK = "https://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ";
-    const PAYUNI_YEARLY_LINK = "https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/9fMi15VUxEnLZDsKltvkC";
+    
+    // PayUNi 各方案付款連結
+    const PAYUNI_LINKS = {
+      monthly: "https://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ",
+      yearly: "https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/9fMi15VUxEnLZDsKltvkC",
+      test: "https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/Fwa2S29p2qrzVeBhVXGHC" // 10 元測試通道
+    };
 
-    function toggleCompanyInvoice(val) {
+    // 方案單選卡片樣式即時切換
+    function handlePlanChange(radio) {
+      document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('border-brand-400', 'bg-brand-100/60', 'shadow-sm');
+        card.classList.add('border-brand-200', 'bg-brand-50/50');
+      });
+      const currentCard = radio.closest('.plan-card');
+      if (currentCard) {
+        currentCard.classList.remove('border-brand-200', 'bg-brand-50/50');
+        currentCard.classList.add('border-brand-400', 'bg-brand-100/60', 'shadow-sm');
+      }
+    }
+
+    // 電子發票/載具欄位動態展開
+    function toggleInvoiceFields(val) {
+      document.getElementById('mobileCarrierField').classList.toggle('hidden', val !== 'mobile');
       document.getElementById('companyInvoiceFields').classList.toggle('hidden', val !== 'company');
     }
 
+    // 提交訂單並跳轉 PayUNi 付款
     async function submitAndPay() {
       const storeName = document.getElementById('storeName').value.trim();
-      const planChoice = document.getElementById('planChoice').value;
+      // 正確讀取 Radio 選取的方案值 (monthly / yearly / test)
+      const selectedPlanRadio = document.querySelector('input[name="planChoice"]:checked');
+      const planChoice = selectedPlanRadio ? selectedPlanRadio.value : 'yearly';
+      
       const buyerName = document.getElementById('buyerName').value.trim();
       const buyerPhone = document.getElementById('buyerPhone').value.trim();
       const buyerEmail = document.getElementById('buyerEmail').value.trim();
+
+      // 發票資訊讀取
+      const invoiceType = document.getElementById('invoiceType').value;
+      const mobileCarrier = document.getElementById('mobileCarrier')?.value.trim() || '';
+      const companyTitle = document.getElementById('companyTitle')?.value.trim() || '';
+      const companyTaxId = document.getElementById('companyTaxId')?.value.trim() || '';
 
       if (!storeName || !buyerName || !buyerPhone || !buyerEmail) {
         return Swal.fire('請填寫完整資料', '店家名稱、姓名、手機與電子信箱為必填！', 'warning');
       }
 
-      Swal.fire({ title: '正在建立專屬系統帳號...', allowOutsideClick: false }); Swal.showLoading();
+      // 發票格式基本驗證
+      if (invoiceType === 'mobile' && (!mobileCarrier || !mobileCarrier.startsWith('/'))) {
+        return Swal.fire('手機載具格式有誤', '手機條碼載具必須以斜線 / 開頭，共 8 碼！', 'warning');
+      }
+      if (invoiceType === 'company' && (!companyTitle || !companyTaxId || companyTaxId.length !== 8)) {
+        return Swal.fire('公司統編資料有誤', '請輸入完整公司抬頭與正確 8 碼統一編號！', 'warning');
+      }
+
+      Swal.fire({ title: '正在建立專屬系統帳號...', allowOutsideClick: false }); 
+      Swal.showLoading();
 
       try {
         const storeId = crypto.randomUUID();
 
-        // 1. 建立 stores 店家記錄 (修正為 pending，未付款前不開通)
-await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
-  method: "POST",
-  headers: {
-    "apikey": SUPABASE_ANON_KEY,
-    "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    id: storeId,
-    store_name: storeName,
-    industry_type: 'beauty',
-    plan_name: planChoice === 'yearly' ? '年度旗艦方案' : '月繳方案',
-    plan_status: 'pending', // 修正：預設待付款
-    expires_at: null,       // 修正：尚未扣款成功前無到期日
-    owner_email: buyerEmail,
-    owner_phone: buyerPhone,
-    admin_pin: '8888'
-  })
-});
+        // 方案中文名稱定義
+        let planTitle = '月繳方案';
+        if (planChoice === 'yearly') planTitle = '年度旗艦方案';
+        if (planChoice === 'test') planTitle = '全流程測試方案 (10元)';
 
-        // 2. 初始化 store_settings 設定記錄
+        // 1. 建立 stores 店家主紀錄 (預設 pending，未付款前無到期日)
+        const storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+          },
+          body: JSON.stringify({
+            id: storeId,
+            store_name: storeName,
+            industry_type: 'beauty',
+            plan_name: planTitle,
+            plan_status: 'pending', // 確保待付款
+            expires_at: null,       // 尚未刷卡前無到期日
+            owner_email: buyerEmail,
+            owner_phone: buyerPhone,
+            admin_pin: '8888'
+          })
+        });
+
+        if (!storeRes.ok) {
+          throw new Error("建立店家帳號失敗，請稍候重試！");
+        }
+
+        // 2. 初始化 store_settings 店家預設設定
         await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
           method: "POST",
           headers: {
@@ -475,23 +557,31 @@ await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
           })
         });
 
+        // 判定正確的跳轉金流網址
+        const targetPayUrl = PAYUNI_LINKS[planChoice] || PAYUNI_LINKS.yearly;
+
         Swal.fire({
           title: '帳號建立完成！即將前往付款',
-          html: `<div class="text-xs text-brand-800 text-left space-y-1 bg-brand-50 p-3 rounded-xl border border-brand-200"><div><b>店家：</b>${storeName}</div><div><b>專屬後台 ID：</b><code>${storeId}</code></div><div class="pt-1 text-brand-500">點擊確定將前往 PayUNi 官方加密頁面完成扣款。</div></div>`,
+          html: `
+            <div class="text-xs text-brand-800 text-left space-y-1.5 bg-brand-50 p-3.5 rounded-2xl border border-brand-200">
+              <div><b>店家名稱：</b>${storeName}</div>
+              <div><b>訂購方案：</b>${planTitle}</div>
+              <div><b>專屬後台 ID：</b><code class="text-brand-500 font-mono select-all">${storeId}</code></div>
+              <div class="pt-1.5 text-brand-500 border-t border-brand-200/60">
+                點擊「確定前往」將進入 PayUNi 官方加密頁面完成扣款，扣款成功後後台即刻自動開通！
+              </div>
+            </div>
+          `,
           icon: 'success',
-          confirmButtonText: '確定前往'
+          confirmButtonText: '確定前往付款'
         }).then(() => {
-          window.location.href = (planChoice === 'yearly') ? PAYUNI_YEARLY_LINK : PAYUNI_MONTHLY_LINK;
+          window.location.href = targetPayUrl;
         });
+
       } catch(e) {
-        Swal.fire('連線異常', e.message, 'error');
+        Swal.fire('系統連線異常', e.message, 'error');
       }
     }
-
-    function toggleInvoiceFields(val) {
-  document.getElementById('mobileCarrierField').classList.toggle('hidden', val !== 'mobile');
-  document.getElementById('companyInvoiceFields').classList.toggle('hidden', val !== 'company');
-}
   </script>
 </body>
 </html>
