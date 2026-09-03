@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Sibyl 數位管家 | 美業沙龍線上預約排程系統 完整介紹與梯次開通</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,800;1,800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script>
@@ -18,7 +18,9 @@
               400: '#B89F88', 500: '#9B7E65', 600: '#7D624B', 700: '#5F4835',
               800: '#423122', 900: '#2A1E14',
             },
-            sand: { 50: '#FDFBF7', 100: '#F7EDE8', 200: '#EBE5DF' }
+            sage: { 50: '#F3F6F4', 100: '#E3ECE5', 500: '#6E8B75', 800: '#3D5443' },
+            rose: { 50: '#FAF3F3', 100: '#F6E4E4', 500: '#B87272', 800: '#6E3838' },
+            slateblue: { 50: '#F3F5F7', 100: '#E3E8ED', 500: '#698196', 800: '#3B4E5E' }
           },
           fontFamily: {
             sans: ['Noto Sans TC', 'sans-serif'],
@@ -31,36 +33,38 @@
   <style>
     .swal2-popup { border-radius: 1.5rem !important; font-family: 'Noto Sans TC', sans-serif !important; }
     .swal2-confirm { background-color: #9B7E65 !important; border-radius: 0.75rem !important; font-weight: 700 !important; }
-    .gradient-hero { background: radial-gradient(circle at top left, #FAF2EB 0%, #F5EDE3 50%, #E9DACB 100%); }
+    .gradient-hero { background: radial-gradient(circle at top left, #FAF2EB 0%, #F5ECE1 50%, #E9DACB 100%); }
 
-    /* 高質感微進場動效 (Soft Fade Slide) */
-    .soft-reveal {
+    /* 🎬 精準左右滑入微動效 (只針對核心 4-5 處觸發，穩定不晃動、不頭暈) */
+    .slide-in-left {
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateX(-32px);
       transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
       will-change: opacity, transform;
     }
-    .soft-reveal.is-in {
-      opacity: 1;
-      transform: translateY(0);
+    .slide-in-right {
+      opacity: 0;
+      transform: translateX(32px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: opacity, transform;
     }
-    .soft-delay-1 { transition-delay: 80ms; }
-    .soft-delay-2 { transition-delay: 160ms; }
-    .soft-delay-3 { transition-delay: 240ms; }
+    .slide-active {
+      opacity: 1 !important;
+      transform: translateX(0) !important;
+    }
 
-    /* 按鈕與卡片微觸感 */
-    .touch-card {
+    .touch-scale {
       transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .touch-card:active {
-      transform: scale(0.985);
+    .touch-scale:active {
+      transform: scale(0.98);
     }
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased selection:bg-brand-400 selection:text-white pb-24 overflow-x-hidden">
 
   <!-- 頂部導覽列 -->
-  <nav class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-brand-200/60 shadow-xs">
+  <nav class="bg-white/85 backdrop-blur-md sticky top-0 z-40 border-b border-brand-200/60 shadow-xs">
     <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
       <a href="https://heysibyl.com" target="_blank" class="flex items-center gap-2.5 text-brand-900 font-bold text-sm tracking-wide">
         <span class="w-8 h-8 bg-brand-800 text-brand-50 rounded-xl flex items-center justify-center text-xs shadow-xs">
@@ -69,7 +73,7 @@
         <span class="font-serif text-lg tracking-wider font-extrabold">SIBYL 數位管家</span>
       </a>
       <div class="flex items-center gap-3">
-        <a href="#order-form-anchor" class="px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white text-xs md:text-sm font-bold rounded-full shadow-xs transition touch-card">
+        <a href="#order-form-anchor" class="px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white text-xs md:text-sm font-bold rounded-full shadow-xs transition touch-scale">
           本梯次開通
         </a>
       </div>
@@ -78,11 +82,11 @@
 
   <div class="max-w-4xl mx-auto px-4 pt-6 space-y-12">
 
-    <!-- Hero 主視覺 -->
-    <header class="soft-reveal relative overflow-hidden rounded-[2.5rem] gradient-hero p-8 md:p-14 text-center shadow-sm border border-brand-200/80">
+    <!-- Hero 主視覺：大字大氣場 ＋ 永久免費升級特權提示 -->
+    <header class="relative overflow-hidden rounded-[2.5rem] gradient-hero p-8 md:p-14 text-center shadow-sm border border-brand-200/80">
       <div class="relative z-10 space-y-5">
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/90 text-brand-800 rounded-full text-xs font-bold shadow-xs border border-brand-200">
-          <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-white/95 text-brand-800 rounded-full text-xs font-bold shadow-xs border border-brand-200">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
           <span>每週限量梯次審核制・維護最高連線品質</span>
         </div>
         
@@ -93,27 +97,27 @@
         </h1>
         
         <p class="text-sm md:text-base text-brand-700 font-medium max-w-xl mx-auto leading-relaxed">
-          不只是一個預約前台。將美業常見的<b>深夜對時段、手寫排班、客人放鳥與月底結算</b>全數自動化。
+          這不只是一個預約前台！深入收集上百位美業店長真實痛點，將<b>深夜對時段、手工排班、放鳥卡位、月底結算</b>全數自動化。
         </p>
 
-        <!-- 3 大視覺化指標圖卡 -->
+        <!-- 3 大視覺化指標色塊 (白底/灰綠/琥珀，層次豐富) -->
         <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto pt-2">
-          <div class="bg-white/95 p-4 rounded-2xl border border-brand-200 shadow-xs touch-card">
+          <div class="bg-white/95 p-4 rounded-2xl border border-brand-200 shadow-xs touch-scale">
             <div class="text-2xl md:text-3xl font-black text-brand-800">80%↓</div>
             <div class="text-xs text-brand-600 font-bold mt-1">減少溝通耗時</div>
           </div>
-          <div class="bg-white/95 p-4 rounded-2xl border border-brand-200 shadow-xs touch-card">
-            <div class="text-2xl md:text-3xl font-black text-emerald-800">0 次</div>
-            <div class="text-xs text-emerald-700 font-bold mt-1">時長防撞鎖定</div>
+          <div class="bg-sage-50 p-4 rounded-2xl border border-sage-100 shadow-xs touch-scale">
+            <div class="text-2xl md:text-3xl font-black text-sage-800">0 次</div>
+            <div class="text-xs text-sage-800 font-bold mt-1">時長防撞鎖定</div>
           </div>
-          <div class="bg-white/95 p-4 rounded-2xl border border-brand-200 shadow-xs touch-card">
+          <div class="bg-amber-50/80 p-4 rounded-2xl border border-amber-200/80 shadow-xs touch-scale">
             <div class="text-2xl md:text-3xl font-black text-amber-800">永久</div>
-            <div class="text-xs text-amber-700 font-bold mt-1">許願免費升級</div>
+            <div class="text-xs text-amber-800 font-bold mt-1">許願免費升級</div>
           </div>
         </div>
 
         <div class="pt-3">
-          <a href="#order-form-anchor" class="inline-flex items-center gap-2 px-9 py-4 bg-brand-800 hover:bg-brand-900 text-white rounded-2xl text-sm md:text-base font-bold shadow-sm transition touch-card">
+          <a href="#order-form-anchor" class="inline-flex items-center gap-2 px-9 py-4 bg-brand-800 hover:bg-brand-900 text-white rounded-2xl text-sm md:text-base font-bold shadow-sm transition touch-scale">
             <i class="fa-solid fa-arrow-right text-xs"></i>
             <span>立即申請本梯次開通（加贈 3,600 元實戰包）</span>
           </a>
@@ -121,45 +125,48 @@
       </div>
     </header>
 
-    <!-- 痛點情境對比 -->
+    <!-- 痛點轉折：左右滑入動畫效果 1（左側推入 vs 右側推入） -->
     <section class="space-y-4">
-      <div class="soft-reveal text-center space-y-1">
+      <div class="text-center space-y-1">
         <h2 class="text-2xl md:text-3xl font-black text-brand-900">
-          美業日常最消耗心力的三個時刻
+          美業老闆每天最消耗心力的三個時刻
         </h2>
-        <p class="text-xs md:text-sm text-brand-500 font-medium">把休息時間留給自己，繁瑣排程交給管家</p>
+        <p class="text-xs md:text-sm text-brand-500 font-medium">把休息時間留給自己，繁瑣雜事交給管家</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-        <div class="soft-reveal soft-delay-1 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 動效 1-A：左側滑入 -->
+        <div class="slide-in-left bg-rose-50/60 p-6 rounded-3xl border border-rose-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">溝通耗時</span>
-            <i class="fa-regular fa-comment-dots text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-xs font-bold">溝通耗時</span>
+            <i class="fa-regular fa-comment-dots text-rose-500"></i>
           </div>
           <h3 class="text-base font-bold text-brand-900">半夜 1 點還在回「明天幾點有空？」</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             忙完一整天手酸腰痛，睡前還要反覆對時段，零碎訊息佔據休息生活。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-2 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 中間平穩不晃 -->
+        <div class="bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
             <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">人工作業失誤</span>
-            <i class="fa-regular fa-calendar-xmark text-brand-400"></i>
+            <i class="fa-regular fa-calendar-xmark text-brand-500"></i>
           </div>
           <h3 class="text-base font-bold text-brand-900">紙本塗塗改改，現場兩組客人撞期</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             忙碌時看錯字跡或漏抄，客人同時到店乾等，場面尷尬且影響專業形象。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-3 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 動效 1-B：右側滑入 -->
+        <div class="slide-in-right bg-rose-50/60 p-6 rounded-3xl border border-rose-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">營收折損</span>
-            <i class="fa-solid fa-ban text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-xs font-bold">營收折損</span>
+            <i class="fa-solid fa-ban text-rose-500"></i>
           </div>
           <h3 class="text-base font-bold text-brand-900">熱門時段被放鳥，整下午乾等空班</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             週末黃金檔期客人臨時失聯，推掉其他預約的下場就是無奈空班。
           </p>
         </div>
@@ -167,73 +174,73 @@
     </section>
 
     <!-- 影音實測展示區 -->
-    <section class="soft-reveal bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xs border border-brand-200 text-center space-y-4">
+    <section class="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xs border border-brand-200 text-center space-y-4">
       <div class="space-y-1.5">
         <span class="px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">手機介面錄影實測</span>
         <h2 class="text-lg md:text-2xl font-black text-brand-900 flex items-center justify-center gap-2">
           <i class="fa-solid fa-play text-brand-500 text-sm"></i>
           1 分鐘快速導覽：系統流暢度展示
         </h2>
-        <p class="text-xs md:text-sm text-brand-500">直覺操作體驗，無需繁瑣學習成本</p>
+        <p class="text-xs md:text-sm text-brand-500 font-medium">直覺操作體驗，專為手機點按習慣優化</p>
       </div>
       <div class="w-full max-w-[280px] mx-auto aspect-[9/16] rounded-3xl overflow-hidden shadow-sm bg-black border border-brand-200">
         <iframe class="w-full h-full" src="https://www.youtube.com/embed/nRzuggBdRk0" title="美業系統展示 Short" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     </section>
 
-    <!-- 本梯次開通贈禮：3,600 元實戰包 -->
-    <section class="soft-reveal bg-gradient-to-br from-[#FAF5EE] via-sand-50 to-[#F2E8DC] p-6 md:p-10 rounded-[2.5rem] border border-brand-300 shadow-xs space-y-6">
+    <!-- 左右滑入動效 2：價值 3,600 元實戰包（法式琥珀金高質感整體滑入） -->
+    <section class="slide-in-left bg-gradient-to-br from-[#FAF5EE] via-amber-50/50 to-[#F2E8DC] p-6 md:p-10 rounded-[2.5rem] border border-amber-200 shadow-sm space-y-6">
       <div class="text-center space-y-2">
         <span class="inline-flex items-center gap-1.5 px-3.5 py-1 bg-brand-800 text-white rounded-full text-xs font-bold shadow-xs">
-          <i class="fa-solid fa-box-open text-xs"></i> 本梯次開通專屬限定禮（市值 3,600 元）
+          <i class="fa-solid fa-box-open text-xs text-amber-300"></i> 本梯次開通專屬限定禮（市值 3,600 元）
         </span>
         <h2 class="text-2xl md:text-3xl font-black text-brand-900">
           不只給您好系統，更幫您搞定客人移轉與宣傳做圖
         </h2>
         <p class="text-xs md:text-sm text-brand-700 font-medium max-w-lg mx-auto leading-relaxed">
-          開通即刻解鎖實戰資源包，省下美編開銷，當天就能在社群質感宣傳。
+          開通即刻免費解鎖實戰資源包，省下美編設計開銷，當天就能在社群質感宣傳！
         </p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-brand-200 shadow-xs space-y-2 touch-card">
-          <div class="w-10 h-10 bg-brand-100 text-brand-700 rounded-xl flex items-center justify-center text-base">
+        <div class="bg-white p-5 rounded-2xl border border-amber-200/80 shadow-xs space-y-2 touch-scale">
+          <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center text-base">
             <i class="fa-solid fa-image"></i>
           </div>
           <h3 class="text-sm font-bold text-brand-900">5 套 Canva IG 宣傳限動範本</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
-            法式簡約美學。手機開啟 Canva 換上店名與預約連結，1 分鐘發限動公告熟客。
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
+            法式簡約美學。手機開啟 Canva 換上店名與預約連結，1 分鐘快速發限動公告。
           </p>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-brand-200 shadow-xs space-y-2 touch-card">
-          <div class="w-10 h-10 bg-brand-100 text-brand-700 rounded-xl flex items-center justify-center text-base">
+        <div class="bg-white p-5 rounded-2xl border border-sage-100 shadow-xs space-y-2 touch-scale">
+          <div class="w-10 h-10 bg-sage-100 text-sage-800 rounded-xl flex items-center justify-center text-base">
             <i class="fa-brands fa-line text-lg"></i>
           </div>
           <h3 class="text-sm font-bold text-brand-900">美業 LINE 圖文選單 3 套</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
-            大地色與奶油白高階質感。直接套用官方 LINE，配置預約與價目常用按鈕。
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
+            大地色與奶油白高階質感。直接套用官方 LINE，配置預約與價目黃金按鈕。
           </p>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-brand-200 shadow-xs space-y-2 touch-card">
-          <div class="w-10 h-10 bg-brand-100 text-brand-700 rounded-xl flex items-center justify-center text-base">
+        <div class="bg-white p-5 rounded-2xl border border-rose-100 shadow-xs space-y-2 touch-scale">
+          <div class="w-10 h-10 bg-rose-100 text-rose-800 rounded-xl flex items-center justify-center text-base">
             <i class="fa-solid fa-envelope-open-text"></i>
           </div>
           <h3 class="text-sm font-bold text-brand-900">10 組顧客回訪關懷文案庫</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             燙染修護、剪髮週期、光療卸甲全數備妥，直接貼入後台模組一鍵發送。
           </p>
         </div>
       </div>
 
-      <div class="p-3 bg-white/80 rounded-2xl border border-brand-200 text-center text-xs md:text-sm text-brand-800 font-bold">
+      <div class="p-3 bg-white/85 rounded-2xl border border-amber-200 text-center text-xs md:text-sm text-brand-800 font-bold">
         完成開通後，實戰包下載連結將與專屬系統連結一併寄送至您的電子信箱。
       </div>
     </section>
 
-    <!-- 實測體驗專區 -->
-    <section class="soft-reveal bg-brand-100/60 p-6 md:p-8 rounded-3xl border border-brand-200 shadow-xs text-center space-y-4">
+    <!-- 實測體驗專區 (維持原貌) -->
+    <section class="bg-brand-100/60 p-6 md:p-8 rounded-3xl border border-brand-200 shadow-xs text-center space-y-4">
       <div class="space-y-1.5">
         <span class="inline-block px-3 py-0.5 bg-brand-800 text-white rounded-full text-xs font-bold">線上實測體驗</span>
         <h3 class="text-lg md:text-xl font-bold text-brand-900 flex items-center justify-center gap-2">
@@ -257,172 +264,184 @@
       </div>
 
       <div class="pt-1">
-        <a href="https://lin.ee/YoxX201" target="_blank" class="inline-flex items-center gap-2 px-8 py-3 bg-brand-800 hover:bg-brand-900 text-white rounded-2xl text-xs md:text-sm font-bold shadow-xs transition touch-card">
+        <a href="https://lin.ee/YoxX201" target="_blank" class="inline-flex items-center gap-2 px-8 py-3 bg-brand-800 hover:bg-brand-900 text-white rounded-2xl text-xs md:text-sm font-bold shadow-xs transition touch-scale">
           <i class="fa-brands fa-line text-sm"></i>
           <span>加 LINE 索取測試連結與手冊</span>
         </a>
       </div>
     </section>
 
-    <!-- 後台全模組深度介紹 -->
+    <!-- 後台全模組深度介紹：左右滑入動效 3（左側與右側交錯） ＋ 多色階卡片 -->
     <section class="space-y-4">
-      <div class="soft-reveal text-center space-y-1">
-        <span class="px-3 py-1 bg-brand-200 text-brand-800 rounded-full text-xs font-bold">指揮後台全模組</span>
+      <div class="text-center space-y-1">
+        <span class="px-3 py-1 bg-brand-200 text-brand-800 rounded-full text-xs font-bold">全方位指揮總控台</span>
         <h2 class="text-2xl md:text-3xl font-black text-brand-900">沙龍營運所需工具，完整具備</h2>
-        <p class="text-xs md:text-sm text-brand-500 font-medium">依據美業真實流程打造，所有功能皆因應現場痛點誕生，隨心自由開關</p>
+        <p class="text-xs md:text-sm text-brand-500 font-medium">
+          後台內建<b>「功能許願池」</b>，開發團隊親自評估後享有<b>永久免費升級</b>！
+        </p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <div class="soft-reveal soft-delay-1 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 1: 左滑入 (陶土杏棕) -->
+        <div class="slide-in-left bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
             <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">快速排程</span>
-            <i class="fa-solid fa-calendar-days text-brand-400"></i>
+            <i class="fa-solid fa-calendar-days text-brand-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">日曆總覽與口頭快速加單</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             以專屬色點清楚辨識排程。熟客現場口頭約下月？輸入手機 10 秒插單，防撞期排程同步更新。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-2 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 2: 右滑入 (鼠尾草綠) -->
+        <div class="slide-in-right bg-sage-50/60 p-6 rounded-3xl border border-sage-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">人員分工</span>
-            <i class="fa-solid fa-user-group text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-sage-100 text-sage-800 rounded-full text-xs font-bold">人員分工</span>
+            <i class="fa-solid fa-user-group text-sage-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">專員名單管理與獨立排班頁面</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
-            員工以專屬代號獨立劃假排休；經營者在總後台掌握全員在班狀態與預約名單。
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
+            員工以專屬代號獨立劃假排休；經營者在總後台掌握全員在班狀態與預約名單，免每週對班表。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-1 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 3: 左滑入 (莫蘭迪灰藍) -->
+        <div class="slide-in-left bg-slateblue-50/60 p-6 rounded-3xl border border-slateblue-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">坪效運用</span>
-            <i class="fa-solid fa-layer-group text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-slateblue-100 text-slateblue-800 rounded-full text-xs font-bold">坪效運用</span>
+            <i class="fa-solid fa-layer-group text-slateblue-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">服務智慧分組：等待期彈性插單</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             <b>Group A（技術類）</b>燙染停留空檔允許彈性插單；<b>Group B（專屬類）</b>全程專人防撞鎖定。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-2 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 4: 右滑入 (煙燻玫瑰) -->
+        <div class="slide-in-right bg-rose-50/60 p-6 rounded-3xl border border-rose-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">履約保障</span>
-            <i class="fa-solid fa-shield-halved text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-xs font-bold">履約保障</span>
+            <i class="fa-solid fa-shield-halved text-rose-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">店家審核接單與線下訂金機制</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             評估時段再核准接單；訂金可設「僅新客」或「全員」，客人前台檢視匯款帳號並回報後五碼。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-1 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 5 (白底) -->
+        <div class="bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
             <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">品牌門面</span>
-            <i class="fa-solid fa-camera-retro text-brand-400"></i>
+            <i class="fa-solid fa-camera-retro text-brand-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">作品展示專區：兼具預約與官網功能</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
-            手機隨拍隨傳分類展示，每張作品均可直連 Instagram 貼文，為社群導流增加曝光。
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
+            手機隨拍隨傳分類展示，每張作品均可直連 Instagram 貼文，為社群導流增加曝光度。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-2 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 6 (灰綠底) -->
+        <div class="bg-sage-50/60 p-6 rounded-3xl border border-sage-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">對帳結算</span>
-            <i class="fa-solid fa-chart-pie text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-sage-100 text-sage-800 rounded-full text-xs font-bold">對帳結算</span>
+            <i class="fa-solid fa-chart-pie text-sage-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">營業額即時統計與待收款管理</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             施作完成輸入實收金額即可結單，數據自動歸檔。一鍵篩選單項服務營收，月底對帳清晰。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-1 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 7 (灰藍底) -->
+        <div class="bg-slateblue-50/60 p-6 rounded-3xl border border-slateblue-100 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
-            <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">顧客經營</span>
-            <i class="fa-solid fa-heart-pulse text-brand-400"></i>
+            <span class="px-2.5 py-0.5 bg-slateblue-100 text-slateblue-800 rounded-full text-xs font-bold">顧客經營</span>
+            <i class="fa-solid fa-heart-pulse text-slateblue-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">自訂 5 組週期回訪關懷文案庫</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             依燙染、剪髮、美甲週期自動推薦回訪名單，一鍵複製專屬文案貼回通訊軟體。
           </p>
         </div>
 
-        <div class="soft-reveal soft-delay-2 bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-card">
+        <!-- 模組 8 (白底) -->
+        <div class="bg-white p-6 rounded-3xl border border-brand-200 shadow-xs space-y-2 touch-scale">
           <div class="flex items-center justify-between">
             <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">彈性排休</span>
-            <i class="fa-solid fa-calendar-check text-brand-400"></i>
+            <i class="fa-solid fa-calendar-check text-brand-500"></i>
           </div>
           <h3 class="font-bold text-base text-brand-900">每週固定公休與特殊連假控制台</h3>
-          <p class="text-xs md:text-sm text-brand-600 leading-relaxed">
+          <p class="text-xs md:text-sm text-brand-600 leading-relaxed font-medium">
             勾選每週固定公休與特殊休假日，日曆自動將休假鎖定；前台支援滿版最新公告。
           </p>
         </div>
       </div>
     </section>
 
-    <!-- LINE 官方自動化進階模組 -->
-    <section class="soft-reveal bg-white rounded-[2.5rem] p-6 md:p-10 shadow-xs border border-brand-200 space-y-4">
+    <!-- 左右滑入動效 4：LINE 官方自動化進階模組 -->
+    <section class="bg-gradient-to-br from-sage-50 via-white to-sand-50 rounded-[2.5rem] p-6 md:p-10 shadow-xs border border-sage-100 space-y-4">
       <div class="text-center space-y-1">
-        <span class="px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">LINE 官方帳號串接</span>
+        <span class="px-3 py-1 bg-sage-100 text-sage-800 rounded-full text-xs font-bold">LINE 官方帳號串接</span>
         <h2 class="text-2xl md:text-3xl font-black text-brand-900">全自動 LINE 互動與排程提醒引擎</h2>
         <p class="text-xs md:text-sm text-brand-500 font-medium">使用店家的 LINE 官方帳號 API，直接傳遞不透過第三方抽佣</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-2">
-        <div class="p-5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2 touch-card">
-          <div class="w-8 h-8 bg-brand-200 text-brand-800 rounded-lg flex items-center justify-center text-sm">
+        <!-- 動效 4-A: 左滑入 -->
+        <div class="slide-in-left p-5 bg-white rounded-2xl border border-brand-200 space-y-2 touch-scale">
+          <div class="w-9 h-9 bg-amber-100 text-amber-800 rounded-lg flex items-center justify-center text-sm">
             <i class="fa-solid fa-bell"></i>
           </div>
           <h3 class="font-bold text-sm text-brand-900">對話框一鍵接單 / 婉拒</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             預約成立即時推播卡片至老闆個人 LINE，手機點擊即可核准接單並同步通知客人。
           </p>
         </div>
 
-        <div class="p-5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2 touch-card">
-          <div class="w-8 h-8 bg-brand-200 text-brand-800 rounded-lg flex items-center justify-center text-sm">
+        <div class="p-5 bg-white rounded-2xl border border-brand-200 space-y-2 touch-scale">
+          <div class="w-9 h-9 bg-sage-100 text-sage-800 rounded-lg flex items-center justify-center text-sm">
             <i class="fa-solid fa-bars-staggered"></i>
           </div>
           <h3 class="font-bold text-sm text-brand-900">LINE 互動式價目表 (Flex)</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             顧客在官方 LINE 輸入「價目表」，自動回傳輪播價目卡片與預約按鈕。
           </p>
         </div>
 
-        <div class="p-5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2 touch-card">
-          <div class="w-8 h-8 bg-brand-200 text-brand-800 rounded-lg flex items-center justify-center text-sm">
+        <!-- 動效 4-B: 右滑入 -->
+        <div class="slide-in-right p-5 bg-white rounded-2xl border border-brand-200 space-y-2 touch-scale">
+          <div class="w-9 h-9 bg-slateblue-100 text-slateblue-800 rounded-lg flex items-center justify-center text-sm">
             <i class="fa-solid fa-clock-rotate-left"></i>
           </div>
           <h3 class="font-bold text-sm text-brand-900">前一天 09:00 自動推播</h3>
-          <p class="text-xs text-brand-600 leading-relaxed">
+          <p class="text-xs text-brand-600 leading-relaxed font-medium">
             預約日前一天早上自動發送溫馨提醒，大幅降低客人遺忘與臨時放鳥率。
           </p>
         </div>
       </div>
     </section>
-    <!-- 方案價格與詳細扣款模式介紹 -->
+    <!-- 左右滑入動效 5：方案定價對比（月繳左側滑入 vs 年繳右側滑入） -->
     <section class="space-y-4">
-      <div class="soft-reveal text-center space-y-1">
+      <div class="text-center space-y-1">
         <h2 class="text-2xl md:text-3xl font-black text-brand-900">透明無負擔的訂閱方案</h2>
-        <p class="text-xs md:text-sm text-brand-500 font-medium">本梯次開通專享永久免費功能升級特權與專屬實戰包</p>
+        <p class="text-xs md:text-sm text-brand-500 font-medium">本梯次開通專享<b>後台許願池永久免費升級特權</b>與專屬實戰包</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-        <!-- 月繳方案 -->
-        <div class="bg-white p-6 md:p-8 rounded-3xl border border-brand-200 shadow-xs flex flex-col justify-between space-y-5 touch-card">
+        <!-- 月繳方案：左推入 -->
+        <div class="slide-in-left bg-white p-6 md:p-8 rounded-3xl border border-brand-200 shadow-xs flex flex-col justify-between space-y-5 touch-scale">
           <div class="space-y-3">
             <div class="flex justify-between items-center">
               <span class="text-base md:text-lg font-bold text-brand-800">美業標準月繳方案</span>
               <span class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">定期定額</span>
             </div>
             <div class="text-3xl md:text-4xl font-black text-brand-800">NT$ 680 <span class="text-xs md:text-sm text-brand-400 font-normal">/ 月</span></div>
-            <p class="text-xs text-brand-700 bg-brand-50 p-3 rounded-xl border border-brand-200 leading-relaxed">
+            <p class="text-xs text-brand-700 bg-brand-50 p-3 rounded-xl border border-brand-200 leading-relaxed font-medium">
               📌 <b>扣款規則：</b>首期於下單時扣款，次期起透過 PAYUNi 於<b>每月 10 號自動扣款</b>。免手動轉帳、零行政負擔，隨時可按月停止授權無違約金。
             </p>
-            <ul class="text-xs md:text-sm text-brand-700 space-y-2.5 pt-2">
+            <ul class="text-xs md:text-sm text-brand-700 space-y-2.5 pt-2 font-medium">
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 完整美業線上預約前台與日曆排程</li>
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 行動 Web App 店家專屬管理後台</li>
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 多專員排班與時長防撞期計算</li>
@@ -434,8 +453,8 @@
           <div class="pt-3 border-t border-brand-100 text-xs text-brand-400 text-center font-bold">定期定額自動扣款・無合約壓力</div>
         </div>
 
-        <!-- 年繳方案 (推薦) -->
-        <div class="bg-gradient-to-b from-white via-sand-50 to-white p-6 md:p-8 rounded-3xl border-2 border-brand-500 shadow-sm flex flex-col justify-between space-y-5 relative touch-card">
+        <!-- 年繳方案：右推入 (多色階琥珀微金) -->
+        <div class="slide-in-right bg-gradient-to-b from-white via-sand-50 to-amber-50/20 p-6 md:p-8 rounded-3xl border-2 border-brand-500 shadow-sm flex flex-col justify-between space-y-5 relative touch-scale">
           <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-800 text-white text-xs font-bold px-3.5 py-0.5 rounded-full shadow-xs">最推薦・現省 $1,560</div>
           <div class="space-y-3">
             <div class="flex justify-between items-center">
@@ -443,13 +462,13 @@
               <span class="px-2.5 py-0.5 bg-brand-500 text-white rounded-full text-xs font-bold">單筆開通一年</span>
             </div>
             <div class="text-3xl md:text-4xl font-black text-brand-800">NT$ 6,600 <span class="text-xs md:text-sm text-brand-400 font-normal">/ 年</span></div>
-            <p class="text-xs text-brand-800 bg-brand-100/70 p-3 rounded-xl border border-brand-200 leading-relaxed">
+            <p class="text-xs text-brand-800 bg-brand-100/70 p-3 rounded-xl border border-brand-200 leading-relaxed font-medium">
               📌 <b>繳費規則：</b>一次付清開通 <b>365 天完整使用權限</b>。絕無未告知之自動刷卡扣款；到期前 7 天系統發信與 LINE 提醒續約。
             </p>
-            <ul class="text-xs md:text-sm text-brand-700 space-y-2.5 pt-2">
+            <ul class="text-xs md:text-sm text-brand-700 space-y-2.5 pt-2 font-medium">
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 包含所有月繳功能與所有進階模組</li>
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 專屬獨立資料庫頻寬保障</li>
-              <li class="flex items-center gap-2 font-bold text-brand-900"><i class="fa-solid fa-gem text-brand-600 text-xs"></i> 優先享有全系統新功能免費升級特權</li>
+              <li class="flex items-center gap-2 font-bold text-brand-900"><i class="fa-solid fa-wand-magic-sparkles text-amber-700 text-xs"></i> 享有後台許願池新功能永久免費升級特權</li>
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 專屬 1 對 1 官方技術客服指導</li>
               <li class="flex items-center gap-2 font-bold text-brand-900"><i class="fa-solid fa-box-open text-brand-600 text-xs"></i> 贈送《美業數位轉型實戰包（市值3,600元）》</li>
               <li class="flex items-center gap-2"><i class="fa-solid fa-check text-brand-600 text-xs"></i> 換算每日不到 19 元的超值營運管家</li>
@@ -461,11 +480,11 @@
     </section>
 
     <!-- 線上訂購與自動開通表單 -->
-    <section id="order-form-anchor" class="soft-reveal bg-white p-6 md:p-10 rounded-3xl border border-brand-200 shadow-xs space-y-5">
+    <section id="order-form-anchor" class="bg-white p-6 md:p-10 rounded-3xl border border-brand-200 shadow-xs space-y-5">
       <div class="text-center space-y-1">
         <span class="px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold">線上即時開通</span>
         <h2 class="text-xl md:text-2xl font-black text-brand-900">線上快速訂購與開通</h2>
-        <p class="text-xs md:text-sm text-brand-500">填寫基本資料後前往金流付款，完成後系統自動建立專屬後台與資料庫</p>
+        <p class="text-xs md:text-sm text-brand-500 font-medium">填寫基本資料後前往金流付款，完成後系統自動建立專屬後台與資料庫</p>
       </div>
 
       <form id="orderForm" class="space-y-4 pt-2">
@@ -483,7 +502,7 @@
             <label class="block text-xs md:text-sm font-bold text-brand-800 mb-1.5">選擇訂購方案</label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <!-- 方案 1: 月繳方案 -->
-              <label class="plan-card flex flex-col justify-between p-4 rounded-2xl border border-brand-200 bg-brand-50/50 cursor-pointer transition relative touch-card">
+              <label class="plan-card flex flex-col justify-between p-4 rounded-2xl border border-brand-200 bg-brand-50/50 cursor-pointer transition relative touch-scale">
                 <input type="radio" name="planChoice" value="monthly" class="hidden" onchange="handlePlanChange(this)">
                 <div>
                   <div class="text-xs md:text-sm font-bold text-brand-900">月繳方案 (定期定額)</div>
@@ -493,7 +512,7 @@
               </label>
 
               <!-- 方案 2: 年度旗艦方案 (推薦) -->
-              <label class="plan-card flex flex-col justify-between p-4 rounded-2xl border-2 border-brand-500 bg-brand-100/60 cursor-pointer transition relative shadow-xs touch-card">
+              <label class="plan-card flex flex-col justify-between p-4 rounded-2xl border-2 border-brand-500 bg-brand-100/60 cursor-pointer transition relative shadow-xs touch-scale">
                 <div class="absolute -top-2.5 right-2 px-2.5 py-0.5 bg-brand-800 text-white rounded-full text-[10px] font-bold">最推薦</div>
                 <input type="radio" name="planChoice" value="yearly" class="hidden" checked onchange="handlePlanChange(this)">
                 <div>
@@ -526,13 +545,13 @@
           <input type="email" id="buyerEmail" placeholder="例如：owner@gmail.com" required class="w-full p-3.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs md:text-sm focus:ring-2 focus:ring-brand-400 outline-none">
         </div>
 
-        <button type="button" onclick="submitAndPay()" class="w-full py-4.5 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-2xl shadow-xs transition text-sm md:text-base flex items-center justify-center gap-2 touch-card">
+        <button type="button" onclick="submitAndPay()" class="w-full py-4.5 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-2xl shadow-xs transition text-sm md:text-base flex items-center justify-center gap-2 touch-scale">
           <span>確認無誤，前往 PAYUNi 安全付款</span>
           <i class="fa-solid fa-arrow-right text-xs"></i>
         </button>
       </form>
 
-      <!-- 服務條款、定期扣款授權與隱私權保護聲明 -->
+      <!-- 服務條款、定期扣款授權與隱私權保護聲明 (完整保留) -->
       <div class="bg-brand-50 p-5 rounded-2xl border border-brand-200 text-xs text-brand-600 space-y-2 leading-relaxed">
         <div class="font-bold text-brand-900 flex items-center gap-1.5">
           <i class="fa-solid fa-scale-balanced"></i>
@@ -548,7 +567,7 @@
     <!-- 頁尾宣告 -->
     <footer class="text-center py-6 text-xs text-brand-500 space-y-2.5">
       <div>
-        <a href="https://lin.ee/YoxX201" target="_blank" class="inline-flex items-center gap-1.5 px-5 py-2 bg-brand-800 text-white rounded-full font-bold shadow-xs hover:bg-brand-900 transition touch-card">
+        <a href="https://lin.ee/YoxX201" target="_blank" class="inline-flex items-center gap-1.5 px-5 py-2 bg-brand-800 text-white rounded-full font-bold shadow-xs hover:bg-brand-900 transition touch-scale">
           <i class="fa-brands fa-line text-sm"></i>
           <span>聯繫 Sibyl 官方線上客服</span>
         </a>
@@ -560,7 +579,7 @@
   </div>
 
   <!-- ✨ 右下角「回到頂部」透明白圓形懸浮按鈕 -->
-  <button id="backToTopBtn" onclick="scrollToTop()" class="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-white/80 hover:bg-white text-brand-800 border border-brand-200/80 shadow-md backdrop-blur-md flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none transform translate-y-3" title="回到頂部">
+  <button id="backToTopBtn" onclick="scrollToTop()" class="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-white/85 hover:bg-white text-brand-800 border border-brand-200/80 shadow-md backdrop-blur-md flex items-center justify-center transition-all duration-300 opacity-0 pointer-events-none transform translate-y-3" title="回到頂部">
     <i class="fa-solid fa-arrow-up text-sm"></i>
   </button>
 
@@ -573,17 +592,20 @@
       yearly: "https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/9fMi15VUxEnLZDsKltvkC"
     };
 
-    // 柔和微進場監聽器 (無眩暈感)
+    // 🎬 左右滑入監聽器 (IntersectionObserver)
     document.addEventListener('DOMContentLoaded', () => {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('is-in');
+            entry.target.classList.add('slide-active');
           }
         });
-      }, { threshold: 0.08, rootMargin: "0px 0px -30px 0px" });
+      }, {
+        threshold: 0.1,
+        rootMargin: "0px 0px -30px 0px"
+      });
 
-      document.querySelectorAll('.soft-reveal').forEach(el => observer.observe(el));
+      document.querySelectorAll('.slide-in-left, .slide-in-right').forEach(el => observer.observe(el));
     });
 
     // 右下角回到頂部按鈕滾動監聽
