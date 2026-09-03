@@ -814,15 +814,144 @@
     grid.innerHTML = html || '<div class="col-span-3 text-center py-4 text-xs text-brand-400">當日無開放預約時段</div>';
   }
 
-  function selectTimePill(timeStr, el) {
-    document.querySelectorAll('.time-pill').forEach(p => {
-      if(p.classList.contains('cursor-pointer')) {
-        p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm";
-      }
-    });
-    el.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-500 bg-brand-500 text-white shadow-md";
-    document.getElementById('time').value = timeStr;
+  // ✅ 徹底修復時段複選問題：點擊時強制單選
+function selectTimePill(timeStr, el) {
+  document.querySelectorAll('.time-pill').forEach(p => {
+    p.classList.remove('bg-brand-500', 'text-white', 'border-brand-500');
+    p.classList.add('bg-white', 'text-brand-800', 'border-brand-200');
+  });
+  el.classList.remove('bg-white', 'text-brand-800', 'border-brand-200');
+  el.classList.add('bg-brand-500', 'text-white', 'border-brand-500');
+  document.getElementById('time').value = timeStr;
+}
+
+// ✅ 徹底修復 'custType' 資料庫報錯問題
+document.getElementById('bookForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const sVal = document.getElementById('service').value;
+  const dValRaw = document.getElementById('date').value;
+  const tVal = document.getElementById('time').value;
+
+  if (!sVal) { 
+    return Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
   }
+  if (!dValRaw) { 
+    return Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
+  }
+  if (!tVal) { 
+    return Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
+  }
+
+  const btn = document.getElementById('subBtn');
+  btn.disabled = true; 
+  btn.innerText = "正在傳送預約...";
+
+  let totalPrice = 0;
+  document.querySelectorAll('#service-grid input:checked').forEach(cb => {
+    const pVal = cb.getAttribute('data-price') || '0';
+    const numMatch = pVal.match(/\d+/);
+    totalPrice += numMatch ? Number(numMatch[0]) : 0;
+  });
+
+  const dVal = dValRaw.replace(/\//g, '-');
+  const appointmentIso = `${dVal}T${tVal}:00+08:00`;
+  const emailVal = document.getElementById('email')?.value.trim() || '';
+  const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
+  const custTypeVal = document.getElementById('custType')?.value || 'old';
+  const nameVal = document.getElementById('name').value.trim();
+  const phoneVal = document.getElementById('phone').value.trim();
+  const staffIdVal = document.getElementById('staffId').value || 'all';
+  const staffNameVal = document.getElementById('staffName').value || '不指定';
+
+  // 1. 純淨 Supabase 資料庫 Payload (嚴格排除非資料庫欄位，解決 schema cache 錯誤)
+  const dbPayload = {
+    store_id: CURRENT_STORE_ID,
+    customer_name: nameVal,
+    customer_phone: phoneVal,
+    customer_type: custTypeVal,
+    customer_notes: custNotesVal,
+    line_name: guestLineUid ? guestLineUid : document.getElementById('lineName').value.trim(),
+    notes: emailVal ? `Email: ${emailVal}` : '',
+    service_names: sVal,
+    price: totalPrice,
+    appointment_time: appointmentIso,
+    staff_id: staffIdVal,
+    staff_name: staffNameVal,
+    status: "待確認"
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(dbPayload)
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(errJson.message || "資料庫寫入失敗");
+    }
+
+    // 2. 異步推播給 GAS
+    fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "submitBooking",
+        store_id: CURRENT_STORE_ID,
+        data: Object.assign({}, dbPayload, {
+          name: nameVal,
+          phone: phoneVal,
+          date: dValRaw,
+          time: tVal,
+          service: sVal,
+          email: emailVal,
+          line_uid: guestLineUid
+        })
+      })
+    }).catch(() => {});
+
+    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+    let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
+    if (isNeedDeposit) {
+      successHtml = `
+        <div class="text-left text-xs space-y-2 text-brand-800">
+          <p class="font-bold text-amber-800">📌 本次預約需預付訂金：${db.depositAmount} 元</p>
+          <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap leading-relaxed">${db.depositInfo}</div>
+          <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到首頁回報後五碼以保留時段！</p>
+        </div>
+      `;
+    }
+
+    Swal.fire({
+      title: '預約申請已送出！',
+      html: successHtml,
+      icon: 'success',
+      confirmButtonText: '確定',
+      customClass: { confirmButton: 'swal2-confirm-brown' },
+      buttonsStyling: false
+    }).then(() => {
+      document.getElementById('booking-ui').style.display = 'none';
+      document.getElementById('success-screen').style.display = 'flex';
+    });
+
+  } catch (err) {
+    Swal.fire({
+      title: '預約傳送失敗',
+      text: err.message,
+      icon: 'error',
+      confirmButtonText: '重試',
+      customClass: { confirmButton: 'swal2-confirm-brown' },
+      buttonsStyling: false
+    });
+    btn.disabled = false;
+    btn.innerText = "送出預約";
+  }
+};
 
   function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerByPhone(); }
 
