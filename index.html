@@ -8,6 +8,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- 引入 LINE 官方 LIFF SDK 捕捉顧客真實 User ID -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -96,7 +98,7 @@
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
-<!-- 🛠️ 全螢幕系統維護遮罩層 (當 super.html 開啟維護鎖定時強制覆蓋) -->
+<!-- 全螢幕系統維護遮罩層 -->
 <div id="maintenance-screen" class="fixed inset-0 bg-brand-50/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-brand-200/60">
     <i class="fa-solid fa-screwdriver-wrench"></i>
@@ -106,7 +108,7 @@
     為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。
   </p>
   <div class="p-3 bg-white/80 rounded-2xl border border-brand-200 text-[11px] text-brand-500 max-w-xs mb-5">
-    造成您的不便敬請見諒！若有即時預約或諮詢需求，請點擊下方按鈕直接聯繫店家。
+    造成您的不便敬請見諒！若有即時預約需求，請點擊下方按鈕直接聯繫店家。
   </div>
   <a id="maintenance-line-btn" href="#" target="_blank" class="px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
     <i class="fa-brands fa-line text-sm"></i>
@@ -114,7 +116,7 @@
   </a>
 </div>
 
-<!-- 頂部即時系統全域廣播橫幅 (預告期顯示) -->
+<!-- 頂部即時系統全域廣播橫幅 -->
 <div id="system-banner" class="bg-amber-100 text-amber-900 px-4 py-2 text-[11px] font-medium text-center border-b border-amber-200 hidden">
   <span class="font-bold mr-1">📢 [系統公告]</span>
   <span id="system-banner-text"></span>
@@ -344,6 +346,8 @@
   const urlParams = new URLSearchParams(window.location.search);
   const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
 
+  let guestLineUid = ""; // ✨ 保存客人的真實 LINE UID
+
   let db = { 
     availableDates: [], services: [], portfolio: [], promoImgs: [], 
     weeklyOffDays: [], customOffDates: [], futureBookings: [], staffSchedules: {},
@@ -357,6 +361,22 @@
   let currentPortfolioList = [];
   let isPortfolioExpanded = false;
 
+  // ✨ LIFF 靜默初始化：顧客從 LINE 打開時，0.1 秒無感取得真實 LINE UID
+  async function initLiff() {
+    try {
+      await liff.init({ liffId: "2011183690-A3PkQLO3" });
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        guestLineUid = profile.userId || "";
+        if (profile.displayName && !document.getElementById('lineName').value) {
+          document.getElementById('lineName').value = profile.displayName;
+        }
+      }
+    } catch(e) {
+      console.log("非 LINE 內建瀏覽器或 LIFF 初始化跳過");
+    }
+  }
+
   async function directSupabaseFetch(endpoint) {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
@@ -369,14 +389,11 @@
     }
   }
 
-  // 自動偵測全域維護與全域廣播狀態
   async function checkMaintenanceAndAnnouncement() {
     try {
       const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       if (Array.isArray(announcements) && announcements.length > 0) {
         const item = announcements[0];
-        
-        // 🛠️ 1. 若開啟「維護鎖定」：強制覆蓋前台，完全不可點選
         if (item.is_maintenance === true) {
           document.getElementById('maintenance-desc').innerText = item.content || "為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。";
           document.getElementById('maintenance-screen').classList.remove('hidden');
@@ -384,19 +401,18 @@
           document.getElementById('maintenance-line-btn').href = db.line || '#';
           return;
         }
-
-        // 📢 2. 若為「一般公告」：於頁面最上方顯示優雅提示小橫幅
         if (item.content) {
           document.getElementById('system-banner-text').innerText = item.content;
           document.getElementById('system-banner').classList.remove('hidden');
         }
       }
     } catch (err) {
-      console.warn("無法取得系統全域公告: ", err);
+      console.warn("無法取得全域公告: ", err);
     }
   }
 
   window.onload = async function() {
+    initLiff();
     try {
       const nowIso = new Date().toISOString();
       let [stores, settings, services, portfolios, bookings] = await Promise.all([
@@ -481,7 +497,7 @@
       };
 
       renderStoreUI();
-      checkMaintenanceAndAnnouncement(); // 檢查全域公告與維護鎖定狀態
+      checkMaintenanceAndAnnouncement();
     } catch (e) {
       console.error("前台初始化異常: ", e);
     }
@@ -508,21 +524,15 @@
     document.getElementById('store-hours').innerText = db.businessHours ? `🕒 ${db.businessHours}` : "🕒 營業時間：09:00 - 19:00";
 
     const depositBtn = document.getElementById('quick-report-deposit-btn');
-    if (depositBtn) {
-      depositBtn.classList.toggle('hidden', !db.enableDeposit);
-    }
+    if (depositBtn) depositBtn.classList.toggle('hidden', !db.enableDeposit);
 
     updateDepositSectionDisplay();
 
     const featuredShop = document.getElementById('featuredShopSection');
-    if (featuredShop) {
-      featuredShop.style.display = db.enableFeaturedShop ? 'block' : 'none';
-    }
+    if (featuredShop) featuredShop.style.display = db.enableFeaturedShop ? 'block' : 'none';
 
     const custNotesBox = document.getElementById('custNotesWrapper');
-    if (custNotesBox) {
-      custNotesBox.style.display = (db.enableCustNotes !== false) ? 'block' : 'none';
-    }
+    if (custNotesBox) custNotesBox.style.display = (db.enableCustNotes !== false) ? 'block' : 'none';
 
     const staffSection = document.getElementById('staffSection');
     if (staffSection) {
@@ -562,15 +572,12 @@
   function updateDepositSectionDisplay() {
     const depositBox = document.getElementById('frontDepositSection');
     if (!depositBox) return;
-
     if (!db.enableDeposit) {
       depositBox.classList.add('hidden');
       return;
     }
-
     const currentType = document.getElementById('custType')?.value || 'old';
     const isNeedDeposit = (db.depositMode === 'all') || (db.depositMode === 'new_only' && currentType === 'new');
-
     if (isNeedDeposit) {
       depositBox.classList.remove('hidden');
       document.getElementById('depositAmountTag').innerText = `需預付訂金：${db.depositAmount} 元`;
@@ -639,13 +646,7 @@
             headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({ deposit_reported: true, deposit_last5: r.value.trim() })
           });
-          Swal.fire({
-            title: '已收到回報！', 
-            text: '店家確認款項後會立即為您保留時段。', 
-            icon: 'success',
-            customClass: { confirmButton: 'swal2-confirm-brown' },
-            buttonsStyling: false
-          });
+          Swal.fire({ title: '已收到回報！', text: '店家確認款項後會立即為您保留時段。', icon: 'success', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
         } else {
           Swal.fire({ text: '查無此號碼之待確認預約', icon: 'error', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
         }
@@ -656,11 +657,8 @@
   function handleServiceChange(cb) {
     const selectedMainCount = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length;
     if (selectedMainCount === 0) {
-      document.querySelectorAll('#service-grid input[data-isaddon="true"]').forEach(addonCb => {
-        addonCb.checked = false;
-      });
+      document.querySelectorAll('#service-grid input[data-isaddon="true"]').forEach(addonCb => { addonCb.checked = false; });
     }
-
     let selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
     document.getElementById('service').value = selectedBoxes.map(el => el.value).join(', ');
     
@@ -671,16 +669,11 @@
       } else {
         card.classList.remove('bg-brand-100', 'border-brand-400', 'font-bold');
       }
-
       if (input.getAttribute('data-isaddon') === 'true') {
-        if (selectedMainCount > 0) {
-          card.classList.remove('opacity-40', 'pointer-events-none');
-        } else {
-          card.classList.add('opacity-40', 'pointer-events-none');
-        }
+        card.classList.toggle('opacity-40', selectedMainCount === 0);
+        card.classList.toggle('pointer-events-none', selectedMainCount === 0);
       }
     });
-
     calculateTimesLocally();
   }
 
@@ -698,7 +691,6 @@
   function renderFrontCalendar() {
     const grid = document.getElementById('cal-grid');
     document.getElementById('cal-month-year').innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
-    
     const headers = ['日', '一', '二', '三', '四', '五', '六'];
     let html = headers.map(h => `<div class="bg-brand-50 py-2 text-[11px] font-bold text-brand-400">${h}</div>`).join('');
 
@@ -873,7 +865,6 @@
     const tabs = document.getElementById('portfolio-tabs');
     const rawCats = (db.portfolio || []).map(p => p.cat).filter(Boolean);
     const categories = ['全部', ...new Set(rawCats)];
-    
     if (categories.length <= 1 && (!db.portfolio || db.portfolio.length === 0)) {
       document.getElementById('portfolioSection').style.display = 'none';
       return;
@@ -895,17 +886,10 @@
       });
       el.className = "px-3.5 py-1.5 rounded-full text-xs font-bold border transition bg-brand-400 text-white border-brand-400 shadow-sm";
     }
-
-    currentPortfolioList = (cat === '全部') 
-      ? (db.portfolio || []) 
-      : (db.portfolio || []).filter(w => w.cat === cat);
-
+    currentPortfolioList = (cat === '全部') ? (db.portfolio || []) : (db.portfolio || []).filter(w => w.cat === cat);
     const hasAnyLink = currentPortfolioList.some(w => w.link && w.link.trim() !== '' && w.link.trim() !== '#');
     const hintEl = document.getElementById('portfolio-hint-text');
-    if (hintEl) {
-      hintEl.classList.toggle('hidden', !hasAnyLink);
-    }
-
+    if (hintEl) hintEl.classList.toggle('hidden', !hasAnyLink);
     isPortfolioExpanded = false;
     renderPortfolioGrid();
   }
@@ -915,17 +899,13 @@
     const moreWrapper = document.getElementById('portfolio-more-wrapper');
     const toggleBtnText = document.querySelector('#portfolio-toggle-btn span:first-child');
     const arrow = document.getElementById('portfolio-arrow');
-
     grid.innerHTML = '';
-
     if (currentPortfolioList.length === 0) {
       grid.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-4">尚無作品展示</div>';
       moreWrapper.classList.add('hidden');
       return;
     }
-
     const displayList = isPortfolioExpanded ? currentPortfolioList : currentPortfolioList.slice(0, 2);
-
     displayList.forEach(w => {
       const hasLink = (w.link && w.link.trim() !== '' && w.link.trim() !== '#');
       grid.innerHTML += `
@@ -934,16 +914,10 @@
           <div class="p-2.5 text-center text-xs font-bold text-brand-900 truncate group-hover:text-brand-500">${w.title}</div>
         </div>`;
     });
-
     if (currentPortfolioList.length > 2) {
       moreWrapper.classList.remove('hidden');
-      if (isPortfolioExpanded) {
-        toggleBtnText.innerText = '收折作品';
-        arrow.style.transform = 'rotate(180deg)';
-      } else {
-        toggleBtnText.innerText = `查看更多作品 (${currentPortfolioList.length - 2})`;
-        arrow.style.transform = 'rotate(0deg)';
-      }
+      toggleBtnText.innerText = isPortfolioExpanded ? '收折作品' : `查看更多作品 (${currentPortfolioList.length - 2})`;
+      arrow.style.transform = isPortfolioExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
     } else {
       moreWrapper.classList.add('hidden');
     }
@@ -986,13 +960,15 @@
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
     const custTypeVal = document.getElementById('custType')?.value || 'old';
 
+    // ✨ 同時打包 guestLineUid (真實 LINE UID)，供後端推播使用
     const bookingPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: document.getElementById('name').value.trim(),
       customer_phone: document.getElementById('phone').value.trim(),
       customer_type: custTypeVal,
       customer_notes: custNotesVal,
-      line_name: document.getElementById('lineName').value.trim(),
+      line_name: guestLineUid ? guestLineUid : document.getElementById('lineName').value.trim(),
+      line_uid: guestLineUid,
       notes: emailVal ? `Email: ${emailVal}` : '',
       service_names: document.getElementById('service').value,
       price: totalPrice,
