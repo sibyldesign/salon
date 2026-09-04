@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>線上預約系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- 引入 LINE 官方 LIFF SDK 捕捉顧客真實 User ID -->
@@ -17,7 +17,8 @@
           colors: {
             brand: {
               50: '#FDFBF7', 100: '#F7EDE8', 200: '#EBE5DF', 300: '#D5C7BC',
-              400: '#BCA38F', 500: '#A08875', 800: '#5C4B3C', 900: '#3D3126',
+              400: '#BCA38F', 500: '#8C7355', 600: '#7A6246', 700: '#68523A',
+              800: '#5C4B3C', 900: '#3D3126',
             }
           },
           fontFamily: {
@@ -56,7 +57,6 @@
     }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
-
     .swal2-popup {
       border-radius: 1.5rem !important;
       font-family: 'Noto Sans TC', sans-serif !important;
@@ -72,16 +72,16 @@
       color: #5C4B3C !important;
     }
     .swal2-confirm, .swal2-styled.swal2-confirm, .swal2-confirm-brown {
-      background-color: #A08875 !important;
+      background-color: #8C7355 !important;
       color: #FFFFFF !important;
       border-radius: 0.85rem !important;
       font-weight: 700 !important;
       padding: 0.6rem 1.6rem !important;
-      box-shadow: 0 2px 4px rgba(160, 136, 117, 0.2) !important;
+      box-shadow: 0 2px 4px rgba(140, 115, 85, 0.2) !important;
       border: none !important;
     }
     .swal2-confirm:hover, .swal2-confirm-brown:hover {
-      background-color: #8C7355 !important;
+      background-color: #7A6246 !important;
     }
     .swal2-cancel, .swal2-styled.swal2-cancel {
       background-color: #EBE5DF !important;
@@ -98,25 +98,25 @@
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
-<!-- 全螢幕系統維護遮罩層 -->
+<!-- 全螢幕系統維護或店家鎖定遮罩層 (雙層防護) -->
 <div id="maintenance-screen" class="fixed inset-0 bg-brand-50/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-brand-200/60">
     <i class="fa-solid fa-screwdriver-wrench"></i>
   </div>
-  <h2 class="text-xl font-bold text-brand-900 mb-2">系統例行性維護中</h2>
+  <h2 class="text-xl font-bold text-brand-900 mb-2">系統暫停服務中</h2>
   <p class="text-xs text-brand-700 leading-relaxed max-w-xs mb-3" id="maintenance-desc">
     為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。
   </p>
   <div class="p-3 bg-white/80 rounded-2xl border border-brand-200 text-[11px] text-brand-500 max-w-xs mb-5">
     造成您的不便敬請見諒！若有即時預約需求，請點擊下方按鈕直接聯繫店家。
   </div>
-  <a id="maintenance-line-btn" href="#" target="_blank" class="px-6 py-3 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
+  <a id="maintenance-line-btn" href="#" target="_blank" class="px-6 py-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
     <i class="fa-brands fa-line text-sm"></i>
     <span>聯繫店家官方 LINE</span>
   </a>
 </div>
 
-<!-- 頂部即時系統全域廣播橫幅 -->
+<!-- 頂部即時系統全域廣播橫幅 (同步讀取監聽) -->
 <div id="system-banner" class="bg-amber-100 text-amber-900 px-4 py-2 text-[11px] font-medium text-center border-b border-amber-200 hidden">
   <span class="font-bold mr-1">📢 [系統公告]</span>
   <span id="system-banner-text"></span>
@@ -136,7 +136,6 @@
     <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約</h1>
     <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
   </div>
-
   <div id="promo" class="w-full bg-[#BCA38F] text-white py-3.5 px-4 shadow-sm">
     <div class="max-w-md mx-auto text-center flex flex-col items-center justify-center">
       <div class="text-[13px] font-bold flex items-center justify-center gap-1.5 mb-1">
@@ -149,7 +148,6 @@
 </header>
 
 <div id="booking-ui" class="max-w-md mx-auto flex flex-col">
-
   <!-- PORTFOLIO 作品展示專區 -->
   <div class="px-4 mt-6" id="portfolioSection">
     <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-0.5">PORTFOLIO</div>
@@ -164,16 +162,29 @@
     </div>
   </div>
 
-  <!-- 設計師熱推選品專區 -->
+  <!-- ✨ 顧客真實好評專區 (通過後台審核核准呈現) -->
+  <div class="px-4 mt-6" id="reviewWallSection">
+    <div class="flex justify-between items-center px-1 mb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1">
+        <i class="fa-solid fa-star text-amber-500 text-xs"></i> 顧客真實好評
+      </span>
+      <button type="button" onclick="openReviewModal()" class="text-[11px] text-brand-500 underline font-bold">我要給評</button>
+    </div>
+    <div class="flex gap-2.5 overflow-x-auto pb-2 no-scrollbar" id="reviewList">
+      <div class="text-xs text-brand-400 py-3 text-center w-full">好評載入中...</div>
+    </div>
+  </div>
+
+  <!-- 老師推薦・沙龍專屬選品專區 (全美業通用詞修正) -->
   <div class="px-4 mt-6" id="featuredShopSection" style="display: none;">
     <div class="p-4 rounded-3xl bg-brand-100/70 border border-brand-200/80 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-xs font-bold text-brand-900">✨ 設計師熱推選品好物</div>
-          <div class="text-[10px] text-brand-500 mt-0.5">現場專業沙龍洗護保養，線上隨時帶回家</div>
+          <div class="text-xs font-bold text-brand-900">✨ 老師推薦・沙龍專屬選品</div>
+          <div class="text-[10px] text-brand-500 mt-0.5">店內專業洗護與保養好物，線上隨時帶回家</div>
         </div>
         <a href="shop.html" target="_blank" class="px-3 py-1.5 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-[11px] font-bold shadow-sm transition">
-          前往商城 ➔
+          前往選購 ➔
         </a>
       </div>
     </div>
@@ -200,9 +211,24 @@
   <main class="flex-1 px-4 mt-5">
     <div class="bg-white/95 rounded-3xl p-6 shadow-sm border border-white/80 backdrop-blur-md mb-6">
       <form id="bookForm" class="space-y-5">
+        
+        <!-- 手機號碼 (失焦自動查詢儲值餘額與包卡堂票) -->
         <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">手機號碼</label>
+          <div class="flex justify-between items-center mb-1.5">
+            <label class="block text-xs font-bold text-brand-800">手機號碼</label>
+            <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
+          </div>
           <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)" onblur="checkCustomerByPhone()">
+          
+          <!-- ✨ 儲值餘額與包卡堂票膠囊卡片 -->
+          <div id="memberWalletCard" class="hidden mt-2 p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1 text-xs">
+            <div class="flex justify-between items-center font-bold text-brand-900">
+              <span>🪙 會員儲值餘額：<span id="displayWalletBalance" class="text-brand-600 font-black">0</span> 元</span>
+              <span id="displayWalletDiscountTag" class="text-[10px] text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">儲值享打折</span>
+            </div>
+            <div id="displayPackagesList" class="text-[11px] text-emerald-700 font-medium"></div>
+          </div>
+
           <div class="flex justify-between items-center mt-1">
             <div id="welcome-msg" class="text-xs font-bold text-brand-500 hidden"></div>
             <button type="button" id="quick-report-deposit-btn" class="text-[11px] text-brand-500 underline ml-auto hidden" onclick="promptQuickReportDeposit()">若已付訂金，點此直接回報後五碼</button>
@@ -258,6 +284,16 @@
           <textarea id="custNotes" rows="2" placeholder="如有特殊膚況、頭皮敏感或需求請在此填寫..." class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition"></textarea>
         </div>
 
+        <!-- ✨ 活動折扣碼輸入框 -->
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
+          <div class="flex gap-2">
+            <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/50">
+            <button type="button" onclick="applyCouponCode()" class="px-4 py-2 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
+          </div>
+          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold"></div>
+        </div>
+
         <!-- 預約日期 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約日期</label>
@@ -272,13 +308,41 @@
           <input type="hidden" id="date" required>
         </div>
 
-        <!-- 預約時段 -->
+        <!-- 預約時段 (選取時深拿鐵棕高對比純白字、當日過去時段與預約緩衝自動防呆) -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約時段</label>
           <div class="grid grid-cols-3 gap-2" id="timePillGrid">
             <div class="col-span-3 text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>
           </div>
           <input type="hidden" id="time" required>
+        </div>
+
+        <!-- ✨ 預約送出前「即時費用小計框」 -->
+        <div id="checkoutSummaryBox" class="p-4 rounded-2xl bg-brand-100/70 border border-brand-200 space-y-2 text-xs">
+          <div class="font-bold text-brand-900 border-b border-brand-200 pb-1.5 flex justify-between items-center">
+            <span>預估費用小計</span>
+            <span class="text-[10px] text-brand-500 font-normal">現場施作以後台結單為準</span>
+          </div>
+          <div class="flex justify-between items-center text-brand-700">
+            <span>項目原價總計：</span>
+            <span class="font-mono font-bold">NT$ <span id="summaryOriginalPrice">0</span></span>
+          </div>
+          <div id="rowWalletDiscount" class="hidden flex justify-between items-center text-emerald-700">
+            <span>會員儲值折扣：</span>
+            <span class="font-mono font-bold">- NT$ <span id="summaryWalletDiscount">0</span></span>
+          </div>
+          <div id="rowCouponDiscount" class="hidden flex justify-between items-center text-emerald-700">
+            <span>活動優惠折抵：</span>
+            <span class="font-mono font-bold">- NT$ <span id="summaryCouponDiscount">0</span></span>
+          </div>
+          <div id="rowPackageCardDeduct" class="hidden flex justify-between items-center text-blue-700">
+            <span>包卡堂票折抵：</span>
+            <span class="font-mono font-bold">- 本次使用堂票 (免付)</span>
+          </div>
+          <div class="flex justify-between items-center text-brand-900 font-black text-sm pt-1 border-t border-brand-200">
+            <span>預估應付金額：</span>
+            <span class="text-brand-600 font-mono text-base">NT$ <span id="summaryFinalPrice">0</span></span>
+          </div>
         </div>
 
         <!-- 線下收取訂金說明卡片 -->
@@ -312,23 +376,63 @@
             <a id="nav-ig" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="Instagram"><svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
             <a id="nav-map" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="地圖導航"><svg class="w-7 h-7 text-[#5C4B3C] group-hover:text-brand-500 transition" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></a>
           </div>
-
           <div class="text-center text-xs text-brand-800 space-y-1.5 mb-5 font-medium">
             <div id="store-address">📍 門市服務據點</div>
             <div id="store-hours">🕒 營業時間：09:00 - 19:00</div>
           </div>
-
-          <button type="submit" id="subBtn" class="w-full py-4 bg-[#C2AB97] hover:bg-brand-500 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95">
-            送出預約
+          <button type="submit" id="subBtn" class="w-full py-4 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95">
+            送出預約申請
           </button>
         </div>
       </form>
     </div>
   </main>
-
   <footer class="text-center py-6 text-[11px] text-brand-400">
     Designed by <a href="https://heysibyl.com" target="_blank" class="text-brand-500 font-bold hover:underline">Sibyl | 數位管家</a>
   </footer>
+</div>
+
+<!-- 給評 Modal 彈窗 -->
+<div id="reviewModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-xl border border-brand-200 text-xs">
+    <div class="flex justify-between items-center">
+      <h3 class="font-bold text-sm text-brand-900">發表顧客好評</h3>
+      <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
+    </div>
+
+    <!-- 星星評分 -->
+    <div class="text-center space-y-1">
+      <div id="starContainer" class="flex justify-center gap-2 text-2xl text-gray-300 cursor-pointer">
+        <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(1)"></i>
+        <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(2)"></i>
+        <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(3)"></i>
+        <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(4)"></i>
+        <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(5)"></i>
+      </div>
+      <input type="hidden" id="reviewRatingVal" value="5">
+    </div>
+
+    <!-- 標籤按鈕點選 (特色服務多選) -->
+    <div class="space-y-1.5">
+      <label class="font-bold text-brand-800">服務特色點選 (可多選)</label>
+      <div id="reviewTagsContainer" class="flex flex-wrap gap-1.5">
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">細心溫柔</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">完全不推銷</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">手法專業</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">環境極放鬆</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">成效超滿意</span>
+      </div>
+    </div>
+
+    <div>
+      <label class="font-bold text-brand-800 mb-1 block">留下真實回饋文字</label>
+      <textarea id="reviewContentInput" rows="3" placeholder="老師的手法真的很舒服..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none"></textarea>
+    </div>
+
+    <button onclick="submitCustomerReview()" class="w-full py-3 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold shadow-xs transition">
+      送出好評審核
+    </button>
+  </div>
 </div>
 
 <div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center hidden">
@@ -337,16 +441,15 @@
   </div>
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
   <p class="text-xs text-brand-500 mb-4 leading-relaxed" id="successScreenMsg">店家確認排程後會立即與您聯繫確認❤️</p>
-  <button type="button" class="px-8 py-3 bg-brand-400 text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
+  <button type="button" class="px-8 py-3 bg-[#8C7355] text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
 </div>
-<script>
+  <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
   const urlParams = new URLSearchParams(window.location.search);
   const CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
-
-  let guestLineUid = ""; // ✨ 保存客人的真實 LINE UID
+  let guestLineUid = ""; 
 
   let db = { 
     availableDates: [], services: [], portfolio: [], promoImgs: [], 
@@ -355,13 +458,21 @@
     enableStaffSelect: true, enableFeaturedShop: true,
     enableShowPrice: true, enableCustNotes: true
   };
+
+  // 會員即時折扣與包卡狀態
+  let memberData = {
+    walletBalance: 0,
+    discountPercent: 1,
+    packages: []
+  };
+  let activeCoupon = null;
+
   let currentSlide = 0;
   let currentYear = new Date().getFullYear();
   let currentMonth = new Date().getMonth();
   let currentPortfolioList = [];
   let isPortfolioExpanded = false;
 
-  // ✨ LIFF 靜默初始化：顧客從 LINE 打開時，0.1 秒無感取得真實 LINE UID
   async function initLiff() {
     try {
       await liff.init({ liffId: "2011183690-A3PkQLO3" });
@@ -389,17 +500,32 @@
     }
   }
 
+  // ✨ 總控台公告同步監聽 ＆ 全平台維護／個別店家鎖定檢查
   async function checkMaintenanceAndAnnouncement() {
     try {
+      // 1. 檢查個別店家是否被總管鎖定
+      const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
+      if (storeRes && storeRes.length > 0) {
+        const s = storeRes[0];
+        if (s.plan_status === 'locked' || s.plan_status === 'expired') {
+          document.getElementById('maintenance-desc').innerText = `【${s.store_name}】目前暫停預約中，如有疑問請直接聯繫店家。`;
+          document.getElementById('maintenance-screen').classList.remove('hidden');
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('maintenance-line-btn').href = db.line || '#';
+          return false;
+        }
+      }
+
+      // 2. 檢查全平台公告與全域維護鎖定
       const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       if (Array.isArray(announcements) && announcements.length > 0) {
         const item = announcements[0];
         if (item.is_maintenance === true) {
-          document.getElementById('maintenance-desc').innerText = item.content || "為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。";
+          document.getElementById('maintenance-desc').innerText = item.content || "全平台進行例行升級維護中，施工完畢將即刻開放。";
           document.getElementById('maintenance-screen').classList.remove('hidden');
           document.getElementById('booking-ui').style.display = 'none';
           document.getElementById('maintenance-line-btn').href = db.line || '#';
-          return;
+          return false;
         }
         if (item.content) {
           document.getElementById('system-banner-text').innerText = item.content;
@@ -409,11 +535,15 @@
     } catch (err) {
       console.warn("無法取得全域公告: ", err);
     }
+    return true;
   }
 
   window.onload = async function() {
     initLiff();
     try {
+      const isOk = await checkMaintenanceAndAnnouncement();
+      if (!isOk) return;
+
       const nowIso = new Date().toISOString();
       let [stores, settings, services, portfolios, bookings] = await Promise.all([
         directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
@@ -423,17 +553,8 @@
         directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
       ]);
 
-      const localCachedSettings = localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`);
       let sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
-      if (localCachedSettings) {
-        try {
-          const parsed = JSON.parse(localCachedSettings);
-          sCfg = Object.assign({}, sCfg, parsed);
-        } catch(e){}
-      }
-
       const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "線上預約" };
-
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -455,7 +576,7 @@
       if (formattedServices.length === 0) {
         formattedServices = [
           { id: "def-1", name: "剪髮造型設計", duration: 60, type: "Group_A", price: "800", isAddon: false, sortOrder: 0 },
-          { id: "def-2", name: "深層深透護髮", duration: 60, type: "Group_A", price: "1200", isAddon: false, sortOrder: 1 },
+          { id: "def-2", name: "深層水光護髮", duration: 60, type: "Group_A", price: "1200", isAddon: false, sortOrder: 1 },
           { id: "def-3", name: "頭皮去角質SPA", duration: 30, type: "Group_A", price: "600", isAddon: true, sortOrder: 2 }
         ];
       }
@@ -470,7 +591,7 @@
         address: sCfg.address || "門市服務據點",
         businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
         bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-        careText: sCfg.care_text || "1. 服務完成後 48 小時內避免高溫沖洗與劇烈磨擦。\n2. 保持操作部位乾燥並適度補水保濕，維持最佳修護效果。\n3. 若有任何整理保養疑問，歡迎隨時透過官方 LINE 詢問店家。",
+        careText: sCfg.care_text || "1. 服務完成後 48 小時內避免高溫沖洗與劇烈磨擦。\n2. 保持操作部位乾燥並適度補水保濕。\n3. 若有疑問歡迎隨時洽詢店家。",
         ig: sCfg.ig_url || "#",
         line: sCfg.line_url || "#",
         map: sCfg.map_url || "#",
@@ -497,7 +618,7 @@
       };
 
       renderStoreUI();
-      checkMaintenanceAndAnnouncement();
+      loadApprovedReviews();
     } catch (e) {
       console.error("前台初始化異常: ", e);
     }
@@ -515,17 +636,15 @@
       document.getElementById('store-logo-img').classList.add('hidden');
       document.getElementById('store-logo-placeholder').classList.remove('hidden');
     }
-
     document.getElementById('promo-text').innerText = db.promoText;
     document.getElementById('nav-ig').href = db.ig || '#';
     document.getElementById('nav-line').href = db.line || '#';
     document.getElementById('nav-map').href = db.map || '#';
     document.getElementById('store-address').innerText = db.address ? `📍 ${db.address}` : "📍 門市服務據點";
     document.getElementById('store-hours').innerText = db.businessHours ? `🕒 ${db.businessHours}` : "🕒 營業時間：09:00 - 19:00";
-
+    
     const depositBtn = document.getElementById('quick-report-deposit-btn');
     if (depositBtn) depositBtn.classList.toggle('hidden', !db.enableDeposit);
-
     updateDepositSectionDisplay();
 
     const featuredShop = document.getElementById('featuredShopSection');
@@ -544,7 +663,7 @@
     }
 
     document.getElementById('staffGrid').innerHTML = db.staffList.map((s, idx) => `
-      <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-brand-50/50 border-brand-200 text-brand-800'}" onclick="selectStaff('${s.id}', '${s.name}', this)">
+      <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-sm' : 'bg-brand-50/50 border-brand-200 text-brand-800'}" onclick="selectStaff('${s.id}', '${s.name}', this)">
         ${s.name}
       </button>
     `).join('');
@@ -591,7 +710,7 @@
     document.querySelectorAll('.staff-btn').forEach(b => {
       b.className = "staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-50/50 border-brand-200 text-brand-800";
     });
-    el.className = "staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-400 text-white border-brand-400 shadow-sm";
+    el.className = "staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-[#8C7355] text-white border-[#8C7355] shadow-sm";
     document.getElementById('staffId').value = id;
     document.getElementById('staffName').value = name;
     calculateTimesLocally();
@@ -601,56 +720,18 @@
     const svcGrid = document.getElementById('service-grid');
     svcGrid.innerHTML = '';
     const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
-
     db.services.forEach(s => {
       const isAddon = s.isAddon === true;
       const disabledClass = isAddon && !hasMainSelected ? 'opacity-40 pointer-events-none' : '';
       const priceText = (db.enableShowPrice !== false) ? `${s.price}元` : '';
-
       svcGrid.innerHTML += `
         <label class="service-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-brand-50/50 cursor-pointer transition text-xs ${disabledClass}">
           <div class="flex items-center gap-2 truncate">
-            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="accent-brand-400 rounded">
+            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="accent-[#8C7355] rounded">
             <span class="truncate font-medium">${isAddon ? '✨ ' : ''}${s.name}</span>
           </div>
           ${priceText ? `<span class="text-brand-500 font-bold ml-1 shrink-0">${priceText}</span>` : ''}
         </label>`;
-    });
-  }
-
-  function promptQuickReportDeposit() {
-    const phone = document.getElementById('phone').value.trim();
-    if (!phone) { 
-      Swal.fire({ text: '請先輸入您的手機號碼', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-      return; 
-    }
-    Swal.fire({
-      title: '回報訂金匯款後五碼',
-      input: 'text',
-      inputPlaceholder: '請輸入帳號末 5 碼數字',
-      showCancelButton: true,
-      confirmButtonText: '確認送出',
-      cancelButtonText: '取消',
-      customClass: { confirmButton: 'swal2-confirm-brown' },
-      buttonsStyling: false,
-      preConfirm: (val) => {
-        if (!val || val.length !== 5) { Swal.showValidationMessage('請填寫完整 5 碼'); }
-        return val;
-      }
-    }).then(async r => {
-      if (r.isConfirmed) {
-        const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=id`);
-        if (res && res.length > 0) {
-          await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${res[0].id}`, {
-            method: "PATCH",
-            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ deposit_reported: true, deposit_last5: r.value.trim() })
-          });
-          Swal.fire({ title: '已收到回報！', text: '店家確認款項後會立即為您保留時段。', icon: 'success', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
-        } else {
-          Swal.fire({ text: '查無此號碼之待確認預約', icon: 'error', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
-        }
-      }
     });
   }
 
@@ -675,6 +756,7 @@
       }
     });
     calculateTimesLocally();
+    updateCheckoutSummary();
   }
 
   function moveSlide(direction) {
@@ -693,20 +775,24 @@
     document.getElementById('cal-month-year').innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
     const headers = ['日', '一', '二', '三', '四', '五', '六'];
     let html = headers.map(h => `<div class="bg-brand-50 py-2 text-[11px] font-bold text-brand-400">${h}</div>`).join('');
-
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     for (let i = 0; i < firstDay; i++) html += `<div class="bg-white py-3"></div>`;
     
     const selectedDate = document.getElementById('date').value;
+    const now = new Date();
+    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
-      let isAvailable = (db.availableDates || []).includes(dStr) || (db.availableDates.length === 0);
+      let thisCellDate = new Date(currentYear, currentMonth, i);
+      let isPast = (thisCellDate < todayZero);
+      let isAvailable = !isPast && ((db.availableDates || []).includes(dStr) || (db.availableDates.length === 0));
       let isActive = (dStr === selectedDate);
       
       if (isAvailable) {
         html += `
-          <div class="py-2.5 text-xs font-bold cursor-pointer transition ${isActive ? 'bg-brand-900 text-white font-extrabold shadow-inner rounded-xl' : 'bg-white text-gray-900 hover:bg-brand-100 rounded-xl'}" onclick="selectDate('${dStr}')">
+          <div class="py-2.5 text-xs font-bold cursor-pointer transition ${isActive ? 'bg-[#8C7355] text-white font-extrabold shadow-inner rounded-xl' : 'bg-white text-gray-900 hover:bg-brand-100 rounded-xl'}" onclick="selectDate('${dStr}')">
             ${i}
           </div>`;
       } else {
@@ -729,39 +815,42 @@
     calculateTimesLocally();
   }
 
+  // ✨ 時段計算：當日過去時段與預約緩衝小時自動鎖定反灰
   function calculateTimesLocally() {
     const sStr = document.getElementById('service').value;
     const dStr = document.getElementById('date').value;
     const staffId = document.getElementById('staffId').value;
     const grid = document.getElementById('timePillGrid');
-
     if (!sStr || !dStr) {
       grid.innerHTML = '<div class="col-span-3 text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
       return;
     }
-
     let totalDuration = 0;
     document.querySelectorAll('#service-grid input:checked').forEach(cb => {
       totalDuration += Number(cb.getAttribute('data-duration') || 60);
     });
     if (totalDuration === 0) totalDuration = 60;
-
     const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
     const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
     const interval = Number(db.shiftInterval || 30);
     const startMin = sH * 60 + sM;
     const endMin = eH * 60 + eM;
-
     const defaultSlots = [];
     for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
-
+    
     const targetDateFormatted = dStr.replace(/\//g, '-');
     const dayAppts = (db.futureBookings || []).filter(a => {
       return a.appointment_time.startsWith(targetDateFormatted) && (staffId === 'all' || a.staff_id === staffId);
     });
-
     const staffKey = `${staffId}_${dStr}`;
     const customStaffSlots = db.staffSchedules && db.staffSchedules[staffKey];
+
+    // 當日過期時間與緩衝計算
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+    const isToday = (dStr === todayStr);
+    const currentMinutesNow = now.getHours() * 60 + now.getMinutes();
+    const bufferMinutes = (Number(db.bookingBufferHours) || 1) * 60;
 
     let html = '';
     defaultSlots.forEach(t => {
@@ -769,22 +858,24 @@
       const slotMin = t % 60;
       const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
       
-      let isAvailable = false;
-      const hasCustomSchedule = db.staffSchedules && Object.keys(db.staffSchedules).some(k => k.endsWith(`_${dStr}`));
+      let isAvailable = true;
 
-      if (!hasCustomSchedule) {
-        isAvailable = true;
-      } else {
+      // 防呆 1：若是當天，已過的時間或在緩衝小時內自動禁止
+      if (isToday && (t < (currentMinutesNow + bufferMinutes))) {
+        isAvailable = false;
+      }
+
+      // 排班自訂狀態檢查
+      const hasCustomSchedule = db.staffSchedules && Object.keys(db.staffSchedules).some(k => k.endsWith(`_${dStr}`));
+      if (hasCustomSchedule) {
         if (staffId === 'all') {
           const allStaffSchedules = db.staffSchedules || {};
           const staffKeys = Object.keys(allStaffSchedules).filter(k => k.endsWith(`_${dStr}`));
           if (staffKeys.length > 0) {
-            isAvailable = staffKeys.some(k => allStaffSchedules[k] && allStaffSchedules[k][timeFormatted] === true);
-          } else {
-            isAvailable = true;
+            isAvailable = isAvailable && staffKeys.some(k => allStaffSchedules[k] && allStaffSchedules[k][timeFormatted] === true);
           }
         } else {
-          isAvailable = (customStaffSlots && customStaffSlots[timeFormatted] === true);
+          isAvailable = isAvailable && (customStaffSlots && customStaffSlots[timeFormatted] === true);
         }
       }
 
@@ -800,184 +891,231 @@
 
       if (isAvailable) {
         html += `
-          <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-800 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition shadow-sm" onclick="selectTimePill('${timeFormatted}', this)">
+          <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-brand-500 hover:bg-brand-50 transition shadow-xs" onclick="selectTimePill('${timeFormatted}', this)">
             ${timeFormatted}
           </div>`;
       } else {
         html += `
-          <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none select-none opacity-60">
+          <div class="py-2.5 text-center text-xs font-bold rounded-full border border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed pointer-events-none select-none">
             ${timeFormatted}
           </div>`;
       }
     });
-
     grid.innerHTML = html || '<div class="col-span-3 text-center py-4 text-xs text-brand-400">當日無開放預約時段</div>';
   }
 
-  // ✅ 徹底修復時段複選問題：點擊時強制單選
-function selectTimePill(timeStr, el) {
-  document.querySelectorAll('.time-pill').forEach(p => {
-    p.classList.remove('bg-brand-500', 'text-white', 'border-brand-500');
-    p.classList.add('bg-white', 'text-brand-800', 'border-brand-200');
-  });
-  el.classList.remove('bg-white', 'text-brand-800', 'border-brand-200');
-  el.classList.add('bg-brand-500', 'text-white', 'border-brand-500');
-  document.getElementById('time').value = timeStr;
-}
-
-// ✅ 徹底修復 'custType' 資料庫報錯問題
-document.getElementById('bookForm').onsubmit = async function(e) {
-  e.preventDefault();
-  const sVal = document.getElementById('service').value;
-  const dValRaw = document.getElementById('date').value;
-  const tVal = document.getElementById('time').value;
-
-  if (!sVal) { 
-    return Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-  }
-  if (!dValRaw) { 
-    return Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-  }
-  if (!tVal) { 
-    return Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-  }
-
-  const btn = document.getElementById('subBtn');
-  btn.disabled = true; 
-  btn.innerText = "正在傳送預約...";
-
-  let totalPrice = 0;
-  document.querySelectorAll('#service-grid input:checked').forEach(cb => {
-    const pVal = cb.getAttribute('data-price') || '0';
-    const numMatch = pVal.match(/\d+/);
-    totalPrice += numMatch ? Number(numMatch[0]) : 0;
-  });
-
-  const dVal = dValRaw.replace(/\//g, '-');
-  const appointmentIso = `${dVal}T${tVal}:00+08:00`;
-  const emailVal = document.getElementById('email')?.value.trim() || '';
-  const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
-  const custTypeVal = document.getElementById('custType')?.value || 'old';
-  const nameVal = document.getElementById('name').value.trim();
-  const phoneVal = document.getElementById('phone').value.trim();
-  const staffIdVal = document.getElementById('staffId').value || 'all';
-  const staffNameVal = document.getElementById('staffName').value || '不指定';
-
-  // 1. 純淨 Supabase 資料庫 Payload (嚴格排除非資料庫欄位，解決 schema cache 錯誤)
-  const dbPayload = {
-    store_id: CURRENT_STORE_ID,
-    customer_name: nameVal,
-    customer_phone: phoneVal,
-    customer_type: custTypeVal,
-    customer_notes: custNotesVal,
-    line_name: guestLineUid ? guestLineUid : document.getElementById('lineName').value.trim(),
-    notes: emailVal ? `Email: ${emailVal}` : '',
-    service_names: sVal,
-    price: totalPrice,
-    appointment_time: appointmentIso,
-    staff_id: staffIdVal,
-    staff_name: staffNameVal,
-    status: "待確認"
-  };
-
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify(dbPayload)
+  // ✨ 時段點擊選中：強制深拿鐵棕高對比純白字
+  function selectTimePill(timeStr, el) {
+    document.querySelectorAll('.time-pill').forEach(p => {
+      p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-brand-500 hover:bg-brand-50 transition shadow-xs";
     });
-
-    if (!res.ok) {
-      const errJson = await res.json().catch(() => ({ message: res.statusText }));
-      throw new Error(errJson.message || "資料庫寫入失敗");
-    }
-
-    // 2. 異步推播給 GAS
-    fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "submitBooking",
-        store_id: CURRENT_STORE_ID,
-        data: Object.assign({}, dbPayload, {
-          name: nameVal,
-          phone: phoneVal,
-          date: dValRaw,
-          time: tVal,
-          service: sVal,
-          email: emailVal,
-          line_uid: guestLineUid
-        })
-      })
-    }).catch(() => {});
-
-    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
-    let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
-    if (isNeedDeposit) {
-      successHtml = `
-        <div class="text-left text-xs space-y-2 text-brand-800">
-          <p class="font-bold text-amber-800">📌 本次預約需預付訂金：${db.depositAmount} 元</p>
-          <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap leading-relaxed">${db.depositInfo}</div>
-          <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到首頁回報後五碼以保留時段！</p>
-        </div>
-      `;
-    }
-
-    Swal.fire({
-      title: '預約申請已送出！',
-      html: successHtml,
-      icon: 'success',
-      confirmButtonText: '確定',
-      customClass: { confirmButton: 'swal2-confirm-brown' },
-      buttonsStyling: false
-    }).then(() => {
-      document.getElementById('booking-ui').style.display = 'none';
-      document.getElementById('success-screen').style.display = 'flex';
-    });
-
-  } catch (err) {
-    Swal.fire({
-      title: '預約傳送失敗',
-      text: err.message,
-      icon: 'error',
-      confirmButtonText: '重試',
-      customClass: { confirmButton: 'swal2-confirm-brown' },
-      buttonsStyling: false
-    });
-    btn.disabled = false;
-    btn.innerText = "送出預約";
+    el.className = "time-pill py-2.5 text-center text-xs font-black rounded-full border border-brand-500 bg-[#8C7355] text-white shadow-md";
+    document.getElementById('time').value = timeStr;
   }
-};
 
+  // ✨ 電話輸入失焦：自動查會員儲值金、整單折扣、包卡堂數
   function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerByPhone(); }
-
   async function checkCustomerByPhone() {
     let phone = document.getElementById('phone').value.trim();
     if (phone.length >= 8) {
       document.getElementById('welcome-msg').style.display = 'block';
-      document.getElementById('welcome-msg').innerText = '尋找紀錄中...';
+      document.getElementById('welcome-msg').innerText = '查詢會員紀錄中...';
       try {
-        const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`);
-        if (Array.isArray(res) && res.length > 0) {
-          document.getElementById('name').value = res[0].customer_name || '';
-          if (res[0].line_name) document.getElementById('lineName').value = res[0].line_name;
-          if (res[0].notes && res[0].notes.includes('Email:')) {
-            const emailStr = res[0].notes.split('Email:')[1].trim();
+        const [bookings, custs, pkgs] = await Promise.all([
+          directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+          directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`),
+          directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`)
+        ]);
+
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          document.getElementById('name').value = bookings[0].customer_name || '';
+          if (bookings[0].line_name) document.getElementById('lineName').value = bookings[0].line_name;
+          if (bookings[0].notes && bookings[0].notes.includes('Email:')) {
+            const emailStr = bookings[0].notes.split('Email:')[1].trim();
             if (document.getElementById('email')) document.getElementById('email').value = emailStr;
           }
-          document.getElementById('welcome-msg').innerHTML = `歡迎回來，<b>${res[0].customer_name}</b>！`;
+          document.getElementById('welcome-msg').innerHTML = `歡迎回來，<b>${bookings[0].customer_name}</b>！`;
           setType('old', document.querySelectorAll('.type-btn')[0]);
         } else {
           document.getElementById('welcome-msg').style.display = 'none';
           setType('new', document.querySelectorAll('.type-btn')[1]);
         }
+
+        // 讀取儲值金與包卡
+        if (custs && custs.length > 0) {
+          const c = custs[0];
+          memberData.walletBalance = Number(c.wallet_balance || 0);
+          memberData.discountPercent = Number(c.member_discount || 1);
+          memberData.packages = pkgs || [];
+
+          document.getElementById('memberStatusBadge').innerText = "VIP 熟客已登入";
+          document.getElementById('memberStatusBadge').classList.remove('hidden');
+          document.getElementById('displayWalletBalance').innerText = memberData.walletBalance;
+
+          if (memberData.discountPercent < 1) {
+            document.getElementById('displayWalletDiscountTag').innerText = `儲值享 ${memberData.discountPercent * 10} 折`;
+            document.getElementById('displayWalletDiscountTag').classList.remove('hidden');
+          } else {
+            document.getElementById('displayWalletDiscountTag').classList.add('hidden');
+          }
+
+          if (memberData.packages.length > 0) {
+            document.getElementById('displayPackagesList').innerText = `🎫 尚有包卡堂票：${memberData.packages.map(p => `${p.service_name}(剩${p.remaining_times}堂)`).join(', ')}`;
+          } else {
+            document.getElementById('displayPackagesList').innerText = '';
+          }
+          document.getElementById('memberWalletCard').classList.remove('hidden');
+        } else {
+          document.getElementById('memberStatusBadge').classList.add('hidden');
+          document.getElementById('memberWalletCard').classList.add('hidden');
+          memberData = { walletBalance: 0, discountPercent: 1, packages: [] };
+        }
       } catch (err) {
         document.getElementById('welcome-msg').style.display = 'none';
       }
+      updateCheckoutSummary();
+    }
+  }
+
+  // ✨ 套用折扣碼
+  async function applyCouponCode() {
+    const code = document.getElementById('couponCode').value.trim().toUpperCase();
+    const notice = document.getElementById('couponNotice');
+    if (!code) return;
+    try {
+      const res = await directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}&code=eq.${code}&is_active=eq.true`);
+      if (res && res.length > 0) {
+        activeCoupon = res[0];
+        notice.innerText = `✓ 折扣碼【${activeCoupon.code}】套用成功！`;
+        notice.classList.remove('hidden');
+      } else {
+        activeCoupon = null;
+        notice.innerText = `✕ 折扣碼無效或已過期`;
+        notice.classList.remove('hidden');
+      }
+    } catch(e) { activeCoupon = null; }
+    updateCheckoutSummary();
+  }
+
+  // ✨ 即時費用小計框更新
+  function updateCheckoutSummary() {
+    let originalTotal = 0;
+    let hasPackageApplied = false;
+
+    const checkedItems = document.querySelectorAll('#service-grid input:checked');
+    checkedItems.forEach(cb => {
+      const pVal = cb.getAttribute('data-price') || '0';
+      const num = pVal.match(/\d+/);
+      const itemPrice = num ? Number(num[0]) : 0;
+      const sName = cb.value;
+
+      const matchPkg = memberData.packages.find(p => p.service_name === sName && p.remaining_times > 0);
+      if (matchPkg) {
+        hasPackageApplied = true;
+      } else {
+        originalTotal += itemPrice;
+      }
+    });
+
+    document.getElementById('summaryOriginalPrice').innerText = originalTotal;
+
+    let walletDiscount = 0;
+    if (memberData.discountPercent < 1 && originalTotal > 0) {
+      walletDiscount = Math.round(originalTotal * (1 - memberData.discountPercent));
+      document.getElementById('summaryWalletDiscount').innerText = walletDiscount;
+      document.getElementById('rowWalletDiscount').classList.remove('hidden');
+    } else {
+      document.getElementById('rowWalletDiscount').classList.add('hidden');
+    }
+
+    let couponDiscount = 0;
+    if (activeCoupon && originalTotal > 0) {
+      if (activeCoupon.discount_type === 'cash') {
+        couponDiscount = Number(activeCoupon.discount_value || 0);
+      } else if (activeCoupon.discount_type === 'percent') {
+        couponDiscount = Math.round(originalTotal * (1 - Number(activeCoupon.discount_value || 1)));
+      }
+      document.getElementById('summaryCouponDiscount').innerText = couponDiscount;
+      document.getElementById('rowCouponDiscount').classList.remove('hidden');
+    } else {
+      document.getElementById('rowCouponDiscount').classList.add('hidden');
+    }
+
+    if (hasPackageApplied) {
+      document.getElementById('rowPackageCardDeduct').classList.remove('hidden');
+    } else {
+      document.getElementById('rowPackageCardDeduct').classList.add('hidden');
+    }
+
+    let finalTotal = originalTotal - walletDiscount - couponDiscount;
+    if (finalTotal < 0) finalTotal = 0;
+    document.getElementById('summaryFinalPrice').innerText = finalTotal;
+  }
+
+  // ✨ 載入審核通過的好評牆
+  async function loadApprovedReviews() {
+    try {
+      const res = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&is_approved=eq.true&order=created_at.desc`);
+      const container = document.getElementById('reviewList');
+      if (!res || res.length === 0) {
+        container.innerHTML = '<div class="text-xs text-brand-400 py-3 text-center w-full">尚無好評紀錄</div>';
+        return;
+      }
+      container.innerHTML = res.map(r => `
+        <div class="w-60 shrink-0 p-3.5 rounded-2xl bg-white border border-brand-200 shadow-xs space-y-1.5 text-xs">
+          <div class="flex justify-between items-center font-bold text-brand-900">
+            <span>${r.customer_name || '沙龍顧客'}</span>
+            <span class="text-amber-500">${'★'.repeat(r.rating || 5)}</span>
+          </div>
+          <div class="flex flex-wrap gap-1">
+            ${(r.tags || []).map(t => `<span class="px-1.5 py-0.5 bg-brand-100 text-brand-800 rounded text-[9px] font-bold">${t}</span>`).join('')}
+          </div>
+          <p class="text-brand-600 line-clamp-2 text-[11px] leading-relaxed">${r.comment || '滿意推薦！'}</p>
+        </div>
+      `).join('');
+    } catch(e) {}
+  }
+
+  // 好評 Modal 操作
+  function openReviewModal() { document.getElementById('reviewModal').classList.remove('hidden'); }
+  function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); }
+  function setReviewRating(star) {
+    document.getElementById('reviewRatingVal').value = star;
+    const stars = document.getElementById('starContainer').children;
+    for (let i = 0; i < 5; i++) {
+      stars[i].className = (i < star) ? "fa-solid fa-star text-amber-400" : "fa-solid fa-star text-gray-300";
+    }
+  }
+  function toggleReviewTag(el) {
+    el.classList.toggle('bg-[#8C7355]');
+    el.classList.toggle('text-white');
+    el.classList.toggle('border-[#8C7355]');
+  }
+  async function submitCustomerReview() {
+    const name = document.getElementById('name').value.trim() || '沙龍顧客';
+    const rating = Number(document.getElementById('reviewRatingVal').value || 5);
+    const comment = document.getElementById('reviewContentInput').value.trim();
+    const tags = [];
+    document.querySelectorAll('#reviewTagsContainer .tag-pill.text-white').forEach(t => tags.push(t.innerText));
+
+    if (!comment && tags.length === 0) return Swal.fire('請留下心得或點選特色標籤', '', 'warning');
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/customer_reviews`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          store_id: CURRENT_STORE_ID,
+          customer_name: name,
+          rating: rating,
+          tags: tags,
+          comment: comment,
+          is_approved: false
+        })
+      });
+      closeReviewModal();
+      Swal.fire('好評已提交！', '店家審核後將上架於好評牆，謝謝您的支持❤️', 'success');
+    } catch(e) {
+      Swal.fire('提交失敗', e.message, 'error');
     }
   }
 
@@ -999,7 +1137,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       return;
     }
     document.getElementById('portfolioSection').style.display = 'block';
-
     tabs.innerHTML = categories.map((cat, idx) => `
       <button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold border transition ${idx === 0 ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white text-brand-800 border-brand-200'}" onclick="filterWork('${cat}', this)">
         ${cat}
@@ -1057,62 +1194,88 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     renderPortfolioGrid();
   }
 
+  function promptQuickReportDeposit() {
+    const phone = document.getElementById('phone').value.trim();
+    if (!phone) { 
+      Swal.fire({ text: '請先輸入您的手機號碼', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
+      return; 
+    }
+    Swal.fire({
+      title: '回報訂金匯款後五碼',
+      input: 'text',
+      inputPlaceholder: '請輸入帳號末 5 碼數字',
+      showCancelButton: true,
+      confirmButtonText: '確認送出',
+      cancelButtonText: '取消',
+      customClass: { confirmButton: 'swal2-confirm-brown' },
+      buttonsStyling: false,
+      preConfirm: (val) => {
+        if (!val || val.length !== 5) { Swal.showValidationMessage('請填寫完整 5 碼'); }
+        return val;
+      }
+    }).then(async r => {
+      if (r.isConfirmed) {
+        const res = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=id`);
+        if (res && res.length > 0) {
+          await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${res[0].id}`, {
+            method: "PATCH",
+            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ deposit_reported: true, deposit_last5: r.value.trim() })
+          });
+          Swal.fire({ title: '已收到回報！', text: '店家確認款項後會立即為您保留時段。', icon: 'success', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
+        } else {
+          Swal.fire({ text: '查無此號碼之待確認預約', icon: 'error', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
+        }
+      }
+    });
+  }
+
+  // ✨ 表單送出：嚴格白名單過濾，徹底根除 custType Schema Cache 報錯
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
-    if (!document.getElementById('service').value) { 
-      Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-      return; 
+    const sVal = document.getElementById('service').value;
+    const dValRaw = document.getElementById('date').value;
+    const tVal = document.getElementById('time').value;
+    if (!sVal) { 
+      return Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
     }
-    if (!document.getElementById('date').value) { 
-      Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-      return; 
+    if (!dValRaw) { 
+      return Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
     }
-    if (!document.getElementById('time').value) { 
-      Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-      return; 
+    if (!tVal) { 
+      return Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
     }
 
     const btn = document.getElementById('subBtn');
-    btn.disabled = true; btn.innerText = "正在傳送預約...";
+    btn.disabled = true; 
+    btn.innerText = "正在傳送預約...";
 
-    let totalPrice = 0;
-    document.querySelectorAll('#service-grid input:checked').forEach(cb => {
-      const pVal = cb.getAttribute('data-price') || '0';
-      const numMatch = pVal.match(/\d+/);
-      totalPrice += numMatch ? Number(numMatch[0]) : 0;
-    });
-
-    const dVal = document.getElementById('date').value.replace(/\//g, '-');
-    const tVal = document.getElementById('time').value;
+    const dVal = dValRaw.replace(/\//g, '-');
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
     const emailVal = document.getElementById('email')?.value.trim() || '';
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
     const custTypeVal = document.getElementById('custType')?.value || 'old';
+    const nameVal = document.getElementById('name').value.trim();
+    const phoneVal = document.getElementById('phone').value.trim();
+    const staffIdVal = document.getElementById('staffId').value || 'all';
+    const staffNameVal = document.getElementById('staffName').value || '不指定';
+    const finalEstimatedPrice = Number(document.getElementById('summaryFinalPrice').innerText || 0);
 
-    // ✨ 同時打包 guestLineUid (真實 LINE UID)，供後端推播使用
-    const bookingPayload = {
+    // 1. 純淨 Supabase 資料庫 Payload (嚴格排除非資料庫欄位，解決 schema cache 錯誤)
+    const dbPayload = {
       store_id: CURRENT_STORE_ID,
-      customer_name: document.getElementById('name').value.trim(),
-      customer_phone: document.getElementById('phone').value.trim(),
+      customer_name: nameVal,
+      customer_phone: phoneVal,
       customer_type: custTypeVal,
       customer_notes: custNotesVal,
       line_name: guestLineUid ? guestLineUid : document.getElementById('lineName').value.trim(),
-      line_uid: guestLineUid,
       notes: emailVal ? `Email: ${emailVal}` : '',
-      service_names: document.getElementById('service').value,
-      price: totalPrice,
+      service_names: sVal,
+      price: finalEstimatedPrice,
       appointment_time: appointmentIso,
-      staff_id: document.getElementById('staffId').value || 'all',
-      staff_name: document.getElementById('staffName').value || '不指定',
-      status: "待確認",
-      name: document.getElementById('name').value.trim(),
-      phone: document.getElementById('phone').value.trim(),
-      custType: custTypeVal,
-      service: document.getElementById('service').value,
-      date: document.getElementById('date').value,
-      time: tVal,
-      staffName: document.getElementById('staffName').value || '不指定',
-      email: emailVal
+      staff_id: staffIdVal,
+      staff_name: staffNameVal,
+      status: "待確認"
     };
 
     try {
@@ -1124,32 +1287,43 @@ document.getElementById('bookForm').onsubmit = async function(e) {
           "Content-Type": "application/json",
           "Prefer": "return=representation"
         },
-        body: JSON.stringify(bookingPayload)
+        body: JSON.stringify(dbPayload)
       });
-
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({ message: res.statusText }));
         throw new Error(errJson.message || "資料庫寫入失敗");
       }
 
+      // 2. 異步推播給 GAS
       fetch(API_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "submitBooking", store_id: CURRENT_STORE_ID, data: bookingPayload })
+        body: JSON.stringify({
+          action: "submitBooking",
+          store_id: CURRENT_STORE_ID,
+          data: Object.assign({}, dbPayload, {
+            name: nameVal,
+            phone: phoneVal,
+            date: dValRaw,
+            time: tVal,
+            service: sVal,
+            email: emailVal,
+            line_uid: guestLineUid,
+            coupon_code: activeCoupon ? activeCoupon.code : ''
+          })
+        })
       }).catch(() => {});
 
       const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
-      
       let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
       if (isNeedDeposit) {
         successHtml = `
           <div class="text-left text-xs space-y-2 text-brand-800">
             <p class="font-bold text-amber-800">📌 本次預約需預付訂金：${db.depositAmount} 元</p>
             <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap leading-relaxed">${db.depositInfo}</div>
-            <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到預約頁面輸入手機回報後五碼，以便店家保留時段！</p>
+            <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到首頁回報後五碼以保留時段！</p>
           </div>
         `;
       }
-
       Swal.fire({
         title: '預約申請已送出！',
         html: successHtml,
@@ -1159,9 +1333,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
         buttonsStyling: false
       }).then(() => {
         document.getElementById('booking-ui').style.display = 'none';
-        if (isNeedDeposit) {
-          document.getElementById('successScreenMsg').innerHTML = `預約已送出！請完成訂金匯款以保留時段。<br>匯款完成後請隨時透過首頁回報後五碼。`;
-        }
         document.getElementById('success-screen').style.display = 'flex';
       });
     } catch (err) {
@@ -1177,6 +1348,15 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       btn.innerText = "送出預約";
     }
   };
+
+  // ✨ PWA Service Worker 註冊與 Web Push 監聽
+  if ('serviceWorker' in navigator && 'PushManager' in window) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
+        console.log('ServiceWorker 註冊失敗: ', err);
+      });
+    });
+  }
 </script>
 </body>
 </html>
