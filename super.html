@@ -50,43 +50,37 @@
         </span>
         <span class="font-bold text-sm text-brand-900">Sibyl 數位管家 | 租戶營運總控台</span>
       </div>
-      <button onclick="loadStores()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="重新整理">
-        <i class="fa-solid fa-rotate-right"></i>
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="loadInitialData()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="重新整理">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button onclick="location.reload()" class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" title="登出">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+      </div>
     </div>
   </header>
 
+  <!-- 總控台頂部切換導覽標籤 -->
+  <div class="max-w-4xl mx-auto px-4 pt-4">
+    <div class="flex gap-2 border-b border-brand-200 pb-2">
+      <button id="tab-btn-stores" onclick="switchSuperTab('stores')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs">
+        <i class="fa-solid fa-store mr-1"></i> 全租戶店家名冊與開通狀態
+      </button>
+      <button id="tab-btn-announcement" onclick="switchSuperTab('announcement')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200">
+        <i class="fa-solid fa-bullhorn mr-1"></i> 全平台即時公告、維護鎖定與許願池
+      </button>
+    </div>
+  </div>
+
   <main class="max-w-4xl mx-auto p-4 space-y-6">
 
-    <!-- 全域廣播發布與全平台維護控制區 -->
-    <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="flex items-center justify-between">
-        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-          <i class="fa-solid fa-bullhorn text-brand-500"></i>
-          <span>全平台即時公告與維護鎖定</span>
-        </h2>
-        <span id="current-announcement-status" class="text-[10px] text-gray-400">讀取中...</span>
-      </div>
-      
-      <div class="flex gap-2 flex-wrap sm:flex-nowrap">
-        <input type="text" id="announcement-input" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none w-full sm:w-auto" placeholder="輸入公告內容（例：系統將於今晚 02:00 進行升級，維護期間暫停預約）">
-        <div class="flex gap-1.5 w-full sm:w-auto shrink-0">
-          <button onclick="publishAnnouncement(false)" class="flex-1 sm:flex-none px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">一般公告</button>
-          <button onclick="publishAnnouncement(true)" class="flex-1 sm:flex-none px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">🛠️ 維護鎖定</button>
-          <button onclick="clearAnnouncement()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition whitespace-nowrap">下架/解除</button>
-        </div>
-      </div>
-      <div class="text-[10px] text-gray-400 leading-relaxed">
-        💡 <b>操作說明：</b>「一般公告」僅於前後台頂部顯示提示小橫幅；點擊「維護鎖定」會即時覆蓋所有店家前台全螢幕遮罩，完全禁止任何預約操作。
-      </div>
-    </section>
-
-    <!-- 租戶店家總覽 -->
-    <section class="space-y-3">
+    <!-- 分頁 1：全租戶店家名冊 (每頁 10 間、含頁碼切換) -->
+    <div id="super-page-stores" class="space-y-4">
       <div class="flex items-center justify-between">
         <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
           <i class="fa-solid fa-users-rectangle text-brand-500"></i>
-          <span>全租戶店家名冊與開通狀態</span>
+          <span>全租戶店家名冊</span>
         </h2>
         <span id="store-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
       </div>
@@ -101,24 +95,63 @@
           <button onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已過期</button>
         </div>
         <div class="relative w-full sm:w-60">
-          <input type="text" id="store-search-kw" oninput="renderStores()" placeholder="🔍 搜尋店名/電話/Email..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-brand-200 bg-white outline-none focus:ring-1 focus:ring-brand-400">
+          <input type="text" id="store-search-kw" oninput="currentPage = 1; renderStores();" placeholder="🔍 搜尋店名/電話/Email..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-brand-200 bg-white outline-none focus:ring-1 focus:ring-brand-400">
           <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-brand-400 text-xs"></i>
         </div>
       </div>
 
+      <!-- 店家卡片渲染清單 -->
       <div id="stores-container" class="space-y-3"></div>
-    </section>
 
-    <!-- 店家功能許願池接收區 -->
-    <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-        <i class="fa-solid fa-lightbulb text-amber-500"></i>
-        <span>店家功能許願池清單</span>
-      </h2>
-      <div id="wishes-container" class="space-y-2 text-xs">
-        <div class="text-center py-4 text-brand-400">目前尚無許願回報</div>
+      <!-- 分頁頁碼控制列 (每頁 10 家) -->
+      <div id="pagination-controls" class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-brand-200 text-xs">
+        <div class="text-brand-500 text-[11px]" id="page-info-text">顯示第 1 - 10 家</div>
+        <div class="flex gap-1.5 items-center" id="page-buttons-container"></div>
       </div>
-    </section>
+    </div>
+
+    <!-- 分頁 2：全平台即時公告、維護鎖定與功能許願池 -->
+    <div id="super-page-announcement" class="space-y-6" style="display: none;">
+      
+      <!-- 全域公告與維護鎖定 -->
+      <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-bullhorn text-brand-500"></i>
+            <span>全平台即時公告與維護鎖定 (0 門檻免綁 UID)</span>
+          </h2>
+          <span id="current-announcement-status" class="text-[10px] text-gray-400 font-medium">讀取中...</span>
+        </div>
+        
+        <div class="flex gap-2 flex-wrap sm:flex-nowrap">
+          <input type="text" id="announcement-input" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none w-full sm:w-auto" placeholder="輸入公告內容（例：今晚 02:00 進行伺服器例行維護，維護期間暫停預約）">
+          <div class="flex gap-1.5 w-full sm:w-auto shrink-0">
+            <button onclick="publishAnnouncement(false)" class="flex-1 sm:flex-none px-3.5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">一般公告</button>
+            <button onclick="publishAnnouncement(true)" class="flex-1 sm:flex-none px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition whitespace-nowrap">🛠️ 維護鎖定</button>
+            <button onclick="clearAnnouncement()" class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition whitespace-nowrap">下架/解除</button>
+          </div>
+        </div>
+        <div class="text-[10px] text-gray-500 leading-relaxed bg-brand-50 p-2.5 rounded-xl border border-brand-100">
+          💡 <b>運作機制說明：</b>全系統前台每 15 秒會主動檢測本設定。<br>
+          ・<b>一般公告</b>：所有店家前台與管理後台頂部會常駐顯示黃色公告橫幅。<br>
+          ・<b>維護鎖定</b>：所有店家前台會立即彈出全螢幕遮罩，強制鎖定禁止任何預約下單。
+        </div>
+      </section>
+
+      <!-- 店家功能許願池接收區 -->
+      <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-lightbulb text-amber-500"></i>
+            <span>店家功能許願池清單</span>
+          </h2>
+          <button onclick="loadWishes()" class="text-[11px] text-brand-500 hover:underline">重新讀取</button>
+        </div>
+        <div id="wishes-container" class="space-y-2 text-xs">
+          <div class="text-center py-4 text-brand-400">目前尚無許願回報</div>
+        </div>
+      </section>
+    </div>
 
   </main>
 
@@ -130,17 +163,37 @@
 
     let allStores = [];
     let currentFilter = 'ALL';
+    let currentPage = 1;
+    const PAGE_SIZE = 10;
 
     function checkSuperKey() {
       const val = document.getElementById('super-key-input').value.trim();
       if (val === SUPER_KEY) {
         document.getElementById('super-lock').style.display = 'none';
-        loadStores();
-        loadAnnouncement();
-        loadWishes();
+        loadInitialData();
       } else {
         Swal.fire('金鑰錯誤', '請輸入正確的管理金鑰', 'error');
       }
+    }
+
+    function loadInitialData() {
+      loadStores();
+      loadAnnouncement();
+      loadWishes();
+    }
+
+    // 分頁標籤切換
+    function switchSuperTab(tabId) {
+      document.getElementById('super-page-stores').style.display = (tabId === 'stores') ? 'block' : 'none';
+      document.getElementById('super-page-announcement').style.display = (tabId === 'announcement') ? 'block' : 'none';
+
+      document.getElementById('tab-btn-stores').className = (tabId === 'stores')
+        ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+        : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+
+      document.getElementById('tab-btn-announcement').className = (tabId === 'announcement')
+        ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+        : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
     }
 
     async function loadStores() {
@@ -150,6 +203,7 @@
         });
         allStores = await res.json();
         document.getElementById('store-count-badge').innerText = `共 ${allStores.length} 間店家`;
+        currentPage = 1;
         renderStores();
       } catch(e) {
         console.error(e);
@@ -158,6 +212,7 @@
 
     function filterStores(status, btn) {
       currentFilter = status;
+      currentPage = 1;
       document.querySelectorAll('.store-filter-btn').forEach(b => {
         b.className = "store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap";
       });
@@ -165,6 +220,7 @@
       renderStores();
     }
 
+    // 渲染店家卡片 (每頁 10 間)
     function renderStores() {
       const kw = (document.getElementById('store-search-kw')?.value || '').trim().toLowerCase();
       const container = document.getElementById('stores-container');
@@ -180,12 +236,26 @@
         );
       }
 
-      if (filtered.length === 0) {
-        container.innerHTML = '<div class="text-center text-xs text-brand-400 py-8 bg-white rounded-3xl border border-brand-200">查無此狀態的店家資料</div>';
+      const totalItems = filtered.length;
+      const totalPages = Math.ceil(totalItems / PAGE_SIZE) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      const endIndex = Math.min(startIndex + PAGE_SIZE, totalItems);
+      const pageStores = filtered.slice(startIndex, endIndex);
+
+      document.getElementById('page-info-text').innerText = totalItems > 0 
+        ? `顯示第 ${startIndex + 1} - ${endIndex} 家（共 ${totalItems} 家）` 
+        : `查無店家資料`;
+
+      renderPagination(totalPages);
+
+      if (pageStores.length === 0) {
+        container.innerHTML = '<div class="text-center text-xs text-brand-400 py-8 bg-white rounded-3xl border border-brand-200">查無相符的店家紀錄</div>';
         return;
       }
 
-      container.innerHTML = filtered.map(s => {
+      container.innerHTML = pageStores.map(s => {
         const isPending = (s.plan_status === 'pending');
         const isActive = (s.plan_status === 'active');
         const isLocked = (s.plan_status === 'locked');
@@ -200,7 +270,6 @@
         const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
         const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
 
-        // 鎖定/解鎖切換按鈕
         const lockBtnHtml = isLocked
           ? `<button onclick="toggleStoreLock('${s.id}', false, '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
                <i class="fa-solid fa-lock-open text-[10px]"></i> 解除鎖定
@@ -224,7 +293,7 @@
               </div>
               <div class="text-right">
                 <span class="font-bold text-brand-500">${s.plan_name || '標準版'}</span>
-                <div class="text-[10px] text-gray-400">到期日：${s.expires_at ? s.expires_at.split('T')[0] : '無期限 (未付款)'}</div>
+                <div class="text-[10px] text-gray-400">到期日：${s.expires_at ? s.expires_at.split('T')[0] : '無期限'}</div>
               </div>
             </div>
 
@@ -261,7 +330,30 @@
       }).join('');
     }
 
-    // 個別店家手動鎖定/解除鎖定
+    // 分頁按鈕生成
+    function renderPagination(totalPages) {
+      const container = document.getElementById('page-buttons-container');
+      if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+      }
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `
+          <button onclick="changePage(${i})" class="w-7 h-7 rounded-lg text-xs font-bold transition ${i === currentPage ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-800 hover:bg-brand-200'}">
+            ${i}
+          </button>
+        `;
+      }
+      container.innerHTML = html;
+    }
+
+    function changePage(page) {
+      currentPage = page;
+      renderStores();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     async function toggleStoreLock(storeId, toLock, storeName) {
       const actionText = toLock ? "暫時鎖定" : "解除鎖定";
       const newStatus = toLock ? "locked" : "active";
@@ -357,6 +449,7 @@
       });
     }
 
+    // 載入當前廣播公告
     async function loadAnnouncement() {
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
@@ -376,10 +469,19 @@
       } catch(e){}
     }
 
+    // 發布公告或啟動全域維護鎖定
     async function publishAnnouncement(isMaintenance = false) {
       const text = document.getElementById('announcement-input').value.trim();
       if (!text) return Swal.fire('請輸入公告文字', '', 'warning');
       
+      // 先將既有的舊公告設為非作用中
+      await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false })
+      });
+
+      // 新增一筆最新公告
       await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
         method: "POST",
         headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
@@ -387,7 +489,7 @@
       });
       
       const title = isMaintenance ? '已啟動全平台維護鎖定！' : '公告發布成功！';
-      const desc = isMaintenance ? '所有店家前台即刻被鎖定，顧客將無法填單並呈現維護畫面。' : '前後台頂部橫幅已同步顯示。';
+      const desc = isMaintenance ? '所有店家前台將即時彈出全螢幕遮罩，完全禁止填單。' : '所有店家前後台將同步顯示橫幅。';
       Swal.fire(title, desc, 'success');
       loadAnnouncement();
     }
@@ -399,7 +501,7 @@
         body: JSON.stringify({ is_active: false, is_maintenance: false })
       });
       document.getElementById('announcement-input').value = '';
-      Swal.fire('已解除公告與維護鎖定', '所有店家前台已恢復正常營運！', 'success');
+      Swal.fire('已解除公告與維護鎖定', '所有店家前台已恢復正常運作！', 'success');
       loadAnnouncement();
     }
 
@@ -410,7 +512,7 @@
         });
         const wishes = await res.json();
         const container = document.getElementById('wishes-container');
-        if (wishes.length === 0) {
+        if (!wishes || wishes.length === 0) {
           container.innerHTML = '<div class="text-center py-4 text-brand-400">目前尚無許願回報</div>';
           return;
         }
