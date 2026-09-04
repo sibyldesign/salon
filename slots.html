@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>本週最新釋出空檔</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#FAF8F5', 100: '#F4EFEA', 200: '#E6DCD2', 300: '#D5C4B4',
+              400: '#B89F88', 500: '#8C7355', 600: '#7A6246', 700: '#68523A',
+              800: '#54412D', 900: '#3D2E1F',
+            }
+          },
+          fontFamily: {
+            sans: ['Noto Sans TC', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 9:16 黃金比例卡片容器 */
+    .story-frame {
+      width: 100%;
+      max-width: 420px;
+      min-height: 100vh;
+      background: radial-gradient(circle at top left, #FAF5EE 0%, #F5EDE3 50%, #E9DACB 100%);
+    }
+  </style>
+</head>
+<body class="bg-[#2A1E14] flex justify-center items-center min-h-screen antialiased selection:bg-brand-400 selection:text-white">
+
+  <!-- 9:16 限動比例容器 (截圖就是現成限動美圖) -->
+  <div class="story-frame flex flex-col justify-between p-7 md:p-9 shadow-2xl relative border-x border-brand-200/40">
+    
+    <!-- 頂部店名與標題 -->
+    <div class="text-center space-y-2 pt-4">
+      <div id="store-title" class="text-xs font-bold tracking-[0.25em] text-brand-600 uppercase">
+        SALON RESERVATION
+      </div>
+      <h1 class="font-serif text-3xl md:text-4xl font-bold tracking-tight text-brand-900 leading-tight">
+        Available Slots
+      </h1>
+      <p class="text-xs font-medium text-brand-700 tracking-wider">
+        本週釋出專屬空檔・即刻線上卡位
+      </p>
+      <div class="w-12 h-0.5 bg-brand-400 mx-auto mt-3"></div>
+    </div>
+
+    <!-- 中間時段列表區 (大字清楚、留白優雅) -->
+    <div id="slots-container" class="space-y-3 my-auto py-6">
+      <div class="text-center py-8 text-xs text-brand-400">正在確認最新空檔...</div>
+    </div>
+
+    <!-- 底部行動呼籲 -->
+    <div class="text-center space-y-3 pb-4">
+      <a id="go-booking-btn" href="#" class="w-full py-4 bg-brand-800 hover:bg-brand-900 text-white rounded-2xl font-bold text-sm tracking-widest shadow-md transition flex items-center justify-center gap-2">
+        <span>點此立即線上預約</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </a>
+      <div class="text-[10px] text-brand-500 font-medium">
+        截圖本頁面可直接標註時段私訊小編・亦可點擊上方直接線上卡位
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
+    const urlParams = new URLSearchParams(window.location.search);
+    const storeId = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+
+    window.onload = async function() {
+      // 導向按鈕連結
+      document.getElementById('go-booking-btn').href = `https://salon.heysibyl.com/?store_id=${storeId}`;
+
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}&select=display_title,published_slots`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+          const cfg = data[0];
+          if (cfg.display_title) {
+            document.getElementById('store-title').innerText = cfg.display_title;
+          }
+
+          const slots = cfg.published_slots || [];
+          const container = document.getElementById('slots-container');
+
+          if (slots.length === 0) {
+            container.innerHTML = `
+              <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-brand-200 text-center space-y-1">
+                <div class="text-sm font-bold text-brand-900">目前暫無釋出空檔</div>
+                <div class="text-xs text-brand-500">歡迎點擊下方按鈕查看常規可預約時段</div>
+              </div>`;
+            return;
+          }
+
+          container.innerHTML = slots.map(s => `
+            <a href="https://salon.heysibyl.com/?store_id=${storeId}" class="flex items-center justify-between p-4 bg-white/90 backdrop-blur-sm rounded-2xl border border-brand-200/80 shadow-xs hover:border-brand-500 transition group">
+              <div class="space-y-0.5">
+                <div class="text-xs font-bold text-brand-500 flex items-center gap-1.5">
+                  <i class="fa-regular fa-calendar text-[11px]"></i>
+                  <span>${s.date}</span>
+                </div>
+                <div class="text-lg font-black text-brand-900 font-serif">
+                  ${s.time}
+                </div>
+              </div>
+              <span class="px-3 py-1 bg-brand-100 group-hover:bg-brand-800 text-brand-800 group-hover:text-white rounded-full text-xs font-bold transition">
+                可預約 ➔
+              </span>
+            </a>
+          `).join('');
+        }
+      } catch (e) {
+        console.error("讀取空檔失敗", e);
+      }
+    };
+  </script>
+</body>
+</html>
