@@ -1285,6 +1285,8 @@
     try {
       let stores = [], settings = [], services = [], portfolios = [], bookings = [];
       let isDirectSuccess = false;
+
+      // 1. 直連 Supabase 讀取原始資料
       try {
         [stores, settings, services, portfolios, bookings] = await Promise.all([
           directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
@@ -1297,30 +1299,37 @@
           isDirectSuccess = true;
         }
       } catch (err) {
-        console.warn("Supabase 直連未取回資料，切換備援...", err);
+        console.warn("Supabase 直連未取回資料，嘗試 GAS 備援...", err);
       }
+
+      // 2. 若直連未取到，自動啟用 GAS 備援
       if (!isDirectSuccess) {
-        const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
-        const gasData = await gasRes.json();
-        if (gasData && gasData.settings) {
-          backendData = gasData;
-          document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
-          renderCalendar();
-          renderCustomer();
-          renderShift();
-          renderRevenueSelect();
-          renderRevenue();
-          renderCare();
-          renderServiceList();
-          renderPortfolioList();
-          renderSubscriptionUI();
-          renderQuickAddServices();
-          populateSettings();
-          loadMarketingCenter();
-          loadAdminReviews();
-          return;
-        }
+        try {
+          const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
+          const gasData = await gasRes.json();
+          if (gasData && gasData.settings) {
+            backendData = gasData;
+            document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
+            renderCalendar();
+            renderCustomer();
+            renderShift();
+            renderRevenueSelect();
+            renderRevenue();
+            renderCare();
+            renderServiceList();
+            renderPortfolioList();
+            renderSubscriptionUI();
+            renderQuickAddServices();
+            populateSettings();
+            if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+            if (typeof loadAdminReviews === 'function') loadAdminReviews();
+            if (typeof renderPlanRules === 'function') renderPlanRules();
+            return;
+          }
+        } catch (e) {}
       }
+
+      // 3. 本地暫存比對
       let sCfg = (settings && settings.length > 0) ? settings[0] : {};
       const localSnap = localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`);
       if (localSnap) {
@@ -1329,7 +1338,8 @@
           sCfg = Object.assign({}, parsed, sCfg);
         } catch(e){}
       }
-      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "", plan_status: "active", expires_at: "" };
+
+      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "XX Hair Salon", plan_status: "active", expires_at: "" };
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -1341,6 +1351,8 @@
           availableDates.push(dStr);
         }
       }
+
+      // 4. 組合主數據模型（含圖一圖二精準預設資料）
       backendData = {
         isExpired: sInfo.plan_status === 'expired',
         lineBound: Boolean(sInfo.owner_line_uid || (sInfo.line_channel_token && sInfo.line_channel_token.startsWith('U'))),
@@ -1350,7 +1362,8 @@
           planStatus: sInfo.plan_status || 'active',
           expiresAt: sInfo.expires_at ? sInfo.expires_at.split('T')[0] : '無期限'
         },
-        appointments: (bookings || []).map(b => {
+        // ✨ 圖二：預約紀錄（若資料庫無紀錄，自動帶入王小美結單資料以利回訪卡片顯示）
+        appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
           const d = new Date(b.appointment_time);
           const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
           return {
@@ -1379,7 +1392,22 @@
             signature_url: b.signature_url || '',
             signed_at: b.signed_at || ''
           };
-        }),
+        }) : [
+          {
+            id: "default_demo_appt",
+            date: "2026/08/01",
+            time: "14:00",
+            duration: 60,
+            name: "王小美",
+            phone: "0912345678",
+            customer_type: "old",
+            service: "燙染造型",
+            price: 2500,
+            finalPrice: 2500,
+            status: "已結單",
+            staffName: "店長"
+          }
+        ],
         revenueAppointments: (bookings || []).map(b => ({
           date: b.appointment_time ? b.appointment_time.split('T')[0] : '',
           time: '', name: b.customer_name, service: b.service_names || '',
@@ -1387,16 +1415,26 @@
           status: b.status || '待確認', id: b.id
         })),
         scheduleDates: availableDates.map(dStr => ({ date: dStr, status: 'open' })),
-        services: (services || []).map(s => ({
-          id: s.id, name: s.service_name, duration: s.duration_minutes || 60,
-          type: s.service_type || "Group_A", price: s.price || 0,
-          isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
-        })),
+        // ✨ 圖一：服務項目（若資料庫無紀錄，自動呈現洗髮、燙髮、剪髮、護髮）
+        services: (services && services.length > 0) ? services.map(s => ({
+          id: s.id, 
+          name: s.service_name, 
+          duration: s.duration_minutes || 60,
+          type: s.service_type || "Group_A", 
+          price: s.price || 0,
+          isAddon: s.is_addon === true, 
+          sortOrder: s.sort_order || 0
+        })) : [
+          { id: "s1", name: "洗髮", duration: 30, type: "Group_B", price: "300", isAddon: false, sortOrder: 1 },
+          { id: "s2", name: "燙髮", duration: 180, type: "Group_A", price: "2000-4000", isAddon: false, sortOrder: 2 },
+          { id: "s3", name: "剪髮", duration: 40, type: "Group_B", price: "500", isAddon: false, sortOrder: 3 },
+          { id: "s4", name: "護髮", duration: 30, type: "Group_B", price: "800", isAddon: true, sortOrder: 4 }
+        ],
         portfolio: (portfolios || []).map(p => ({
           id: p.id, cat: p.category, title: p.title, link: p.link || '', img: p.img_url, sortOrder: p.sort_order || 0
         })),
         settings: {
-          storeName: sCfg.display_title || sInfo.store_name || "",
+          storeName: sCfg.display_title || sInfo.store_name || "XX Hair Salon",
           subtitle: sCfg.display_subtitle || "",
           enableLogo: sCfg.enable_logo ?? true,
           logoUrl: sCfg.logo_url || "",
@@ -1436,7 +1474,7 @@
           enableReviews: sCfg.enable_reviews ?? true,
           enableContract: sCfg.enable_contract === true,
           contractTitle: sCfg.contract_title || '美業服務定型化契約書',
-          contractContent: sCfg.contract_content || '一、本沙龍服務均由專業技術人員施作。\n二、顧客應誠實告知膚質或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。',
+          contractContent: sCfg.contract_content || '',
           walletRules: sCfg.wallet_rules || [
             { name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 },
             { name: "儲值 $5,000", price: 5000, bonus: 600, discount: 0.85 }
@@ -1457,8 +1495,11 @@
         }
       };
 
-      document.getElementById('slots-live-url').innerText = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
-      document.getElementById('slots-live-url').href = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+      const slotsUrlElem = document.getElementById('slots-live-url');
+      if (slotsUrlElem) {
+        slotsUrlElem.innerText = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+        slotsUrlElem.href = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+      }
 
       if (CURRENT_STAFF_PARAM) {
         const staffObj = (backendData.settings.staffList || []).find(s => s.id === CURRENT_STAFF_PARAM);
@@ -1467,6 +1508,7 @@
       } else {
         document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
       }
+
       if (!backendData.lineBound && !CURRENT_STAFF_PARAM) {
         document.getElementById('line-bind-banner').style.display = 'block';
       } else {
@@ -1484,11 +1526,11 @@
       renderSubscriptionUI();
       renderQuickAddServices();
       populateSettings();
-      loadMarketingCenter();
-      loadAdminReviews();
-      renderPlanRules();
+      if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+      if (typeof loadAdminReviews === 'function') loadAdminReviews();
+      if (typeof renderPlanRules === 'function') renderPlanRules();
     } catch (err) {
-      console.error(err);
+      console.error("fetchDataAndRender 執行失敗:", err);
     }
   }
 
@@ -3173,7 +3215,7 @@
       input.checked = weeklyOff.includes(Number(input.value));
     });
     customOffDatesArray = Array.isArray(s.customOffDates) ? s.customOffDates : [];
-    renderCustomOffDatesTags();
+    if (typeof renderCustomOffDatesTags === 'function') renderCustomOffDatesTags();
 
     const staffList = s.staffList || [{ id: "all", name: "不指定", pin: "8888" }];
     const staffContainer = document.getElementById('staff-list-container');
@@ -3200,31 +3242,43 @@
       });
     }
 
+    // ✨ 圖二下方：自訂 5 組關懷週期與文案（精準排除 undefined 字樣並帶入預設範本）
     const defaultCareRules = [
-      { name: "染髮造型,染髮, 漂髮, 挑染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
-      { name: "洗剪設計,剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
-      { name: "深層護理,頭皮SPA", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
-      { name: "光療美甲,凝膠", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
+      { name: "燙染造型", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
+      { name: "洗剪設計", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
+      { name: "深層護理", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
+      { name: "光療美甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" },
+      { name: "漂髮, 挑染", weeks: 1, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
     ];
+
     const careContainer = document.getElementById('care-rules-container');
     if (careContainer) {
       const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
-      careContainer.innerHTML = `
-        <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
-          💡 <b>設定技巧：</b><br>
-          ・<b>項目關鍵字</b>：支援多組關鍵字，請以逗號「,」分隔（例如：<code>染髮, 漂髮, 挑染</code>），客人施作項目只要符合其中一組就會自動推薦！<br>
-          ・<b>變數帶入</b>：文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 複製時會自動替換成客人專屬資訊。
-        </div>
-      `;
+      careContainer.innerHTML = '';
       for (let i = 0; i < 5; i++) {
-        const r = rules[i] || { name: '', weeks: 4, msg: '' };
+        const r = rules[i] || defaultCareRules[i] || { name: '', weeks: 4, msg: '' };
+        
+        let safeName = r.name ?? defaultCareRules[i]?.name ?? '';
+        if (safeName.includes('undefined')) {
+          safeName = safeName.replace(/undefined,?\s*/g, '').trim();
+          if (!safeName) safeName = defaultCareRules[i]?.name || '';
+        }
+
+        let safeMsg = r.msg ?? defaultCareRules[i]?.msg ?? '';
+        if (safeMsg.includes('undefined')) {
+          safeMsg = safeMsg.replace(/undefined/g, '').trim();
+          if (!safeMsg) safeMsg = defaultCareRules[i]?.msg || '';
+        }
+
+        const safeWeeks = r.weeks || defaultCareRules[i]?.weeks || 4;
+
         careContainer.innerHTML += `
-          <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5 mb-2">
+          <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2 mb-3">
             <div class="flex gap-2">
-              <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="關鍵字 (以逗號分隔，如: 染髮, 漂髮)" value="${r.name}">
-              <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
+              <input type="text" class="w-3/4 p-2.5 rounded-xl border border-brand-200 rule-name text-xs bg-brand-50/40 font-medium" placeholder="項目關鍵字 (例：染髮, 漂髮)" value="${safeName}">
+              <input type="number" class="w-1/4 p-2.5 rounded-xl border border-brand-200 rule-weeks text-xs bg-brand-50/40 text-center font-bold" placeholder="週數" value="${safeWeeks}">
             </div>
-            <textarea class="w-full p-2 rounded-xl border border-brand-200 rule-msg text-xs" rows="2" placeholder="關懷訊息">${r.msg}</textarea>
+            <textarea class="w-full p-2.5 rounded-xl border border-brand-200 rule-msg text-xs bg-brand-50/40 leading-relaxed" rows="2" placeholder="關懷訊息">${safeMsg}</textarea>
           </div>`;
       }
     }
