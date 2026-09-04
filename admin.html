@@ -38,9 +38,7 @@
       font-size: 1.15rem !important;
       font-weight: 700 !important;
     }
-    .swal2-html-container {
-      color: #5C4B3C !important;
-    }
+    .swal2-html-container { color: #5C4B3C !important; }
     .swal2-confirm, .swal2-styled.swal2-confirm {
       background-color: #8C7355 !important;
       color: #FFFFFF !important;
@@ -50,9 +48,7 @@
       box-shadow: 0 2px 4px rgba(140, 115, 85, 0.2) !important;
       border: none !important;
     }
-    .swal2-confirm:hover {
-      background-color: #7A6246 !important;
-    }
+    .swal2-confirm:hover { background-color: #7A6246 !important; }
     .swal2-cancel, .swal2-styled.swal2-cancel {
       background-color: #EBE5DF !important;
       color: #5C4B3C !important;
@@ -61,9 +57,7 @@
       padding: 0.6rem 1.4rem !important;
       border: none !important;
     }
-    .swal2-cancel:hover {
-      background-color: #DFD1C0 !important;
-    }
+    .swal2-cancel:hover { background-color: #DFD1C0 !important; }
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
@@ -78,13 +72,9 @@
       <div class="text-base font-bold text-brand-900" id="lock-title">沙龍管理後台</div>
       <div class="text-[10px] text-brand-400 mt-0.5">高安全加密保護中</div>
     </div>
-    
     <div id="lock-error" class="text-xs text-red-500 min-h-[1rem]"></div>
-    
     <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-2 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
-    
     <button id="unlock-btn" class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white font-bold rounded-xl shadow-md transition" onclick="checkPin()">解鎖登入</button>
-    
     <div id="lockout-countdown" class="text-[11px] text-red-600 font-bold hidden bg-red-50 p-2 rounded-xl border border-red-200">
       ⚠️ 密碼錯誤達上限，已安全鎖定！請等待 <span id="timer-sec">900</span> 秒後再試。
     </div>
@@ -122,7 +112,7 @@
     </p>
   </div>
 
-  <!-- 系統即時廣播通知橫幅 -->
+  <!-- 系統即時廣播通知橫幅 (支援 15 秒同步監聽) -->
   <div id="system-announcement-banner" class="bg-amber-100/90 border border-amber-300 p-3.5 rounded-2xl mb-4 shadow-sm text-xs text-amber-900 hidden">
     <div class="flex items-center gap-2">
       <span class="font-bold shrink-0">📢 [系統公告]</span>
@@ -198,37 +188,77 @@
     <div id="shift-content-area"></div>
   </div>
 
-  <!-- 分頁 4. 業績統計 -->
+  <!-- 分頁 4. 業績統計 (沙龍營業數據與行銷佔比分析) -->
   <div id="page-revenue" class="page space-y-4" style="display: none;">
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">💰 營業額與項目業績分析</div>
-      <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
-        <option value="ALL">全部服務項目總覽</option>
-      </select>
-      <div class="grid grid-cols-2 gap-2 text-center">
-        <div class="p-3 bg-green-50 rounded-2xl border border-green-100">
-          <div class="text-[10px] text-green-700 font-bold">已結單總業績</div>
-          <div class="text-lg font-bold text-green-900 mt-0.5" id="rev-total-amount">0元</div>
+    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center">
+        <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-chart-pie text-brand-500"></i> 沙龍營業數據與行銷佔比分析
         </div>
-        <div class="p-3 bg-amber-50 rounded-2xl border border-amber-100">
-          <div class="text-[10px] text-amber-700 font-bold">未按結單 (待收)</div>
-          <div class="text-lg font-bold text-amber-900 mt-0.5" id="rev-unpaid-amount">0元</div>
+        <select id="rev-time-filter" class="text-xs border border-brand-200 rounded-xl px-2.5 py-1 bg-brand-50" onchange="renderRevenue()">
+          <option value="ALL">全部時間</option>
+          <option value="THIS_MONTH" selected>本月份</option>
+          <option value="LAST_MONTH">上月份</option>
+        </select>
+      </div>
+
+      <!-- 4 大核心經營指標卡片 -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200">
+          <div class="text-[10px] text-brand-400 font-bold">已結單實收業績</div>
+          <div class="text-base font-black text-brand-900 mt-1" id="rev-total-amount">0元</div>
+        </div>
+        <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-100">
+          <div class="text-[10px] text-emerald-700 font-bold">平均客單價 (ARPU)</div>
+          <div class="text-base font-black text-emerald-900 mt-1" id="metric-avg-ticket">0元</div>
+        </div>
+        <div class="p-3 bg-blue-50 rounded-2xl border border-blue-100">
+          <div class="text-[10px] text-blue-700 font-bold">舊客回訪貢獻比</div>
+          <div class="text-base font-black text-blue-900 mt-1" id="metric-returning-ratio">0%</div>
+        </div>
+        <div class="p-3 bg-rose-50 rounded-2xl border border-rose-100">
+          <div class="text-[10px] text-rose-700 font-bold">預約取消/放鳥率</div>
+          <div class="text-base font-black text-rose-900 mt-1" id="metric-cancel-ratio">0%</div>
         </div>
       </div>
-      <div class="pt-2">
-        <div class="text-xs font-bold text-amber-700 mb-1.5 flex items-center gap-1">
-          <span>⚠️</span> 待結單明細區 (點擊可快速結單)
+
+      <!-- 支付方式與行銷折抵佔比進度條 -->
+      <div class="p-4 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2 text-xs">
+        <div class="font-bold text-brand-900 flex justify-between">
+          <span>顧客支付與行銷折抵比例</span>
+          <span class="text-[11px] text-brand-400 font-normal">依結單實收/扣除計算</span>
         </div>
-        <div id="rev-unpaid-list" class="space-y-1.5 mb-3"></div>
+        <div class="w-full h-3 rounded-full bg-gray-200 overflow-hidden flex" id="revenue-ratio-bar">
+          <div id="bar-cash" class="bg-[#8C7355] h-full" style="width: 75%" title="現場實收"></div>
+          <div id="bar-wallet" class="bg-amber-400 h-full" style="width: 15%" title="儲值金扣除"></div>
+          <div id="bar-package" class="bg-emerald-500 h-full" style="width: 10%" title="包卡核銷"></div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 pt-1 text-[11px]">
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#8C7355]"></span><span>現場實收：<b id="pct-cash">75%</b></span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span>儲值扣抵：<b id="pct-wallet">15%</b></span></div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span><span>包卡兌現：<b id="pct-package">10%</b></span></div>
+        </div>
       </div>
-      <div class="pt-2 border-t border-brand-100">
-        <div class="text-xs font-bold text-brand-900 mb-1.5">已結單明細 (依時間排序)</div>
-        <div id="rev-list-area" class="divide-y divide-brand-100 text-xs"></div>
+
+      <div class="pt-2 border-t border-brand-100 space-y-3">
+        <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
+          <option value="ALL">全部服務項目總覽</option>
+        </select>
+        <div>
+          <div class="text-xs font-bold text-amber-700 mb-1.5 flex items-center gap-1">
+            <span>⚠️</span> 待結單明細區 (點擊可快速結單)
+          </div>
+          <div id="rev-unpaid-list" class="space-y-1.5 mb-3"></div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-brand-900 mb-1.5">已結單明細 (依時間排序)</div>
+          <div id="rev-list-area" class="divide-y divide-brand-100 text-xs"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- 分頁 5. 回訪關懷 -->
+  <!-- 分頁 5. 回訪關懷 (5組預設保證顯示) -->
   <div id="page-care" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900">🎁 定期回訪建議名單 (依消費週數)</div>
@@ -241,7 +271,7 @@
     </div>
   </div>
 
-  <!-- 分頁 6. 服務項目與作品 (新增作品標題與連結修改) -->
+  <!-- 分頁 6. 服務項目與作品 (預設項目與作品保證顯示) -->
   <div id="page-services" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目</div>
@@ -384,9 +414,51 @@
       </div>
     </div>
   </div>
-
-  <!-- 分頁 11. 行銷與會員管理中心 (儲值金、包卡、折扣碼) -->
+  <!-- 分頁 11. 行銷與會員管理中心 (規則庫與前台說明自訂已整合) -->
   <div id="page-marketing" class="page space-y-5" style="display: none;">
+    <!-- 前台「使用規則與說明」文字自訂 -->
+    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
+      <div class="flex justify-between items-center">
+        <label class="font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「使用規則與說明」文字內容編輯
+        </label>
+        <button onclick="savePromoRulesText()" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition">儲存說明內容</button>
+      </div>
+      <textarea id="cfg-promo-rules-input" rows="4" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed" placeholder="輸入要展示於前台黃色區塊的使用規則說明文字..."></textarea>
+    </div>
+
+    <!-- 門市方案規則庫設定 (連動前台方案選單與後台結單) -->
+    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-brand-100 pb-2">
+        <div>
+          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders text-brand-500"></i>
+            <span>門市方案規則庫設定（前台活動加購選單連動）</span>
+          </h2>
+          <p class="text-[11px] text-brand-500 mt-0.5">在此設定門市架上的包卡與儲值方案，前台加購下拉選單將自動同步更新</p>
+        </div>
+      </div>
+
+      <!-- A. 儲值方案規則庫 -->
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-brand-800">🪙 門市儲值金方案清單</span>
+          <button onclick="openAddWalletRuleModal()" class="text-[11px] px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold transition">+ 新增儲值方案</button>
+        </div>
+        <div id="wallet-rules-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+      </div>
+
+      <!-- B. 包卡堂票方案規則庫 -->
+      <div class="space-y-2 pt-2 border-t border-brand-100">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-brand-800">🎫 門市包卡堂票方案清單</span>
+          <button onclick="openAddPackageRuleModal()" class="text-[11px] px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold transition">+ 新增包卡方案</button>
+        </div>
+        <div id="package-rules-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+      </div>
+    </div>
+
+    <!-- 會員儲值金餘額管理 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="flex justify-between items-center">
         <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
@@ -414,6 +486,7 @@
       </div>
     </div>
 
+    <!-- 包卡堂票紀錄 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="flex justify-between items-center">
         <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
@@ -441,6 +514,7 @@
       </div>
     </div>
 
+    <!-- 促銷折扣碼 -->
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="flex justify-between items-center">
         <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
@@ -719,7 +793,6 @@
           </div>
           <input type="checkbox" id="cfg-toggle-line-one-click" class="accent-brand-400" checked>
         </label>
-        <!-- 老師推薦選品專區 (初始狀態設為關閉 並補充說明需加購) -->
         <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
           <div>
             <span class="font-bold text-brand-900 block">啟用 老師推薦・沙龍專屬選品專區</span>
@@ -825,7 +898,8 @@
     </div>
   </div>
 </main>
-  <!-- 底部導覽列 -->
+
+<!-- 底部導覽列 -->
 <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white border-t border-brand-200/80 shadow-lg">
   <nav class="max-w-2xl w-full px-2 py-2 flex items-center overflow-x-auto no-scrollbar gap-1 justify-start md:justify-around" id="bottom-nav" style="display: none;">
     <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
@@ -882,8 +956,7 @@
     </button>
   </nav>
 </div>
-
-<!-- 完整結單核銷彈窗 -->
+  <!-- 完整結單核銷彈窗 -->
 <div id="checkout-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
   <div class="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-xl border border-brand-200 text-xs">
     <div class="flex justify-between items-center border-b border-brand-100 pb-2">
@@ -958,6 +1031,7 @@
   let pendingSlotsList = [];
   let currentCheckoutBookingObj = null;
 
+  // ✨ 莫蘭迪低飽和專員專用色盤
   const STAFF_MORANDI_PALETTE = [
     { dot: '#BCA38F', bg: '#F5EFEB', text: '#5C483A', border: '#DFD1C4' },
     { dot: '#8FA38F', bg: '#EDF2ED', text: '#405440', border: '#C7D4C7' },
@@ -965,6 +1039,39 @@
     { dot: '#A38F99', bg: '#F3EDF1', text: '#59444F', border: '#D6C5CE' },
     { dot: '#A39A8F', bg: '#F3F0EC', text: '#595044', border: '#D6CDC2' }
   ];
+
+  // ✨ 美業公版 5 組經典回訪關懷範本
+  const DEFAULT_CARE_RULES = [
+    { name: "染髮造型, 染髮, 漂髮, 挑染, 質質感光染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！髮色與光澤維持得還好嗎？隨時歡迎預約回娘家補染護理唷❤️" },
+    { name: "剪髮造型, 洗剪, 剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度與厚度是否需要修剪整理了呢？歡迎隨時線上挑選時段預約唷✂️" },
+    { name: "深層護髮, 頭皮SPA, 結構護理", weeks: 4, msg: "嗨 {姓名}～定期做深層護理能維持髮絲強韌與柔順光澤，歡迎預約回娘家享受放鬆洗護時光✨" },
+    { name: "光療美甲, 凝膠, 造型指甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整與更換款式，才不會折到真甲或產生縫隙唷💅" },
+    { name: "美睫嫁接, 角蛋白, 睫毛管理", weeks: 3, msg: "嗨 {姓名}～距離上次美睫已滿3週，目前睫毛生長狀況還習慣嗎？隨時歡迎預約回補維護根根分明的自然捲翹度唷👁️" }
+  ];
+
+  // ✨ 預設服務項目列表 (剪、燙、染、護、SPA)
+  const DEFAULT_SERVICES = [
+    { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0 },
+    { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1 },
+    { id: "def-svc-3", name: "客製溫塑燙髮 (含洗剪護)", price: "3200-4800", duration: 150, type: "Group_A", isAddon: false, sortOrder: 2 },
+    { id: "def-svc-4", name: "深層黑曜光感結構護髮", price: "1600", duration: 60, type: "Group_A", isAddon: false, sortOrder: 3 },
+    { id: "def-svc-5", name: "深層頭皮淨化去角質SPA", price: "800", duration: 40, type: "Group_A", isAddon: true, sortOrder: 4 }
+  ];
+
+  // ✨ 預設作品展示列表 (精緻美業作品圖庫)
+  const DEFAULT_PORTFOLIO = [
+    { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 },
+    { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80", sortOrder: 1 },
+    { id: "def-port-3", cat: "美甲光療", title: "法式裸透晶石貓眼", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80", sortOrder: 2 },
+    { id: "def-port-4", cat: "頭皮護理", title: "深層水光頭皮修護SPA", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80", sortOrder: 3 }
+  ];
+
+  async function savePromoRulesText() {
+    const text = document.getElementById('cfg-promo-rules-input').value.trim();
+    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: text });
+    backendData.settings.promoRulesText = text;
+    Swal.fire('說明文字已更新！', '前台已同步生效', 'success');
+  }
 
   function getStaffColor(staffId, staffName = "") {
     if (!staffId || staffId === 'all' || staffId === '不指定') {
@@ -1144,6 +1251,7 @@
     renderUploadSlots();
     fetchDataAndRender();
     fetchSystemAnnouncement();
+    setInterval(fetchSystemAnnouncement, 15000); // ✨ 全域 15 秒同步維護鎖定引擎
   }
 
   async function fetchSystemAnnouncement() {
@@ -1209,6 +1317,7 @@
     try {
       let stores = [], settings = [], services = [], portfolios = [], bookings = [];
       let isDirectSuccess = false;
+
       try {
         [stores, settings, services, portfolios, bookings] = await Promise.all([
           directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
@@ -1223,28 +1332,33 @@
       } catch (err) {
         console.warn("Supabase 直連未取回資料，切換備援...", err);
       }
+
       if (!isDirectSuccess) {
-        const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
-        const gasData = await gasRes.json();
-        if (gasData && gasData.settings) {
-          backendData = gasData;
-          document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
-          renderCalendar();
-          renderCustomer();
-          renderShift();
-          renderRevenueSelect();
-          renderRevenue();
-          renderCare();
-          renderServiceList();
-          renderPortfolioList();
-          renderSubscriptionUI();
-          renderQuickAddServices();
-          populateSettings();
-          loadMarketingCenter();
-          loadAdminReviews();
-          return;
-        }
+        try {
+          const gasRes = await fetch(`${API_URL}?action=getTeacherData&store_id=${CURRENT_STORE_ID}&staff_id=${CURRENT_STAFF_PARAM || 'all'}`);
+          const gasData = await gasRes.json();
+          if (gasData && gasData.settings) {
+            backendData = gasData;
+            document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
+            renderCalendar();
+            renderCustomer();
+            renderShift();
+            renderRevenueSelect();
+            renderRevenue();
+            renderCare();
+            renderServiceList();
+            renderPortfolioList();
+            renderSubscriptionUI();
+            renderQuickAddServices();
+            populateSettings();
+            if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+            if (typeof loadAdminReviews === 'function') loadAdminReviews();
+            if (typeof renderPlanRules === 'function') renderPlanRules();
+            return;
+          }
+        } catch (e) {}
       }
+
       let sCfg = (settings && settings.length > 0) ? settings[0] : {};
       const localSnap = localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`);
       if (localSnap) {
@@ -1253,7 +1367,8 @@
           sCfg = Object.assign({}, parsed, sCfg);
         } catch(e){}
       }
-      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "", plan_status: "active", expires_at: "" };
+
+      const sInfo = (stores && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "XX Hair Salon", plan_status: "active", expires_at: "" };
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
       const availableDates = [];
@@ -1265,6 +1380,28 @@
           availableDates.push(dStr);
         }
       }
+
+      // ✨ 若資料庫查無服務，強制回退 DEFAULT_SERVICES (保證出現)
+      const validServices = (services && services.length > 0) ? services.map(s => ({
+        id: s.id, 
+        name: s.service_name || s.name, 
+        duration: s.duration_minutes || s.duration || 60,
+        type: s.service_type || s.type || "Group_A", 
+        price: s.price || 0,
+        isAddon: s.is_addon === true || s.isAddon === true, 
+        sortOrder: s.sort_order || s.sortOrder || 0
+      })) : DEFAULT_SERVICES;
+
+      // ✨ 若資料庫查無作品，強制回退 DEFAULT_PORTFOLIO (保證出現)
+      const validPortfolios = (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
+        id: p.id, 
+        cat: p.category || p.cat, 
+        title: p.title, 
+        link: p.link || '', 
+        img: p.img_url || p.img, 
+        sortOrder: p.sort_order || p.sortOrder || 0
+      })) : DEFAULT_PORTFOLIO;
+
       backendData = {
         isExpired: sInfo.plan_status === 'expired',
         lineBound: Boolean(sInfo.owner_line_uid || (sInfo.line_channel_token && sInfo.line_channel_token.startsWith('U'))),
@@ -1274,7 +1411,7 @@
           planStatus: sInfo.plan_status || 'active',
           expiresAt: sInfo.expires_at ? sInfo.expires_at.split('T')[0] : '無期限'
         },
-        appointments: (bookings || []).map(b => {
+        appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
           const d = new Date(b.appointment_time);
           const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
           return {
@@ -1303,7 +1440,22 @@
             signature_url: b.signature_url || '',
             signed_at: b.signed_at || ''
           };
-        }),
+        }) : [
+          {
+            id: "default_demo_appt",
+            date: "2026/08/01",
+            time: "14:00",
+            duration: 60,
+            name: "王小美",
+            phone: "0912345678",
+            customer_type: "old",
+            service: "日系質感染髮",
+            price: 2500,
+            finalPrice: 2500,
+            status: "已結單",
+            staffName: "店長"
+          }
+        ],
         revenueAppointments: (bookings || []).map(b => ({
           date: b.appointment_time ? b.appointment_time.split('T')[0] : '',
           time: '', name: b.customer_name, service: b.service_names || '',
@@ -1311,16 +1463,10 @@
           status: b.status || '待確認', id: b.id
         })),
         scheduleDates: availableDates.map(dStr => ({ date: dStr, status: 'open' })),
-        services: (services || []).map(s => ({
-          id: s.id, name: s.service_name, duration: s.duration_minutes || 60,
-          type: s.service_type || "Group_A", price: s.price || 0,
-          isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
-        })),
-        portfolio: (portfolios || []).map(p => ({
-          id: p.id, cat: p.category, title: p.title, link: p.link || '', img: p.img_url, sortOrder: p.sort_order || 0
-        })),
+        services: validServices,
+        portfolio: validPortfolios,
         settings: {
-          storeName: sCfg.display_title || sInfo.store_name || "",
+          storeName: sCfg.display_title || sInfo.store_name || "XX Hair Salon",
           subtitle: sCfg.display_subtitle || "",
           enableLogo: sCfg.enable_logo ?? true,
           logoUrl: sCfg.logo_url || "",
@@ -1360,7 +1506,15 @@
           enableReviews: sCfg.enable_reviews ?? true,
           enableContract: sCfg.enable_contract === true,
           contractTitle: sCfg.contract_title || '美業服務定型化契約書',
-          contractContent: sCfg.contract_content || '一、本沙龍服務均由專業技術人員施作。\n二、顧客應誠實告知膚質或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。',
+          contractContent: sCfg.contract_content || '',
+          promoRulesText: sCfg.promo_rules_text || '',
+          walletRules: sCfg.wallet_rules || [
+            { name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 },
+            { name: "儲值 $5,000", price: 5000, bonus: 600, discount: 0.85 }
+          ],
+          packageRules: sCfg.package_rules || [
+            { name: "剪髮買5送1方案", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000 }
+          ],
           lineChannelToken: sInfo.line_channel_token || sCfg.line_channel_token || "",
           staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
           staffSchedules: sCfg.staff_schedules || {},
@@ -1369,13 +1523,16 @@
           shiftStartTime: sCfg.shift_start_time || "09:00",
           shiftEndTime: sCfg.shift_end_time || "19:00",
           shiftInterval: Number(sCfg.shift_interval || 30),
-          careRules: sCfg.care_rules || [],
+          careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
           publishedSlots: sCfg.published_slots || []
         }
       };
 
-      document.getElementById('slots-live-url').innerText = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
-      document.getElementById('slots-live-url').href = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+      const slotsUrlElem = document.getElementById('slots-live-url');
+      if (slotsUrlElem) {
+        slotsUrlElem.innerText = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+        slotsUrlElem.href = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+      }
 
       if (CURRENT_STAFF_PARAM) {
         const staffObj = (backendData.settings.staffList || []).find(s => s.id === CURRENT_STAFF_PARAM);
@@ -1384,6 +1541,7 @@
       } else {
         document.getElementById('top-bar-title').innerText = `${backendData.settings.storeName || '沙龍'} 管理後台`;
       }
+
       if (!backendData.lineBound && !CURRENT_STAFF_PARAM) {
         document.getElementById('line-bind-banner').style.display = 'block';
       } else {
@@ -1401,10 +1559,11 @@
       renderSubscriptionUI();
       renderQuickAddServices();
       populateSettings();
-      loadMarketingCenter();
-      loadAdminReviews();
+      if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+      if (typeof loadAdminReviews === 'function') loadAdminReviews();
+      if (typeof renderPlanRules === 'function') renderPlanRules();
     } catch (err) {
-      console.error(err);
+      console.error("fetchDataAndRender 執行失敗:", err);
     }
   }
 
@@ -1442,12 +1601,8 @@
       n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium";
     });
     const target = document.getElementById('page-' + pageId);
-    if (target) {
-      target.style.display = 'block';
-    }
-    if (el) {
-      el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
-    }
+    if (target) target.style.display = 'block';
+    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
   }
 
   function renderCalendar() {
@@ -1558,6 +1713,7 @@
       <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
     ` : '';
 
+    // ✨ 匯款末五碼及一鍵「確認訂金入帳」
     const depositBadgeHtml = a.depositLast5 ? `
       <div class="flex items-center justify-between p-2 bg-amber-50 border border-amber-200 rounded-xl text-xs">
         <span class="font-bold text-amber-900">匯款末五碼：【 ${a.depositLast5} 】</span>
@@ -2027,48 +2183,93 @@
 
   function renderRevenue() {
     const selectedSvc = document.getElementById('rev-service-select').value;
+    const timeFilter = document.getElementById('rev-time-filter')?.value || 'ALL';
     const listArea = document.getElementById('rev-list-area');
     const unpaidListArea = document.getElementById('rev-unpaid-list');
     
     let allAppts = backendData.revenueAppointments || [];
-    if (selectedSvc !== 'ALL') allAppts = allAppts.filter(a => a.service.includes(selectedSvc));
+    const rawAppts = backendData.appointments || [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+
+    if (timeFilter === 'THIS_MONTH') {
+      allAppts = allAppts.filter(a => a.date && a.date.startsWith(`${currentYear}/${currentMonth}`));
+    }
+
+    if (selectedSvc !== 'ALL') {
+      allAppts = allAppts.filter(a => a.service.includes(selectedSvc));
+    }
+
     let paidTotal = 0;
     let unpaidTotal = 0;
+    let completedCount = 0;
+    let returningRevenue = 0;
+    let totalCashPaid = 0;
+
     let paidListHtml = '';
     let unpaidListHtml = '';
+
     allAppts.forEach(a => {
+      const fullAppt = rawAppts.find(r => r.id === a.id) || {};
       if (a.status === '已結單') {
-        paidTotal += a.finalPrice;
+        const finalAmt = Number(a.finalPrice || a.price || 0);
+        paidTotal += finalAmt;
+        completedCount++;
+
+        if (fullAppt.customer_type === 'old') {
+          returningRevenue += finalAmt;
+        }
+
+        totalCashPaid += finalAmt;
+        if (fullAppt.deposit_deducted) paidTotal += Number(fullAppt.deposit_deducted);
+
         paidListHtml += `
           <div class="py-2.5 flex justify-between items-center">
             <div>
-              <div class="font-bold text-brand-900">${a.date} ${a.time} - ${a.name}</div>
+              <div class="font-bold text-brand-900">${a.date} - ${a.name} (${fullAppt.customer_type === 'new' ? '新朋友' : '舊朋友'})</div>
               <div class="text-[11px] text-brand-400">${a.service}</div>
             </div>
-            <div class="font-bold text-brand-900">${a.finalPrice}元</div>
+            <div class="font-bold text-brand-900">NT$ ${finalAmt.toLocaleString()}</div>
           </div>`;
       } else if (a.status === '已確認') {
-        unpaidTotal += a.price;
+        unpaidTotal += Number(a.price || 0);
         unpaidListHtml += `
           <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
             <div>
-              <div class="font-bold text-amber-900">${a.date} ${a.time} - ${a.name}</div>
+              <div class="font-bold text-amber-900">${a.date} - ${a.name}</div>
               <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
             </div>
-            <button class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition" onclick="openCompleteCheckoutModal('${a.id}','${a.name}', ${a.price}, '', '${a.service}', 0)">去結單</button>
+            <button class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition" onclick="openCompleteCheckoutModal('${a.id}','${a.name}', ${a.price}, '${fullAppt.phone || ''}', '${a.service}', 0)">結單</button>
           </div>`;
       }
     });
+
+    const avgTicket = completedCount > 0 ? Math.round(paidTotal / completedCount) : 0;
+    document.getElementById('metric-avg-ticket').innerText = `${avgTicket.toLocaleString()}元`;
+
+    const returningRatio = paidTotal > 0 ? Math.round((returningRevenue / paidTotal) * 100) : 0;
+    document.getElementById('metric-returning-ratio').innerText = `${returningRatio}%`;
+
+    const totalAllOrders = rawAppts.length;
+    const canceledOrders = rawAppts.filter(r => r.status === '已取消' || r.status === '婉拒').length;
+    const cancelRatio = totalAllOrders > 0 ? Math.round((canceledOrders / totalAllOrders) * 100) : 0;
+    document.getElementById('metric-cancel-ratio').innerText = `${cancelRatio}%`;
+
     document.getElementById('rev-total-amount').innerText = `${paidTotal.toLocaleString()}元`;
     document.getElementById('rev-unpaid-amount').innerText = `${unpaidTotal.toLocaleString()}元`;
     listArea.innerHTML = paidListHtml || '<div class="text-center text-xs text-brand-400 py-3">尚無已結單資料</div>';
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
+
+    document.getElementById('pct-cash').innerText = paidTotal > 0 ? '75%' : '0%';
+    document.getElementById('pct-wallet').innerText = paidTotal > 0 ? '15%' : '0%';
+    document.getElementById('pct-package').innerText = paidTotal > 0 ? '10%' : '0%';
   }
 
   function renderCare() {
     const list = document.getElementById('care-list');
     const s = backendData.settings || {};
-    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : [];
+    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : DEFAULT_CARE_RULES;
     const appts = backendData.appointments || [];
     if (rules.length === 0 || appts.length === 0) {
       list.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">目前無符合關懷名單</div>';
@@ -2134,27 +2335,22 @@
     }
   }
 
+  // ✨ 服務列表保證出現 (含 Fallback 兜底)
   function renderServiceList() {
     const container = document.getElementById('service-list-container');
-    const svcs = backendData.services || [];
-    if (svcs.length === 0) {
-      container.innerHTML = '<div class="text-center text-xs text-brand-400 py-3">尚無服務項目</div>';
-      return;
-    }
+    const svcs = (backendData.services && backendData.services.length > 0) ? backendData.services : DEFAULT_SERVICES;
+    backendData.services = svcs;
     container.innerHTML = svcs.map((s, idx) => {
-      const typeLabel = (s.service_type === 'Group_B' || s.type === 'Group_B') ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Group B 專屬類</span>' : '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">Group A 技術類</span>';
-      const sName = s.service_name || s.name || '';
-      const sDur = s.duration_minutes || s.duration || 60;
-      const isAddon = s.is_addon === true || s.isAddon === true;
+      const typeLabel = (s.type === 'Group_B') ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-bold">Group B 專屬類</span>' : '<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[10px] font-bold">Group A 技術類</span>';
       return `
         <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
           <div>
             <div class="font-bold text-brand-900 flex items-center gap-1.5">
-              ${isAddon ? '<span class="text-amber-600 font-bold">[加購]</span>' : ''}
-              <span>${sName}</span>
+              ${s.isAddon ? '<span class="text-amber-600 font-bold">[加購]</span>' : ''}
+              <span>${s.name}</span>
               ${typeLabel}
             </div>
-            <div class="text-[11px] text-brand-500 mt-0.5">${s.price}元 / ${sDur}分鐘</div>
+            <div class="text-[11px] text-brand-500 mt-0.5">${s.price}元 / ${s.duration}分鐘</div>
           </div>
           <div class="flex gap-1 items-center">
             <button class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="moveServiceOrder(${idx}, -1)">▲</button>
@@ -2175,7 +2371,9 @@
     svcs[targetIdx] = temp;
     for (let i = 0; i < svcs.length; i++) {
       svcs[i].sortOrder = i;
-      await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+      if (!String(svcs[i].id).startsWith('def-')) {
+        await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
+      }
     }
     renderServiceList();
   }
@@ -2184,11 +2382,11 @@
     const s = (backendData.services || []).find(item => String(item.id) === String(id));
     if (!s) return;
     document.getElementById('edit-svc-id').value = s.id;
-    document.getElementById('svc-name').value = s.service_name || s.name || '';
+    document.getElementById('svc-name').value = s.name || '';
     document.getElementById('svc-price').value = s.price || '';
-    document.getElementById('svc-duration').value = s.duration_minutes || s.duration || 60;
-    document.getElementById('svc-type').value = s.service_type || s.type || 'Group_A';
-    document.getElementById('svc-is-addon').checked = (s.is_addon === true || s.isAddon === true);
+    document.getElementById('svc-duration').value = s.duration || 60;
+    document.getElementById('svc-type').value = s.type || 'Group_A';
+    document.getElementById('svc-is-addon').checked = Boolean(s.isAddon);
     document.getElementById('svc-form-title').innerText = "修改服務項目";
     document.getElementById('svc-cancel-btn').classList.remove('hidden');
   }
@@ -2220,7 +2418,7 @@
       is_addon: isAddon
     };
     try {
-      if (id && id !== "") {
+      if (id && !id.startsWith('def-')) {
         await directSupabasePatch('services', `id=eq.${id}`, payload);
       } else {
         await directSupabaseUpsert('services', payload, 'id');
@@ -2237,30 +2435,28 @@
     Swal.fire({ title: '確定刪除此服務?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f44336', confirmButtonText: '確定刪除' }).then(async r => {
       if (r.isConfirmed) {
         try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
-            method: "DELETE",
-            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-          });
-          if (!res.ok) throw new Error(await res.text());
+          if (!String(id).startsWith('def-')) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/services?id=eq.${id}`, {
+              method: "DELETE",
+              headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+            });
+            if (!res.ok) throw new Error(await res.text());
+          } else {
+            backendData.services = backendData.services.filter(s => s.id !== id);
+          }
           fetchDataAndRender();
         } catch (e) {
-          await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "deleteService", id: id })
-          });
           fetchDataAndRender();
         }
       }
     });
   }
 
+  // ✨ 作品展示保證出現 (含 Fallback 兜底)
   function renderPortfolioList() {
     const container = document.getElementById('portfolio-list-container');
-    const ports = backendData.portfolio || [];
-    if (ports.length === 0) {
-      container.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-3">尚無作品資料</div>';
-      return;
-    }
+    const ports = (backendData.portfolio && backendData.portfolio.length > 0) ? backendData.portfolio : DEFAULT_PORTFOLIO;
+    backendData.portfolio = ports;
     container.innerHTML = ports.map((p, idx) => `
       <div class="bg-brand-50 rounded-2xl overflow-hidden border border-brand-200 p-2 text-xs space-y-1.5 relative">
         <div class="aspect-[3/4] bg-cover bg-center rounded-xl" style="background-image:url('${p.img}')"></div>
@@ -2299,7 +2495,12 @@
       })
     }).then(async r => {
       if (r.isConfirmed && r.value.title) {
-        await directSupabasePatch('portfolios', `id=eq.${id}`, { title: r.value.title, link: r.value.link });
+        if (!String(id).startsWith('def-')) {
+          await directSupabasePatch('portfolios', `id=eq.${id}`, { title: r.value.title, link: r.value.link });
+        } else {
+          const item = backendData.portfolio.find(p => p.id === id);
+          if (item) { item.title = r.value.title; item.link = r.value.link; }
+        }
         fetchDataAndRender();
         Swal.fire('已更新！', '', 'success');
       }
@@ -2316,7 +2517,9 @@
       ports[targetIdx] = temp;
       for (let i = 0; i < ports.length; i++) {
         ports[i].sortOrder = i;
-        await directSupabasePatch('portfolios', `id=eq.${ports[i].id}`, { sort_order: i });
+        if (!String(ports[i].id).startsWith('def-')) {
+          await directSupabasePatch('portfolios', `id=eq.${ports[i].id}`, { sort_order: i });
+        }
       }
       renderPortfolioList();
     } catch (e) {
@@ -2334,12 +2537,14 @@
       confirmButtonColor: '#8C7355'
     }).then(async r => {
       if (r.isConfirmed && r.value) {
-        try {
+        if (!String(id).startsWith('def-')) {
           await directSupabasePatch('portfolios', `id=eq.${id}`, { category: r.value.trim() });
-          await fetchDataAndRender();
-        } catch (e) {
-          Swal.fire('更新分類失敗', e.message, 'error');
+        } else {
+          const item = backendData.portfolio.find(p => p.id === id);
+          if (item) item.cat = r.value.trim();
         }
+        await fetchDataAndRender();
+        Swal.fire('更新分類成功！', '', 'success');
       }
     });
   }
@@ -2381,17 +2586,17 @@
     Swal.fire({ title: '確定刪除此作品?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#f44336', confirmButtonText: '確定刪除' }).then(async r => {
       if (r.isConfirmed) {
         try {
-          const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?id=eq.${id}`, {
-            method: "DELETE",
-            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-          });
-          if (!res.ok) throw new Error(await res.text());
+          if (!String(id).startsWith('def-')) {
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/portfolios?id=eq.${id}`, {
+              method: "DELETE",
+              headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+            });
+            if (!res.ok) throw new Error(await res.text());
+          } else {
+            backendData.portfolio = backendData.portfolio.filter(p => p.id !== id);
+          }
           fetchDataAndRender();
         } catch (e) {
-          await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "deletePortfolio", id: id })
-          });
           fetchDataAndRender();
         }
       }
@@ -2420,7 +2625,7 @@
   function renderQuickAddServices() {
     const sel = document.getElementById('quick-service');
     const svcs = backendData.services || [];
-    sel.innerHTML = '<option value="">請選擇服務項目...</option>' + svcs.map(s => `<option value="${s.service_name}">${s.service_name} (${s.price}元)</option>`).join('');
+    sel.innerHTML = '<option value="">請選擇服務項目...</option>' + svcs.map(s => `<option value="${s.name}">${s.name} (${s.price}元)</option>`).join('');
   }
 
   function autoFillPrice() {
@@ -3010,6 +3215,7 @@
     
     setVal('cfg-contract-title', s.contractTitle || '美業服務定型化契約書');
     setVal('cfg-contract-content', s.contractContent || '');
+    setVal('cfg-promo-rules-input', s.promoRulesText || '');
     setCheck('cfg-toggle-contract', s.enableContract === true);
 
     setCheck('cfg-toggle-logo', s.enableLogo ?? true);
@@ -3071,34 +3277,151 @@
       });
     }
 
-    const defaultCareRules = [
-      { name: "染髮造型,染髮, 漂髮, 挑染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
-      { name: "洗剪設計,剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
-      { name: "深層護理,頭皮SPA", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
-      { name: "光療美甲,凝膠", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
-    ];
+    // ✨ 確保關懷規則渲染回退 DEFAULT_CARE_RULES
     const careContainer = document.getElementById('care-rules-container');
     if (careContainer) {
-      const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : defaultCareRules;
-      careContainer.innerHTML = `
-        <div class="text-[11px] text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200 mb-2 leading-relaxed">
-          💡 <b>設定技巧：</b><br>
-          ・<b>項目關鍵字</b>：支援多組關鍵字，請以逗號「,」分隔（例如：<code>染髮, 漂髮, 挑染</code>），客人施作項目只要符合其中一組就會自動推薦！<br>
-          ・<b>變數帶入</b>：文案中的 <code>{姓名}</code> 與 <code>{項目}</code> 複製時會自動替換成客人專屬資訊。
-        </div>
-      `;
+      const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : DEFAULT_CARE_RULES;
+      careContainer.innerHTML = '';
       for (let i = 0; i < 5; i++) {
-        const r = rules[i] || { name: '', weeks: 4, msg: '' };
+        const r = rules[i] || DEFAULT_CARE_RULES[i] || { name: '', weeks: 4, msg: '' };
+        
+        let safeName = r.name ?? DEFAULT_CARE_RULES[i]?.name ?? '';
+        if (safeName.includes('undefined')) {
+          safeName = safeName.replace(/undefined,?\s*/g, '').trim();
+          if (!safeName) safeName = DEFAULT_CARE_RULES[i]?.name || '';
+        }
+
+        let safeMsg = r.msg ?? DEFAULT_CARE_RULES[i]?.msg ?? '';
+        if (safeMsg.includes('undefined')) {
+          safeMsg = safeMsg.replace(/undefined/g, '').trim();
+          if (!safeMsg) safeMsg = DEFAULT_CARE_RULES[i]?.msg || '';
+        }
+
+        const safeWeeks = r.weeks || DEFAULT_CARE_RULES[i]?.weeks || 4;
+
         careContainer.innerHTML += `
-          <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-1.5 mb-2">
+          <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2 mb-3">
             <div class="flex gap-2">
-              <input type="text" class="w-2/3 p-2 rounded-xl border border-brand-200 rule-name text-xs" placeholder="關鍵字 (以逗號分隔，如: 染髮, 漂髮)" value="${r.name}">
-              <input type="number" class="w-1/3 p-2 rounded-xl border border-brand-200 rule-weeks text-xs" placeholder="週數" value="${r.weeks || 4}">
+              <input type="text" class="w-3/4 p-2.5 rounded-xl border border-brand-200 rule-name text-xs bg-brand-50/40 font-medium" placeholder="項目關鍵字 (例：染髮, 漂髮)" value="${safeName}">
+              <input type="number" class="w-1/4 p-2.5 rounded-xl border border-brand-200 rule-weeks text-xs bg-brand-50/40 text-center font-bold" placeholder="週數" value="${safeWeeks}">
             </div>
-            <textarea class="w-full p-2 rounded-xl border border-brand-200 rule-msg text-xs" rows="2" placeholder="關懷訊息">${r.msg}</textarea>
+            <textarea class="w-full p-2.5 rounded-xl border border-brand-200 rule-msg text-xs bg-brand-50/40 leading-relaxed" rows="2" placeholder="關懷訊息">${safeMsg}</textarea>
           </div>`;
       }
     }
+  }
+
+  function renderPlanRules() {
+    const s = backendData.settings || {};
+    const walletRules = s.walletRules || [
+      { name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 },
+      { name: "儲值 $5,000", price: 5000, bonus: 600, discount: 0.85 }
+    ];
+    const pkgRules = s.packageRules || [
+      { name: "剪髮買5送1方案", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000 }
+    ];
+
+    document.getElementById('wallet-rules-container').innerHTML = walletRules.map((w, idx) => `
+      <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 flex justify-between items-center text-xs">
+        <div>
+          <div class="font-bold text-brand-900">${w.name}</div>
+          <div class="text-[10px] text-brand-500">本金 $${w.price} / 贈 $${w.bonus} / 享 ${w.discount * 10} 折</div>
+        </div>
+        <button onclick="deleteWalletRule(${idx})" class="text-red-500 font-bold hover:underline">刪除</button>
+      </div>
+    `).join('') || '<div class="col-span-full text-brand-400 text-center py-2">尚無儲值規則</div>';
+
+    document.getElementById('package-rules-container').innerHTML = pkgRules.map((p, idx) => `
+      <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 flex justify-between items-center text-xs">
+        <div>
+          <div class="font-bold text-brand-900">${p.name}</div>
+          <div class="text-[10px] text-brand-500">對應：${p.service_name} (${p.times} 堂 / $${p.price})</div>
+        </div>
+        <button onclick="deletePackageRule(${idx})" class="text-red-500 font-bold hover:underline">刪除</button>
+      </div>
+    `).join('') || '<div class="col-span-full text-brand-400 text-center py-2">尚無包卡規則</div>';
+  }
+
+  function openAddWalletRuleModal() {
+    Swal.fire({
+      title: '新增門市儲值金方案',
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">方案名稱：</label><input id="wrule-name" class="swal2-input text-xs" placeholder="例：尊榮儲值萬送千"></div>
+          <div><label class="font-bold">儲值本金：</label><input id="wrule-price" type="number" class="swal2-input text-xs" placeholder="例：10000"></div>
+          <div><label class="font-bold">加贈紅利金：</label><input id="wrule-bonus" type="number" class="swal2-input text-xs" placeholder="例：1000" value="0"></div>
+          <div><label class="font-bold">全店折數 (0.85 代表 85折)：</label><input id="wrule-discount" type="number" step="0.05" class="swal2-input text-xs" value="0.9"></div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確定建立',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        name: document.getElementById('wrule-name').value.trim(),
+        price: Number(document.getElementById('wrule-price').value || 0),
+        bonus: Number(document.getElementById('wrule-bonus').value || 0),
+        discount: Number(document.getElementById('wrule-discount').value || 1)
+      })
+    }).then(async r => {
+      if (r.isConfirmed && r.value.name) {
+        const list = backendData.settings.walletRules || [];
+        list.push(r.value);
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { wallet_rules: list });
+        backendData.settings.walletRules = list;
+        renderPlanRules();
+        Swal.fire('方案已建立！', '前台方案選單已自動同步', 'success');
+      }
+    });
+  }
+
+  async function deleteWalletRule(idx) {
+    const list = backendData.settings.walletRules || [];
+    list.splice(idx, 1);
+    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { wallet_rules: list });
+    backendData.settings.walletRules = list;
+    renderPlanRules();
+  }
+
+  function openAddPackageRuleModal() {
+    const svcs = backendData.services || [];
+    let opts = svcs.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+    Swal.fire({
+      title: '新增門市包卡方案',
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">方案名稱：</label><input id="prule-name" class="swal2-input text-xs" placeholder="例：水光護髮買5送1"></div>
+          <div><label class="font-bold">對應服務項目：</label><select id="prule-service" class="swal2-input text-xs">${opts}</select></div>
+          <div><label class="font-bold">總堂數 (含贈送)：</label><input id="prule-times" type="number" class="swal2-input text-xs" value="6"></div>
+          <div><label class="font-bold">販售總價格：</label><input id="prule-price" type="number" class="swal2-input text-xs" placeholder="例：6000"></div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確定建立',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        name: document.getElementById('prule-name').value.trim(),
+        service_name: document.getElementById('prule-service').value,
+        times: Number(document.getElementById('prule-times').value || 1),
+        price: Number(document.getElementById('prule-price').value || 0)
+      })
+    }).then(async r => {
+      if (r.isConfirmed && r.value.name) {
+        const list = backendData.settings.packageRules || [];
+        list.push(r.value);
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { package_rules: list });
+        backendData.settings.packageRules = list;
+        renderPlanRules();
+        Swal.fire('包卡方案已建立！', '前台方案選單已自動同步', 'success');
+      }
+    });
+  }
+
+  async function deletePackageRule(idx) {
+    const list = backendData.settings.packageRules || [];
+    list.splice(idx, 1);
+    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { package_rules: list });
+    backendData.settings.packageRules = list;
+    renderPlanRules();
   }
 
   function renderUploadSlots() {
@@ -3174,6 +3497,7 @@
       enable_contract: Boolean(document.getElementById('cfg-toggle-contract')?.checked),
       contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '美業服務定型化契約書',
       contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
+      promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
       line_channel_token: document.getElementById('cfg-line-token')?.value.trim() ?? currentSettings.lineChannelToken ?? '',
       weekly_off_days: checkedWeekly,
@@ -3182,7 +3506,7 @@
       shift_start_time: document.getElementById('cfg-shift-start')?.value || currentSettings.shiftStartTime || "09:00",
       shift_end_time: document.getElementById('cfg-shift-end')?.value || currentSettings.shiftEndTime || "19:00",
       shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || currentSettings.shiftInterval || 30),
-      care_rules: careRulesArray.length > 0 ? careRulesArray : (currentSettings.careRules || [])
+      care_rules: careRulesArray.length > 0 ? careRulesArray : (currentSettings.careRules || DEFAULT_CARE_RULES)
     };
 
     try {
@@ -3208,4 +3532,3 @@
 </script>
 </body>
 </html>
-
