@@ -8,7 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- 引入 LINE 官方 LIFF SDK 捕捉顧客真實 User ID -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     tailwind.config = {
@@ -98,7 +97,7 @@
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
-<!-- 全螢幕系統維護或店家鎖定遮罩層 (雙層防護) -->
+<!-- 全螢幕系統維護或店家鎖定遮罩層 -->
 <div id="maintenance-screen" class="fixed inset-0 bg-brand-50/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-brand-200/60">
     <i class="fa-solid fa-screwdriver-wrench"></i>
@@ -107,16 +106,13 @@
   <p class="text-xs text-brand-700 leading-relaxed max-w-xs mb-3" id="maintenance-desc">
     為了提供更穩定優質的服務體驗，平台目前正進行升級維護中，施工完畢將立即自動開放使用。
   </p>
-  <div class="p-3 bg-white/80 rounded-2xl border border-brand-200 text-[11px] text-brand-500 max-w-xs mb-5">
-    造成您的不便敬請見諒！若有即時預約需求，請點擊下方按鈕直接聯繫店家。
-  </div>
   <a id="maintenance-line-btn" href="#" target="_blank" class="px-6 py-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
     <i class="fa-brands fa-line text-sm"></i>
     <span>聯繫店家官方 LINE</span>
   </a>
 </div>
 
-<!-- 頂部即時系統全域廣播橫幅 (同步讀取監聽) -->
+<!-- 頂部即時系統全域廣播橫幅 -->
 <div id="system-banner" class="bg-amber-100 text-amber-900 px-4 py-2 text-[11px] font-medium text-center border-b border-amber-200 hidden">
   <span class="font-bold mr-1">📢 [系統公告]</span>
   <span id="system-banner-text"></span>
@@ -162,7 +158,7 @@
     </div>
   </div>
 
-  <!-- ✨ 顧客真實好評專區 (通過後台審核核准呈現) -->
+  <!-- 顧客真實好評牆 -->
   <div class="px-4 mt-6" id="reviewWallSection">
     <div class="flex justify-between items-center px-1 mb-2">
       <span class="text-xs font-bold text-brand-900 flex items-center gap-1">
@@ -175,13 +171,13 @@
     </div>
   </div>
 
-  <!-- 老師推薦・沙龍專屬選品專區 (全美業通用詞修正) -->
+  <!-- 老師推薦・沙龍專屬選品專區 (全美業通用詞) -->
   <div class="px-4 mt-6" id="featuredShopSection" style="display: none;">
     <div class="p-4 rounded-3xl bg-brand-100/70 border border-brand-200/80 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
         <div>
           <div class="text-xs font-bold text-brand-900">✨ 老師推薦・沙龍專屬選品</div>
-          <div class="text-[10px] text-brand-500 mt-0.5">店內專業洗護與保養好物，線上隨時帶回家</div>
+          <div class="text-[10px] text-brand-500 mt-0.5">現場專業沙龍洗護保養，線上隨時帶回家</div>
         </div>
         <a href="shop.html" target="_blank" class="px-3 py-1.5 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-[11px] font-bold shadow-sm transition">
           前往選購 ➔
@@ -212,15 +208,14 @@
     <div class="bg-white/95 rounded-3xl p-6 shadow-sm border border-white/80 backdrop-blur-md mb-6">
       <form id="bookForm" class="space-y-5">
         
-        <!-- 手機號碼 (失焦自動查詢儲值餘額與包卡堂票) -->
+        <!-- 手機號碼與會員儲值/包卡即時資訊 -->
         <div>
           <div class="flex justify-between items-center mb-1.5">
             <label class="block text-xs font-bold text-brand-800">手機號碼</label>
             <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
           </div>
-          <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)" onblur="checkCustomerByPhone()">
+          <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)" onblur="checkCustomerBenefitsByPhone()">
           
-          <!-- ✨ 儲值餘額與包卡堂票膠囊卡片 -->
           <div id="memberWalletCard" class="hidden mt-2 p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1 text-xs">
             <div class="flex justify-between items-center font-bold text-brand-900">
               <span>🪙 會員儲值餘額：<span id="displayWalletBalance" class="text-brand-600 font-black">0</span> 元</span>
@@ -239,14 +234,12 @@
           <label class="block text-xs font-bold text-brand-800 mb-1.5">您的姓名</label>
           <input type="text" id="name" required placeholder="請輸入姓名" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
-
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">LINE 顯示名稱</label>
           <input type="text" id="lineName" placeholder="例如：小美" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
-
         <div id="emailSection">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">電子信箱 <span class="text-[10px] text-brand-400 font-normal">(自動寄送預約副本)</span></label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5" id="emailLabel">電子信箱 <span class="text-[10px] text-brand-400 font-normal">(寄送預約副本)</span></label>
           <input type="email" id="email" placeholder="例如：user@gmail.com" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
@@ -257,6 +250,12 @@
             <button type="button" class="type-btn py-2.5 rounded-xl border border-brand-200 text-xs font-bold transition bg-brand-50/50 text-brand-800" onclick="setType('new', this)">新朋友</button>
           </div>
           <input type="hidden" id="custType" value="old">
+        </div>
+
+        <!-- 推薦介紹人欄位 -->
+        <div id="referrerSection">
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">推薦介紹人 <span class="text-[10px] text-brand-400 font-normal">(選填，享專屬回饋)</span></label>
+          <input type="text" id="referrerName" placeholder="請填寫介紹人姓名或手機" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 focus:bg-white outline-none transition">
         </div>
 
         <div id="staffSection">
@@ -284,16 +283,6 @@
           <textarea id="custNotes" rows="2" placeholder="如有特殊膚況、頭皮敏感或需求請在此填寫..." class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition"></textarea>
         </div>
 
-        <!-- ✨ 活動折扣碼輸入框 -->
-        <div class="space-y-1">
-          <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
-          <div class="flex gap-2">
-            <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/50">
-            <button type="button" onclick="applyCouponCode()" class="px-4 py-2 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
-          </div>
-          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold"></div>
-        </div>
-
         <!-- 預約日期 -->
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約日期</label>
@@ -317,31 +306,133 @@
           <input type="hidden" id="time" required>
         </div>
 
-        <!-- ✨ 預約送出前「即時費用小計框」 -->
-        <div id="checkoutSummaryBox" class="p-4 rounded-2xl bg-brand-100/70 border border-brand-200 space-y-2 text-xs">
-          <div class="font-bold text-brand-900 border-b border-brand-200 pb-1.5 flex justify-between items-center">
-            <span>預估費用小計</span>
-            <span class="text-[10px] text-brand-500 font-normal">現場施作以後台結單為準</span>
+        <!-- 🏷️ 本月活動方案與折抵/加購選擇 (完全對齊圖一) -->
+        <div class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 shadow-xs space-y-4 text-xs">
+          <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
+            <i class="fa-solid fa-tags text-brand-500"></i> 本月活動方案與折抵/加購選擇
           </div>
-          <div class="flex justify-between items-center text-brand-700">
-            <span>項目原價總計：</span>
-            <span class="font-mono font-bold">NT$ <span id="summaryOriginalPrice">0</span></span>
+
+          <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-2 text-[11.5px] leading-relaxed text-amber-950">
+            <div class="font-bold flex items-center gap-1 text-amber-900">
+              <i class="fa-solid fa-circle-info text-amber-600"></i>
+              <span>包卡使用規則與說明：</span>
+            </div>
+            <div id="promo-rule-content" class="whitespace-pre-line space-y-1.5">
+              • <b>包卡優惠 | 買五送一 (共6次)</b>：購買日起 90 天內需使用完畢。逾期未使用之剩餘次數，恕無法延期、退費或折換現金。<br>
+              • <b>扣次規則</b>：單項技術服務扣 1 次包卡；複合技術扣 2 次包卡。<br>
+              • <b>專屬加購</b>：店內特殊加購護理均需另行計費，不適用於包卡扣抵。
+            </div>
           </div>
-          <div id="rowWalletDiscount" class="hidden flex justify-between items-center text-emerald-700">
-            <span>會員儲值折扣：</span>
-            <span class="font-mono font-bold">- NT$ <span id="summaryWalletDiscount">0</span></span>
+
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <label class="block font-bold text-brand-900">1. 現場加購方案選擇：</label>
+            <select id="addon-package-select" onchange="updateCheckoutSummary()" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none text-xs font-medium">
+              <option value="none" data-price="0">不加購包卡</option>
+              <option value="pkg_hair_cut" data-price="4000">剪髮買5送1方案 (+NT$ 4,000)</option>
+              <option value="pkg_hair_spa" data-price="6000">深層護理買5送1方案 (+NT$ 6,000)</option>
+            </select>
+            <select id="addon-wallet-select" onchange="updateCheckoutSummary()" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none text-xs font-medium">
+              <option value="none" data-price="0">不加購儲值</option>
+              <option value="topup_3000" data-price="3000">儲值 $3,000 (整單享 9 折 + 贈 $300)</option>
+              <option value="topup_5000" data-price="5000">儲值 $5,000 (整單享 85 折 + 贈 $600)</option>
+            </select>
           </div>
-          <div id="rowCouponDiscount" class="hidden flex justify-between items-center text-emerald-700">
-            <span>活動優惠折抵：</span>
-            <span class="font-mono font-bold">- NT$ <span id="summaryCouponDiscount">0</span></span>
+
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <label class="block font-bold text-brand-900">2. 使用已購/當下加購之方案扣抵本次預約：</label>
+            <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+              <input type="checkbox" id="chk-use-package" onchange="updateCheckoutSummary()" class="accent-brand-500 rounded">
+              <span class="font-bold text-brand-800">使用包卡扣抵 (💡 請先帶入電話或選擇加購)</span>
+            </label>
+            <label class="flex items-start gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+              <input type="checkbox" id="chk-use-wallet" onchange="updateCheckoutSummary()" class="accent-brand-500 rounded mt-0.5">
+              <div>
+                <span class="font-bold text-brand-800">使用儲值金扣抵 (💡 請先帶入電話或選擇加購)</span>
+                <div class="text-[10px] text-amber-700 mt-0.5">※ 使用儲值金扣抵時，會以結單金額去折扣並折抵</div>
+              </div>
+            </label>
           </div>
-          <div id="rowPackageCardDeduct" class="hidden flex justify-between items-center text-blue-700">
-            <span>包卡堂票折抵：</span>
-            <span class="font-mono font-bold">- 本次使用堂票 (免付)</span>
+        </div>
+
+        <!-- 活動折扣碼輸入框 (置於小計框上方) -->
+        <div class="space-y-1">
+          <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
+          <div class="flex gap-2">
+            <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3 py-2.5 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/50">
+            <button type="button" onclick="applyCouponCode()" class="px-4 py-2.5 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
           </div>
-          <div class="flex justify-between items-center text-brand-900 font-black text-sm pt-1 border-t border-brand-200">
-            <span>預估應付金額：</span>
-            <span class="text-brand-600 font-mono text-base">NT$ <span id="summaryFinalPrice">0</span></span>
+          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold"></div>
+        </div>
+
+        <!-- 🧮 預算計價即時試算 (完全對齊圖二) -->
+        <div id="checkoutSummaryBox" class="p-5 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3.5 text-xs shadow-xs">
+          <div class="flex justify-between items-center border-b border-brand-200 pb-2">
+            <span class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
+              <i class="fa-solid fa-calculator text-brand-500"></i> 預算計價即時試算
+            </span>
+            <span class="text-[10px] text-brand-500 font-bold" id="badge-member-summary">💳 包卡: 0次 | 💰 儲值: $0</span>
+          </div>
+
+          <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-1.5 text-amber-950">
+            <div class="flex justify-between items-center font-bold text-amber-900 text-xs">
+              <span>1. 施作主項目原價預估區間：</span>
+              <span class="font-mono text-sm" id="summary-service-range">$0</span>
+            </div>
+            <div class="space-y-1 text-[11px] text-amber-800/90 pl-1" id="summary-items-breakdown">
+              <div>(尚未選擇服務項目)</div>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center text-rose-700 font-bold pl-1" id="row-deduct-detail">
+            <span>2. 本次折抵/優惠折抵：</span>
+            <span id="summary-deduct-text">無折抵</span>
+          </div>
+
+          <div class="p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 flex justify-between items-center font-bold text-brand-900" id="row-addon-plan-fee">
+            <span>3. 現場加購方案費用：</span>
+            <span class="font-mono text-brand-600">+NT$ <span id="summary-addon-total">0</span></span>
+          </div>
+
+          <div id="rowDepositDeduct" class="hidden flex justify-between items-center text-amber-800 font-bold pl-1">
+            <span>4. 預約預付訂金折抵：</span>
+            <span class="font-mono">-NT$ <span id="summaryDepositDeduct">0</span></span>
+          </div>
+
+          <div id="box-package-remain-notice" class="hidden p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-emerald-800 font-bold text-center text-xs">
+            扣除本次預約後，剩餘包卡：<span id="text-remain-package-times">0</span> 次
+          </div>
+
+          <div class="flex justify-between items-baseline pt-2 border-t border-brand-200 font-bold text-brand-900">
+            <span class="text-sm">現場預估應付金額：</span>
+            <span class="text-2xl font-black text-[#8C7355] font-serif">NT$ <span id="summary-final-total">0</span></span>
+          </div>
+        </div>
+
+        <!-- 📑 定型化契約與數位手寫簽署專區 -->
+        <div id="digitalContractSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 shadow-xs space-y-3 hidden text-xs">
+          <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
+            <i class="fa-solid fa-file-contract text-[#8C7355]"></i>
+            <span id="display-contract-title">美業服務定型化契約書</span>
+          </div>
+          
+          <div class="p-3 bg-white rounded-2xl border border-brand-200 max-h-36 overflow-y-auto text-[11px] text-brand-700 leading-relaxed whitespace-pre-wrap font-sans" id="display-contract-content">
+            正在讀取服務契約條款...
+          </div>
+
+          <label class="flex items-center gap-2 pt-1 cursor-pointer select-none">
+            <input type="checkbox" id="chk-agree-contract" class="accent-[#8C7355] rounded w-4 h-4">
+            <span class="font-bold text-brand-900 text-xs">我已詳閱並完全同意上述服務契約條款 (必勾選)</span>
+          </label>
+
+          <div class="space-y-1.5 pt-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-brand-800">請於下方灰框處手寫簽名：</span>
+              <button type="button" onclick="clearSignatureCanvas()" class="text-[10px] text-brand-500 underline font-bold">清除重簽</button>
+            </div>
+            <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-inner">
+              <canvas id="signatureCanvas" width="360" height="130" class="w-full h-[130px] touch-none"></canvas>
+            </div>
+            <div class="text-[10px] text-brand-400 text-center">簽署軌跡與時間戳記將加密保存，並由 notice@heysibyl.com 寄發存證副本</div>
           </div>
         </div>
 
@@ -363,9 +454,7 @@
             <span class="flex items-center gap-1.5">🌿 居家保養小叮嚀</span>
             <span class="text-brand-400 group-open:rotate-180 transition transform duration-300">▼</span>
           </summary>
-          <div class="p-4 text-xs text-brand-800/90 leading-relaxed bg-white border-t border-brand-100 whitespace-pre-wrap" id="care-content">1. 服務完成後 48 小時內避免高溫沖洗與劇烈磨擦。
-2. 保持操作部位乾燥並適度補水保濕，維持最佳修護效果。
-3. 若有任何整理保養疑問，歡迎隨時透過官方 LINE 詢問店家。</div>
+          <div class="p-4 text-xs text-brand-800/90 leading-relaxed bg-white border-t border-brand-100 whitespace-pre-wrap" id="care-content"></div>
         </details>
 
         <!-- 社群與資訊 -->
@@ -392,7 +481,7 @@
   </footer>
 </div>
 
-<!-- 給評 Modal 彈窗 -->
+<!-- 給評 Modal 彈窗 (修正標籤選中樣式) -->
 <div id="reviewModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
   <div class="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-xl border border-brand-200 text-xs">
     <div class="flex justify-between items-center">
@@ -400,7 +489,6 @@
       <button onclick="closeReviewModal()" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
     </div>
 
-    <!-- 星星評分 -->
     <div class="text-center space-y-1">
       <div id="starContainer" class="flex justify-center gap-2 text-2xl text-gray-300 cursor-pointer">
         <i class="fa-solid fa-star text-amber-400" onclick="setReviewRating(1)"></i>
@@ -412,15 +500,14 @@
       <input type="hidden" id="reviewRatingVal" value="5">
     </div>
 
-    <!-- 標籤按鈕點選 (特色服務多選) -->
     <div class="space-y-1.5">
       <label class="font-bold text-brand-800">服務特色點選 (可多選)</label>
       <div id="reviewTagsContainer" class="flex flex-wrap gap-1.5">
-        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">細心溫柔</span>
-        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">完全不推銷</span>
-        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">手法專業</span>
-        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">環境極放鬆</span>
-        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer">成效超滿意</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer font-bold">細心溫柔</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer font-bold">完全不推銷</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer font-bold">手法專業</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer font-bold">環境極放鬆</span>
+        <span onclick="toggleReviewTag(this)" class="tag-pill px-2.5 py-1 rounded-full border border-brand-200 bg-brand-50 text-brand-700 cursor-pointer font-bold">成效超滿意</span>
       </div>
     </div>
 
@@ -455,11 +542,10 @@
     availableDates: [], services: [], portfolio: [], promoImgs: [], 
     weeklyOffDays: [], customOffDates: [], futureBookings: [], staffSchedules: {},
     enableDeposit: false, depositMode: 'all', depositAmount: 0, depositInfo: '',
-    enableStaffSelect: true, enableFeaturedShop: true,
-    enableShowPrice: true, enableCustNotes: true
+    enableStaffSelect: true, enableFeaturedShop: false,
+    enableShowPrice: true, enableCustNotes: true, enableContract: false
   };
 
-  // 會員即時折扣與包卡狀態
   let memberData = {
     walletBalance: 0,
     discountPercent: 1,
@@ -473,6 +559,8 @@
   let currentPortfolioList = [];
   let isPortfolioExpanded = false;
 
+  let sigCanvas, sigCtx, isSigDrawing = false;
+
   async function initLiff() {
     try {
       await liff.init({ liffId: "2011183690-A3PkQLO3" });
@@ -483,9 +571,7 @@
           document.getElementById('lineName').value = profile.displayName;
         }
       }
-    } catch(e) {
-      console.log("非 LINE 內建瀏覽器或 LIFF 初始化跳過");
-    }
+    } catch(e) {}
   }
 
   async function directSupabaseFetch(endpoint) {
@@ -500,10 +586,8 @@
     }
   }
 
-  // ✨ 總控台公告同步監聽 ＆ 全平台維護／個別店家鎖定檢查
   async function checkMaintenanceAndAnnouncement() {
     try {
-      // 1. 檢查個別店家是否被總管鎖定
       const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
       if (storeRes && storeRes.length > 0) {
         const s = storeRes[0];
@@ -516,7 +600,6 @@
         }
       }
 
-      // 2. 檢查全平台公告與全域維護鎖定
       const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       if (Array.isArray(announcements) && announcements.length > 0) {
         const item = announcements[0];
@@ -532,9 +615,7 @@
           document.getElementById('system-banner').classList.remove('hidden');
         }
       }
-    } catch (err) {
-      console.warn("無法取得全域公告: ", err);
-    }
+    } catch (err) {}
     return true;
   }
 
@@ -573,14 +654,6 @@
         isAddon: s.is_addon === true, sortOrder: s.sort_order || 0
       }));
 
-      if (formattedServices.length === 0) {
-        formattedServices = [
-          { id: "def-1", name: "剪髮造型設計", duration: 60, type: "Group_A", price: "800", isAddon: false, sortOrder: 0 },
-          { id: "def-2", name: "深層水光護髮", duration: 60, type: "Group_A", price: "1200", isAddon: false, sortOrder: 1 },
-          { id: "def-3", name: "頭皮去角質SPA", duration: 30, type: "Group_A", price: "600", isAddon: true, sortOrder: 2 }
-        ];
-      }
-
       db = {
         storeName: sCfg.display_title || sInfo.store_name || "線上預約",
         subtitle: sCfg.display_subtitle || "專業美業沙龍",
@@ -601,9 +674,12 @@
         depositAmount: Number(sCfg.deposit_amount || 0),
         depositInfo: sCfg.deposit_info || '',
         enableStaffSelect: sCfg.enable_staff_select !== false,
-        enableFeaturedShop: sCfg.enable_featured_shop !== false,
+        enableFeaturedShop: sCfg.enable_featured_shop === true,
         enableShowPrice: sCfg.enable_show_price !== false,
         enableCustNotes: sCfg.enable_cust_notes !== false,
+        enableContract: sCfg.enable_contract === true,
+        contractTitle: sCfg.contract_title || '美業服務定型化契約書',
+        contractContent: sCfg.contract_content || '一、本沙龍服務均由專業技術人員施作，操作前已充分向顧客說明施作內容與流程。\n二、顧客應誠實告知過敏史、特殊體質或近期施作技術。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。',
         staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
         staffSchedules: sCfg.staff_schedules || {},
         shiftStartTime: sCfg.shift_start_time || "09:00",
@@ -619,9 +695,8 @@
 
       renderStoreUI();
       loadApprovedReviews();
-    } catch (e) {
-      console.error("前台初始化異常: ", e);
-    }
+      initSignature();
+    } catch (e) {}
   };
 
   function renderStoreUI() {
@@ -683,6 +758,15 @@
     }
 
     document.getElementById('care-content').innerText = db.careText;
+
+    if (db.enableContract) {
+      document.getElementById('digitalContractSection').classList.remove('hidden');
+      document.getElementById('display-contract-title').innerText = db.contractTitle;
+      document.getElementById('display-contract-content').innerText = db.contractContent;
+      document.getElementById('emailLabel').innerHTML = '電子信箱 <span class="text-rose-600 font-bold">*必填，將寄送契約存證副本</span>';
+      document.getElementById('email').required = true;
+    }
+
     setupPortfolio();
     renderServices();
     renderFrontCalendar();
@@ -704,6 +788,7 @@
     } else {
       depositBox.classList.add('hidden');
     }
+    updateCheckoutSummary();
   }
 
   function selectStaff(id, name, el) {
@@ -815,7 +900,6 @@
     calculateTimesLocally();
   }
 
-  // ✨ 時段計算：當日過去時段與預約緩衝小時自動鎖定反灰
   function calculateTimesLocally() {
     const sStr = document.getElementById('service').value;
     const dStr = document.getElementById('date').value;
@@ -845,7 +929,6 @@
     const staffKey = `${staffId}_${dStr}`;
     const customStaffSlots = db.staffSchedules && db.staffSchedules[staffKey];
 
-    // 當日過期時間與緩衝計算
     const now = new Date();
     const todayStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
     const isToday = (dStr === todayStr);
@@ -859,13 +942,8 @@
       const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
       
       let isAvailable = true;
+      if (isToday && (t < (currentMinutesNow + bufferMinutes))) isAvailable = false;
 
-      // 防呆 1：若是當天，已過的時間或在緩衝小時內自動禁止
-      if (isToday && (t < (currentMinutesNow + bufferMinutes))) {
-        isAvailable = false;
-      }
-
-      // 排班自訂狀態檢查
       const hasCustomSchedule = db.staffSchedules && Object.keys(db.staffSchedules).some(k => k.endsWith(`_${dStr}`));
       if (hasCustomSchedule) {
         if (staffId === 'all') {
@@ -904,7 +982,6 @@
     grid.innerHTML = html || '<div class="col-span-3 text-center py-4 text-xs text-brand-400">當日無開放預約時段</div>';
   }
 
-  // ✨ 時段點擊選中：強制深拿鐵棕高對比純白字
   function selectTimePill(timeStr, el) {
     document.querySelectorAll('.time-pill').forEach(p => {
       p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-brand-500 hover:bg-brand-50 transition shadow-xs";
@@ -913,9 +990,8 @@
     document.getElementById('time').value = timeStr;
   }
 
-  // ✨ 電話輸入失焦：自動查會員儲值金、整單折扣、包卡堂數
-  function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerByPhone(); }
-  async function checkCustomerByPhone() {
+  function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerBenefitsByPhone(); }
+  async function checkCustomerBenefitsByPhone() {
     let phone = document.getElementById('phone').value.trim();
     if (phone.length >= 8) {
       document.getElementById('welcome-msg').style.display = 'block';
@@ -941,7 +1017,6 @@
           setType('new', document.querySelectorAll('.type-btn')[1]);
         }
 
-        // 讀取儲值金與包卡
         if (custs && custs.length > 0) {
           const c = custs[0];
           memberData.walletBalance = Number(c.wallet_balance || 0);
@@ -977,7 +1052,6 @@
     }
   }
 
-  // ✨ 套用折扣碼
   async function applyCouponCode() {
     const code = document.getElementById('couponCode').value.trim().toUpperCase();
     const notice = document.getElementById('couponNotice');
@@ -997,62 +1071,92 @@
     updateCheckoutSummary();
   }
 
-  // ✨ 即時費用小計框更新
+  // ✨ 預算計價即時試算更新 (完全符合圖一、圖二結構)
   function updateCheckoutSummary() {
-    let originalTotal = 0;
-    let hasPackageApplied = false;
+    let mainTotal = 0;
+    let breakdownHtml = '';
+    const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
 
-    const checkedItems = document.querySelectorAll('#service-grid input:checked');
-    checkedItems.forEach(cb => {
-      const pVal = cb.getAttribute('data-price') || '0';
-      const num = pVal.match(/\d+/);
-      const itemPrice = num ? Number(num[0]) : 0;
-      const sName = cb.value;
-
-      const matchPkg = memberData.packages.find(p => p.service_name === sName && p.remaining_times > 0);
-      if (matchPkg) {
-        hasPackageApplied = true;
-      } else {
-        originalTotal += itemPrice;
-      }
-    });
-
-    document.getElementById('summaryOriginalPrice').innerText = originalTotal;
-
-    let walletDiscount = 0;
-    if (memberData.discountPercent < 1 && originalTotal > 0) {
-      walletDiscount = Math.round(originalTotal * (1 - memberData.discountPercent));
-      document.getElementById('summaryWalletDiscount').innerText = walletDiscount;
-      document.getElementById('rowWalletDiscount').classList.remove('hidden');
+    if (checkedBoxes.length === 0) {
+      document.getElementById('summary-items-breakdown').innerHTML = '<div>(尚未選擇服務項目)</div>';
+      document.getElementById('summary-service-range').innerText = '$0';
     } else {
-      document.getElementById('rowWalletDiscount').classList.add('hidden');
+      checkedBoxes.forEach(cb => {
+        const pVal = cb.getAttribute('data-price') || '0';
+        const num = pVal.match(/\d+/);
+        const itemPrice = num ? Number(num[0]) : 0;
+        mainTotal += itemPrice;
+        const isAddon = cb.getAttribute('data-isaddon') === 'true';
+        breakdownHtml += `
+          <div class="flex justify-between items-center">
+            <span>(${isAddon ? '專屬加購' : '主服務項目'}：${cb.value})</span>
+            <span class="font-mono">${isAddon ? '+' : ''}$${pVal}</span>
+          </div>`;
+      });
+      document.getElementById('summary-items-breakdown').innerHTML = breakdownHtml;
+      document.getElementById('summary-service-range').innerText = `$${mainTotal}`;
     }
 
-    let couponDiscount = 0;
-    if (activeCoupon && originalTotal > 0) {
+    const usePkg = document.getElementById('chk-use-package')?.checked;
+    const useWallet = document.getElementById('chk-use-wallet')?.checked;
+    let deductText = '無折抵';
+    let deductAmount = 0;
+
+    const matchedPkg = memberData.packages.find(p => checkedBoxes.some(cb => cb.value.includes(p.service_name)));
+    const remainNotice = document.getElementById('box-package-remain-notice');
+
+    if (usePkg && matchedPkg && matchedPkg.remaining_times > 0) {
+      deductText = `套用包卡扣抵 1 次 (主項目折抵 $0)`;
+      deductAmount = mainTotal;
+      remainNotice.classList.remove('hidden');
+      document.getElementById('text-remain-package-times').innerText = matchedPkg.remaining_times - 1;
+    } else {
+      remainNotice.classList.add('hidden');
+    }
+
+    if (useWallet && memberData.discountPercent < 1 && deductAmount === 0 && mainTotal > 0) {
+      const discountVal = Math.round(mainTotal * (1 - memberData.discountPercent));
+      deductText = `儲值會員享 ${memberData.discountPercent * 10} 折 (-$${discountVal})`;
+      deductAmount = discountVal;
+    }
+
+    if (activeCoupon && deductAmount === 0 && mainTotal > 0) {
       if (activeCoupon.discount_type === 'cash') {
-        couponDiscount = Number(activeCoupon.discount_value || 0);
-      } else if (activeCoupon.discount_type === 'percent') {
-        couponDiscount = Math.round(originalTotal * (1 - Number(activeCoupon.discount_value || 1)));
+        deductAmount = Number(activeCoupon.discount_value || 0);
+        deductText = `折扣碼折抵 (-$${deductAmount})`;
+      } else {
+        deductAmount = Math.round(mainTotal * (1 - Number(activeCoupon.discount_value || 1)));
+        deductText = `折扣碼享 ${activeCoupon.discount_value * 10} 折 (-$${deductAmount})`;
       }
-      document.getElementById('summaryCouponDiscount').innerText = couponDiscount;
-      document.getElementById('rowCouponDiscount').classList.remove('hidden');
+    }
+    document.getElementById('summary-deduct-text').innerText = deductText;
+
+    const pkgSel = document.getElementById('addon-package-select');
+    const walSel = document.getElementById('addon-wallet-select');
+    const addonPkgFee = Number(pkgSel.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
+    const addonWalFee = Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
+    const totalAddon = addonPkgFee + addonWalFee;
+    document.getElementById('summary-addon-total').innerText = totalAddon.toLocaleString();
+
+    const custTypeVal = document.getElementById('custType')?.value || 'old';
+    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+    let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
+    const rowDeposit = document.getElementById('rowDepositDeduct');
+
+    if (depositDeduct > 0) {
+      rowDeposit.classList.remove('hidden');
+      document.getElementById('summaryDepositDeduct').innerText = depositDeduct;
     } else {
-      document.getElementById('rowCouponDiscount').classList.add('hidden');
+      rowDeposit.classList.add('hidden');
     }
 
-    if (hasPackageApplied) {
-      document.getElementById('rowPackageCardDeduct').classList.remove('hidden');
-    } else {
-      document.getElementById('rowPackageCardDeduct').classList.add('hidden');
-    }
-
-    let finalTotal = originalTotal - walletDiscount - couponDiscount;
+    let finalTotal = (mainTotal - deductAmount) + totalAddon - depositDeduct;
     if (finalTotal < 0) finalTotal = 0;
-    document.getElementById('summaryFinalPrice').innerText = finalTotal;
+    document.getElementById('summary-final-total').innerText = finalTotal.toLocaleString();
+
+    document.getElementById('badge-member-summary').innerText = `💳 包卡: ${memberData.packages.reduce((sum, p) => sum + p.remaining_times, 0)}次 | 💰 儲值: $${memberData.walletBalance}`;
   }
 
-  // ✨ 載入審核通過的好評牆
   async function loadApprovedReviews() {
     try {
       const res = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&is_approved=eq.true&order=created_at.desc`);
@@ -1076,7 +1180,6 @@
     } catch(e) {}
   }
 
-  // 好評 Modal 操作
   function openReviewModal() { document.getElementById('reviewModal').classList.remove('hidden'); }
   function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); }
   function setReviewRating(star) {
@@ -1090,6 +1193,8 @@
     el.classList.toggle('bg-[#8C7355]');
     el.classList.toggle('text-white');
     el.classList.toggle('border-[#8C7355]');
+    el.classList.toggle('bg-brand-50');
+    el.classList.toggle('text-brand-700');
   }
   async function submitCustomerReview() {
     const name = document.getElementById('name').value.trim() || '沙龍顧客';
@@ -1196,19 +1301,14 @@
 
   function promptQuickReportDeposit() {
     const phone = document.getElementById('phone').value.trim();
-    if (!phone) { 
-      Swal.fire({ text: '請先輸入您的手機號碼', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-      return; 
-    }
+    if (!phone) return Swal.fire({ text: '請先輸入您的手機號碼', icon: 'warning' }); 
     Swal.fire({
       title: '回報訂金匯款後五碼',
       input: 'text',
       inputPlaceholder: '請輸入帳號末 5 碼數字',
       showCancelButton: true,
       confirmButtonText: '確認送出',
-      cancelButtonText: '取消',
-      customClass: { confirmButton: 'swal2-confirm-brown' },
-      buttonsStyling: false,
+      confirmButtonColor: '#8C7355',
       preConfirm: (val) => {
         if (!val || val.length !== 5) { Swal.showValidationMessage('請填寫完整 5 碼'); }
         return val;
@@ -1222,59 +1322,168 @@
             headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
             body: JSON.stringify({ deposit_reported: true, deposit_last5: r.value.trim() })
           });
-          Swal.fire({ title: '已收到回報！', text: '店家確認款項後會立即為您保留時段。', icon: 'success', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
+          Swal.fire('已收到回報！', '店家確認款項後會立即為您保留時段。', 'success');
         } else {
-          Swal.fire({ text: '查無此號碼之待確認預約', icon: 'error', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false });
+          Swal.fire('查無此號碼之待確認預約', '', 'error');
         }
       }
     });
   }
 
-  // ✨ 表單送出：嚴格白名單過濾，徹底根除 custType Schema Cache 報錯
+  function initSignature() {
+    sigCanvas = document.getElementById('signatureCanvas');
+    if (!sigCanvas) return;
+    sigCtx = sigCanvas.getContext('2d');
+    sigCtx.strokeStyle = "#33271C";
+    sigCtx.lineWidth = 2.5;
+    sigCtx.lineCap = "round";
+
+    const getPos = (e) => {
+      const rect = sigCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => { isSigDrawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+    const draw = (e) => { if (!isSigDrawing) return; e.preventDefault(); const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
+    const stopDraw = () => { isSigDrawing = false; };
+
+    sigCanvas.addEventListener('mousedown', startDraw);
+    sigCanvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+
+    sigCanvas.addEventListener('touchstart', startDraw, { passive: false });
+    sigCanvas.addEventListener('touchmove', draw, { passive: false });
+    window.addEventListener('touchend', stopDraw);
+  }
+
+  function clearSignatureCanvas() {
+    if (sigCtx) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  }
+
+  function isCanvasBlank(canvas) {
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width; blank.height = canvas.height;
+    return canvas.toDataURL() === blank.toDataURL();
+  }
+
+  async function uploadSignatureToSupabase(canvas) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(async (blob) => {
+        if (!blob) return reject(new Error("簽名畫布讀取失敗"));
+        const fileName = `${CURRENT_STORE_ID}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.png`;
+        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/signatures/${fileName}`;
+        try {
+          const res = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+              "Content-Type": "image/png"
+            },
+            body: blob
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/signatures/${fileName}`;
+          resolve(publicUrl);
+        } catch (err) {
+          reject(err);
+        }
+      }, 'image/png');
+    });
+  }
+
+  // ✨ 表單提交：白名單過濾、合約簽章直傳 Supabase Storage、預付訂金防呆
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
     const sVal = document.getElementById('service').value;
     const dValRaw = document.getElementById('date').value;
     const tVal = document.getElementById('time').value;
-    if (!sVal) { 
-      return Swal.fire({ text: '請至少選擇一項預約項目', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-    }
-    if (!dValRaw) { 
-      return Swal.fire({ text: '請點選預約日期', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
-    }
-    if (!tVal) { 
-      return Swal.fire({ text: '請選取預約時段', icon: 'warning', customClass: { confirmButton: 'swal2-confirm-brown' }, buttonsStyling: false }); 
+    if (!sVal) return Swal.fire('請至少選擇一項施作項目', '', 'warning');
+    if (!dValRaw || !tVal) return Swal.fire('請點選預約日期與時段', '', 'warning');
+
+    const custTypeVal = document.getElementById('custType')?.value || 'old';
+    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+    let deposit5Code = '';
+
+    if (isNeedDeposit) {
+      const confirmResult = await Swal.fire({
+        title: '預約需預付訂金提醒',
+        html: `
+          <div class="text-left text-xs space-y-2 text-brand-800 leading-relaxed">
+            <p class="font-bold text-amber-800">📌 本次預約需預付訂金：NT$ ${db.depositAmount} 元</p>
+            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap">${db.depositInfo}</div>
+            <p class="text-[11px] text-brand-600">完成匯款後，請於下方輸入「轉帳帳號後五碼」以利店家即刻核對保留時段！</p>
+            <input type="text" id="prompt-deposit-5" maxlength="5" placeholder="請輸入轉帳後五碼" class="swal2-input text-xs text-center">
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '已完成匯款，送出預約',
+        confirmButtonColor: '#8C7355',
+        cancelButtonText: '稍後再付',
+        preConfirm: () => document.getElementById('prompt-deposit-5')?.value.trim()
+      });
+      if (confirmResult.isDismissed) return;
+      deposit5Code = confirmResult.value || '';
     }
 
     const btn = document.getElementById('subBtn');
-    btn.disabled = true; 
-    btn.innerText = "正在傳送預約...";
+    btn.disabled = true;
+    btn.innerText = "正在處理合約與送出預約...";
+
+    let sigUrl = "";
+    if (db.enableContract) {
+      const agree = document.getElementById('chk-agree-contract')?.checked;
+      if (!agree) {
+        btn.disabled = false;
+        btn.innerText = "送出預約申請";
+        return Swal.fire('請勾選同意服務契約條款', '', 'warning');
+      }
+      if (isCanvasBlank(sigCanvas)) {
+        btn.disabled = false;
+        btn.innerText = "送出預約申請";
+        return Swal.fire('請在簽名框親筆手寫簽名', '', 'warning');
+      }
+      try {
+        sigUrl = await uploadSignatureToSupabase(sigCanvas);
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = "送出預約申請";
+        return Swal.fire('數位簽章存檔失敗，請重試', err.message, 'error');
+      }
+    }
 
     const dVal = dValRaw.replace(/\//g, '-');
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
     const emailVal = document.getElementById('email')?.value.trim() || '';
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
-    const custTypeVal = document.getElementById('custType')?.value || 'old';
     const nameVal = document.getElementById('name').value.trim();
     const phoneVal = document.getElementById('phone').value.trim();
     const staffIdVal = document.getElementById('staffId').value || 'all';
     const staffNameVal = document.getElementById('staffName').value || '不指定';
-    const finalEstimatedPrice = Number(document.getElementById('summaryFinalPrice').innerText || 0);
+    const refVal = document.getElementById('referrerName')?.value.trim() || '';
+    const finalPrice = Number(document.getElementById('summary-final-total').innerText.replace(/,/g, '') || 0);
+    const depositDeductVal = isNeedDeposit ? Number(db.depositAmount || 0) : 0;
 
-    // 1. 純淨 Supabase 資料庫 Payload (嚴格排除非資料庫欄位，解決 schema cache 錯誤)
     const dbPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: nameVal,
       customer_phone: phoneVal,
       customer_type: custTypeVal,
-      customer_notes: custNotesVal,
+      customer_notes: custNotesVal ? (refVal ? `${custNotesVal} (推薦人: ${refVal})` : custNotesVal) : (refVal ? `推薦人: ${refVal}` : ''),
       line_name: guestLineUid ? guestLineUid : document.getElementById('lineName').value.trim(),
       notes: emailVal ? `Email: ${emailVal}` : '',
       service_names: sVal,
-      price: finalEstimatedPrice,
+      price: finalPrice,
       appointment_time: appointmentIso,
       staff_id: staffIdVal,
       staff_name: staffNameVal,
+      signature_url: sigUrl || null,
+      signed_at: sigUrl ? new Date().toISOString() : null,
+      deposit_deducted: depositDeductVal,
+      deposit_reported: Boolean(deposit5Code),
+      deposit_last5: deposit5Code || null,
       status: "待確認"
     };
 
@@ -1294,7 +1503,6 @@
         throw new Error(errJson.message || "資料庫寫入失敗");
       }
 
-      // 2. 異步推播給 GAS
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
@@ -1313,50 +1521,27 @@
         })
       }).catch(() => {});
 
-      const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
-      let successHtml = '店家確認排程後會立即與您聯繫確認❤️';
-      if (isNeedDeposit) {
-        successHtml = `
-          <div class="text-left text-xs space-y-2 text-brand-800">
-            <p class="font-bold text-amber-800">📌 本次預約需預付訂金：${db.depositAmount} 元</p>
-            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 whitespace-pre-wrap leading-relaxed">${db.depositInfo}</div>
-            <p class="text-[11px] text-brand-500">完成匯款後，歡迎回到首頁回報後五碼以保留時段！</p>
-          </div>
-        `;
-      }
       Swal.fire({
-        title: '預約申請已送出！',
-        html: successHtml,
+        title: '預約申請已成功送出！',
+        html: `
+          <div class="text-xs text-brand-800 text-left space-y-1.5 leading-relaxed bg-brand-50 p-3 rounded-2xl border border-brand-200">
+            <div>店家確認排程後將第一時間與您聯繫確認❤️</div>
+            ${sigUrl ? '<div>✓ 數位契約與簽署存證副本已自動寄發至您的信箱。</div>' : ''}
+          </div>
+        `,
         icon: 'success',
         confirmButtonText: '確定',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
+        confirmButtonColor: '#8C7355'
       }).then(() => {
         document.getElementById('booking-ui').style.display = 'none';
         document.getElementById('success-screen').style.display = 'flex';
       });
     } catch (err) {
-      Swal.fire({
-        title: '預約傳送失敗',
-        text: err.message,
-        icon: 'error',
-        confirmButtonText: '重試',
-        customClass: { confirmButton: 'swal2-confirm-brown' },
-        buttonsStyling: false
-      });
+      Swal.fire('預約傳送失敗', err.message, 'error');
       btn.disabled = false;
-      btn.innerText = "送出預約";
+      btn.innerText = "送出預約申請";
     }
   };
-
-  // ✨ PWA Service Worker 註冊與 Web Push 監聽
-  if ('serviceWorker' in navigator && 'PushManager' in window) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch(err => {
-        console.log('ServiceWorker 註冊失敗: ', err);
-      });
-    });
-  }
 </script>
 </body>
 </html>
