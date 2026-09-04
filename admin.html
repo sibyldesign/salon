@@ -429,6 +429,16 @@
   <!-- 分頁 11. 行銷與會員管理中心 (規則庫已正確納入) -->
   <div id="page-marketing" class="page space-y-5" style="display: none;">
     <!-- 方案規則設定庫 -->
+    <!-- 行銷活動與包卡規則文字自訂 -->
+<div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
+  <div class="flex justify-between items-center">
+    <label class="font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「使用規則與說明」文字內容編輯
+    </label>
+    <button onclick="savePromoRulesText()" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs">儲存說明內容</button>
+  </div>
+  <textarea id="cfg-promo-rules-input" rows="4" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed" placeholder="輸入要展示於前台黃色區塊的使用規則說明文字..."></textarea>
+</div>
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
       <div class="flex justify-between items-center border-b border-brand-100 pb-2">
         <div>
@@ -1042,6 +1052,13 @@
     { dot: '#A39A8F', bg: '#F3F0EC', text: '#595044', border: '#D6CDC2' }
   ];
 
+  async function savePromoRulesText() {
+  const text = document.getElementById('cfg-promo-rules-input').value.trim();
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: text });
+  backendData.settings.promoRulesText = text;
+  Swal.fire('說明文字已更新！', '前台已同步生效', 'success');
+}
+  
   function getStaffColor(staffId, staffName = "") {
     if (!staffId || staffId === 'all' || staffId === '不指定') {
       return STAFF_MORANDI_PALETTE[0];
@@ -3242,14 +3259,31 @@
       });
     }
 
-    // ✨ 圖二下方：自訂 5 組關懷週期與文案（精準排除 undefined 字樣並帶入預設範本）
-    const defaultCareRules = [
-      { name: "燙染造型", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
-      { name: "洗剪設計", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
-      { name: "深層護理", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
-      { name: "光療美甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" },
-      { name: "漂髮, 挑染", weeks: 1, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
-    ];
+    // 美業公版 5 組經典回訪關懷範本
+const DEFAULT_CARE_RULES = [
+  { name: "染髮造型, 染髮, 漂髮, 挑染, 質質感光染", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！髮色與光澤維持得還好嗎？隨時歡迎預約回娘家補染護理唷❤️" },
+  { name: "剪髮造型, 洗剪, 剪髮", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度與厚度是否需要修剪整理了呢？歡迎隨時線上挑選時段預約唷✂️" },
+  { name: "深層護髮, 頭皮SPA, 結構護理", weeks: 4, msg: "嗨 {姓名}～定期做深層護理能維持髮絲強韌與柔順光澤，歡迎預約回娘家享受放鬆洗護時光✨" },
+  { name: "光療美甲, 凝膠, 造型指甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整與更換款式，才不會折到真甲或產生縫隙唷💅" },
+  { name: "美睫嫁接, 角蛋白, 睫毛管理", weeks: 3, msg: "嗨 {姓名}～距離上次美睫已滿3週，目前睫毛生長狀況還習慣嗎？隨時歡迎預約回補維護根根分明的自然捲翹度唷👁️" }
+];
+
+    // 預設服務項目列表 (剪、燙、染、護、SPA)
+const DEFAULT_SERVICES = [
+  { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0 },
+  { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1 },
+  { id: "def-svc-3", name: "客製溫塑燙髮 (含洗剪護)", price: "3200-4800", duration: 150, type: "Group_A", isAddon: false, sortOrder: 2 },
+  { id: "def-svc-4", name: "深層黑曜光感結構護髮", price: "1600", duration: 60, type: "Group_A", isAddon: false, sortOrder: 3 },
+  { id: "def-svc-5", name: "深層頭皮淨化去角質SPA", price: "800", duration: 40, type: "Group_A", isAddon: true, sortOrder: 4 }
+];
+
+// 預設作品展示列表 (精緻美業作品圖庫)
+const DEFAULT_PORTFOLIO = [
+  { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 },
+  { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80", sortOrder: 1 },
+  { id: "def-port-3", cat: "美甲光療", title: "法式裸透晶石貓眼", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80", sortOrder: 2 },
+  { id: "def-port-4", cat: "頭皮護理", title: "深層水光頭皮修護SPA", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80", sortOrder: 3 }
+];
 
     const careContainer = document.getElementById('care-rules-container');
     if (careContainer) {
