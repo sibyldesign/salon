@@ -445,20 +445,20 @@
     <div class="flex justify-between items-center border-b border-brand-100 pb-2">
       <h3 class="font-bold text-sm text-brand-900 flex items-center gap-1.5">
         <i class="fa-solid fa-scroll text-[#8C7355]"></i>
-        <span id="modal-contract-title">美業服務定型化契約條款</span>
+        <span id="modal-contract-title">美業服務定型化服務契約書</span>
       </h3>
       <button type="button" onclick="closeContractModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
     </div>
 
-    <!-- 條款本文容器 (監聽滾動至底部) -->
-    <div id="contractScrollArea" onscroll="handleContractScroll(this)" class="flex-1 overflow-y-auto p-3 bg-brand-50/60 rounded-2xl border border-brand-200 text-[11.5px] leading-relaxed text-brand-800 whitespace-pre-wrap font-sans">
+    <!-- 條款本文容器 (設定固定高度與滾動監聽) -->
+    <div id="contractScrollArea" onscroll="handleContractScroll(this)" class="h-64 overflow-y-auto p-4 bg-brand-50/60 rounded-2xl border border-brand-200 text-[11.5px] leading-relaxed text-brand-800 whitespace-pre-wrap font-sans">
       正在載入契約條款內容...
     </div>
 
-    <!-- 底部同意按鈕 (預設反灰鎖定) -->
+    <!-- 底部同意按鈕與提示 -->
     <div class="pt-2 border-t border-brand-100 space-y-2">
-      <div id="scroll-bottom-hint" class="text-[10px] text-center text-amber-700 font-bold animate-pulse">
-        ↓ 請滑動閱讀至條款最底端，方可點擊同意
+      <div id="scroll-bottom-hint" class="text-[10px] text-center text-amber-800 font-bold">
+        ↓ 請完整閱讀完整契約條款，方可點擊同意
       </div>
       <button id="btn-agree-contract-modal" type="button" disabled onclick="confirmAgreeContract()" class="w-full py-3 rounded-xl font-bold transition text-xs bg-gray-200 text-gray-400 cursor-not-allowed">
         ✓ 本人已詳細閱讀並完全同意
@@ -730,19 +730,66 @@
     } catch (e) {}
   };
 
-  // 打開契約視窗
+  // ✨ 旗艦級完整美業定型化契約內容範本 (排版工整，保證產生捲軸)
+const COMPREHENSIVE_CONTRACT_TEMPLATE = `美業沙龍預約服務定型化契約條款
+
+為保障雙方權益，本沙龍遵循行政院消費者保護處定型化契約規範，制定以下服務條款：
+
+一、專業服務與技術確認
+1. 本沙龍所有剪髮、燙髮、染髮、護髮、美睫美甲及皮膚管理技術，均由具備專業證照或受過原廠培訓之合格技術人員親自施作。
+2. 施作前，專員將針對顧客需求進行評估，並清楚向顧客說明施作流程、預估時長、建議施作項目及最終實收金額。
+
+二、顧客健康與體質告知義務
+1. 顧客如有皮膚過敏史、頭皮敏感、心血管疾病、懷孕、蟹足腫、近期接受醫美療程或服藥等特殊體質狀況，應於施作前主動誠實告知專員。
+2. 若顧客未事先告知特殊狀況，致使施作過程產生不良反應者，顧客應自負相關責任。
+
+三、預約排程與訂金扣抵規則
+1. 熱門時段預約需依店家規定預付訂金。已支付之訂金將於現場服務結算時全額扣抵消費金額。
+2. 如需取消或變更預約時段，顧客應於預約日前 24 小時主動通知店家改期。
+3. 若顧客無故未到（No-Show）或於預約前 2 小時內臨時取消，店家得扣除該筆訂金以補貼專員保留時段之工時損失。
+
+四、成果維護與技術保固
+1. 技術性燙染或美甲光療服務享有 7 日售後保固服務。顧客於施作後 7 日內若因非人為因素產生捲度異常減退或凝膠脫落，可免費回娘家檢視修補。
+2. 居家保養應嚴格遵照店家衛教說明（如 48 小時內避免高溫沖洗等），非可歸責於店家之正常褪色與自然生長不在保固範圍內。
+
+五、個人資料保護與數位簽章效益
+1. 本系統遵循個人資料保護法，顧客簽署之親筆數位簽名軌跡與預約資料將加密保存於安全雲端儲存空間，作為雙方合約履行之正式存證依據。
+2. 系統將於預約送出後自動發送合約存證副本至顧客填寫之電子郵件信箱。`;
+
 function openContractReadModal() {
   const modal = document.getElementById('contractModal');
   const scrollArea = document.getElementById('contractScrollArea');
-  document.getElementById('modal-contract-title').innerText = db.contractTitle || '美業服務定型化契約條款';
-  scrollArea.innerText = db.contractContent || '一、本沙龍服務均由專業人員施作...\n二、顧客應誠實告知膚質狀況...';
   
-  // 每次打開重置滾動位置與按鈕狀態
+  document.getElementById('modal-contract-title').innerText = db.contractTitle || '美業服務定型化服務契約書';
+  
+  // 處理後台設定的換行符號 \n 轉義，若太短則載入旗艦版範本
+  let content = db.contractContent || '';
+  content = content.replace(/\\n/g, '\n');
+  if (content.length < 150) {
+    content = COMPREHENSIVE_CONTRACT_TEMPLATE;
+  }
+  scrollArea.innerText = content;
+
+  // 重置滾動條
   scrollArea.scrollTop = 0;
   const agreeBtn = document.getElementById('btn-agree-contract-modal');
-  agreeBtn.disabled = true;
-  agreeBtn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-gray-200 text-gray-400 cursor-not-allowed";
-  document.getElementById('scroll-bottom-hint').classList.remove('hidden');
+  const hint = document.getElementById('scroll-bottom-hint');
+
+  // ✨ 智慧高度防呆：判斷是否需要滾動
+  setTimeout(() => {
+    const isScrollable = scrollArea.scrollHeight > scrollArea.clientHeight + 20;
+    if (!isScrollable) {
+      // 內容太短無捲軸時，直接解鎖按鈕
+      agreeBtn.disabled = false;
+      agreeBtn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-[#8C7355] hover:bg-[#7A6246] text-white shadow-md cursor-pointer";
+      hint.innerText = "✓ 您已可點擊下方按鈕完成同意";
+    } else {
+      // 內容長需要滾動時，鎖定按鈕
+      agreeBtn.disabled = true;
+      agreeBtn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-gray-200 text-gray-400 cursor-not-allowed";
+      hint.innerText = "↓ 請完整閱讀完整契約條款，方可點擊同意";
+    }
+  }, 100);
 
   modal.classList.remove('hidden');
 }
@@ -751,31 +798,27 @@ function closeContractModal() {
   document.getElementById('contractModal').classList.add('hidden');
 }
 
-// 監聽滾動事件：到達底部（允許 15px 誤差）時亮起同意按鈕
 function handleContractScroll(el) {
-  const isAtBottom = (el.scrollHeight - el.scrollTop <= el.clientHeight + 15);
+  // 滾動到底部 20px 內觸發解鎖
+  const isAtBottom = (el.scrollHeight - el.scrollTop <= el.clientHeight + 20);
   const agreeBtn = document.getElementById('btn-agree-contract-modal');
   const hint = document.getElementById('scroll-bottom-hint');
 
   if (isAtBottom) {
     agreeBtn.disabled = false;
     agreeBtn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-[#8C7355] hover:bg-[#7A6246] text-white shadow-md cursor-pointer";
-    hint.classList.add('hidden');
+    hint.innerText = "✓ 已閱讀至最底端，請點擊下方按鈕完成同意";
   }
 }
 
-// 點擊確認同意契約
 function confirmAgreeContract() {
   document.getElementById('hasAgreedContract').value = "true";
   document.getElementById('contract-read-status').innerHTML = '<span class="text-emerald-700 font-bold">✓ 已詳細閱讀並同意契約條款</span>';
   closeContractModal();
   
-  // 解鎖並展開簽名框
   const sigWrapper = document.getElementById('signatureWrapper');
   sigWrapper.classList.remove('hidden');
-  initSignature(); // 初始化畫布監聽
-  
-  // 平滑滾動至簽名框
+  initSignature();
   sigWrapper.scrollIntoView({ behavior: 'smooth' });
 }
     
@@ -1410,7 +1453,52 @@ function confirmAgreeContract() {
     });
   }
 
-  function initSignature() {
+  // ✨ 全域公告與維護鎖定自動輪詢引擎 (每 15 秒同步一次最新狀態)
+async function syncGlobalMaintenanceStatus() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const announcements = await res.json();
+
+    const banner = document.getElementById('system-banner');
+    const bannerText = document.getElementById('system-banner-text');
+    const maintScreen = document.getElementById('maintenance-screen');
+    const maintDesc = document.getElementById('maintenance-desc');
+    const bookingUi = document.getElementById('booking-ui');
+
+    if (Array.isArray(announcements) && announcements.length > 0) {
+      const item = announcements[0];
+      
+      // 1. 維護鎖定觸發
+      if (item.is_maintenance === true) {
+        maintDesc.innerText = item.content || "全平台進行例行升級維護中，施工完畢將即刻開放使用。";
+        maintScreen.classList.remove('hidden');
+        bookingUi.style.display = 'none';
+        banner.classList.add('hidden');
+        return;
+      }
+
+      // 2. 一般提示公告
+      if (item.content) {
+        bannerText.innerText = item.content;
+        banner.classList.remove('hidden');
+        maintScreen.classList.add('hidden');
+        bookingUi.style.display = 'flex';
+      }
+    } else {
+      // 無公告時自動隱藏橫幅與遮罩
+      banner.classList.add('hidden');
+      maintScreen.classList.add('hidden');
+      bookingUi.style.display = 'flex';
+    }
+  } catch(e) {}
+}
+
+// 啟動定時輪詢 (每 15 秒自動讀取一次)
+setInterval(syncGlobalMaintenanceStatus, 15000);
+    
+    function initSignature() {
     sigCanvas = document.getElementById('signatureCanvas');
     if (!sigCanvas) return;
     sigCtx = sigCanvas.getContext('2d');
