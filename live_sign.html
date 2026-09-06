@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+<title>｜現場數位合約補簽系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand: {
+            50: '#FDFBF7', 100: '#F7EDE8', 200: '#EBE5DF', 300: '#D5C7BC',
+            400: '#BCA38F', 500: '#8C7355', 600: '#7A6246', 700: '#68523A',
+            800: '#5C4B3C', 900: '#3D3126',
+          }
+        },
+        fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #FAF6F0; font-family: 'Noto Sans TC', sans-serif; margin: 0; padding: 0; color: #5C4B3C; }
+  .text-input { width: 100%; padding: 12px; background: white; border: 1px solid #EBE5DF; border-radius: 14px; font-size: 13px; outline: none; box-sizing: border-box; }
+  .text-input:focus { border-color: #8C7355; }
+</style>
+</head>
+<body class="w-full overflow-x-hidden p-4 flex flex-col justify-center items-center min-h-screen">
+<div class="w-full max-w-md bg-white border border-brand-200 rounded-[2rem] p-6 shadow-xl space-y-5">
+  <div class="text-center border-b border-brand-100 pb-4 space-y-1">
+    <div class="w-12 h-12 mx-auto bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center text-lg shadow-xs">
+      <i class="fa-solid fa-file-signature"></i>
+    </div>
+    <h2 class="text-base font-black text-brand-900" id="store-contract-main-title">現場服務數位合約補簽專區</h2>
+    <p class="text-[11px] text-brand-400">請由現場手機或平板完成以下顧客資料確認與簽署程序</p>
+  </div>
+
+  <div class="space-y-3 text-xs">
+    <div>
+      <label class="font-bold text-brand-700 block mb-1"><i class="fa-solid fa-phone mr-1"></i> 輸入顧客手機號碼 (自動帶入歷史檔案)</label>
+      <div class="flex gap-2">
+        <input type="tel" id="ls_phone" placeholder="例如：0912345678 (必填)" class="w-full p-3 bg-brand-50/50 border border-brand-200 rounded-xl font-bold outline-none text-xs">
+        <button onclick="searchHistoryForLiveSign()" class="bg-[#8C7355] hover:bg-[#7A6246] text-white px-4 rounded-xl text-xs font-bold whitespace-nowrap active:scale-95 transition shadow-xs">撈取檔案</button>
+      </div>
+    </div>
+    
+    <div>
+      <label class="font-bold text-brand-700 block mb-1">顧客姓名 *</label>
+      <input type="text" id="ls_owner" placeholder="請輸入姓名" class="text-input font-bold">
+    </div>
+    <div>
+      <label class="font-bold text-brand-700 block mb-1">LINE 顯示名稱</label>
+      <input type="text" id="ls_line" placeholder="例如：小美" class="text-input font-bold">
+    </div>
+    <div>
+      <label class="font-bold text-brand-700 block mb-1">電子信箱 (將自動寄送合約存證副本)</label>
+      <input type="email" id="ls_email" placeholder="例如：user@gmail.com" class="text-input font-bold">
+    </div>
+    <div>
+      <label class="font-bold text-brand-700 block mb-1">本次施作項目 / 寵物名稱 *</label>
+      <input type="text" id="ls_service" placeholder="例如：日系質感染髮 / 剪髮設計" class="text-input font-bold">
+    </div>
+  </div>
+
+  <div class="space-y-4 pt-2 border-t border-brand-100">
+    <div class="text-[11px] font-bold text-brand-500 tracking-wider uppercase">
+      <i class="fa-solid fa-scale-balanced mr-1"></i> 法律條款與數位簽署
+    </div>
+
+    <!-- 點擊閱讀合約項目 -->
+    <div onclick="openTermsModalWindow()" class="p-4 border border-brand-200 rounded-2xl flex justify-between items-center cursor-pointer bg-brand-50/40 hover:border-brand-400 transition group">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center"><i class="fa-regular fa-file-lines"></i></div>
+        <div>
+          <div class="text-xs font-bold text-brand-900" id="termTitleLabel">請點擊詳閱【服務定型化契約條款】*</div>
+          <div class="text-[10px] text-brand-400 mt-0.5">需完整滑動至底部方可解鎖簽名</div>
+        </div>
+      </div>
+      <span id="badge_main" class="text-[10px] bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold w-16 text-center">待閱讀</span>
+    </div>
+
+    <!-- 簽名解鎖遮罩 -->
+    <div id="signatureLockCover" class="border border-brand-200 bg-brand-50/60 rounded-2xl p-4 flex items-center justify-center gap-2 text-xs font-bold text-brand-400 tracking-wide text-center">
+      <i class="fa-solid fa-lock text-[11px]"></i> 請先點擊上方詳閱合約條款以解鎖簽名區
+    </div>
+
+    <!-- 解鎖後的簽署區 -->
+    <div id="signatureUnlockBlock" class="hidden space-y-4">
+      <div class="border border-brand-200 rounded-2xl p-3.5 flex items-start gap-2.5 cursor-pointer bg-brand-50/30" onclick="toggleFinalCheckUIEngine()">
+        <div id="finalCheckCircle" class="w-5 h-5 rounded-full border-2 border-brand-300 flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5 transition-all"></div>
+        <span class="text-[11px] leading-relaxed text-brand-800 font-bold">本人已詳細閱讀、充分理解並完全同意上述所有服務契約條款。 *</span>
+        <input type="checkbox" id="finalCheck" required class="hidden">
+      </div>
+
+      <div class="border border-brand-200 rounded-2xl p-4 space-y-3 bg-white shadow-inner">
+        <div class="flex justify-between items-center">
+          <label class="text-[10px] font-bold text-brand-400 tracking-wider uppercase">Digital Signature / 親筆手寫簽名正本 *</label>
+          <button type="button" onclick="clearSignatureCanvasEngine()" class="text-[10px] text-rose-600 font-bold flex items-center gap-1 hover:underline"><i class="fa-regular fa-trash-can"></i> 清除重簽</button>
+        </div>
+        <div class="border border-brand-200 rounded-2xl overflow-hidden bg-brand-50/30 relative h-[140px]">
+          <canvas id="sigCanvas" class="w-full h-full cursor-crosshair"></canvas>
+          <div id="sigTextPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 text-brand-500">
+            <i class="fa-solid fa-pen-fancy text-lg mb-1 animate-pulse"></i>
+            <span class="text-[10px] font-bold tracking-widest">請在此處親筆手寫簽名</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="submitBtn" onclick="submitLiveSignPayload()" class="w-full bg-[#8C7355] hover:bg-[#7A6246] text-white font-black py-4 rounded-xl text-xs shadow-md tracking-widest active:scale-95 transition block text-center">
+    ✓ 同意服務條款並發送數位簽署
+  </button>
+</div>
+
+<!-- 契約閱讀 Modal 彈窗 -->
+<div id="termsModal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center p-4 backdrop-blur-xs bg-black/50 transition-all">
+  <div class="bg-white w-full max-w-md h-[80vh] rounded-[2.5rem] flex flex-col overflow-hidden shadow-2xl border border-brand-200 scale-95 transition-transform duration-300" id="modalContainer">
+    <div id="modalTitle" class="p-5 font-bold text-center border-b border-brand-100 text-sm text-brand-900">📜 服務定型化契約條款</div>
+    <div id="modalBody" class="p-6 flex-1 overflow-y-auto text-xs leading-relaxed text-brand-800 whitespace-pre-wrap bg-brand-50/40 font-sans" onscroll="handleModalScrollEngine()">載入中...</div>
+    <div class="p-4 border-t border-brand-100 bg-white">
+      <button type="button" id="modalCloseBtn" disabled onclick="closeTermsModalWindow()" class="w-full bg-gray-200 text-gray-400 p-3.5 rounded-2xl text-xs font-bold transition-all tracking-widest text-center cursor-not-allowed">
+        請向下滑動閱讀完整條款
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="text-center mt-6 text-brand-400 text-[11px] tracking-widest uppercase">
+  Designed by <a href="https://heysibyl.com" target="_blank" class="font-bold text-brand-600 hover:underline">Sibyl | 數位管家</a>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  const CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
+
+  let mainRead = false, isCheckedFinal = false, drawingState = false;
+  let contractTitleText = "美業服務定型化契約書";
+  let contractBodyText = "載入中...";
+
+  const canvas = document.getElementById('sigCanvas');
+  const ctx = canvas ? canvas.getContext('2d') : null;
+
+  // 頁面載入時直接從 Supabase 抓取該店家的合約設定
+  window.onload = async function() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}&select=contract_title,contract_content`, {
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const data = await res.json();
+      if (data && data.length > 0) {
+        contractTitleText = data[0].contract_title || contractTitleText;
+        contractBodyText = data[0].contract_content || "一、本沙龍服務均由專業技術人員施作。\n二、顧客應誠實告知過敏史或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。";
+      } else {
+        contractBodyText = "一、本沙龍服務均由專業技術人員施作。\n二、顧客應誠實告知過敏史或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。";
+      }
+      document.getElementById('store-contract-main-title').innerText = contractTitleText;
+      document.getElementById('termTitleLabel').innerText = `請點擊詳閱【${contractTitleText}】*`;
+    } catch(e) {
+      contractBodyText = "一、本沙龍服務均由專業技術人員施作。\n二、顧客應誠實告知過敏史或特殊體質。";
+    }
+  };
+
+  // 跨表撈取歷史檔案
+  async function searchHistoryForLiveSign() {
+    let phone = document.getElementById('ls_phone').value.trim();
+    if (phone.length < 8) return Swal.fire('提示', '請輸入正確的手機號碼再進行反查！', 'warning');
+    
+    Swal.fire({ title: '正在查詢歷史檔案...', didOpen: () => Swal.showLoading() });
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1`, {
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const list = await res.json();
+      Swal.close();
+
+      if (list && list.length > 0) {
+        const b = list[0];
+        document.getElementById('ls_owner').value = b.customer_name || '';
+        document.getElementById('ls_line').value = b.line_name || '';
+        if (b.notes && b.notes.includes('Email:')) {
+          document.getElementById('ls_email').value = b.notes.split('Email:')[1].trim();
+        }
+        document.getElementById('ls_service').value = b.service_names || '';
+        Swal.fire({ toast: true, position: 'top', icon: 'success', title: '成功自動回填顧客資歷！', timer: 1500, showConfirmButton: false });
+      } else {
+        Swal.fire('新客提示', '資料庫查無此號碼紀錄，請手動填寫欄位建檔。', 'info');
+      }
+    } catch(err) {
+      Swal.close();
+      Swal.fire('查詢失敗', err.message, 'error');
+    }
+  }
+
+  function openTermsModalWindow() {
+    const modal = document.getElementById('termsModal');
+    const body = document.getElementById('modalBody');
+    const btn = document.getElementById('modalCloseBtn');
+    if (!modal || !body || !btn) return;
+
+    btn.disabled = true;
+    btn.className = "w-full bg-gray-200 text-gray-400 p-3.5 rounded-2xl text-xs font-bold text-center cursor-not-allowed uppercase";
+    btn.innerText = "請向下滑動閱讀完整條款";
+    body.scrollTop = 0;
+    
+    document.getElementById('modalTitle').innerText = `📜 ${contractTitleText}`;
+    body.innerText = contractBodyText;
+    
+    modal.classList.remove('hidden');
+    setTimeout(() => document.getElementById('modalContainer').classList.remove('scale-95'), 50);
+    setTimeout(() => {
+      if (body.scrollHeight <= body.clientHeight + 20) unlockTermsButton(btn);
+    }, 300);
+  }
+
+  function handleModalScrollEngine() {
+    const body = document.getElementById('modalBody');
+    const btn = document.getElementById('modalCloseBtn');
+    if (!body || !btn) return;
+    if (body.scrollHeight - body.scrollTop <= body.clientHeight + 25) {
+      unlockTermsButton(btn);
+    }
+  }
+
+  function unlockTermsButton(btn) {
+    btn.disabled = false;
+    btn.innerText = "✓ 本人已詳細閱讀並完全同意以上條款";
+    btn.className = "w-full bg-[#8C7355] hover:bg-[#7A6246] text-white p-3.5 rounded-2xl text-xs font-bold shadow-md text-center cursor-pointer transition";
+  }
+
+  function closeTermsModalWindow() {
+    document.getElementById('modalContainer').classList.add('scale-95');
+    setTimeout(() => document.getElementById('termsModal').classList.add('hidden'), 150);
+    
+    mainRead = true;
+    document.getElementById('badge_main').innerText = "已完成";
+    document.getElementById('badge_main').className = "text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold w-16 text-center";
+    
+    document.getElementById('signatureLockCover').classList.add('hidden');
+    document.getElementById('signatureUnlockBlock').classList.remove('hidden');
+    setTimeout(initDigitalSignatureCanvasEngine, 150);
+  }
+
+  function toggleFinalCheckUIEngine() {
+    isCheckedFinal = !isCheckedFinal;
+    document.getElementById('finalCheck').checked = isCheckedFinal;
+    let checkCircle = document.getElementById('finalCheckCircle');
+    if (isCheckedFinal) {
+      checkCircle.className = "w-5 h-5 rounded-full bg-[#8C7355] flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5 transition-all shadow-sm border-none";
+      checkCircle.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i>';
+    } else {
+      checkCircle.className = "w-5 h-5 rounded-full border-2 border-brand-300 flex items-center justify-center text-white text-xs flex-shrink-0 mt-0.5 transition-all bg-transparent";
+      checkCircle.innerHTML = '';
+    }
+  }
+
+  function initDigitalSignatureCanvasEngine() {
+    if (!canvas) return;
+    canvas.width = canvas.parentNode.getBoundingClientRect().width;
+    canvas.height = 140;
+    ctx.strokeStyle = "#3D3126";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    };
+
+    const startDraw = (e) => { drawingState = true; document.getElementById('sigTextPlaceholder').classList.add('hidden'); const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+    const draw = (e) => { if (!drawingState) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+    const stopDraw = () => { drawingState = false; };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    window.addEventListener('mouseup', stopDraw);
+
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    window.addEventListener('touchend', stopDraw);
+  }
+
+  function clearSignatureCanvasEngine() {
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    document.getElementById('sigTextPlaceholder').classList.remove('hidden');
+  }
+
+  function isCanvasBlank(cvs) {
+    const blank = document.createElement('canvas');
+    blank.width = cvs.width; blank.height = cvs.height;
+    return cvs.toDataURL() === blank.toDataURL();
+  }
+
+  // 將手寫簽名轉 Blob 並直傳 Supabase Storage (signatures 儲存桶)
+  async function uploadSignatureToSupabase(cvs) {
+    return new Promise((resolve, reject) => {
+      cvs.toBlob(async (blob) => {
+        if (!blob) return reject(new Error("簽名畫布讀取失敗"));
+        const fileName = `${CURRENT_STORE_ID}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.png`;
+        const uploadUrl = `${SUPABASE_URL}/storage/v1/object/signatures/${fileName}`;
+        try {
+          const res = await fetch(uploadUrl, {
+            method: "POST",
+            headers: {
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+              "Content-Type": "image/png"
+            },
+            body: blob
+          });
+          if (!res.ok) throw new Error(await res.text());
+          const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/signatures/${fileName}`;
+          resolve(publicUrl);
+        } catch (err) {
+          reject(err);
+        }
+      }, 'image/png');
+    });
+  }
+
+  async function submitLiveSignPayload() {
+    if (!mainRead || !isCheckedFinal || isCanvasBlank(canvas)) {
+      return Swal.fire('提示', '請完整詳閱合約、勾選同意並於下方親筆手寫簽名後再送出！', 'warning');
+    }
+
+    const phone = document.getElementById('ls_phone').value.trim();
+    const ownerName = document.getElementById('ls_owner').value.trim();
+    const email = document.getElementById('ls_email').value.trim();
+    const serviceName = document.getElementById('ls_service').value.trim();
+    const lineName = document.getElementById('ls_line').value.trim();
+
+    if (!phone || !ownerName || !serviceName) {
+      return Swal.fire('請完整填寫手機、家長/顧客姓名與施作項目！', '', 'warning');
+    }
+
+    Swal.fire({ title: '正在上傳簽章並建立紀錄...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+      // 1. 上傳簽名圖檔至 Supabase Storage
+      const sigUrl = await uploadSignatureToSupabase(canvas);
+
+      // 2. 尋找該號碼最近一筆預約單進行綁定，若無則自動新增一筆已完成的合約紀錄
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1`, {
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const list = await res.json();
+
+      const signTimestamp = new Date().toISOString();
+
+      if (list && list.length > 0) {
+        // 更新最近一筆預約的簽名檔
+        await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${list[0].id}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            signature_url: sigUrl,
+            signed_at: signTimestamp
+          })
+        });
+      } else {
+        // 新增一筆合約簽署紀錄
+        await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+          method: "POST",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            store_id: CURRENT_STORE_ID,
+            customer_name: ownerName,
+            customer_phone: phone,
+            line_name: lineName,
+            service_names: serviceName,
+            notes: email ? `Email: ${email} (現場數位合約補簽)` : '現場數位合約補簽',
+            appointment_time: signTimestamp,
+            signature_url: sigUrl,
+            signed_at: signTimestamp,
+            status: '已結單'
+          })
+        });
+      }
+
+      Swal.close();
+      Swal.fire({
+        title: '現場合約數位簽署成功！',
+        text: '手寫契約與資歷已永久存證至雲端後台❤️',
+        icon: 'success',
+        confirmButtonColor: '#8C7355'
+      }).then(() => {
+        window.location.reload();
+      });
+
+    } catch(err) {
+      Swal.close();
+      Swal.fire('簽署上傳失敗', err.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>
