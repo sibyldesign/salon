@@ -802,6 +802,10 @@
     async function initOrderLiff() {
       try {
         await liff.init({ liffId: "2011183690-A3PkQLO3" });
+        if (liff.isInClient() && !liff.isLoggedIn()) {
+          liff.login(); // 在 LINE 內部開啟時自動導向授權取得 UID
+          return;
+        }
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           lineUserUid = profile.userId || "";
@@ -809,9 +813,9 @@
             document.getElementById('buyerLineName').value = profile.displayName;
           }
         }
-      } catch(e) {}
-      
-      // 2. 自動回填防呆：若上次跳去加好友再回來，資料自動恢復！
+      } catch(e) {
+        console.warn("LIFF 初始化跳過:", e);
+      }
       restoreOrderDraft();
     }
 
