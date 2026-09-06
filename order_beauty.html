@@ -795,6 +795,55 @@
         Swal.fire('系統連線異常', e.message, 'error');
       }
     }
+
+    let lineUserUid = "";
+
+    // 1. 初始化 LIFF 靜默取得店家老闆個人 UID
+    async function initOrderLiff() {
+      try {
+        await liff.init({ liffId: "2011183690-A3PkQLO3" });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          lineUserUid = profile.userId || "";
+          if (profile.displayName && !document.getElementById('buyerLineName').value) {
+            document.getElementById('buyerLineName').value = profile.displayName;
+          }
+        }
+      } catch(e) {}
+      
+      // 2. 自動回填防呆：若上次跳去加好友再回來，資料自動恢復！
+      restoreOrderDraft();
+    }
+
+    // 監聽所有 input 欄位即時存檔
+    function setupDraftAutosave() {
+      const fields = ['storeName', 'buyerName', 'buyerPhone', 'buyerEmail', 'buyerLineName'];
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', () => {
+            localStorage.setItem(`sibyl_order_draft_${id}`, el.value);
+          });
+        }
+      });
+    }
+
+    function restoreOrderDraft() {
+      const fields = ['storeName', 'buyerName', 'buyerPhone', 'buyerEmail', 'buyerLineName'];
+      fields.forEach(id => {
+        const val = localStorage.getItem(`sibyl_order_draft_${id}`);
+        const el = document.getElementById(id);
+        if (el && val) el.value = val;
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initOrderLiff();
+      setupDraftAutosave();
+    });
+
+    // 3. 建立店家時，直接將 lineUserUid 寫入 owner_line_uid
+    // (在 executeStoreCreationAndRedirect 的 body 內確保有：owner_line_uid: lineUserUid)
   </script>
 </body>
 </html>
