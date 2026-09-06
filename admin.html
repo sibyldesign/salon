@@ -332,31 +332,37 @@
   <!-- 分頁 4. 業績統計 (沙龍營業數據與行銷佔比分析) -->
   <div id="page-revenue" class="page space-y-4" style="display: none;">
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
-      <!-- 在 rev-time-filter 下方補上這段：自訂日期區間篩選 -->
-      <div class="flex justify-between items-center">
+      
+      <!-- 頂部標題與時間選擇 -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-brand-100">
         <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
           <i class="fa-solid fa-chart-pie text-brand-500"></i> 沙龍營業數據與行銷佔比分析
         </div>
-        <select id="rev-time-filter" class="text-xs border border-brand-200 rounded-xl px-2.5 py-1 bg-brand-50" onchange="handleRevenueTimeFilterChange()">
+        <select id="rev-time-filter" class="text-xs border border-brand-200 rounded-xl px-2.5 py-1.5 bg-brand-50 outline-none font-bold text-brand-800" onchange="renderRevenue()">
           <option value="ALL">全部時間</option>
           <option value="THIS_MONTH" selected>本月份</option>
           <option value="LAST_MONTH">上月份</option>
-          <option value="CUSTOM">📅 自訂日期區間...</option>
         </select>
       </div>
 
-      <!-- 🔽 這裡就是新增的自訂區間 (預設 hidden，選 CUSTOM 時展開) -->
-      <div id="rev-custom-range-box" class="hidden grid grid-cols-2 gap-2 p-3 bg-brand-50 rounded-2xl border border-brand-200 text-xs">
-        <div>
-          <label class="block font-bold text-brand-800 mb-1">開始日期</label>
-          <input type="date" id="rev-start-date" class="w-full p-2 rounded-xl border border-brand-200 bg-white outline-none" onchange="renderRevenue()">
+      <!-- 📅 永遠直接顯示的自訂日期區間 (取消 hidden，讓老闆隨時可以選日期查業績) -->
+      <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 text-xs">
+        <div class="font-bold text-brand-900 flex items-center gap-1">
+          <i class="fa-solid fa-calendar-days text-brand-500"></i>
+          <span>依自訂日期區間查找業績：</span>
         </div>
-        <div>
-          <label class="block font-bold text-brand-800 mb-1">結束日期</label>
-          <input type="date" id="rev-end-date" class="w-full p-2 rounded-xl border border-brand-200 bg-white outline-none" onchange="renderRevenue()">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold text-brand-700 mb-1 text-[11px]">開始日期</label>
+            <input type="date" id="rev-start-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none font-medium" onchange="renderRevenue()">
+          </div>
+          <div>
+            <label class="block font-bold text-brand-700 mb-1 text-[11px]">結束日期</label>
+            <input type="date" id="rev-end-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none font-medium" onchange="renderRevenue()">
+          </div>
         </div>
       </div>
-      
+
       <!-- 4 大核心經營指標卡片 -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
         <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200">
@@ -377,7 +383,7 @@
         </div>
       </div>
 
-      <!-- ✨ 美業業界必備：各專員個人業績抽成與工時統計表 (受後台開關控制) -->
+      <!-- ✨ 美業業界必備：各專員個人業績抽成與工時統計表 -->
       <div id="staff-revenue-section" class="pt-2 border-t border-brand-100 space-y-2.5">
         <div class="flex justify-between items-center">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1">
@@ -437,7 +443,7 @@
       </div>
     </div>
   </div>
-
+  
   <!-- 分頁 5. 回訪關懷 -->
   <div id="page-care" class="page space-y-4" style="display: none;">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -2731,11 +2737,17 @@
     svcs.forEach(s => { sel.innerHTML += `<option value="${s.name}">${s.name}</option>`; });
   }
 
-  // ✨ 支援自訂日期區間切換控制
+  // 切換選單時觸發，負責展開或隱藏自訂日期區間框
   function handleRevenueTimeFilterChange() {
     const val = document.getElementById('rev-time-filter')?.value;
     const customBox = document.getElementById('rev-custom-range-box');
-    if (customBox) customBox.classList.toggle('hidden', val !== 'CUSTOM');
+    if (customBox) {
+      if (val === 'CUSTOM') {
+        customBox.classList.remove('hidden');
+      } else {
+        customBox.classList.add('hidden');
+      }
+    }
     renderRevenue();
   }
 
@@ -2751,26 +2763,25 @@
     const currentYear = now.getFullYear();
     const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-    // 1. 時間區間過濾
-    if (timeFilter === 'THIS_MONTH') {
+    // ✨ 智慧日期區間過濾 (只要有填寫開始與結束日期，即優先以自訂區間篩選)
+    const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
+    const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
+
+    if (sD && eD) {
+      allAppts = allAppts.filter(a => {
+        const ad = a.date ? a.date.replace(/-/g, '/') : '';
+        return ad >= sD && ad <= eD;
+      });
+    } else if (timeFilter === 'THIS_MONTH') {
       const ym = `${currentYear}/${currentMonth}`;
       allAppts = allAppts.filter(a => a.date && a.date.replace(/-/g, '/').startsWith(ym));
     } else if (timeFilter === 'LAST_MONTH') {
       const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const prevYm = `${prevDate.getFullYear()}/${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
       allAppts = allAppts.filter(a => a.date && a.date.replace(/-/g, '/').startsWith(prevYm));
-    } else if (timeFilter === 'CUSTOM') {
-      const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
-      const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
-      if (sD && eD) {
-        allAppts = allAppts.filter(a => {
-          const ad = a.date ? a.date.replace(/-/g, '/') : '';
-          return ad >= sD && ad <= eD;
-        });
-      }
     }
 
-    // 2. 服務項目過濾
+    // 服務項目過濾
     if (selectedSvc !== 'ALL') {
       allAppts = allAppts.filter(a => (a.service || '').includes(selectedSvc));
     }
@@ -2779,7 +2790,6 @@
     let unpaidTotal = 0;
     let completedCount = 0;
     let returningRevenue = 0;
-    let totalCashPaid = 0;
 
     let paidListHtml = '';
     let unpaidListHtml = '';
@@ -2795,7 +2805,6 @@
           returningRevenue += finalAmt;
         }
 
-        totalCashPaid += finalAmt;
         if (fullAppt.deposit_deducted) paidTotal += Number(fullAppt.deposit_deducted);
 
         paidListHtml += `
@@ -2814,44 +2823,36 @@
               <div class="font-bold text-amber-900">${a.date} - ${a.name}</div>
               <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
             </div>
-            <!-- ✨ 修正死穴：呼叫全新的 openCheckoutModal (支援對帳彈窗與新購抵扣) -->
             <button class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] transition shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${fullAppt.customer_phone || fullAppt.phone || ''}', '${a.service}', ${a.price || 0})">結單</button>
           </div>`;
       }
     });
 
-    // 指標試算
+    // 畫面數據回填
     const avgTicket = completedCount > 0 ? Math.round(paidTotal / completedCount) : 0;
-    const metricAvg = document.getElementById('metric-avg-ticket');
-    if (metricAvg) metricAvg.innerText = `${avgTicket.toLocaleString()}元`;
+    document.getElementById('metric-avg-ticket').innerText = `${avgTicket.toLocaleString()}元`;
 
     const returningRatio = paidTotal > 0 ? Math.round((returningRevenue / paidTotal) * 100) : 0;
-    const metricReturn = document.getElementById('metric-returning-ratio');
-    if (metricReturn) metricReturn.innerText = `${returningRatio}%`;
+    document.getElementById('metric-returning-ratio').innerText = `${returningRatio}%`;
 
     const totalAllOrders = rawAppts.length;
     const canceledOrders = rawAppts.filter(r => r.status === '已取消' || r.status === '婉拒').length;
     const cancelRatio = totalAllOrders > 0 ? Math.round((canceledOrders / totalAllOrders) * 100) : 0;
-    const metricCancel = document.getElementById('metric-cancel-ratio');
-    if (metricCancel) metricCancel.innerText = `${cancelRatio}%`;
+    document.getElementById('metric-cancel-ratio').innerText = `${cancelRatio}%`;
 
-    const revTotal = document.getElementById('rev-total-amount');
-    if (revTotal) revTotal.innerText = `${paidTotal.toLocaleString()}元`;
-
-    const revUnpaid = document.getElementById('rev-unpaid-amount');
-    if (revUnpaid) revUnpaid.innerText = `${unpaidTotal.toLocaleString()}元`;
+    document.getElementById('rev-total-amount').innerText = `${paidTotal.toLocaleString()}元`;
 
     if (listArea) listArea.innerHTML = paidListHtml || '<div class="text-center text-xs text-brand-400 py-3">尚無已結單資料</div>';
     if (unpaidListArea) unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
 
-    // ✨ 專員業績抽成、服務工時與人次統計 (業界必備模組)
+    // 專員業績抽成統計
     const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
     const commSection = document.getElementById('staff-revenue-section');
     if (commSection) commSection.style.display = isCalcEnabled ? 'block' : 'none';
 
     if (isCalcEnabled) {
       const staffStats = {};
-      const completedList = rawAppts.filter(r => r.status === '已結單');
+      const completedList = rawAppts.filter(r => r.status === '已結單' && (!sD || (r.appointment_time && r.appointment_time >= `${sD.replace(/\//g,'-')}T00:00:00`)));
 
       completedList.forEach(a => {
         const sName = a.staff_name || '不指定';
@@ -2880,14 +2881,6 @@
         }).join('') || '<tr><td colspan="6" class="text-center py-4 text-brand-400">目前尚無已結單專員資料</td></tr>';
       }
     }
-
-    // 支付比例條
-    const pctCash = document.getElementById('pct-cash');
-    const pctWallet = document.getElementById('pct-wallet');
-    const pctPkg = document.getElementById('pct-package');
-    if (pctCash) pctCash.innerText = paidTotal > 0 ? '75%' : '0%';
-    if (pctWallet) pctWallet.innerText = paidTotal > 0 ? '15%' : '0%';
-    if (pctPkg) pctPkg.innerText = paidTotal > 0 ? '10%' : '0%';
   }
 
   // =========================================================================
