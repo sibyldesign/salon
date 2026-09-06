@@ -1058,13 +1058,14 @@
     const isNewPkgBought = (addonPkgFee > 0);
     const hasOldPkg = memberData.packages && memberData.packages.some(p => checkedBoxes.some(cb => cb.value.includes(p.service_name)) && p.remaining_times > 0);
     
+    // 1. 包卡扣抵計算
     if (usePkg && (hasOldPkg || isNewPkgBought) && mainTotal > 0) {
       deductAmount = mainTotal;
       deductText = `套用包卡抵扣 1 次 (主項目折抵 -$${mainTotal})`;
       const remainNotice = document.getElementById('box-package-remain-notice');
       if (remainNotice) {
         remainNotice.classList.remove('hidden');
-        const oldRem = memberData.packages[0]?.remaining_times || 0;
+        const oldRem = memberData.packages?.[0]?.remaining_times || 0;
         const newTotalRem = isNewPkgBought ? (oldRem + 5) : (oldRem - 1);
         document.getElementById('text-remain-package-times').innerText = Math.max(0, newTotalRem);
       }
@@ -1073,16 +1074,39 @@
       if (remainNotice) remainNotice.classList.add('hidden');
     }
 
+    // 2. 取得儲值折扣率 (優先取新購方案折數，次取舊有會員折數)
     let activeDiscount = memberData.discountPercent || 1;
     const walOptDiscount = walSel ? Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-discount') || 1) : 1;
     if (walOptDiscount < 1) activeDiscount = walOptDiscount;
 
-    if (useWallet && activeDiscount < 1 && deductAmount === 0 && mainTotal > 0) {
-      const discountCut = Math.round(mainTotal * (1 - activeDiscount));
-      deductAmount = discountCut;
-      deductText = `儲值會員享 ${Math.round(activeDiscount * 100) / 10} 折優惠 (-$${discountCut})`;
+    // 3. 儲值金扣抵智慧判斷
+    if (useWallet && deductAmount === 0 && mainTotal > 0) {
+      const discountedMain = Math.round(mainTotal * activeDiscount); // 本次打折後應收
+
+      if (addonWalFee > 0) {
+        // 【情境 A：當下新購儲值金並直接內扣本次費用】
+        deductAmount = mainTotal; // 主項目現場免付，改由新儲值金支付
+        const bonusAdd = addonWalFee >= 5000 ? 600 : (addonWalFee >= 3000 ? 300 : 0);
+        const remainBal = (addonWalFee + bonusAdd) - discountedMain;
+        deductText = `享 ${Math.round(activeDiscount * 100) / 10} 折，本次從儲值金扣除 (剩餘儲值金: $${remainBal})`;
+      } else if (memberData.walletBalance > 0) {
+        // 【情境 B：使用既有儲值金帳戶餘額扣抵】
+        if (memberData.walletBalance >= discountedMain) {
+          deductAmount = mainTotal;
+          deductText = `儲值金全額扣抵 (餘額扣除 $${discountedMain})`;
+        } else {
+          deductAmount = (mainTotal - discountedMain) + memberData.walletBalance;
+          deductText = `儲值金餘額 $${memberData.walletBalance} 全數扣抵`;
+        }
+      } else if (activeDiscount < 1) {
+        // 【情境 C：僅套用會員折數折扣】
+        const discountCut = mainTotal - discountedMain;
+        deductAmount = discountCut;
+        deductText = `儲值會員享 ${Math.round(activeDiscount * 100) / 10} 折優惠 (-$${discountCut})`;
+      }
     }
 
+    // 4. 折扣碼折抵 (若前面尚無全額扣抵方案)
     if (activeCoupon && deductAmount === 0 && mainTotal > 0) {
       if (activeCoupon.discount_type === 'cash') {
         deductAmount = Number(activeCoupon.discount_value || 0);
@@ -1098,6 +1122,7 @@
     const addonTotalEl = document.getElementById('summary-addon-total');
     if (addonTotalEl) addonTotalEl.innerText = totalAddon.toLocaleString();
 
+    // 5. 訂金折抵計算
     const custTypeVal = document.getElementById('custType')?.value || 'old';
     const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
     let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
@@ -1111,13 +1136,12 @@
       rowDeposit?.classList.add('hidden');
     }
 
+    // 6. 最終現場實收金額試算
     let finalTotal = (mainTotal - deductAmount) + totalAddon - depositDeduct;
     if (finalTotal < 0) finalTotal = 0;
 
     const finalTotalEl = document.getElementById('summary-final-total');
     if (finalTotalEl) finalTotalEl.innerText = finalTotal.toLocaleString();
-  }
-
   function setupPortfolio() {
     const tabs = document.getElementById('portfolio-tabs');
     if (!tabs) return;
