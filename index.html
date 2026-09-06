@@ -590,7 +590,7 @@
       if (storeRes && storeRes.length > 0) {
         const s = storeRes[0];
         if (s.plan_status === 'locked' || s.plan_status === 'expired') {
-          document.getElementById('maintenance-desc').innerText = `【${s.store_name}】目前暫停預約中，如有疑問請直接聯繫店家。`;
+          document.getElementById('maintenance-desc').innerText = `【${s.store_name}】目前暫停預約中...`;
           document.getElementById('maintenance-screen').classList.remove('hidden');
           document.getElementById('booking-ui').style.display = 'none';
           document.getElementById('system-banner').classList.add('hidden');
@@ -754,6 +754,23 @@
     document.getElementById('nav-map').href = db.map || '#';
     document.getElementById('store-address').innerText = db.address ? `📍 ${db.address}` : "📍 門市服務據點";
     document.getElementById('store-hours').innerText = db.businessHours ? `🕒 ${db.businessHours}` : "🕒 營業時間：09:00 - 19:00";
+
+    // ✨ 定型化契約模組開關連動與預設條款回填
+    const contractSec = document.getElementById('digitalContractSection');
+    if (contractSec) {
+      // 只要店家開啟契約模組即展開
+      if (db.enableContract === true) {
+        contractSec.classList.remove('hidden');
+        document.getElementById('display-contract-title').innerText = db.contractTitle || '美業服務定型化契約書';
+        document.getElementById('modal-contract-title').innerText = db.contractTitle || '美業服務定型化契約書';
+        
+        // 若店家未自訂內容，自動呈現標準公版預設條款
+        const defaultTerms = "一、本沙龍服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知過敏史、近期皮膚狀態或特殊體質。\n三、預約支付訂金後若需改期，請於預約日前 24 小時提出。\n四、服務完成確認無誤後，現場進行尾款核對與結單。";
+        document.getElementById('contractScrollArea').innerText = db.contractContent || defaultTerms;
+      } else {
+        contractSec.classList.add('hidden');
+      }
+    }
     
     const depositBtn = document.getElementById('quick-report-deposit-btn');
     if (depositBtn) depositBtn.classList.toggle('hidden', !db.enableDeposit);
