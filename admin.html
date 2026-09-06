@@ -2052,16 +2052,57 @@
   }
 
   function renderCustomer() {
-    const statusFilter = document.getElementById('filter-status').value;
-    let appts = backendData.appointments || [];
-    if (statusFilter === 'ALL') {
-      appts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消');
-    } else {
-      appts = appts.filter(a => a.status === statusFilter);
-    }
-    document.getElementById('cust-content-area').innerHTML = appts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無待處理預約</div>';
-  }
+    const appts = backendData.appointments || [];
+    
+    // 1. 待審核專區：狀態為「待確認」，或是「已回報後五碼且尚未核對」
+    const pendingAudit = appts.filter(a => 
+      a.status === '待確認' || 
+      (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed)
+    );
 
+    // 2. 需付訂金但未回報名單：新朋友/需付訂金、未取消、未結單、且未回報後五碼者
+    const unpaidDeposit = appts.filter(a => 
+      a.status !== '已取消' && 
+      a.status !== '已結單' && 
+      !a.deposit_confirmed &&
+      !Boolean(a.depositLast5 || a.deposit_last5) &&
+      (a.customer_type === 'new' || backendData.settings.depositMode === 'all')
+    );
+
+    document.getElementById('pending-audit-badge').innerText = `${pendingAudit.length} 筆待處理`;
+    document.getElementById('unpaid-deposit-badge').innerText = `${unpaidDeposit.length} 筆未回報`;
+
+    // 渲染待審核專區
+    const pendingContainer = document.getElementById('pending-audit-container');
+    if (pendingAudit.length === 0) {
+      pendingContainer.innerHTML = '<div class="text-center text-xs text-amber-800/70 py-3">目前無待核准或待對帳的預約</div>';
+    } else {
+      pendingContainer.innerHTML = pendingAudit.map(a => renderSingleCardHTML(a)).join('');
+    }
+
+    // 渲染未付訂金警戒專區
+    const unpaidContainer = document.getElementById('unpaid-deposit-container');
+    if (unpaidDeposit.length === 0) {
+      unpaidContainer.innerHTML = '<div class="text-center text-xs text-rose-800/60 py-1">全員皆已完成訂金付款</div>';
+    } else {
+      unpaidContainer.innerHTML = unpaidDeposit.map(a => `
+        <div class="p-2.5 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs">
+          <div><b class="text-rose-950">${a.name || a.customer_name}</b> (${a.phone || a.customer_phone}) - ${a.service || a.service_names}</div>
+          <span class="text-[10px] font-bold text-rose-600">尚未收到後五碼</span>
+        </div>
+      `).join('');
+    }
+
+    // 下方常規清單渲染
+    const statusFilter = document.getElementById('filter-status').value;
+    let normalAppts = appts;
+    if (statusFilter === 'ALL') {
+      normalAppts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消');
+    } else {
+      normalAppts = appts.filter(a => a.status === statusFilter);
+    }
+    document.getElementById('cust-content-area').innerHTML = normalAppts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無排程名單</div>';
+  }
   function renderSingleCardHTML(a) {
     const s = backendData.settings || {};
     const isNewCust = (a.customer_type === 'new');
