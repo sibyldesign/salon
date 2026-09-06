@@ -156,19 +156,49 @@
   </div>
 
   <!-- 分頁 2. 名單 -->
-  <div id="page-customer" class="page space-y-3" style="display: none;">
-    <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm space-y-2">
+  <div id="page-customer" class="page space-y-4" style="display: none;">
+    
+    <!-- 🚨 專區 1：新進預約審核 ＆ 訂金核對專區 (新進待審核或客人已回報後五碼待對帳) -->
+    <div class="bg-amber-50/90 border-2 border-amber-300 p-4 rounded-3xl space-y-3 shadow-xs">
       <div class="flex justify-between items-center">
-        <span class="text-xs font-bold text-brand-900">📋 預約名單與審核</span>
+        <span class="font-black text-amber-950 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-bell text-amber-600 animate-bounce"></i> 🚨 新進預約審核 ＆ 訂金核對專區
+        </span>
+        <span id="pending-audit-badge" class="px-2.5 py-0.5 bg-amber-200 text-amber-900 text-[10px] font-bold rounded-full">0 筆待處理</span>
+      </div>
+      <div id="pending-audit-container" class="space-y-2.5">
+        <div class="text-center text-xs text-amber-800/70 py-3">目前無待核准或待對帳的預約</div>
+      </div>
+    </div>
+
+    <!-- ⚠️ 專區 2：需付訂金但尚未回報名單 -->
+    <div class="bg-rose-50/80 border border-rose-200 p-4 rounded-3xl space-y-2.5 shadow-xs">
+      <div class="flex justify-between items-center">
+        <span class="font-bold text-rose-950 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ⚠️ 尚未收到訂金回報 (時段防呆提醒)
+        </span>
+        <span id="unpaid-deposit-badge" class="px-2 py-0.5 bg-rose-200 text-rose-900 text-[10px] font-bold rounded-full">0 筆</span>
+      </div>
+      <div id="unpaid-deposit-container" class="space-y-2"></div>
+    </div>
+
+    <!-- 📋 專區 3：即將到來的預約 (依時間倒序) -->
+    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <div class="flex justify-between items-center pb-2 border-b border-brand-100">
+        <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-calendar-check text-brand-500"></i> 即將到來的排程名單
+        </span>
         <select id="filter-status" class="text-xs border border-brand-200 rounded-lg px-2 py-1 bg-brand-50" onchange="renderCustomer()">
-          <option value="ALL">全部狀態 (未結單)</option>
-          <option value="待確認">待確認</option>
+          <option value="ALL">全部排程 (未結單/未取消)</option>
           <option value="已確認">已確認</option>
+          <option value="待確認">待確認</option>
           <option value="已結單">已結單</option>
           <option value="婉拒">婉拒</option>
           <option value="已取消">已取消</option>
         </select>
       </div>
+      <div id="cust-content-area" class="space-y-3"></div>
+    </div>
       <div class="text-[10px] text-brand-500 bg-brand-50 p-2 rounded-xl border border-brand-100 leading-relaxed">
         💡 <b>名單小提示：</b> 點擊電話按鈕可直接撥號或開啟 WhatsApp 聯繫。新預約將出現綠色「核准接單」按鈕，點擊確認後系統將自動通知客人！服務完成後點擊「結單」進行現金實收、扣儲值金或核銷包卡，該筆紀錄將自動歸檔至「業績」分頁統計。
       </div>
@@ -901,7 +931,7 @@
 
 <!-- 底部導覽列 -->
 <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white border-t border-brand-200/80 shadow-lg">
-  <nav class="max-w-2xl w-full px-2 py-2 flex items-center overflow-x-auto no-scrollbar gap-1 justify-start md:justify-around" id="bottom-nav" style="display: none;">
+  <nav class="max-w-2xl w-full px-2 py-3 flex items-center overflow-x-auto no-scrollbar gap-1 justify-around min-h-[72px]" id="bottom-nav" style="display: none;">
     <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       <span class="text-[10px] mt-0.5">日曆</span>
@@ -957,54 +987,95 @@
   </nav>
 </div>
   <!-- 完整結單核銷彈窗 -->
-<div id="checkout-modal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-  <div class="bg-white p-6 rounded-3xl max-w-sm w-full space-y-4 shadow-xl border border-brand-200 text-xs">
+<!-- 完工結單與活動方案對帳彈窗 (對齊截圖樣式) -->
+<div id="checkoutModal" class="fixed inset-0 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4 z-[9999]">
+  <div class="bg-white rounded-3xl w-full max-w-sm p-5 shadow-2xl border border-brand-200 max-h-[90vh] overflow-y-auto space-y-3 text-xs">
     <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-      <h3 class="font-bold text-sm text-brand-900">服務完成・結單核銷</h3>
+      <h3 class="font-black text-brand-900 text-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-file-invoice-dollar text-[#8C7355]"></i> 美容完工結單與活動方案對帳
+      </h3>
       <button onclick="closeCheckoutModal()" class="text-gray-400 hover:text-gray-600 text-lg">×</button>
     </div>
 
-    <div class="space-y-1.5 p-3 bg-brand-50 rounded-2xl border border-brand-100">
-      <div class="font-bold text-brand-900" id="chk-cust-info">顧客：王小美 (0912345678)</div>
-      <div class="text-brand-600" id="chk-service-info">施作項目：剪髮造型設計</div>
-      <div class="text-brand-900 font-bold">預估應收：NT$ <span id="chk-origin-price">0</span></div>
-      <div id="chk-deposit-notice" class="text-[11px] text-amber-800 font-bold hidden">※ 本次已預付訂金：NT$ <span id="chk-deposit-val">0</span> 元 (已自動自尾款扣除)</div>
-    </div>
-
-    <div class="space-y-2">
-      <label class="font-bold text-brand-800 block">選擇結算核銷方式：</label>
-      <div class="space-y-1.5">
-        <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-100/50">
-          <div class="flex items-center gap-2">
-            <input type="radio" name="payMethodRadio" value="cash" checked class="accent-brand-500">
-            <span class="font-bold text-brand-900">現場付款 (現金 / 刷卡 / LINE Pay)</span>
-          </div>
-        </label>
-
-        <label id="chk-wallet-option" class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-100/50">
-          <div class="flex items-center gap-2">
-            <input type="radio" name="payMethodRadio" value="wallet" class="accent-brand-500">
-            <span class="font-bold text-brand-900">扣除會員儲值金 (目前餘額：<span id="chk-wallet-bal">0</span> 元)</span>
-          </div>
-        </label>
-
-        <label id="chk-pkg-option" class="hidden flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white cursor-pointer has-[:checked]:border-brand-500 has-[:checked]:bg-brand-100/50">
-          <div class="flex items-center gap-2">
-            <input type="radio" name="payMethodRadio" value="package" class="accent-brand-500">
-            <span class="font-bold text-brand-900">扣抵包卡堂票 (尚有 <span id="chk-pkg-rem">0</span> 堂)</span>
-          </div>
-        </label>
+    <!-- 會員目前資產 -->
+    <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-2xl text-xs space-y-1 text-emerald-900 font-bold">
+      <div class="flex justify-between items-center">
+        <span>💳 目前剩餘包卡：</span>
+        <span class="font-black text-emerald-700 text-sm" id="checkModalCurrentCard">0 次</span>
+      </div>
+      <div class="flex justify-between items-center border-t border-emerald-200/60 pt-1">
+        <span>💰 目前儲值金餘額：</span>
+        <span class="font-black text-emerald-700 text-sm" id="checkModalCurrentDeposit">$0</span>
       </div>
     </div>
 
-    <div>
-      <label class="block font-bold text-brand-800 mb-1">最終實收 / 扣抵金額 (現場可微調)</label>
-      <input type="number" id="chk-final-amount" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-base font-bold text-brand-900 outline-none">
+    <!-- 施作項目細項標記 -->
+    <div class="bg-brand-50 p-3 rounded-2xl text-xs space-y-1 text-brand-800 border border-brand-200/80">
+      <div class="font-bold text-[#8C7355] border-b border-brand-200 pb-1 mb-1">📋 施作項目細項標記：</div>
+      <div id="check_item_detail_list" class="text-brand-700 leading-relaxed">--</div>
     </div>
 
-    <button onclick="confirmFinalCheckout()" class="w-full py-3 bg-[#8C7355] hover:bg-brand-600 text-white rounded-xl font-bold shadow-xs transition text-xs">
-      確認結單並歸檔
-    </button>
+    <!-- 1. 現場基準金額 -->
+    <div class="bg-brand-50/70 p-3.5 rounded-2xl text-xs space-y-1.5 text-brand-900 border border-brand-200">
+      <label class="text-xs font-black text-brand-900 block">1. 本次現場基準金額 (原價可手動微調) *：</label>
+      <div class="flex items-center gap-1.5 bg-white p-2 rounded-xl border-2 border-brand-300">
+        <span class="font-black text-brand-700 text-base pl-1">$</span>
+        <input type="number" id="check_custom_base_price" oninput="recalcCheckoutTotal()" class="w-full text-lg font-black text-emerald-700 outline-none bg-transparent" value="0">
+      </div>
+    </div>
+
+    <!-- 2 & 3. 方案扣抵與現場新購方案 -->
+    <div class="space-y-2 bg-amber-50/60 p-3.5 rounded-2xl border border-amber-200">
+      <label class="text-xs font-black text-amber-950 block">2. 扣抵舊有方案 (包卡/儲值金)：</label>
+      <select id="check_discount_use_select" onchange="recalcCheckoutTotal()" class="w-full p-2.5 border border-amber-200 rounded-xl text-xs font-bold text-brand-900 bg-white outline-none">
+        <option value="none" data-rate="1">不使用舊方案 (原價計費)</option>
+        <option value="useCard" id="optUseCardDeductText">使用【包卡扣抵】(主服務 $0)</option>
+        <option value="useDeposit" id="optUseDepositText" data-rate="0.9">使用已有儲值金 (享專屬折扣並扣抵)</option>
+      </select>
+
+      <label class="text-xs font-black text-amber-950 block pt-1">3. 現場新購方案 (同時增購包卡/儲值)：</label>
+      <select id="check_new_buy_select" onchange="recalcCheckoutTotal()" class="w-full p-2.5 border border-amber-200 rounded-xl text-xs font-bold text-brand-900 bg-white outline-none">
+        <option value="none" data-price="0">不新購任何方案</option>
+        <optgroup label="🎁 新購包卡方案" id="pkgBuyOptionsGroup"></optgroup>
+        <optgroup label="💳 新購儲值金方案" id="topupBuyOptionsGroup"></optgroup>
+      </select>
+    </div>
+
+    <!-- 帳單試算明細卡 -->
+    <div class="bg-brand-50 p-3.5 rounded-2xl text-xs space-y-1.5 text-brand-800 border border-brand-200">
+      <div class="flex justify-between text-brand-500">
+        <span>1. 項目基準價 (Original)：</span>
+        <span class="font-bold" id="check_display_orig">$0</span>
+      </div>
+      <div class="flex justify-between text-rose-600">
+        <span>2. 套用優惠折扣：</span>
+        <span class="font-bold" id="check_display_disc">-$0</span>
+      </div>
+      <div class="flex justify-between text-emerald-700 font-bold" id="check_display_dep_deduct_row">
+        <span>3. 儲值金扣抵支付：</span>
+        <span class="font-bold" id="check_display_dep_deduct">-$0</span>
+      </div>
+      <div class="flex justify-between text-amber-800 font-bold">
+        <span>4. 現場加購方案：</span>
+        <span class="font-bold" id="check_display_add">+$0</span>
+      </div>
+      <hr class="border-brand-200 my-1">
+      <div class="flex justify-between items-center text-sm font-black text-brand-900">
+        <span>現場需補付實收金額：</span>
+        <span class="text-xl text-[#8C7355] font-black" id="check_display_final">$0</span>
+      </div>
+      
+      <div class="bg-white p-2.5 rounded-xl border border-dashed border-brand-300 mt-2 space-y-1 text-[11px] text-brand-700">
+        <div class="font-black text-[#8C7355]">📊 結單扣抵後剩餘預估明細：</div>
+        <div id="check_display_after_card" class="font-bold">• 剩餘包卡：--</div>
+        <div id="check_display_after_deposit" class="font-bold">• 剩餘儲值金：--</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 pt-2">
+      <button onclick="closeCheckoutModal()" class="py-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-xs font-bold text-gray-500 transition">取消</button>
+      <button onclick="submitFinalCheckout()" class="py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-sm transition">確認完工結單</button>
+    </div>
   </div>
 </div>
 
@@ -1598,24 +1669,18 @@
   function switchPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(n => {
-      n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium";
+      n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1.5 rounded-2xl transition text-brand-400 font-medium";
     });
     const target = document.getElementById('page-' + pageId);
     if (target) target.style.display = 'block';
-    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1.5 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
-    // ✨ 關鍵修復：切換分頁時，立即強制重新繪製對應分頁畫面
-    if (pageId === 'care') {
-      renderCare();
-      populateCareRulesUI(); // 確保圖二下方的 5 組規則輸入框也被渲染出來
-    }
-    if (pageId === 'services') {
-      renderServiceList();
-      renderPortfolioList();
-    }
+    if (pageId === 'care') renderCare();
+    if (pageId === 'services') renderServiceList();
     if (pageId === 'customer') renderCustomer();
     if (pageId === 'revenue') renderRevenue();
-    if (pageId === 'shift') renderShift();
+    if (pageId === 'settings') populateSettings(); // 確保原設定值原封不動回填！
+    if (pageId === 'reviews') renderReviewTagsManager();
   }
 
   function renderCalendar() {
@@ -1859,35 +1924,193 @@
     document.getElementById('checkout-modal').classList.add('hidden');
   }
 
-  async function confirmFinalCheckout() {
-    if (!currentCheckoutBookingObj) return;
-    const finalPrice = Number(document.getElementById('chk-final-amount').value || 0);
-    const method = document.querySelector('input[name="payMethodRadio"]:checked')?.value || 'cash';
-    Swal.showLoading();
+  // ✨ 結單對帳核心邏輯 (對齊截圖算法)
+  let currentCheckoutCustomer = null;
+  let currentCheckoutPackages = [];
+
+  async function openCheckoutModal(id, name, phone, service, price) {
+    currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
+    
+    // 初始化畫面
+    document.getElementById('check_item_detail_list').innerHTML = `• 顧客：<b>${name}</b> (${phone})<br>• 項目：<b>${service}</b>`;
+    document.getElementById('check_custom_base_price').value = price || 0;
+
+    // 撈取此顧客在資料庫的儲值餘額與包卡
+    let walletBal = 0;
+    let discountRate = 1;
+    currentCheckoutPackages = [];
+    currentCheckoutCustomer = null;
 
     try {
-      if (method === 'wallet') {
-        const custRes = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${currentCheckoutBookingObj.phone}`);
-        if (custRes && custRes.length > 0) {
-          const newBal = Math.max(0, Number(custRes[0].wallet_balance) - finalPrice);
-          await directSupabasePatch('customers', `id=eq.${custRes[0].id}`, { wallet_balance: newBal });
-        }
+      const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`);
+      if (custs && custs.length > 0) {
+        currentCheckoutCustomer = custs[0];
+        walletBal = Number(custs[0].wallet_balance || 0);
+        discountRate = Number(custs[0].member_discount || 1);
       }
-      if (method === 'package') {
-        const pkgId = document.getElementById('chk-pkg-option').getAttribute('data-pkg-id');
-        const pkgRem = Number(document.getElementById('chk-pkg-option').getAttribute('data-pkg-rem') || 1);
-        if (pkgId) {
-          await directSupabasePatch('customer_packages', `id=eq.${pkgId}`, { remaining_times: Math.max(0, pkgRem - 1) });
+      currentCheckoutPackages = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`);
+    } catch(e) {}
+
+    // 更新頂部卡片
+    const matchedPkg = currentCheckoutPackages.find(p => service.includes(p.service_name));
+    const cardTimes = matchedPkg ? matchedPkg.remaining_times : 0;
+    document.getElementById('checkModalCurrentCard').innerText = `${cardTimes} 次`;
+    document.getElementById('checkModalCurrentDeposit').innerText = `$${walletBal}`;
+
+    // 更新下拉選單文字
+    const optCard = document.getElementById('optUseCardDeductText');
+    if (cardTimes > 0) {
+      optCard.innerText = `使用【${matchedPkg.service_name} 包卡扣抵】(剩餘 ${cardTimes} 次，本次 $0)`;
+      optCard.disabled = false;
+    } else {
+      optCard.innerText = `無可扣抵之包卡堂票 (剩餘 0 次)`;
+      optCard.disabled = true;
+    }
+
+    const optDep = document.getElementById('optUseDepositText');
+    if (walletBal > 0) {
+      optDep.innerText = `使用儲值金 (餘額 $${walletBal}，享 ${discountRate * 10} 折扣款)`;
+      optDep.setAttribute('data-rate', discountRate);
+      optDep.disabled = false;
+    } else {
+      optDep.innerText = `無儲值金餘額 ($0)`;
+      optDep.disabled = true;
+    }
+
+    // 動態填入「現場新購方案」選項
+    const s = backendData.settings || {};
+    const pkgRules = s.packageRules || [];
+    const walletRules = s.walletRules || [];
+
+    document.getElementById('pkgBuyOptionsGroup').innerHTML = pkgRules.map(p => `
+      <option value="new_pkg" data-name="${p.service_name}" data-times="${p.times}" data-price="${p.price}">購買【${p.name}】(+NT$ ${p.price})</option>
+    `).join('') || '<option disabled>無預設包卡方案</option>';
+
+    document.getElementById('topupBuyOptionsGroup').innerHTML = walletRules.map(w => `
+      <option value="new_topup" data-add="${w.price + w.bonus}" data-discount="${w.discount}" data-price="${w.price}">儲值【${w.name}】(+NT$ ${w.price})</option>
+    `).join('') || '<option disabled>無預設儲值方案</option>';
+
+    // 重設下拉選項為預設
+    document.getElementById('check_discount_use_select').value = "none";
+    document.getElementById('check_new_buy_select').value = "none";
+
+    recalcCheckoutTotal();
+    document.getElementById('checkoutModal').classList.remove('hidden');
+  }
+
+  function closeCheckoutModal() {
+    document.getElementById('checkoutModal').classList.add('hidden');
+  }
+
+  // ✨ 即時試算現場補付金額與剩餘預估明細 (與截圖完全相符)
+  function recalcCheckoutTotal() {
+    const basePrice = Number(document.getElementById('check_custom_base_price').value || 0);
+    const useMethod = document.getElementById('check_discount_use_select').value;
+    const newBuyOption = document.getElementById('check_new_buy_select').options[document.getElementById('check_new_buy_select').selectedIndex];
+    
+    let origPrice = basePrice;
+    let discAmt = 0;
+    let depDeduct = 0;
+    let addPrice = Number(newBuyOption?.getAttribute('data-price') || 0);
+
+    let curCard = parseInt(document.getElementById('checkModalCurrentCard').innerText) || 0;
+    let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit').innerText.replace('$', '')) || 0;
+
+    // 1. 包卡扣抵
+    if (useMethod === 'useCard' && curCard > 0) {
+      discAmt = origPrice; // 全額扣抵
+      curCard -= 1;
+    }
+
+    // 2. 儲值金扣抵
+    if (useMethod === 'useDeposit' && curDeposit > 0) {
+      const rate = Number(document.getElementById('optUseDepositText').getAttribute('data-rate') || 1);
+      const afterDisc = Math.round(origPrice * rate);
+      discAmt = origPrice - afterDisc;
+      
+      if (curDeposit >= afterDisc) {
+        depDeduct = afterDisc;
+        curDeposit -= afterDisc;
+      } else {
+        depDeduct = curDeposit;
+        curDeposit = 0;
+      }
+    }
+
+    // 3. 現場新購增加資產
+    if (newBuyOption && newBuyOption.value === 'new_pkg') {
+      curCard += Number(newBuyOption.getAttribute('data-times') || 0);
+    }
+    if (newBuyOption && newBuyOption.value === 'new_topup') {
+      curDeposit += Number(newBuyOption.getAttribute('data-add') || 0);
+    }
+
+    let finalPay = (origPrice - discAmt - depDeduct) + addPrice;
+    if (finalPay < 0) finalPay = 0;
+
+    // 更新畫面
+    document.getElementById('check_display_orig').innerText = `$${origPrice}`;
+    document.getElementById('check_display_disc').innerText = `-$${discAmt}`;
+    document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
+    document.getElementById('check_display_add').innerText = `+$${addPrice}`;
+    document.getElementById('check_display_final').innerText = `$${finalPay}`;
+
+    document.getElementById('check_display_after_card').innerText = `• 剩餘包卡：${curCard} 次`;
+    document.getElementById('check_display_after_deposit').innerText = `• 剩餘儲值金：$${curDeposit}`;
+  }
+
+  // ✨ 確認完工結單送出
+  async function submitFinalCheckout() {
+    Swal.showLoading();
+    const finalPrice = Number(document.getElementById('check_display_final').innerText.replace('$', '') || 0);
+    const useMethod = document.getElementById('check_discount_use_select').value;
+    const newBuyOption = document.getElementById('check_new_buy_select').options[document.getElementById('check_new_buy_select').selectedIndex];
+    const phone = currentCheckoutBookingObj.phone;
+    const custName = currentCheckoutBookingObj.name;
+
+    try {
+      // 1. 若使用包卡扣除
+      if (useMethod === 'useCard') {
+        const matched = currentCheckoutPackages.find(p => currentCheckoutBookingObj.service.includes(p.service_name));
+        if (matched) {
+          await directSupabasePatch('customer_packages', `id=eq.${matched.id}`, { remaining_times: matched.remaining_times - 1 });
         }
       }
 
+      // 2. 若新購包卡
+      if (newBuyOption && newBuyOption.value === 'new_pkg') {
+        await directSupabaseUpsert('customer_packages', {
+          store_id: CURRENT_STORE_ID,
+          customer_name: custName,
+          phone: phone,
+          service_name: newBuyOption.getAttribute('data-name'),
+          total_times: Number(newBuyOption.getAttribute('data-times')),
+          remaining_times: Number(newBuyOption.getAttribute('data-times'))
+        }, 'id');
+      }
+
+      // 3. 儲值金更新
+      const finalBal = parseInt(document.getElementById('check_display_after_deposit').innerText.replace(/[^0-9]/g, '')) || 0;
+      if (currentCheckoutCustomer) {
+        await directSupabasePatch('customers', `id=eq.${currentCheckoutCustomer.id}`, { wallet_balance: finalBal });
+      } else if (newBuyOption && newBuyOption.value === 'new_topup') {
+        await directSupabaseUpsert('customers', {
+          store_id: CURRENT_STORE_ID,
+          name: custName,
+          phone: phone,
+          wallet_balance: finalBal,
+          member_discount: Number(newBuyOption.getAttribute('data-discount') || 1)
+        }, 'id');
+      }
+
+      // 4. 結單歸檔預約
       await directSupabasePatch('bookings', `id=eq.${currentCheckoutBookingObj.id}`, {
         status: '已結單',
         final_price: finalPrice
       });
 
       closeCheckoutModal();
-      Swal.fire('結單完成！', `已成功歸檔紀錄`, 'success');
+      Swal.fire('完工結單成功！', `現場實收補付：NT$ ${finalPrice}`, 'success');
       fetchDataAndRender();
     } catch(e) {
       Swal.fire('結單失敗', e.message, 'error');
