@@ -523,39 +523,90 @@
     <div id="search-results-area" class="space-y-3"></div>
   </div>
 
-  <!-- 分頁 8. ⚡ 手動新增預約 -->
+  <!-- 分頁 8. ⚡ 手動新增預約 (比照前台完整優化版) -->
   <div id="page-add" class="page space-y-4" style="display: none;">
-    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
-      <div class="text-xs font-bold text-brand-900 flex items-center gap-1">
-        <span class="text-amber-500 font-bold">⚡</span> 1. 輸入顧客電話快查：
+    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+      
+      <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5 border-b border-brand-100 pb-2">
+        <i class="fa-solid fa-bolt text-amber-500"></i>
+        <span>後台代客建檔與預約卡位</span>
       </div>
-      <div class="flex gap-2">
-        <input type="tel" id="quick-phone" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="顧客電話 (必填)" onblur="quickCheckCustomer()">
+
+      <!-- 1. 手機號碼快查 -->
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">1. 顧客手機號碼 (必填快查)：</label>
+        <div class="flex gap-2">
+          <input type="tel" id="quick-phone" required placeholder="例如：0912345678" class="flex-1 p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-400" oninput="adminQuickCheckCustomer(this.value)">
+        </div>
+        <div class="text-[10px] text-emerald-700 font-bold mt-1" id="admin-quick-member-hint"></div>
       </div>
+
+      <!-- 2. 姓名與 LINE 名稱 -->
       <div class="grid grid-cols-2 gap-2">
-        <input type="text" id="quick-name" class="p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="顧客姓名">
-        <input type="text" id="quick-line" class="p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="LINE 名稱">
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">2. 顧客姓名 *</label>
+          <input type="text" id="quick-name" required placeholder="請輸入姓名" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">LINE 顯示名稱</label>
+          <input type="text" id="quick-line" placeholder="例如：小美" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
       </div>
+
+      <!-- 3. 指定專員 -->
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1">3. 主服務項目：</label>
-        <select id="quick-service" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50" onchange="autoFillPrice()"></select>
+        <label class="block font-bold text-brand-800 mb-1.5">3. 指定服務專員：</label>
+        <div class="grid grid-cols-3 gap-2" id="admin-quick-staff-grid">
+          <!-- 由 JS 動態渲染專員按鈕 -->
+        </div>
+        <input type="hidden" id="quick-staff-id" value="all">
+        <input type="hidden" id="quick-staff-name" value="不指定">
       </div>
+
+      <!-- 4. 服務項目選擇 (比照前台複選網格) -->
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1">4. 本次實收金額：</label>
-        <input type="number" id="quick-price" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-bold text-brand-900">
+        <div class="flex justify-between items-center mb-1.5">
+          <label class="font-bold text-brand-800">4. 選擇施作項目 (可複選)：</label>
+          <span class="text-[10px] text-brand-400">※ 加購項目需先選主項目</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="admin-quick-service-grid">
+          <!-- 由 JS 動態渲染服務勾選卡片 -->
+        </div>
+        <input type="hidden" id="quick-service-names" required>
       </div>
+
+      <!-- 5. 預約日期與時間 -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">5. 預約日期 *</label>
+          <input type="date" id="quick-date" required class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">6. 進場時間 *</label>
+          <input type="time" id="quick-time" required class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
+      </div>
+
+      <!-- 7. 現場實收金額自動試算 -->
+      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
+        <div class="flex justify-between items-center font-bold text-brand-900">
+          <span>7. 預估應收金額：</span>
+          <span class="text-base font-black text-[#8C7355] font-serif">NT$ <span id="admin-quick-total-price">0</span></span>
+        </div>
+        <input type="hidden" id="quick-price" value="0">
+      </div>
+
+      <!-- 8. 內部備註 -->
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1">5. 預約日期：</label>
-        <input type="date" id="quick-date" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50">
+        <label class="block font-bold text-brand-800 mb-1">後台預約備註 (選填)</label>
+        <input type="text" id="quick-notes" placeholder="例如：電話預約、指定靠窗座位..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
       </div>
-      <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1">6. 進場時間：</label>
-        <input type="time" id="quick-time" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50">
-      </div>
-      <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="submitQuickBooking()">確定新增卡位</button>
+
+      <button type="button" onclick="submitAdminQuickBooking()" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl shadow-md transition text-xs tracking-widest">
+        ✓ 確定為顧客新增排程卡位
+      </button>
     </div>
   </div>
-
   <!-- 分頁 9. 💳 訂閱方案 -->
   <div id="page-subscription" class="page space-y-4" style="display: none;">
     <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -3283,10 +3334,149 @@
     }
   }
 
+  // 1. 初始化後台新增分頁的服務與專員選項
   function renderQuickAddServices() {
-    const sel = document.getElementById('quick-service');
+    // 渲染專員按鈕
+    const staffList = (backendData.settings && backendData.settings.staffList) || [{ id: "all", name: "不指定" }];
+    const staffGrid = document.getElementById('admin-quick-staff-grid');
+    if (staffGrid) {
+      staffGrid.innerHTML = staffList.map((st, idx) => `
+        <button type="button" class="admin-staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-brand-50/50 border-brand-200 text-brand-800'}" onclick="selectAdminQuickStaff('${st.id}', '${st.name}', this)">
+          ${st.name}
+        </button>
+      `).join('');
+    }
+
+    // 渲染服務複選卡片
+    const svcGrid = document.getElementById('admin-quick-service-grid');
+    if (!svcGrid) return;
     const svcs = backendData.services || [];
-    sel.innerHTML = '<option value="">請選擇服務項目...</option>' + svcs.map(s => `<option value="${s.name}">${s.name} (${s.price}元)</option>`).join('');
+    
+    svcGrid.innerHTML = svcs.map(s => `
+      <label class="admin-svc-card flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 cursor-pointer transition text-xs">
+        <div class="flex items-center gap-2 truncate">
+          <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${s.isAddon || false}" data-duration="${s.duration || 60}" onchange="handleAdminQuickServiceChange()" class="accent-[#8C7355] rounded">
+          <span class="truncate font-medium">${s.isAddon ? '✨ ' : ''}${s.name}</span>
+        </div>
+        <span class="text-brand-500 font-bold shrink-0 ml-1">${s.price}元</span>
+      </label>
+    `).join('');
+  }
+
+  function selectAdminQuickStaff(id, name, el) {
+    document.querySelectorAll('.admin-staff-btn').forEach(b => {
+      b.className = "admin-staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-50/50 border-brand-200 text-brand-800";
+    });
+    el.className = "admin-staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-[#8C7355] text-white border-[#8C7355]";
+    document.getElementById('quick-staff-id').value = id;
+    document.getElementById('quick-staff-name').value = name;
+  }
+
+  function handleAdminQuickServiceChange() {
+    const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
+    document.getElementById('quick-service-names').value = checked.map(el => el.value).join(', ');
+    
+    let total = 0;
+    checked.forEach(cb => {
+      const pVal = cb.getAttribute('data-price') || '0';
+      const num = pVal.match(/\d+/);
+      total += num ? Number(num[0]) : 0;
+    });
+
+    document.getElementById('quick-price').value = total;
+    document.getElementById('admin-quick-total-price').innerText = total.toLocaleString();
+
+    document.querySelectorAll('.admin-svc-card').forEach(card => {
+      const input = card.querySelector('input');
+      card.classList.toggle('bg-brand-100', input.checked);
+      card.classList.toggle('border-brand-400', input.checked);
+    });
+  }
+
+  // 電話自動快查歷史檔案
+  async function adminQuickCheckCustomer(phoneVal) {
+    const phone = phoneVal.trim();
+    const hint = document.getElementById('admin-quick-member-hint');
+    if (phone.length >= 8) {
+      try {
+        const [bookings, custs] = await Promise.all([
+          directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+          directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+        ]);
+
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          document.getElementById('quick-name').value = bookings[0].customer_name || '';
+          if (bookings[0].line_name) document.getElementById('quick-line').value = bookings[0].line_name;
+          hint.innerText = `✓ 已自動帶入舊客檔案：${bookings[0].customer_name}`;
+        } else if (custs && custs.length > 0) {
+          document.getElementById('quick-name').value = custs[0].name || '';
+          hint.innerText = `✓ 已帶入會員檔案：${custs[0].name} (餘額 $${custs[0].wallet_balance || 0})`;
+        } else {
+          hint.innerText = `✨ 此號碼為新客，將自動建立建檔`;
+        }
+      } catch(e) {
+        hint.innerText = '';
+      }
+    } else {
+      hint.innerText = '';
+    }
+  }
+
+  // 提交後台新增預約
+  async function submitAdminQuickBooking() {
+    const phone = document.getElementById('quick-phone').value.trim();
+    const name = document.getElementById('quick-name').value.trim();
+    const service = document.getElementById('quick-service-names').value.trim();
+    const price = Number(document.getElementById('quick-price').value || 0);
+    const date = document.getElementById('quick-date').value;
+    const time = document.getElementById('quick-time').value;
+    const staffId = document.getElementById('quick-staff-id').value;
+    const staffName = document.getElementById('quick-staff-name').value;
+    const notes = document.getElementById('quick-notes').value.trim();
+
+    if (!phone || !name || !service || !date || !time) {
+      return Swal.fire('請填寫完整預約資料', '手機、姓名、服務項目、日期與時間為必填', 'warning');
+    }
+
+    Swal.fire({ title: '正在新增排程...', allowOutsideClick: false });
+    Swal.showLoading();
+
+    const appointmentIso = `${date.replace(/\//g, '-')}T${time}:00+08:00`;
+
+    try {
+      await directSupabaseUpsert('bookings', {
+        store_id: CURRENT_STORE_ID,
+        customer_name: name,
+        customer_phone: phone,
+        customer_type: 'old',
+        line_name: document.getElementById('quick-line').value.trim() || '',
+        service_names: service,
+        price: price,
+        final_price: price,
+        appointment_time: appointmentIso,
+        staff_id: staffId,
+        staff_name: staffName,
+        notes: notes ? `後台手動加單備註: ${notes}` : '後台手動加單',
+        status: '已確認' // 後台手動新增預約直接預設為已確認
+      }, 'id');
+
+      Swal.fire({ title: '已成功新增排程卡位！', icon: 'success', timer: 1500, showConfirmButton: false });
+      
+      // 清空表單
+      document.getElementById('quick-phone').value = '';
+      document.getElementById('quick-name').value = '';
+      document.getElementById('quick-line').value = '';
+      document.getElementById('quick-service-names').value = '';
+      document.getElementById('quick-date').value = '';
+      document.getElementById('quick-time').value = '';
+      document.getElementById('quick-notes').value = '';
+      document.querySelectorAll('#admin-quick-service-grid input').forEach(cb => cb.checked = false);
+      document.getElementById('admin-quick-total-price').innerText = '0';
+
+      fetchDataAndRender();
+    } catch(err) {
+      Swal.fire('新增失敗', err.message, 'error');
+    }
   }
 
   function autoFillPrice() {
