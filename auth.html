@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sibyl 數位管家 | 安全驗證中...</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-[#FAF6F0] text-[#5C4B3C] flex flex-col items-center justify-center min-h-screen p-6 text-center">
+  <div class="bg-white p-8 rounded-3xl shadow-sm border border-[#DFD1C0] max-w-xs w-full space-y-4">
+    <div class="w-10 h-10 mx-auto bg-[#EFE6DC] rounded-full flex items-center justify-center text-[#8C7355] animate-spin">
+      <i class="fa-solid fa-circle-notch"></i>
+    </div>
+    <div class="font-bold text-sm">正在進行 LINE 安全身分驗證...</div>
+    <div class="text-[11px] text-gray-400" id="auth-status-text">請稍候，系統自動跳轉中</div>
+  </div>
+
+  <script>
+    const LIFF_ID = "2011183690-A3PkQLO3"; // 您的萬用 LIFF ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUrl = urlParams.get('target'); // 目標系統網址
+    const storeId = urlParams.get('store_id') || '';
+
+    window.onload = async function() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (!liff.isLoggedIn()) {
+          // 若未登入，引導登入並帶回原參數
+          liff.login({ redirectUri: window.location.href });
+          return;
+        }
+
+        const profile = await liff.getProfile();
+        const userId = profile.userId;
+        const displayName = profile.displayName;
+
+        if (!targetUrl) {
+          document.getElementById('auth-status-text').innerText = "參數異常：找不到目標轉發網址";
+          return;
+        }
+
+        // 組裝帶有 userId 與 displayName 的安全跳轉網址
+        const finalSeparator = targetUrl.includes('?') ? '&' : '?';
+        const authenticatedRedirectUrl = `${targetUrl}${finalSeparator}line_uid=${encodeURIComponent(userId)}&line_name=${encodeURIComponent(displayName)}&store_id=${storeId}`;
+
+        // 秒級無感跳轉至對應系統
+        window.location.replace(authenticatedRedirectUrl);
+
+      } catch (err) {
+        document.getElementById('auth-status-text').innerText = "驗證初始化失敗：" + err.message;
+        if (targetUrl) {
+          // 發生異常時的降級防呆：直接跳轉目標網址，不卡死用戶
+          setTimeout(() => { window.location.replace(targetUrl); }, 1500);
+        }
+      }
+    };
+  </script>
+</body>
+</html>
