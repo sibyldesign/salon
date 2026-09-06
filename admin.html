@@ -1843,7 +1843,7 @@
         <div class="flex gap-1.5 pt-1 flex-wrap text-[11px] items-center">
           <button class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5B6B78] text-white rounded-lg font-bold transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
           <button class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button class="px-2.5 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold transition" onclick="openCompleteCheckoutModal('${a.id}', '${a.name}', '${a.price}', '${a.phone}', '${a.service}', ${a.deposit_deducted || 0})">結單</button>
+          <button class="px-2.5 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold transition" onclick="openCheckoutModal('${a.id}', '${a.name || a.customer_name}', '${a.phone || a.customer_phone}', '${a.service || a.service_names}', ${a.price || 0})">結單</button>
           <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold transition" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
           ${contractBtnHtml}
         </div>
@@ -3364,22 +3364,26 @@
     loadAdminReviews();
   }
 
+  // 修正 1：換日期時徹底重置，不再殘留舊選取
   function handleSlotRangeChange() {
     const startVal = document.getElementById('slot-start-date').value;
     const endVal = document.getElementById('slot-end-date').value;
     if (!startVal) return;
-    
+
+    // 清空上次選取的暫存
+    pendingSlotsList = [];
+    renderPendingSlotsList();
+
     const container = document.getElementById('slot-picker-checkboxes');
     const times = ["10:00", "11:30", "13:00", "14:30", "16:00", "17:30", "19:00"];
-    
     const startDate = new Date(startVal);
     const endDate = endVal ? new Date(endVal) : new Date(startVal);
-    
+
     let daysList = [];
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
     }
-    
+
     let html = '';
     daysList.forEach(dayStr => {
       html += `
