@@ -503,22 +503,22 @@
       const text = document.getElementById('announcement-input').value.trim();
       const isMaint = document.getElementById('announcement-is-maintenance').checked;
       
-      if (!text) {
-        return Swal.fire('請輸入公告文字', '若要清除公告，請點選「下架/清除」按鈕', 'warning');
-      }
+      if (!text) return Swal.fire('請輸入公告文字', '若要清除公告，請點選「下架/清除」按鈕', 'warning');
 
-      Swal.fire({ title: '正在發布全域公告...', allowOutsideClick: false });
       Swal.showLoading();
-
       try {
-        // 1. 將所有舊公告關閉
+        // 1. 先將所有舊公告設為非啟用
         await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
           method: "PATCH",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          headers: { 
+            "apikey": SUPABASE_ANON_KEY, 
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+            "Content-Type": "application/json" 
+          },
           body: JSON.stringify({ is_active: false })
         });
 
-        // 2. 新增最新活躍公告
+        // 2. ✨ 補上 title 欄位，解決 23502 not-null constraint 錯誤！
         const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
           method: "POST",
           headers: { 
@@ -528,23 +528,24 @@
             "Prefer": "return=representation"
           },
           body: JSON.stringify({ 
+            title: isMaint ? "系統維護公告" : "系統公告", // 補上非空的 title
             content: text, 
             is_active: true, 
             is_maintenance: isMaint 
           })
         });
 
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || JSON.stringify(errData));
+        }
 
-        const title = isMaint ? '已啟動全平台例行維護鎖定！' : '全域公告已成功發布！';
-        const desc = isMaint ? '所有店家前台將即刻彈出全螢幕遮罩，禁止填單。' : '所有店家前台與後台頂部將同步顯示該公告。';
-        Swal.fire(title, desc, 'success');
+        Swal.fire(isMaint ? '已啟動維護鎖定！' : '公告發布成功！', '前台與後台將同步呈現', 'success');
         loadAnnouncement();
       } catch (err) {
         Swal.fire('發布失敗', err.message, 'error');
       }
     }
-
     async function clearAnnouncement() {
       Swal.fire({ title: '正在下架公告...', allowOutsideClick: false });
       Swal.showLoading();
