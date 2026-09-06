@@ -686,20 +686,50 @@
       }
     }
 
+    // 1. 付款前阻擋彈窗（偽強制加 LINE）
     async function submitAndPay() {
       const storeName = document.getElementById('storeName').value.trim();
       const selectedPlanRadio = document.querySelector('input[name="planChoice"]:checked');
       const planChoice = selectedPlanRadio ? selectedPlanRadio.value : 'yearly';
-      
       const buyerName = document.getElementById('buyerName').value.trim();
       const buyerPhone = document.getElementById('buyerPhone').value.trim();
       const buyerEmail = document.getElementById('buyerEmail').value.trim();
-      const buyerLineName = document.getElementById('buyerLineName')?.value.trim() || '';
 
       if (!storeName || !buyerName || !buyerPhone || !buyerEmail) {
         return Swal.fire('請填寫完整資料', '店家名稱、姓名、手機與電子信箱為必填', 'warning');
       }
 
+      Swal.fire({
+        title: '【重要步驟】開通前請先加入官方 LINE',
+        html: `
+          <div class="text-left text-xs space-y-2.5 text-brand-800 leading-relaxed bg-amber-50 p-4 rounded-2xl border border-amber-200">
+            <p class="font-bold text-amber-950">⚠️ 為確保系統開通後能順利接收：</p>
+            <ul class="list-disc pl-4 space-y-1 text-amber-900">
+              <li>專屬後台入口與帳號密碼</li>
+              <li>《美業數位轉型實戰包（市值3,600元）》領取通知</li>
+              <li>重要版本升級與服務防護通知</li>
+            </ul>
+            <p class="pt-1 font-bold text-brand-900">請先點擊下方綠色按鈕加好友，加入後再點擊前往付款：</p>
+            <a href="https://line.me/R/ti/p/@480kqjoj" target="_blank" class="block text-center py-2.5 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold rounded-xl shadow-xs transition">
+              🟢 步驟 1：立即加入 Sibyl 官方 LINE
+            </a>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '步驟 2：我已加入，前往付款 ➔',
+        confirmButtonColor: '#8C7355',
+        cancelButtonText: '稍後再辦'
+      }).then((r) => {
+        if (r.isConfirmed) {
+          executeStoreCreationAndRedirect(storeName, planChoice, buyerName, buyerPhone, buyerEmail);
+        }
+      });
+    }
+
+    // 2. 建立店家與跳轉 PAYUNi
+    async function executeStoreCreationAndRedirect(storeName, planChoice, buyerName, buyerPhone, buyerEmail) {
+      const buyerLineName = document.getElementById('buyerLineName')?.value.trim() || '';
       Swal.fire({ title: '正在建立專屬系統帳號與服務範本...', allowOutsideClick: false }); 
       Swal.showLoading();
 
@@ -707,10 +737,8 @@
         const storeId = crypto.randomUUID();
         const adminToken = Array.from(crypto.getRandomValues(new Uint8Array(16)))
           .map(b => b.toString(16).padStart(2, '0')).join('');
-
         let planTitle = (planChoice === 'yearly') ? '年度旗艦方案' : '月繳方案';
 
-        // 1. 寫入 stores
         const storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
           method: "POST",
           headers: {
@@ -736,29 +764,6 @@
 
         if (!storeRes.ok) throw new Error("建立店家帳號失敗，請稍候重試");
 
-        // 2. 寫入預設 services (剪、燙、護、SPA)
-        await fetch(`${SUPABASE_URL}/rest/v1/services`, {
-          method: "POST",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify([
-            { store_id: storeId, service_name: "剪髮造型設計 (含洗吹)", price: "800", duration_minutes: 60, service_type: "Group_B", is_addon: false, sort_order: 0 },
-            { store_id: storeId, service_name: "日系質感染髮 (依長度報價)", price: "2200-3600", duration_minutes: 120, service_type: "Group_A", is_addon: false, sort_order: 1 },
-            { store_id: storeId, service_name: "深層水光結構護髮", price: "1200", duration_minutes: 60, service_type: "Group_A", is_addon: false, sort_order: 2 },
-            { store_id: storeId, service_name: "頭皮淨化舒壓SPA", price: "600", duration_minutes: 30, service_type: "Group_A", is_addon: true, sort_order: 3 }
-          ])
-        });
-
-        // 3. 寫入預設 portfolios
-        await fetch(`${SUPABASE_URL}/rest/v1/portfolios`, {
-          method: "POST",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify([
-            { store_id: storeId, title: "法式手刷染造型", category: "剪染造型", img_url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", link: "#", sort_order: 0 },
-            { store_id: storeId, title: "極簡奶咖光療美甲", category: "美甲設計", img_url: "https://images.unsplash.com/photo-1632345031435-8727f6897d53?auto=format&fit=crop&w=600&q=80", link: "#", sort_order: 1 }
-          ])
-        });
-
-        // 4. 寫入完整 store_settings (完整對齊最新 SQL Schema 欄位)
         await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
           method: "POST",
           headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
@@ -777,32 +782,6 @@
             enable_multi_staff_schedule: true,
             enable_carousel: true,
             promo_imgs: ["https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80"],
-            enable_cust_type: true,
-            enable_portfolio: true,
-            enable_care: true,
-            enable_show_price: true,
-            enable_cust_notes: true,
-            enable_quick_contact: true,
-            enable_cancel_reason: true,
-            enable_featured_shop: false,
-            enable_flex_menu: true,
-            enable_line_one_click_audit: false,
-            enable_auto_reminder: false,
-            enable_line_auto_notify: false,
-            enable_wallet: true,
-            enable_packages: true,
-            enable_coupons: true,
-            enable_reviews: true,
-            enable_contract: false,
-            contract_title: "美業服務定型化服務契約書",
-            contract_content: "一、本沙龍服務均由專業技術人員施作，操作前已充分向顧客說明施作內容與流程。\n二、顧客應誠實告知過敏史、特殊體質或近期施作技術。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。",
-            wallet_rules: [
-              { name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 },
-              { name: "儲值 $5,000", price: 5000, bonus: 600, discount: 0.85 }
-            ],
-            package_rules: [
-              { name: "剪髮買5送1方案", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000 }
-            ],
             shift_start_time: "09:00",
             shift_end_time: "19:00",
             shift_interval: 30,
@@ -810,28 +789,8 @@
           })
         });
 
-        const adminLink = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
-        const frontLink = `https://salon.heysibyl.com/?store_id=${storeId}`;
         const targetPayUrl = PAYUNI_LINKS[planChoice] || PAYUNI_LINKS.yearly;
-
-        Swal.fire({
-          title: '帳號建立成功！請確認專屬連結',
-          html: `
-            <div class="text-xs md:text-sm text-brand-800 text-left space-y-2 bg-brand-50 p-3.5 rounded-2xl border border-brand-200">
-              <div><b>🏪 店家名稱：</b>${storeName}</div>
-              <div><b>🔑 專屬後台 (含安全私鑰)：</b><br><a href="${adminLink}" target="_blank" class="text-blue-600 underline break-all">${adminLink}</a></div>
-              <div><b>📱 預約前台：</b><br><a href="${frontLink}" target="_blank" class="text-blue-600 underline break-all">${frontLink}</a></div>
-              <div class="p-2.5 bg-amber-100/80 rounded-xl text-amber-900 border border-amber-200 text-xs leading-relaxed font-bold">
-                開通提示：付款完成後，系統將寄送開通信件至 <code>${buyerEmail}</code>，內含專屬後台網址與<b>《美業數位轉型實戰包》下載連結</b>
-              </div>
-            </div>
-          `,
-          icon: 'success',
-          confirmButtonText: '確定，前往 PAYUNi 付款'
-        }).then(() => {
-          window.location.href = targetPayUrl;
-        });
-
+        window.location.href = targetPayUrl;
       } catch(e) {
         Swal.fire('系統連線異常', e.message, 'error');
       }
