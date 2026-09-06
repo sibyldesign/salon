@@ -1586,13 +1586,23 @@
   async function fetchSystemAnnouncement() {
     try {
       const data = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
-      if (data && data.length > 0 && data[0].content) {
-        document.getElementById('announcement-content').innerText = data[0].content;
-        document.getElementById('system-announcement-banner').classList.remove('hidden');
+      const banner = document.getElementById('system-announcement-banner');
+      const bannerContent = document.getElementById('announcement-content');
+
+      if (data && data.length > 0) {
+        const msg = (data[0].content || data[0].title || '').trim();
+        if (msg) {
+          bannerContent.innerText = msg;
+          banner.classList.remove('hidden');
+        } else {
+          banner.classList.add('hidden');
+        }
       } else {
-        document.getElementById('system-announcement-banner').classList.add('hidden');
+        banner.classList.add('hidden');
       }
-    } catch(e){}
+    } catch(e) {
+      document.getElementById('system-announcement-banner')?.classList.add('hidden');
+    }
   }
 
   function openLineBindLiff() {
