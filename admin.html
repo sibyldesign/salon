@@ -3660,25 +3660,43 @@
     });
   }
 
+  // ✨ 支援以 LINE名稱、姓名或電話獨立/綜合搜尋該客人的全部預約卡片
   async function executeSearch() {
     const kw = document.getElementById('search-keyword').value.trim();
-    if (!kw) return;
-    Swal.fire({ title: '搜尋中...', allowOutsideClick: false }); Swal.showLoading();
+    const area = document.getElementById('search-results-area');
+    if (!kw) {
+      return Swal.fire('請輸入搜尋關鍵字', '可輸入 LINE名稱、顧客姓名或手機號碼', 'warning');
+    }
+
+    Swal.fire({ title: '正在查詢該客人的全部預約...', allowOutsideClick: false });
+    Swal.showLoading();
+
     try {
-      const res = await fetch(`${API_URL}?action=searchBookings&store_id=${CURRENT_STORE_ID}&keyword=${encodeURIComponent(kw)}`);
-      const data = await res.json();
+      // 同步向 Supabase 查詢符合電話、姓名或 line_name 的紀錄
+      const endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)&order=appointment_time.desc&select=*`;
+      const records = await directSupabaseFetch(endpoint);
+      
       Swal.close();
-      const area = document.getElementById('search-results-area');
-      if (!data || data.length === 0) {
-        area.innerHTML = '<div class="text-center text-xs text-brand-400 py-4 bg-white rounded-3xl border border-brand-200">查無相符預約紀錄</div>';
+
+      if (!records || records.length === 0) {
+        area.innerHTML = '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無此 LINE名稱 / 姓名 / 電話 的預約紀錄</div>';
         return;
       }
-      area.innerHTML = data.map(a => renderSingleCardHTML(a)).join('');
+
+      // 格式化並渲染該客人的全部預約卡片
+      const initData = getInitialDataAPI ? getInitialDataAPI(CURRENT_STORE_ID) : { services: backendData.services || [] };
+      const formattedAppts = records.map(r => formatApptObj ? formatApptObj(r, initData.services) : r);
+
+      area.innerHTML = `
+        <div class="text-xs font-bold text-brand-900 mb-2 px-1">
+          🔍 搜尋「${kw}」共找到 ${formattedAppts.length} 筆預約卡片：
+        </div>
+        ${formattedAppts.map(a => renderSingleCardHTML(a)).join('')}
+      `;
     } catch (e) {
-      Swal.fire('搜尋失敗', e.message, 'error');
+      Swal.fire('查詢失敗', e.message, 'error');
     }
   }
-
   // 1. 初始化後台新增分頁的服務與專員選項
   // 渲染專員、項目、加購方案下拉選單
   // =========================================================================
