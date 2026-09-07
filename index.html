@@ -340,16 +340,24 @@
           </div>
 
           <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
-            <label class="block font-bold text-brand-900">2. 使用已購/當下加購之方案扣抵本次預約：</label>
-            <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
-              <input type="checkbox" id="chk-use-package" onchange="updateCheckoutSummary()" class="accent-brand-500 rounded">
-              <span class="font-bold text-brand-800">使用包卡扣抵</span>
+            <div class="flex justify-between items-center">
+              <label class="block font-bold text-brand-900">2. 折抵方式選取：</label>
+              <span class="text-[10px] text-amber-700 font-bold">※ 包卡/儲值金/折扣碼 擇一使用</span>
+            </div>
+            <!-- 使用包卡扣抵 -->
+            <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+              <input type="checkbox" id="chk-use-package" onchange="handleDeductMethodChange('package')" class="accent-[#8C7355] rounded">
+              <div>
+                <span class="font-bold text-brand-800">使用包卡扣抵</span>
+                <span class="text-[10px] text-brand-400 block">抵扣對應之主項目 1 堂</span>
+              </div>
             </label>
-            <label class="flex items-start gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
-              <input type="checkbox" id="chk-use-wallet" onchange="updateCheckoutSummary()" class="accent-brand-500 rounded mt-0.5">
+            <!-- 使用儲值金扣抵 -->
+            <label class="flex items-start gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+              <input type="checkbox" id="chk-use-wallet" onchange="handleDeductMethodChange('wallet')" class="accent-[#8C7355] rounded mt-0.5">
               <div>
                 <span class="font-bold text-brand-800">使用儲值金扣抵</span>
-                <div class="text-[10px] text-amber-700 mt-0.5">※ 使用儲值金扣抵時，會以折後金額折抵</div>
+                <div class="text-[10px] text-amber-700 mt-0.5">※ 以折後金額扣抵，不足額現場補差價</div>
               </div>
             </label>
           </div>
@@ -721,11 +729,141 @@
     }
   };
 
+  // ✨ 互斥控制：包卡與儲值金二擇一，且選用時自動作廢折扣碼
+  function handleDeductMethodChange(type) {
+    const chkPkg = document.getElementById('chk-use-package');
+    const chkWal = document.getElementById('chk-use-wallet');
+    const couponInput = document.getElementById('couponCode');
+    const couponNotice = document.getElementById('couponNotice');
+
+    if (type === 'package' && chkPkg.checked) {
+      chkWal.checked = false;
+    } else if (type === 'wallet' && chkWal.checked) {
+      chkPkg.checked = false;
+    }
+
+    // 若選擇了方案扣抵，活動折扣碼失效
+    if (chkPkg.checked || chkWal.checked) {
+      if (activeCoupon) {
+        activeCoupon = null;
+        if (couponInput) couponInput.value = '';
+        if (couponNotice) {
+          couponNotice.innerText = '已改用方案扣抵，折扣碼已自動取消';
+          couponNotice.className = 'text-[11px] text-amber-600 font-bold block';
+        }
+      }
+    }
+    updateCheckoutSummary();
+  }
+
+  // 套用折扣碼時，自動取消包卡與儲值
+  function applyCouponCode() {
+    const code = document.getElementById('couponCode').value.trim().toUpperCase();
+    const notice = document.getElementById('couponNotice');
+    if (!code) return;
+
+    // 檢查資料庫是否有此折扣碼
+    directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}&code=eq.${code}&is_active=eq.true`).then(res => {
+      if (res && res.length > 0) {
+        // 取消包卡與儲值勾選
+        document.getElementById('chk-use-package').checked = false;
+        document.getElementById('chk-use-wallet').checked = false;
+        activeCoupon = res[0];
+        notice.innerText = `✓ 折扣碼【${code}】已套用 (已停用方案折抵)`;
+        notice.className = 'text-[11px] text-emerald-600 font-bold block';
+        updateCheckoutSummary();
+      } else {
+        activeCoupon = null;
+        notice.innerText = '此代碼無效或已過期';
+        notice.className = 'text-[11px] text-red-500 font-bold block';
+        updateCheckoutSummary();
+      }
+    });
+  }
+    
+    function openContractReadModal() {
+    const modal = document.getElementById('contractModal');
+    const scrollBox = document.getElementById('contractScrollArea');
+    const btn = document.getElementById('btn-agree-contract-modal');
+    btn.disabled = true;
+    btn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-gray-200 text-gray-400 cursor-not-allowed";
+    scrollBox.scrollTop = 0;
+    modal.classList.remove('hidden');
+
+    setTimeout(() => {
+      if (scrollBox.scrollHeight <= scrollBox.clientHeight + 25) {
+        unlockContractAgreeBtn();
+      }
+    }, 300);
+  }
+
+  function handleContractScroll(el) {
+    if (el.scrollHeight - el.scrollTop <= el.clientHeight + 30) {
+      unlockContractAgreeBtn();
+    }
+  }
+
+  function unlockContractAgreeBtn() {
+    const btn = document.getElementById('btn-agree-contract-modal');
+    btn.disabled = false;
+    btn.className = "w-full py-3 rounded-xl font-bold transition text-xs bg-[#8C7355] text-white cursor-pointer shadow-md";
+    const hint = document.getElementById('scroll-bottom-hint');
+    if (hint) hint.innerText = "✓ 已完整閱讀條款，請點擊下方按鈕確認";
+  }
+
+  function confirmAgreeContract() {
+    document.getElementById('contractModal')?.classList.add('hidden');
+    document.getElementById('hasAgreedContract').value = 'true';
+    const statusText = document.getElementById('contract-read-status');
+    if (statusText) {
+      statusText.innerText = '✓ 已完成閱讀，請於下方手寫簽名';
+      statusText.className = 'text-[10px] text-emerald-600 font-bold';
+    }
+    document.getElementById('signatureWrapper')?.classList.remove('hidden');
+    initSignaturePad();
+  }
+
+  function closeContractModal() {
+    document.getElementById('contractModal')?.classList.add('hidden');
+  }
+    // ✨ 補齊畫布簽名功能，杜絕 initSignaturePad 遺失錯誤
+  function initSignaturePad() {
+    sigCanvas = document.getElementById('signatureCanvas');
+    if (!sigCanvas) return;
+    sigCtx = sigCanvas.getContext('2d');
+    sigCanvas.width = sigCanvas.parentElement.clientWidth || 360;
+    sigCanvas.height = 130;
+    sigCtx.strokeStyle = "#3D3126";
+    sigCtx.lineWidth = 2.5;
+    sigCtx.lineCap = "round";
+
+    const getPos = (e) => {
+      const rect = sigCanvas.getBoundingClientRect();
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      const cy = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: cx - rect.left, y: cy - rect.top };
+    };
+
+    sigCanvas.onmousedown = (e) => { isSigDrawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); };
+    sigCanvas.onmousemove = (e) => { if (!isSigDrawing) return; const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); };
+    window.onmouseup = () => { isSigDrawing = false; };
+    sigCanvas.ontouchstart = (e) => { isSigDrawing = true; const p = getPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); e.preventDefault(); };
+    sigCanvas.ontouchmove = (e) => { if (!isSigDrawing) return; const p = getPos(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); e.preventDefault(); };
+    window.ontouchend = () => { isSigDrawing = false; };
+  }
+
+  function clearSignatureCanvas() {
+    if (sigCtx && sigCanvas) {
+      sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    }
+  }
+    
+    // ✨ 唯一的 renderStoreUI 實作，修復被重複宣告且大括號錯亂的問題
   function renderStoreUI() {
     document.getElementById('brand-title').innerText = db.storeName;
     document.getElementById('brand-subtitle').innerText = db.subtitle;
     
-    // ✨ LOGO Cache-First 本地快取秒開機制
+    // LOGO 快取機制
     const logoImg = document.getElementById('store-logo-img');
     const logoPlaceholder = document.getElementById('store-logo-placeholder');
     const cachedLogo = localStorage.getItem(`sibyl_logo_${CURRENT_STORE_ID}`);
@@ -755,16 +893,14 @@
     document.getElementById('store-address').innerText = db.address ? `📍 ${db.address}` : "📍 門市服務據點";
     document.getElementById('store-hours').innerText = db.businessHours ? `🕒 ${db.businessHours}` : "🕒 營業時間：09:00 - 19:00";
 
-    // ✨ 定型化契約模組開關連動與預設條款回填
+    // 定型化契約模組開關與條款設定
     const contractSec = document.getElementById('digitalContractSection');
     if (contractSec) {
-      // 只要店家開啟契約模組即展開
       if (db.enableContract === true) {
         contractSec.classList.remove('hidden');
         document.getElementById('display-contract-title').innerText = db.contractTitle || '美業服務定型化契約書';
         document.getElementById('modal-contract-title').innerText = db.contractTitle || '美業服務定型化契約書';
         
-        // 若店家未自訂內容，自動呈現標準公版預設條款
         const defaultTerms = "一、本沙龍服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知過敏史、近期皮膚狀態或特殊體質。\n三、預約支付訂金後若需改期，請於預約日前 24 小時提出。\n四、服務完成確認無誤後，現場進行尾款核對與結單。";
         document.getElementById('contractScrollArea').innerText = db.contractContent || defaultTerms;
       } else {
@@ -813,12 +949,10 @@
 
     document.getElementById('care-content').innerText = db.careText;
 
-    // 自訂使用規則說明連動
     if (db.promoRulesText) {
       document.getElementById('promo-rule-content').innerText = db.promoRulesText;
     }
 
-    // 動態填入活動加購選單
     if (db.packageRules && db.packageRules.length > 0) {
       document.getElementById('addon-package-select').innerHTML = '<option value="none" data-price="0">不加購包卡</option>' +
         db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}">${p.name} (+NT$ ${p.price})</option>`).join('');
@@ -832,7 +966,7 @@
     renderServices();
     renderFrontCalendar();
   }
-
+    
   function updateDepositSectionDisplay() {
     const depositBox = document.getElementById('frontDepositSection');
     if (!depositBox) return;
@@ -1032,151 +1166,30 @@
   }
 
   // ✨ 行銷模組打通：當下加購儲值金（享折數）或包卡（扣1堂）現場即時抵扣！
-  // ✨ 行銷模組打通：當下加購儲值金（享折數）或包卡（扣1堂）現場即時抵扣！
-  function updateCheckoutSummary() {
-    let mainTotal = 0;
-    let breakdownHtml = '';
-    const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
-
-    const summaryItems = document.getElementById('summary-items-breakdown');
-    const summaryRange = document.getElementById('summary-service-range');
-    if (!summaryItems || !summaryRange) return;
-
-    if (checkedBoxes.length === 0) {
-      summaryItems.innerHTML = '<div>(尚未選擇服務項目)</div>';
-      summaryRange.innerText = '$0';
-    } else {
-      checkedBoxes.forEach(cb => {
-        const pVal = cb.getAttribute('data-price') || '0';
-        const num = pVal.match(/\d+/);
-        const itemPrice = num ? Number(num[0]) : 0;
-        mainTotal += itemPrice;
-        const isAddon = cb.getAttribute('data-isaddon') === 'true';
-        breakdownHtml += `
-          <div class="flex justify-between items-center">
-            <span>(${isAddon ? '加購' : '主項目'}：${cb.value})</span>
-            <span class="font-mono">${isAddon ? '+' : ''}$${pVal}</span>
-          </div>`;
-      });
-      summaryItems.innerHTML = breakdownHtml;
-      summaryRange.innerText = `$${mainTotal}`;
-    }
-
-    const pkgSel = document.getElementById('addon-package-select');
-    const walSel = document.getElementById('addon-wallet-select');
-    const addonPkgFee = pkgSel ? Number(pkgSel.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
-    const addonWalFee = walSel ? Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
-    const totalAddon = addonPkgFee + addonWalFee;
-
-    const usePkg = document.getElementById('chk-use-package')?.checked;
-    const useWallet = document.getElementById('chk-use-wallet')?.checked;
-    let deductText = '無折抵';
-    let deductAmount = 0;
-
-    const isNewPkgBought = (addonPkgFee > 0);
-    const hasOldPkg = memberData.packages && memberData.packages.some(p => checkedBoxes.some(cb => cb.value.includes(p.service_name)) && p.remaining_times > 0);
-    
-    // 1. 包卡扣抵計算
-    if (usePkg && (hasOldPkg || isNewPkgBought) && mainTotal > 0) {
-      deductAmount = mainTotal;
-      deductText = `套用包卡抵扣 1 次 (主項目折抵 -$${mainTotal})`;
-      const remainNotice = document.getElementById('box-package-remain-notice');
-      if (remainNotice) {
-        remainNotice.classList.remove('hidden');
-        let calculatedRem = 0;
-        if (isNewPkgBought) {
-          calculatedRem = 5; // 購買6堂扣本次剩5堂
-        } else {
-          const oldRem = memberData.packages?.[0]?.remaining_times || 1;
-          calculatedRem = oldRem - 1;
-        }
-        document.getElementById('text-remain-package-times').innerText = Math.max(0, calculatedRem);
-      }
-    } else {
-      const remainNotice = document.getElementById('box-package-remain-notice');
-      if (remainNotice) remainNotice.classList.add('hidden');
-    }
-
-    // 2. 取得儲值折扣率 (優先取新購方案折數，次取舊有會員折數)
-    let activeDiscount = memberData.discountPercent || 1;
-    const walOptDiscount = walSel ? Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-discount') || 1) : 1;
-    if (walOptDiscount < 1) activeDiscount = walOptDiscount;
-
-    // 3. 儲值金扣抵智慧判斷
-    if (useWallet && deductAmount === 0 && mainTotal > 0) {
-      const discountedMain = Math.round(mainTotal * activeDiscount); // 本次打折後費用
-
-      if (addonWalFee > 0) {
-        // 【情境 A：當下新購儲值金並直接內扣本次費用】
-        deductAmount = mainTotal; // 主項目現場免重複付
-        const bonusAdd = addonWalFee >= 5000 ? 600 : (addonWalFee >= 3000 ? 300 : 0);
-        const remainBal = (addonWalFee + bonusAdd) - discountedMain;
-        deductText = `享 ${Math.round(activeDiscount * 100) / 10} 折，本次由加購儲值金扣除 (剩餘儲值金: $${remainBal})`;
-      } else if (memberData.walletBalance > 0) {
-        // 【情境 B：使用既有儲值金帳戶餘額扣抵】
-        if (memberData.walletBalance >= discountedMain) {
-          deductAmount = mainTotal;
-          deductText = `儲值金全額扣抵 (帳戶扣除 $${discountedMain})`;
-        } else {
-          deductAmount = (mainTotal - discountedMain) + memberData.walletBalance;
-          deductText = `儲值金餘額 $${memberData.walletBalance} 全數扣抵`;
-        }
-      } else if (activeDiscount < 1) {
-        // 【情境 C：僅套用會員折數折扣】
-        const discountCut = mainTotal - discountedMain;
-        deductAmount = discountCut;
-        deductText = `儲值會員享 ${Math.round(activeDiscount * 100) / 10} 折優惠 (-$${discountCut})`;
-      }
-    }
-
-    // 4. 折扣碼折抵
-    if (activeCoupon && deductAmount === 0 && mainTotal > 0) {
-      if (activeCoupon.discount_type === 'cash') {
-        deductAmount = Number(activeCoupon.discount_value || 0);
-        deductText = `折扣碼折抵 (-$${deductAmount})`;
-      } else {
-        deductAmount = Math.round(mainTotal * (1 - Number(activeCoupon.discount_value || 1)));
-        deductText = `折扣碼折抵 (-$${deductAmount})`;
-      }
-    }
-
-    document.getElementById('summary-deduct-text').innerText = deductText;
-
-    const addonTotalEl = document.getElementById('summary-addon-total');
-    if (addonTotalEl) addonTotalEl.innerText = totalAddon.toLocaleString();
-
-    // 5. 訂金折抵計算
-    const custTypeVal = document.getElementById('custType')?.value || 'old';
-    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
-    let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
-    const rowDeposit = document.getElementById('rowDepositDeduct');
-
-    if (depositDeduct > 0) {
-      rowDeposit?.classList.remove('hidden');
-      const sumDep = document.getElementById('summaryDepositDeduct');
-      if (sumDep) sumDep.innerText = depositDeduct;
-    } else {
-      rowDeposit?.classList.add('hidden');
-    }
-
-    // 6. 最終現場實收金額試算
-    let finalTotal = (mainTotal - deductAmount) + totalAddon - depositDeduct;
-    if (finalTotal < 0) finalTotal = 0;
-
-    const finalTotalEl = document.getElementById('summary-final-total');
-    if (finalTotalEl) finalTotalEl.innerText = finalTotal.toLocaleString();
-  } // ✨ 補上這裡遺失的大括號，語法結構即刻恢復正常！
+  updateCheckoutSummary
     
   function setupPortfolio() {
+    const DEFAULT_PORTFOLIO = [
+    { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 },
+    { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80", sortOrder: 1 },
+    { id: "def-port-3", cat: "美甲光療", title: "法式裸透晶石貓眼", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80", sortOrder: 2 },
+    { id: "def-port-4", cat: "頭皮護理", title: "深層水光頭皮修護SPA", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80", sortOrder: 3 }
+  ];
+
+  function setupPortfolio() {
+    const sec = document.getElementById('portfolioSection');
     const tabs = document.getElementById('portfolio-tabs');
-    if (!tabs) return;
-    const rawCats = (db.portfolio || []).map(p => p.cat).filter(Boolean);
-    const categories = ['全部', ...new Set(rawCats)];
-    if (categories.length <= 1 && (!db.portfolio || db.portfolio.length === 0)) {
-      document.getElementById('portfolioSection').style.display = 'none';
-      return;
+    if (!sec || !tabs) return;
+
+    // 若資料庫尚未上傳作品，強制使用預設作品，確保首頁不開天窗
+    if (!db.portfolio || db.portfolio.length === 0) {
+      db.portfolio = DEFAULT_PORTFOLIO;
     }
-    document.getElementById('portfolioSection').style.display = 'block';
+
+    sec.style.display = 'block';
+    const rawCats = db.portfolio.map(p => p.cat).filter(Boolean);
+    const categories = ['全部', ...new Set(rawCats)];
+
     tabs.innerHTML = categories.map((cat, idx) => `
       <button type="button" class="px-3.5 py-1.5 rounded-full text-xs font-bold border transition ${idx === 0 ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white text-brand-800 border-brand-200'}" onclick="filterWork('${cat}', this)">
         ${cat}
@@ -1196,21 +1209,48 @@
     renderPortfolioGrid();
   }
 
+  let isPortfolioExpanded = false;
+
   function renderPortfolioGrid() {
     const grid = document.getElementById('portfolio-grid');
+    const moreBtnWrapper = document.getElementById('portfolio-more-wrapper');
+    const btnText = document.getElementById('portfolio-toggle-btn')?.querySelector('span:first-child');
+    const arrow = document.getElementById('portfolio-arrow');
     if (!grid) return;
+
     grid.innerHTML = '';
-    if (currentPortfolioList.length === 0) {
+    if (!currentPortfolioList || currentPortfolioList.length === 0) {
       grid.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-4">尚無作品展示</div>';
+      if (moreBtnWrapper) moreBtnWrapper.classList.add('hidden');
       return;
     }
-    currentPortfolioList.slice(0, 4).forEach(w => {
+
+    // 預設一行兩圖（前 4 張），點擊展開後顯示全部
+    const itemsToShow = isPortfolioExpanded ? currentPortfolioList : currentPortfolioList.slice(0, 4);
+
+    itemsToShow.forEach(w => {
       grid.innerHTML += `
         <div class="bg-white rounded-2xl overflow-hidden border border-brand-200 shadow-sm transition group cursor-pointer" onclick="window.open('${w.link || '#'}', '_blank')">
           <img src="${w.img}" loading="lazy" decoding="async" class="w-full aspect-[3/4] object-cover object-center" alt="${w.title}">
           <div class="p-2.5 text-center text-xs font-bold text-brand-900 truncate">${w.title}</div>
         </div>`;
     });
+
+    // 多於 4 張圖才顯示按鈕
+    if (moreBtnWrapper) {
+      if (currentPortfolioList.length > 4) {
+        moreBtnWrapper.classList.remove('hidden');
+        if (btnText) btnText.innerText = isPortfolioExpanded ? "收合作品" : "查看更多作品";
+        if (arrow) arrow.innerText = isPortfolioExpanded ? "▲" : "▼";
+      } else {
+        moreBtnWrapper.classList.add('hidden');
+      }
+    }
+  }
+
+  function togglePortfolioExpand() {
+    isPortfolioExpanded = !isPortfolioExpanded;
+    renderPortfolioGrid();
   }
 
   // ✨ 好評同步：前台只載入 is_approved=true 的評價，並載入後台自訂的標籤
@@ -1354,16 +1394,25 @@
     const sVal = document.getElementById('service').value;
     const dValRaw = document.getElementById('date').value;
     const tVal = document.getElementById('time').value;
+    const emailVal = document.getElementById('email')?.value.trim() || '';
+
     if (!sVal) return Swal.fire('請至少選擇一項施作項目', '', 'warning');
     if (!dValRaw || !tVal) return Swal.fire('請點選預約日期與時段', '', 'warning');
+
+    // ✨ 契約模組啟用時，強制檢查 Email 與親筆簽名
+    if (db.enableContract === true) {
+      if (!emailVal) return Swal.fire('請填寫電子信箱', '已啟用定型化契約，需填寫 Email 寄送合約副本存證', 'warning');
+      const hasAgreed = document.getElementById('hasAgreedContract')?.value === 'true';
+      if (!hasAgreed) return Swal.fire('尚未閱讀契約', '請點擊【閱讀服務條款】滑動至底部閱讀並完成手寫簽名', 'warning');
+    }
 
     const btn = document.getElementById('subBtn');
     btn.disabled = true;
     btn.innerText = "正在送出預約...";
 
+    // 格式化日期與價格
     const dVal = dValRaw.replace(/\//g, '-');
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
-    const emailVal = document.getElementById('email')?.value.trim() || '';
     const custNotesVal = document.getElementById('custNotes')?.value.trim() || '';
     const nameVal = document.getElementById('name').value.trim();
     const phoneVal = document.getElementById('phone').value.trim();
@@ -1401,7 +1450,7 @@
       
       if (!res.ok) throw new Error(await res.text());
 
-      // 觸發後端推播通知 (後端已設定由 notice@heysibyl.com 發送 Resend 郵件)
+      // 呼叫背景推播發信
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
