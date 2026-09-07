@@ -245,22 +245,6 @@
     </div>
   </div>
 
-  <!-- LINE 官方防護綁定橫幅 -->
-  <div id="line-bind-banner" class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-3xl mb-4 shadow-sm space-y-2 text-xs" style="display: none;">
-    <div class="flex items-center justify-between">
-      <span class="font-bold text-amber-900 flex items-center gap-1.5 text-sm">
-        <span>🛡️</span> 系統服務狀態防護通知 (未綁定)
-      </span>
-      <span class="text-[10px] bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full font-bold">重要</span>
-    </div>
-    <p class="text-amber-800 leading-relaxed text-[11px]">
-      為保障系統穩定運作，避免因漏看通知導致<b>排程暫停</b>，請完成官方 LINE 綁定。
-    </p>
-    <button onclick="openLineBindLiff()" class="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-sm text-xs transition">
-      📲 立即綁定 Sibyl 官方通知
-    </button>
-  </div>
-
   <!-- 分頁 1. 日曆總覽 -->
   <div id="page-calendar" class="page space-y-4">
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm">
@@ -621,13 +605,13 @@
         </div>
         <div class="flex gap-4 pt-1">
           <label class="flex items-center gap-1.5 cursor-pointer font-medium">
-            <input type="checkbox" id="quick-use-pkg" onchange="calcAdminQuickSummary()" class="accent-[#8C7355] rounded">
-            <span>使用包卡扣抵 (主項目 $0)</span>
-          </label>
-          <label class="flex items-center gap-1.5 cursor-pointer font-medium">
-            <input type="checkbox" id="quick-use-wal" onchange="calcAdminQuickSummary()" class="accent-[#8C7355] rounded">
-            <span>使用儲值金扣抵</span>
-          </label>
+  <input type="checkbox" id="quick-use-pkg" onchange="handleAdminQuickDeductChange('package')" class="accent-[#8C7355] rounded">
+  <span>使用包卡扣抵 (主項目 $0)</span>
+</label>
+<label class="flex items-center gap-1.5 cursor-pointer font-medium">
+  <input type="checkbox" id="quick-use-wal" onchange="handleAdminQuickDeductChange('wallet')" class="accent-[#8C7355] rounded">
+  <span>使用儲值金扣抵</span>
+</label>
         </div>
       </div>
 
@@ -1221,8 +1205,10 @@
         <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white" placeholder="填寫店家最新公告（支援直接按 Enter 換行）"></textarea>
       </div>
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1.5">活動說明圖 (9:16 直式長條比例，最多 7 張)：</label>
-        <div class="grid grid-cols-4 gap-2" id="promo-upload-grid"></div>
+        <label class="block text-xs font-bold text-brand-800 mb-1.5">活動說明圖 (9:16 直式，最多 7 張)：</label>
+        <div class="grid grid-cols-4 gap-2 mb-2" id="promo-upload-grid"></div>
+        <label class="block text-[11px] font-bold text-brand-700 mb-1">說明圖網址清單 (自動產生或手動備份，一行一個網址)：</label>
+        <textarea id="cfg-promo-imgs-text" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white" placeholder="上傳後自動產生圖片網址，亦可手動貼入網址..."></textarea>
       </div>
     </div>
 
@@ -1238,59 +1224,60 @@
 </main>
 
 <!-- 底部導覽列 -->
-<div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white border-t border-brand-200/80 shadow-lg">
-  <nav class="max-w-2xl w-full px-2 py-3 flex items-center overflow-x-auto no-scrollbar gap-1 justify-around min-h-[72px]" id="bottom-nav" style="display: none;">
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
+<!-- 底部導覽列（墊高 min-h、加大點擊高度、加入 pb-safe 防手勢誤觸） -->
+<div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white/95 backdrop-blur-md border-t border-brand-200/90 shadow-xl pb-[env(safe-area-inset-bottom,12px)]">
+  <nav class="max-w-2xl w-full px-2 pt-2.5 pb-2 flex items-center overflow-x-auto no-scrollbar gap-1 justify-around min-h-[76px]" id="bottom-nav" style="display: none;">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      <span class="text-[10px] mt-0.5">日曆</span>
+      <span class="text-[10px] mt-1">日曆</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('shift', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('shift', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      <span class="text-[10px] mt-0.5">排班</span>
+      <span class="text-[10px] mt-1">排班</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-      <span class="text-[10px] mt-0.5">名單</span>
+      <span class="text-[10px] mt-1">名單</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('marketing', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('marketing', this)">
       <i class="fa-solid fa-gift text-lg"></i>
-      <span class="text-[10px] mt-0.5">行銷</span>
+      <span class="text-[10px] mt-1">行銷</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('reviews', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('reviews', this)">
       <i class="fa-solid fa-star text-lg"></i>
-      <span class="text-[10px] mt-0.5">好評</span>
+      <span class="text-[10px] mt-1">好評</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('slots', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('slots', this)">
       <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
-      <span class="text-[10px] mt-0.5">空檔</span>
+      <span class="text-[10px] mt-1">空檔</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('revenue', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('revenue', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
-      <span class="text-[10px] mt-0.5">業績</span>
+      <span class="text-[10px] mt-1">業績</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('care', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('care', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-      <span class="text-[10px] mt-0.5">回訪</span>
+      <span class="text-[10px] mt-1">回訪</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('services', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('services', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879a3 3 0 11-4.242-4.242L10.758 10.758M12 12l2.879-2.879a3 3 0 10-4.242-4.242L7.758 7.758"/></svg>
-      <span class="text-[10px] mt-0.5">服務</span>
+      <span class="text-[10px] mt-1">服務</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('search', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('search', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      <span class="text-[10px] mt-0.5">查詢</span>
+      <span class="text-[10px] mt-1">查詢</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('add', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('add', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-      <span class="text-[10px] mt-0.5">新增</span>
+      <span class="text-[10px] mt-1">新增</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('subscription', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('subscription', this)">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-      <span class="text-[10px] mt-0.5">方案</span>
+      <span class="text-[10px] mt-1">方案</span>
     </button>
-    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('settings', this)">
+    <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('settings', this)">
       <i class="fa-solid fa-gear text-lg"></i>
-      <span class="text-[10px] mt-0.5">設定</span>
+      <span class="text-[10px] mt-1">設定</span>
     </button>
   </nav>
 </div>
@@ -2057,20 +2044,26 @@
   function switchPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(n => {
-      n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1.5 rounded-2xl transition text-brand-400 font-medium";
+      n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
     });
     const target = document.getElementById('page-' + pageId);
     if (target) target.style.display = 'block';
-    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-1.5 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+    if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
+    // ✨ 補齊所有核心分頁的觸發渲染
+    if (pageId === 'calendar') renderCalendar();
+    if (pageId === 'shift') renderShift();
+    if (pageId === 'customer') renderCustomer();
+    if (pageId === 'marketing') loadMarketingCenter();
+    if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
+    if (pageId === 'slots') handleSlotRangeChange();
+    if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
     if (pageId === 'care') renderCare();
     if (pageId === 'services') renderServiceList();
-    if (pageId === 'customer') renderCustomer();
-    if (pageId === 'revenue') renderRevenue();
-    if (pageId === 'settings') populateSettings(); // 確保原設定值原封不動回填！
-    if (pageId === 'reviews') renderReviewTagsManager();
+    if (pageId === 'add') renderQuickAddServices();
+    if (pageId === 'subscription') renderSubscriptionUI();
+    if (pageId === 'settings') populateSettings();
   }
-
   // ✨ 好評標籤編輯管理器
   function renderReviewTagsManager() {
     const box = document.getElementById('review-tags-manage-box');
@@ -2133,8 +2126,11 @@
     renderReviewTagsManager();
   }
 
+  let selectedCalendarDate = '';
+
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
+    if (!grid) return;
     document.getElementById('cal-month-title').innerText = `${calYear} 年 ${calMonth + 1} 月`;
     const headers = ['日', '一', '二', '三', '四', '五', '六'];
     let html = headers.map(h => `<div class="py-1 font-bold text-brand-400 text-[11px]">${h}</div>`).join('');
@@ -2145,18 +2141,19 @@
     for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
       let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
+      let isSelected = (selectedCalendarDate === dStr);
       
       let dotsHtml = apptsToday.slice(0, 4).map(a => {
         const color = getStaffColor(a.staffId, a.staffName);
-        return `<span class="w-2 h-2 rounded-full inline-block shadow-xs" style="background-color: ${color.dot};" title="${a.staffName || '專員'}"></span>`;
+        return `<span class="w-1.5 h-1.5 rounded-full inline-block shadow-xs" style="background-color: ${color.dot};" title="${a.staffName || '專員'}"></span>`;
       }).join('');
       if (apptsToday.length > 4) {
         dotsHtml += `<span class="text-[9px] text-brand-500 font-bold leading-none">+</span>`;
       }
       html += `
-        <div class="py-2 rounded-xl hover:bg-brand-100 cursor-pointer flex flex-col items-center transition border border-transparent hover:border-brand-200" onclick="showApptsInCalendar('${dStr}')">
-          <span class="font-bold text-xs">${i}</span>
-          <div class="flex items-center gap-1 mt-1 h-2">${dotsHtml}</div>
+        <div class="cal-cell py-2 rounded-2xl cursor-pointer flex flex-col items-center transition border ${isSelected ? 'bg-brand-500 text-white border-brand-500 font-black shadow-sm' : 'bg-white hover:bg-brand-50 text-brand-900 border-transparent'}" onclick="showApptsInCalendar('${dStr}')">
+          <span class="text-xs font-bold">${i}</span>
+          <div class="flex items-center gap-0.5 mt-1 h-2">${dotsHtml}</div>
         </div>`;
     }
     grid.innerHTML = html;
@@ -2170,28 +2167,43 @@
   }
 
   function showApptsInCalendar(dateStr) {
+    selectedCalendarDate = dateStr;
+    renderCalendar(); // 重繪並保持選取高亮
     const container = document.getElementById('selected-date-appts');
+    if (!container) return;
     const appts = (backendData.appointments || []).filter(a => a.date === dateStr);
     if (appts.length === 0) {
-      container.innerHTML = `<div class="text-center text-xs text-brand-400 py-4 bg-white rounded-3xl border border-brand-200">${dateStr}<br>當日無預約紀錄</div>`;
+      container.innerHTML = `<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200"><b class="text-brand-800">${dateStr}</b><br>當日無排程預約</div>`;
       return;
     }
     container.innerHTML = `
-      <div class="text-xs font-bold text-brand-900 mb-1 px-1">${dateStr} 預約卡片</div>
+      <div class="flex justify-between items-center px-2 mb-1">
+        <span class="text-xs font-black text-brand-900">📅 ${dateStr} 排程預約 (${appts.length} 筆)</span>
+      </div>
       ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
   }
 
   function renderCustomer() {
     const appts = backendData.appointments || [];
-    
-    // 1. 待審核專區：狀態為「待確認」，或是「已回報後五碼且尚未核對」
+    const now = new Date();
+
+    // 判斷是否已逾期 (預約時間小於當前時間)
+    const isPastAppt = (a) => {
+      if (!a.date) return false;
+      const timeStr = a.time || "23:59";
+      const apptDate = new Date(`${a.date.replace(/\//g, '-')}T${timeStr}:00`);
+      return apptDate < now;
+    };
+
+    // 1. 待審核專區：未逾期且 (待確認 或 (已報末五碼且未核對))
     const pendingAudit = appts.filter(a => 
-      a.status === '待確認' || 
-      (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed)
+      !isPastAppt(a) &&
+      (a.status === '待確認' || (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed))
     );
 
-    // 2. 需付訂金但未回報名單：新朋友/需付訂金、未取消、未結單、且未回報後五碼者
+    // 2. 需付訂金但未回報名單：未逾期、未取消、未結單、未核對且未報末五碼
     const unpaidDeposit = appts.filter(a => 
+      !isPastAppt(a) &&
       a.status !== '已取消' && 
       a.status !== '已結單' && 
       !a.deposit_confirmed &&
@@ -2202,7 +2214,6 @@
     document.getElementById('pending-audit-badge').innerText = `${pendingAudit.length} 筆待處理`;
     document.getElementById('unpaid-deposit-badge').innerText = `${unpaidDeposit.length} 筆未回報`;
 
-    // 渲染待審核專區
     const pendingContainer = document.getElementById('pending-audit-container');
     if (pendingAudit.length === 0) {
       pendingContainer.innerHTML = '<div class="text-center text-xs text-amber-800/70 py-3">目前無待核准或待對帳的預約</div>';
@@ -2210,7 +2221,6 @@
       pendingContainer.innerHTML = pendingAudit.map(a => renderSingleCardHTML(a)).join('');
     }
 
-    // 渲染未付訂金警戒專區
     const unpaidContainer = document.getElementById('unpaid-deposit-container');
     if (unpaidDeposit.length === 0) {
       unpaidContainer.innerHTML = '<div class="text-center text-xs text-rose-800/60 py-1">全員皆已完成訂金付款</div>';
@@ -2223,16 +2233,17 @@
       `).join('');
     }
 
-    // 下方常規清單渲染
+    // 3. 常規清單：過濾已逾期的即將到來名單
     const statusFilter = document.getElementById('filter-status').value;
     let normalAppts = appts;
     if (statusFilter === 'ALL') {
-      normalAppts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消');
+      normalAppts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消' && !isPastAppt(a));
     } else {
       normalAppts = appts.filter(a => a.status === statusFilter);
     }
     document.getElementById('cust-content-area').innerHTML = normalAppts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無排程名單</div>';
   }
+  
   function renderSingleCardHTML(a) {
     const s = backendData.settings || {};
     const isNewCust = (a.customer_type === 'new');
@@ -2311,24 +2322,36 @@
           <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
         </div>
 
-        <!-- 整合客戶資料區（單一標準呈現） -->
+        <!-- 整合客戶資料區 -->
         <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] text-brand-800 border border-brand-100">
           <div class="flex justify-between">
             <span>LINE 名稱：<b>${a.lineName || '未填寫'}</b></span>
             <span>電子信箱：<b>${parsedEmail || '未填寫'}</b></span>
           </div>
-          ${a.customer_notes ? `<div class="text-amber-900"><b>📝 顧客備註/需求：</b>${a.customer_notes}</div>` : ''}
+          ${a.customer_notes ? `
+            <div class="text-amber-900 break-words whitespace-pre-wrap bg-amber-50/60 p-2 rounded-lg border border-amber-100">
+              <b>📝 顧客備註/需求：</b>${a.customer_notes}
+            </div>
+          ` : ''}
           ${a.signature_url ? `
-            <div class="pt-1 flex items-center justify-between border-t border-brand-200/60">
-              <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
-              <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.date}')" class="text-blue-600 underline font-bold">檢視簽名正本</button>
+            <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex flex-col gap-1">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
+                <span class="text-[10px] text-brand-400 font-mono">${a.signed_at ? a.signed_at.replace('T', ' ').substring(0, 16) : ''}</span>
+              </div>
+              <div class="flex gap-2 items-center">
+                <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.date}')" class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-blue-600 font-bold hover:underline text-[10px]">
+                  檢視簽名正本
+                </button>
+                <input type="text" readonly value="${a.signature_url}" class="flex-1 p-1 bg-white border border-brand-200 rounded-lg text-[9px] font-mono text-gray-500 truncate" title="${a.signature_url}">
+              </div>
             </div>
           ` : ''}
         </div>
 
-        <!-- 店家內部專用備註儲存區 -->
+        <!-- 店家內部專用備註儲存區（加入防溢出 break-all） -->
         <div class="flex gap-1.5 pt-1">
-          <input type="text" id="admin-note-${a.id}" placeholder="店家內部備註事項..." value="${cleanNotes}" class="flex-1 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
+          <input type="text" id="admin-note-${a.id}" placeholder="店家內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
           <button onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">存備註</button>
         </div>
 
@@ -2487,14 +2510,11 @@
     let curCard = parseInt(document.getElementById('checkModalCurrentCard').innerText) || 0;
     let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit').innerText.replace(/[^0-9]/g, '')) || 0;
 
-    // 1. 包卡扣抵 (主項目金額全免)
+    // 互斥計算：包卡或儲值僅能擇一
     if (useMethod === 'useCard' && curCard > 0) {
       discAmt = origPrice;
       curCard -= 1;
-    }
-
-    // 2. 儲值金扣抵 (折後扣款)
-    if (useMethod === 'useDeposit' && curDeposit > 0) {
+    } else if (useMethod === 'useDeposit' && curDeposit > 0) {
       const rate = Number(document.getElementById('optUseDepositText').getAttribute('data-rate') || 1);
       const afterDisc = Math.round(origPrice * rate);
       discAmt = origPrice - afterDisc;
@@ -2508,7 +2528,7 @@
       }
     }
 
-    // 3. 現場新購資產增加
+    // 現場新購方案資產增額
     if (newBuyOption && newBuyOption.value === 'new_pkg') {
       curCard += Number(newBuyOption.getAttribute('data-times') || 0);
     }
@@ -2516,10 +2536,8 @@
       curDeposit += Number(newBuyOption.getAttribute('data-add') || 0);
     }
 
-    let finalPay = (origPrice - discAmt - depDeduct) + addPrice;
-    if (finalPay < 0) finalPay = 0;
+    let finalPay = Math.max(0, origPrice - discAmt - depDeduct) + addPrice;
 
-    // 畫面數據即時更新
     document.getElementById('check_display_orig').innerText = `$${origPrice}`;
     document.getElementById('check_display_disc').innerText = `-$${discAmt}`;
     document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
@@ -2790,7 +2808,7 @@
         const isSelected = (activeShiftStaffId === s.id);
         return `
           <button class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
-            isSelected ? 'bg-brand-400 text-white border-brand-400 shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+            isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
           }" onclick="switchShiftStaff('${s.id}')">
             <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${isSelected ? '#FFFFFF' : color.dot};"></span>
             <span>${s.name}</span>
@@ -2802,13 +2820,13 @@
     const dates = backendData.scheduleDates || [];
     const scrollArea = document.getElementById('shift-scroll-area');
     if (scrollArea) {
-      let html = `<div class="date-box shrink-0 px-4 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === 'ALL' ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('ALL')">全部</div>`;
+      let html = `<div class="date-box shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-700'}" onclick="selectShiftDate('ALL')">全部日期</div>`;
       dates.forEach(d => {
         let dParts = d.date.split('/');
         html += `
-          <div class="date-box shrink-0 px-3 py-2 rounded-xl text-center cursor-pointer border text-xs ${currentShiftDate === d.date ? 'bg-brand-400 text-white border-brand-400 font-bold' : 'bg-white border-brand-200'}" onclick="selectShiftDate('${d.date}')">
-            <div class="text-[10px] opacity-70">${dParts[1]}月</div>
-            <div class="font-bold text-sm">${dParts[2]}</div>
+          <div class="date-box shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectShiftDate('${d.date}')">
+            <div class="text-[9px] opacity-70">${dParts[1]}月</div>
+            <div class="font-bold text-xs">${dParts[2]}日</div>
           </div>`;
       });
       scrollArea.innerHTML = html;
@@ -2818,12 +2836,18 @@
     if (!content) return;
 
     if (currentShiftDate === 'ALL') {
-      content.innerHTML = dates.map(d => `
-        <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center shadow-sm">
-          <div><div class="font-bold text-xs">${d.date}</div><div class="text-[11px] text-brand-400">時段排班設定</div></div>
-          <button class="px-3 py-1.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition" onclick="selectShiftDate('${d.date}')">設定時段</button>
-        </div>
-      `).join('');
+      content.innerHTML = `
+        <div class="space-y-2">
+          ${dates.map(d => `
+            <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center shadow-xs text-xs">
+              <div>
+                <div class="font-bold text-brand-900">${d.date}</div>
+                <div class="text-[11px] text-brand-400">點擊右側以進入設定各時段</div>
+              </div>
+              <button class="px-3.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 font-bold rounded-xl text-xs transition" onclick="selectShiftDate('${d.date}')">排定班表 ➔</button>
+            </div>
+          `).join('')}
+        </div>`;
       return;
     }
 
@@ -2846,7 +2870,6 @@
       });
     }
 
-    // 檢查店內除了 "all" 以外是否有其他專員（若有，鎖定「不指定」排班開關）
     const realStaffs = (backendData.settings?.staffList || []).filter(st => st.id !== 'all');
     const isAllStaffLocked = (activeShiftStaffId === 'all' && realStaffs.length > 0);
 
@@ -2854,24 +2877,24 @@
       <div class="bg-white rounded-3xl border border-brand-200 overflow-hidden shadow-sm">
         <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
           <div>
-            <div class="font-bold text-xs text-brand-900">${currentShiftDate} 排班</div>
-            ${isAllStaffLocked ? '<div class="text-[10px] text-amber-700 font-bold mt-0.5">※ 已設置專員，前台「不指定」時段自動綜合在職專員班表，此處鎖定。</div>' : ''}
+            <div class="font-bold text-xs text-brand-900">📅 ${currentShiftDate} 當日班表</div>
+            ${isAllStaffLocked ? '<div class="text-[10px] text-amber-700 font-bold mt-0.5">※ 已設有獨立專員，不指定時段由專員排班綜合計算，此處唯讀鎖定。</div>' : '<div class="text-[10px] text-brand-400">綠色代表接受預約，紅色代表該時段休息</div>'}
           </div>
           ${!isAllStaffLocked ? `
             <div class="flex gap-1.5">
               <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="toggleAllShift('${staffKey}', false)">全休</button>
-              <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold bg-brand-400 text-white" onclick="toggleAllShift('${staffKey}', true)">全開</button>
+              <button class="px-2.5 py-1 bg-[#8C7355] text-white rounded-lg text-xs font-bold hover:bg-[#7A6246]" onclick="toggleAllShift('${staffKey}', true)">全開</button>
             </div>
           ` : ''}
         </div>
-        <div class="divide-y divide-brand-100">${slots.map(t => {
+        <div class="divide-y divide-brand-100 max-h-[60vh] overflow-y-auto">${slots.map(t => {
           const isOpen = shiftSlotStates[staffKey][t] === true;
           return `
             <div class="p-3 flex justify-between items-center text-xs">
-              <span class="font-bold text-brand-800">${t}</span>
-              <button class="px-4 py-1 rounded-full text-xs font-bold transition ${isAllStaffLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : (isOpen ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}" 
+              <span class="font-bold text-brand-800 font-mono text-sm">${t}</span>
+              <button class="px-4 py-1.5 rounded-full text-xs font-bold transition ${isAllStaffLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : (isOpen ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200')}" 
                 ${isAllStaffLocked ? 'disabled' : `onclick="toggleSlotState('${staffKey}', '${t}', this)"`}>
-                ${isOpen ? '上班中' : '已關閉'}
+                ${isOpen ? '上班中 (開放預約)' : '已關閉 (休息)'}
               </button>
             </div>`;
         }).join('')}</div>
@@ -3142,15 +3165,25 @@
   function populateCareRulesUI() {
     const careContainer = document.getElementById('care-rules-container');
     if (!careContainer) return;
+
+    // 完全對齊圖二的 5 組經典預設
+    const exactRules = [
+      { name: "燙染造型", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
+      { name: "洗剪設計", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
+      { name: "深層護理", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
+      { name: "光療美甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" },
+      { name: "漂髮, 挑染", weeks: 1, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
+    ];
+
     const s = (backendData && backendData.settings) ? backendData.settings : {};
-    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : DEFAULT_CARE_RULES;
+    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : exactRules;
 
     careContainer.innerHTML = '';
     for (let i = 0; i < 5; i++) {
-      const r = rules[i] || DEFAULT_CARE_RULES[i];
-      let safeName = String(r.name || '').replace(/undefined,?\s*/g, '').trim();
-      let safeWeeks = r.weeks || 4;
-      let safeMsg = String(r.msg || '').replace(/undefined/g, '').trim();
+      const r = rules[i] || exactRules[i];
+      let safeName = String(r.name || exactRules[i].name).replace(/undefined,?\s*/g, '').trim();
+      let safeWeeks = r.weeks || exactRules[i].weeks || 4;
+      let safeMsg = String(r.msg || exactRules[i].msg).replace(/undefined/g, '').trim();
 
       careContainer.innerHTML += `
         <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2 mb-3">
@@ -3633,18 +3666,25 @@
     const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
     const totalAddon = addonPkgPrice + addonWalPrice;
 
-    const usePkg = document.getElementById('quick-use-pkg')?.checked;
-    const useWal = document.getElementById('quick-use-wal')?.checked;
-
+    // ✨ 後台新增預約：包卡與儲值互斥控制函式
+  function handleAdminQuickDeductChange(type) {
+    const usePkg = document.getElementById('quick-use-pkg');
+    const useWal = document.getElementById('quick-use-wal');
+    if (type === 'package' && usePkg.checked) {
+      useWal.checked = false;
+    } else if (type === 'wallet' && useWal.checked) {
+      usePkg.checked = false;
+    }
+    calcAdminQuickSummary();
+  }
     let deductPrice = 0;
-    if (usePkg && basePrice > 0) {
-      deductPrice = basePrice;
-    } else if (useWal && basePrice > 0) {
-      deductPrice = Math.round(basePrice * 0.1);
+    if (usePkg.checked && basePrice > 0) {
+      deductPrice = basePrice; // 包卡全額折抵主服務
+    } else if (useWal.checked && basePrice > 0) {
+      deductPrice = Math.round(basePrice * 0.1); // 儲值享折扣
     }
 
-    let finalPrice = (basePrice - deductPrice) + totalAddon;
-    if (finalPrice < 0) finalPrice = 0;
+    let finalPrice = Math.max(0, basePrice - deductPrice) + totalAddon;
 
     document.getElementById('quick-disp-base').innerText = `$${basePrice}`;
     document.getElementById('quick-disp-deduct').innerText = `-$${deductPrice}`;
@@ -3826,7 +3866,8 @@
   async function handleImgUpload(idx, input) {
     const file = input.files[0];
     if (!file) return;
-    Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false }); Swal.showLoading();
+    Swal.fire({ title: `正在上傳說明圖 ${idx + 1}...`, allowOutsideClick: false });
+    Swal.showLoading();
     try {
       const base64Data = await fileToBase64(file);
       const formData = new FormData();
@@ -3837,6 +3878,9 @@
         promoImgsArray[idx] = data.data.url;
         document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
         document.getElementById(`slot-${idx}`).innerHTML = '';
+        // 🔄 同步寫入文字框備存
+        const imgsTextarea = document.getElementById('cfg-promo-imgs-text');
+        if (imgsTextarea) imgsTextarea.value = promoImgsArray.filter(Boolean).join('\n');
         Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
       } else {
         throw new Error(data.error?.message || "上傳失敗");
@@ -4199,57 +4243,61 @@
     window.open(`https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`, '_blank');
   }
 
-  // ✨ 加強修復版：populateSettings 徹底杜絕切換分頁清空設定
-  // ✨ 強化版防清空：無值絕不覆蓋既有 DOM 欄位
   function populateSettings() {
     let s = backendData.settings || {};
     
-    // 若記憶體為空，從 localStorage 快取提取兜底
-    if (!s.storeName) {
-      try {
-        const local = JSON.parse(localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`) || '{}');
-        s = Object.assign({}, local, s);
-      } catch(e){}
-    }
+    // 優先讀取 local 快照防止資料庫欄位空值清空輸入
+    try {
+      const cached = JSON.parse(localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`) || '{}');
+      s = Object.assign({}, cached, s);
+    } catch(e){}
 
-    const safeVal = (id, val) => {
+    const setVal = (id, val) => {
       const el = document.getElementById(id);
-      if (el && val !== undefined && val !== null && String(val).trim() !== '') el.value = val;
+      if (el && val !== undefined && val !== null) el.value = val;
     };
-    const safeCheck = (id, val) => {
+    const setCheck = (id, val) => {
       const el = document.getElementById(id);
       if (el && val !== undefined && val !== null) el.checked = Boolean(val);
     };
 
-    const DEFAULT_CONTRACT_TITLE = "美業服務定型化契約書";
-    const DEFAULT_CONTRACT_CONTENT = "一、本沙龍服務均由專業合格技術人員施作，施作前已與顧客進行完整溝通。\n二、顧客應誠實告知近期膚況、過敏病史、是否懷孕或具特殊體質。\n三、預約完成後若需改期或取消，請於預約日前 24 小時主動告知門市。\n四、現場各項加購方案與儲值優惠，經確認開立後均受本契約保障。";
+    setVal('cfg-title', s.storeName || s.display_title);
+    setVal('cfg-subtitle', s.subtitle || s.display_subtitle);
+    setVal('cfg-logo', s.logoUrl || s.logo_url);
+    setVal('cfg-address', s.address);
+    setVal('cfg-hours', s.businessHours || s.business_hours);
+    setVal('cfg-buffer', s.bookingBufferHours || s.booking_buffer_hours);
+    setVal('cfg-care', s.careText || s.care_text);
+    setVal('cfg-deposit-info', s.depositInfo || s.deposit_info);
+    setVal('cfg-deposit-mode', s.depositMode || s.deposit_mode || 'all');
+    setVal('cfg-deposit-amount', s.depositAmount || s.deposit_amount);
+    setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+    setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+    setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
+    setVal('cfg-promo', s.promoText || s.promo_text);
+    setVal('cfg-line', s.line || s.line_url);
+    setVal('cfg-ig', s.ig || s.ig_url);
+    setVal('cfg-map', s.map || s.map_url);
+    setVal('cfg-promo-rules-input', s.promoRulesText || s.promo_rules_text);
+    setVal('cfg-line-token', s.lineChannelToken || s.line_channel_token);
+    setVal('cfg-commission-rate', s.commissionRate || s.commission_rate || 50);
 
-    // 契約模組
-    safeCheck('cfg-toggle-contract', s.enableContract ?? true);
-    safeVal('cfg-contract-title', s.contractTitle || DEFAULT_CONTRACT_TITLE);
-    safeVal('cfg-contract-content', s.contractContent || DEFAULT_CONTRACT_CONTENT);
+    setVal('cfg-contract-title', s.contractTitle || s.contract_title || '美業服務定型化契約書');
+    setVal('cfg-contract-content', s.contractContent || s.contract_content || '');
 
-    // 基礎文字設定
-    safeVal('cfg-title', s.storeName);
-    safeVal('cfg-subtitle', s.subtitle);
-    safeVal('cfg-logo', s.logoUrl);
-    safeVal('cfg-address', s.address);
-    safeVal('cfg-hours', s.businessHours);
-    safeVal('cfg-buffer', s.bookingBufferHours);
-    safeVal('cfg-care', s.careText);
-    safeVal('cfg-deposit-info', s.depositInfo);
-    safeVal('cfg-deposit-mode', s.depositMode);
-    safeVal('cfg-deposit-amount', s.depositAmount);
-    safeVal('cfg-shift-start', s.shiftStartTime);
-    safeVal('cfg-shift-end', s.shiftEndTime);
-    safeVal('cfg-shift-interval', s.shiftInterval);
-    safeVal('cfg-promo', s.promoText);
-    safeVal('cfg-line', s.line);
-    safeVal('cfg-ig', s.ig);
-    safeVal('cfg-map', s.map);
-    safeVal('cfg-promo-rules-input', s.promoRulesText);
-    safeVal('cfg-line-token', s.lineChannelToken);
-    safeVal('cfg-commission-rate', s.commissionRate || 50);
+    // 說明圖清單回填
+    const promoImgs = s.promoImgs || s.promo_imgs || [];
+    if (Array.isArray(promoImgs)) {
+      promoImgsArray = promoImgs;
+      setVal('cfg-promo-imgs-text', promoImgs.filter(Boolean).join('\n'));
+      promoImgs.forEach((url, i) => {
+        const slot = document.getElementById(`slot-${i}`);
+        if (url && slot) {
+          slot.style.backgroundImage = `url('${url}')`;
+          slot.innerHTML = '';
+        }
+      });
+    }
 
     // 模組開關布林值
     safeCheck('cfg-toggle-logo', s.enableLogo ?? true);
@@ -4419,7 +4467,8 @@
   }
 
   async function saveStoreSettings() {
-    Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false }); Swal.showLoading();
+    Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false });
+    Swal.showLoading();
     
     const currentSettings = backendData.settings || {};
     const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
@@ -4433,6 +4482,12 @@
     const auditBookingVal = document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true;
     const depositVal = document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true;
 
+    // 說明圖網址清單處理
+    const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
+    const textImgsArray = rawImgsText.split('\n').map(u => u.trim()).filter(Boolean);
+    const finalPromoImgs = textImgsArray.length > 0 ? textImgsArray : promoImgsArray.filter(Boolean);
+
+    // 唯一宣告 payload 物件
     const payload = {
       store_id: CURRENT_STORE_ID,
       display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
@@ -4447,7 +4502,7 @@
       deposit_mode: document.getElementById('cfg-deposit-mode')?.value ?? currentSettings.depositMode ?? 'all',
       deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || currentSettings.depositAmount || 0),
       promo_text: document.getElementById('cfg-promo')?.value ?? currentSettings.promoText ?? '',
-      promo_imgs: promoImgsArray.filter(Boolean).length > 0 ? promoImgsArray.filter(Boolean) : (currentSettings.promoImgs || []),
+      promo_imgs: finalPromoImgs,
       line_url: document.getElementById('cfg-line')?.value.trim() ?? currentSettings.line ?? '',
       ig_url: document.getElementById('cfg-ig')?.value.trim() ?? currentSettings.ig ?? '',
       map_url: document.getElementById('cfg-map')?.value.trim() ?? currentSettings.map ?? '',
@@ -4469,21 +4524,16 @@
       enable_featured_shop: Boolean(document.getElementById('cfg-toggle-featured-shop')?.checked),
       enable_flex_menu: document.getElementById('cfg-toggle-flex-menu')?.checked ?? currentSettings.enableFlexMenu ?? true,
       enable_auto_reminder: document.getElementById('cfg-toggle-auto-reminder')?.checked ?? currentSettings.enableAutoReminder ?? false,
-
-      // ✨ 補齊專員抽成設定
       commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
       enable_commission_calc: Boolean(document.getElementById('cfg-toggle-commission-calc')?.checked),
-
       enable_wallet: Boolean(document.getElementById('cfg-toggle-wallet')?.checked),
       enable_packages: Boolean(document.getElementById('cfg-toggle-packages')?.checked),
       enable_coupons: Boolean(document.getElementById('cfg-toggle-coupons')?.checked),
       enable_reviews: Boolean(document.getElementById('cfg-toggle-reviews')?.checked),
-
       enable_contract: Boolean(document.getElementById('cfg-toggle-contract')?.checked),
       contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '美業服務定型化契約書',
       contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
       promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
-
       line_channel_token: document.getElementById('cfg-line-token')?.value.trim() ?? currentSettings.lineChannelToken ?? '',
       weekly_off_days: checkedWeekly,
       custom_off_dates: customOffDatesArray,
@@ -4510,7 +4560,7 @@
       Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
     }
   }
-
+  
   window.addEventListener('DOMContentLoaded', () => {
     checkLockoutStatus();
   });
