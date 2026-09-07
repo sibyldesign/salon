@@ -27,7 +27,7 @@
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-20">
 
-  <!-- 登入鎖定層 (預設空白，密碼 888) -->
+  <!-- 登入鎖定層 (管理密碼 888) -->
   <div id="super-lock" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs space-y-4">
       <div class="w-12 h-12 mx-auto bg-brand-100 rounded-2xl flex items-center justify-center text-brand-600 text-xl">
@@ -61,7 +61,7 @@
     </div>
   </header>
 
-  <!-- 總控台頂部切換導覽標籤 -->
+  <!-- 頂部切換標籤 -->
   <div class="max-w-4xl mx-auto px-4 pt-4">
     <div class="flex gap-2 border-b border-brand-200 pb-2">
       <button id="tab-btn-stores" onclick="switchSuperTab('stores')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs">
@@ -75,8 +75,12 @@
 
   <main class="max-w-4xl mx-auto p-4 space-y-6">
 
-    <!-- 分頁 1：全租戶店家名冊 (每頁 10 間、含頁碼切換與 LINE 資訊) -->
+    <!-- 分頁 1：店家名冊與開通狀態 -->
     <div id="super-page-stores" class="space-y-4">
+      
+      <!-- 即將到期 / 欠費通知警示專區 -->
+      <div id="expiring-alert-container"></div>
+
       <div class="flex items-center justify-between">
         <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
           <i class="fa-solid fa-users-rectangle text-brand-500"></i>
@@ -85,7 +89,7 @@
         <span id="store-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
       </div>
 
-      <!-- 快速搜尋與狀態篩選列 -->
+      <!-- 狀態篩選與即時搜尋 -->
       <div class="flex flex-col sm:flex-row gap-2 justify-between">
         <div class="flex gap-2 overflow-x-auto pb-1">
           <button onclick="filterStores('ALL', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs whitespace-nowrap">全部店家</button>
@@ -94,74 +98,76 @@
           <button onclick="filterStores('locked', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已鎖定</button>
           <button onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已過期</button>
         </div>
-        <div class="relative w-full sm:w-60">
+        <div class="relative w-full sm:w-64">
           <input type="text" id="store-search-kw" oninput="currentPage = 1; renderStores();" placeholder="🔍 搜尋店名/電話/LINE/Email..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-brand-200 bg-white outline-none focus:ring-1 focus:ring-brand-400">
           <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-brand-400 text-xs"></i>
         </div>
       </div>
       
-      <!-- 店家卡片渲染清單 -->
+      <!-- 店家卡片清單 -->
       <div id="stores-container" class="space-y-3"></div>
 
-      <!-- 分頁頁碼控制列 (每頁 10 家) -->
-      <div id="pagination-controls" class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-brand-200 text-xs">
-        <div class="text-brand-500 text-[11px]" id="page-info-text">顯示第 1 - 10 家</div>
-        <div class="flex gap-1.5 items-center" id="page-buttons-container"></div>
+      <!-- 10 筆分頁控制器 (上一頁、數字頁碼、下一頁) -->
+      <div id="pagination-controls" class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-brand-200 text-xs shadow-xs">
+        <div class="text-brand-500 text-[11px]" id="page-info-text">載入中...</div>
+        <div class="flex gap-1 items-center" id="page-buttons-container"></div>
       </div>
     </div>
 
-    <!-- 分頁 2：全平台即時公告、維護鎖定與功能許願池 (核心唯一發布區塊) -->
+    <!-- 分頁 2：全域公告、維護鎖定按鈕控制台與許願池 -->
     <div id="super-page-announcement" class="space-y-6" style="display: none;">
       
-      <!-- 全域公告與維護鎖定發布控制台 -->
+      <!-- 平台維護狀態指示燈卡片 -->
+      <div id="platform-status-indicator" class="p-4 rounded-3xl border flex items-center justify-between bg-emerald-50 border-emerald-200 text-emerald-900">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="font-bold text-xs">目前平台狀態：<span id="platform-status-text">正常開放服務中</span></span>
+        </div>
+        <div id="platform-action-btn-box"></div>
+      </div>
+
+      <!-- 全域系統公告廣播控制區 -->
       <section class="bg-white p-6 rounded-3xl border border-brand-200 shadow-sm space-y-4">
         <div class="flex items-center justify-between border-b border-brand-100 pb-3">
           <h2 class="text-sm font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-bullhorn text-brand-500"></i>
-            <span>發布全域系統公告 / 例行維護鎖定</span>
+            <span>全域跑馬燈系統公告發布</span>
           </h2>
-          <span id="current-announcement-status" class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-bold">載入狀態中...</span>
+          <span id="current-announcement-status" class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-bold">載入中...</span>
         </div>
         
         <div class="space-y-2">
-          <label class="block text-xs font-bold text-brand-800">公告展示文字 (前後台頂部跑馬燈連動)：</label>
-          <textarea id="announcement-input" rows="3" class="w-full p-3 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed focus:ring-2 focus:ring-brand-400" placeholder="輸入要廣播給全系統前台與後台的公告內容...（留空發布代表下架關閉）"></textarea>
+          <label class="block text-xs font-bold text-brand-800">公告展示文字 (所有店家前台與後台頂部 15 秒內同步廣播)：</label>
+          <textarea id="announcement-input" rows="3" class="w-full p-3 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed focus:ring-2 focus:ring-brand-400" placeholder="輸入公告內容...（例如：系統將於今晚 02:00 進行資料庫優化維護）"></textarea>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between pt-1">
-          <label class="flex items-center gap-2 text-xs font-bold text-rose-600 cursor-pointer select-none bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
-            <input type="checkbox" id="announcement-is-maintenance" class="accent-rose-600 rounded">
-            <span>啟動「全平台例行升級維護遮罩」（強制鎖定全前台，禁止顧客預約下單）</span>
-          </label>
-          <div class="flex gap-2 w-full sm:w-auto shrink-0">
-            <button onclick="publishAnnouncement()" class="flex-1 sm:flex-none px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition">
-              <i class="fa-solid fa-paper-plane mr-1"></i> 發布公告
-            </button>
-            <button onclick="clearAnnouncement()" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition">
-              下架 / 清除
-            </button>
-          </div>
+        <div class="flex gap-2 justify-end pt-1">
+          <button onclick="clearAnnouncement()" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition">
+            下架 / 清除公告
+          </button>
+          <button onclick="publishAnnouncement()" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <i class="fa-solid fa-paper-plane text-[10px]"></i> 發布公告
+          </button>
         </div>
 
-        <div class="text-[11px] text-brand-600 leading-relaxed bg-brand-50 p-3 rounded-2xl border border-brand-100">
-          💡 <b>運作機制說明：</b><br>
-          • <b>一般公告</b>：發布後，所有店家前台及管理後台頂部會即時常駐顯示黃色公告橫幅。<br>
-          • <b>維護鎖定</b>：勾選維護鎖定後發布，所有店家前台會立即彈出全螢幕「系統升級施工中」遮罩，禁止任何填單。<br>
-          • <b>下架清除</b>：點選「下架/清除」後，系統公告標記為失效，前台與後台黃色公告橫幅將<b>自動完全隱藏不留白</b>。
+        <div class="text-[11px] text-brand-600 leading-relaxed bg-brand-50 p-3 rounded-2xl border border-brand-100 space-y-1">
+          <div>💡 <b>營運控管說明：</b></div>
+          <div>• <b>維護鎖定</b>：改由上方按鈕直接「一鍵啟動 / 一鍵解除」，避免勾選框造成反悔困難。啟動後全平台前台將立即彈出全螢幕施工遮罩，封鎖新預約建立。</div>
+          <div>• <b>純跑馬公告</b>：填寫上方文字後點擊發布，前後台將出現淡黃色提醒條，不影響預約流程。</div>
         </div>
       </section>
 
-      <!-- 店家功能許願池接收區 -->
+      <!-- 店家許願池回報區 -->
       <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center border-b border-brand-100 pb-2">
           <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-lightbulb text-amber-500"></i>
             <span>店家功能許願池清單</span>
           </h2>
-          <button onclick="loadWishes()" class="text-[11px] text-brand-500 hover:underline">重新讀取</button>
+          <button onclick="loadWishes()" class="text-[11px] text-brand-500 hover:underline">重新整理</button>
         </div>
         <div id="wishes-container" class="space-y-2 text-xs">
-          <div class="text-center py-4 text-brand-400">目前尚無許願回報</div>
+          <div class="text-center py-4 text-brand-400">目前尚無許願紀錄</div>
         </div>
       </section>
     </div>
@@ -178,6 +184,7 @@
     let currentFilter = 'ALL';
     let currentPage = 1;
     const PAGE_SIZE = 10;
+    let isPlatformMaintenanceActive = false;
 
     function checkSuperKey() {
       const val = document.getElementById('super-key-input').value.trim();
@@ -216,11 +223,56 @@
         });
         allStores = await res.json();
         document.getElementById('store-count-badge').innerText = `共 ${allStores.length} 間店家`;
+        
+        renderExpiringAlertZone();
         currentPage = 1;
         renderStores();
       } catch(e) {
         console.error("載入店家失敗:", e);
       }
+    }
+
+    // 7 天內到期或已過期警示專區
+    function renderExpiringAlertZone() {
+      const alertBox = document.getElementById('expiring-alert-container');
+      if (!alertBox) return;
+
+      const now = new Date();
+      const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const expiringList = allStores.filter(s => {
+        if (!s.expires_at) return false;
+        const exp = new Date(s.expires_at);
+        return exp <= sevenDaysLater;
+      });
+
+      if (expiringList.length === 0) {
+        alertBox.innerHTML = '';
+        return;
+      }
+
+      alertBox.innerHTML = `
+        <div class="bg-rose-50 border border-rose-200 p-4 rounded-3xl space-y-2 mb-4 text-xs">
+          <div class="flex justify-between items-center font-bold text-rose-950">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> 即將到期 / 欠費通知名單 (7 天內到期或已過期)</span>
+            <span class="px-2.5 py-0.5 bg-rose-200 text-rose-900 rounded-full text-[10px] font-black">${expiringList.length} 家需關注</span>
+          </div>
+          <div class="divide-y divide-rose-200/60">
+            ${expiringList.map(s => `
+              <div class="py-2.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <span class="font-bold text-rose-950 text-sm">${s.store_name}</span>
+                  <span class="text-[11px] text-rose-700 ml-2">到期日：${s.expires_at ? s.expires_at.split('T')[0] : '未知'}</span>
+                  <span class="text-[11px] text-gray-500 ml-2">(${s.owner_email || '無 Email'})</span>
+                </div>
+                <button onclick="sendZeroCostEmailNotice('${s.id}', '${s.store_name}', '${s.owner_email}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[11px] transition shadow-xs flex items-center gap-1">
+                  <i class="fa-solid fa-envelope text-[10px]"></i> 零費用發信催繳 (不扣 LINE 額度)
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
 
     function filterStores(status, btn) {
@@ -285,10 +337,10 @@
         const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
 
         const lockBtnHtml = isLocked
-          ? `<button onclick="('${s.id}', false, '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
+          ? `<button onclick="toggleStoreLock('${s.id}', 'locked', '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
                <i class="fa-solid fa-lock-open text-[10px]"></i> 解除鎖定
              </button>`
-          : `<button onclick="toggleStoreLock('${s.id}', true, '${s.store_name}')" class="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
+          : `<button onclick="toggleStoreLock('${s.id}', 'active', '${s.store_name}')" class="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
                <i class="fa-solid fa-lock text-[10px]"></i> 暫時鎖定
              </button>`;
 
@@ -322,7 +374,7 @@
 
             <div class="flex gap-2 flex-wrap items-center justify-between pt-1 border-t border-brand-100">
               <button onclick="copyDunText('${s.store_name}', '${s.owner_line_name || '負責人'}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs">
-                📋 複製催繳帳單文案
+                📋 複製催繳文案
               </button>
               <div class="flex gap-1.5 flex-wrap items-center">
                 <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
@@ -347,20 +399,31 @@
       }).join('');
     }
 
+    // 10 筆分頁控制器 (上一頁、1 2 3 4、下一頁)
     function renderPagination(totalPages) {
       const container = document.getElementById('page-buttons-container');
-      if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-      }
-      let html = '';
+      if (!container) return;
+
+      let html = `
+        <button onclick="changePage(${currentPage - 1})" class="px-2.5 py-1 rounded-lg border text-xs font-bold transition ${currentPage === 1 ? 'opacity-40 pointer-events-none' : 'bg-white hover:bg-brand-100'}">
+          上一頁
+        </button>
+      `;
+
       for (let i = 1; i <= totalPages; i++) {
         html += `
-          <button onclick="changePage(${i})" class="w-7 h-7 rounded-lg text-xs font-bold transition ${i === currentPage ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-800 hover:bg-brand-200'}">
+          <button onclick="changePage(${i})" class="w-7 h-7 rounded-lg text-xs font-bold transition ${i === currentPage ? 'bg-brand-500 text-white shadow-xs' : 'bg-white border border-brand-200 text-brand-800 hover:bg-brand-100'}">
             ${i}
           </button>
         `;
       }
+
+      html += `
+        <button onclick="changePage(${currentPage + 1})" class="px-2.5 py-1 rounded-lg border text-xs font-bold transition ${currentPage === totalPages ? 'opacity-40 pointer-events-none' : 'bg-white hover:bg-brand-100'}">
+          下一頁
+        </button>
+      `;
+
       container.innerHTML = html;
     }
 
@@ -373,200 +436,69 @@
     function copyDunText(storeName, ownerName) {
       const txt = `親愛的 ${storeName} ${ownerName} 您好：\n提醒您，您在 Sibyl 數位管家的預約排程系統方案即將到期。\n為避免前台預約與推播中斷，請點選以下安全金流連結完成續約：\nhttps://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ\n完成後系統將自動延長使用權限，謝謝您！`;
       navigator.clipboard.writeText(txt).then(() => {
-        Swal.fire({ title: '催繳帳單文案已複製！', icon: 'success', timer: 1500, showConfirmButton: false });
+        Swal.fire({ title: '催繳文案已複製！', icon: 'success', timer: 1500, showConfirmButton: false });
       });
     }
 
-    let allStoresList = [];
-  let storeCurrentPage = 1;
-  const STORES_PER_PAGE = 10;
+    // 單一店家「暫時鎖定 / 解鎖」即時生效
+    async function toggleStoreLock(storeId, currentStatus, storeName = '') {
+      const isNowLocked = (currentStatus === 'locked');
+      const newStatus = isNowLocked ? 'active' : 'locked';
 
-  // 1. 全平台維護鎖定切換 (按鈕切換式，絕不卡死)
-  async function togglePlatformMaintenance(targetStatus) {
-    const actionText = targetStatus ? '啟動全平台維護鎖定' : '解除全平台鎖定';
-    const confirm = await Swal.fire({
-      title: `確定${actionText}？`,
-      text: targetStatus ? '所有店家前台將立刻彈出全螢幕遮罩，禁止顧客預約！' : '全平台前台將恢復正常預約填單。',
-      icon: targetStatus ? 'warning' : 'info',
-      showCancelButton: true,
-      confirmButtonText: `確定${actionText}`,
-      confirmButtonColor: targetStatus ? '#d33' : '#8C7355'
-    });
+      Swal.showLoading();
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+          method: "PATCH",
+          headers: { 
+            "apikey": SUPABASE_ANON_KEY, 
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({ plan_status: newStatus })
+        });
+        if (!res.ok) throw new Error('資料庫更新失敗');
 
-    if (!confirm.isConfirmed) return;
-    Swal.showLoading();
+        Swal.fire('店家狀態已變更！', `【${storeName}】已切換為【${newStatus === 'locked' ? '暫時鎖定停權' : '正常運行'}】`, 'success');
+        loadStores();
+      } catch(e) {
+        Swal.fire('變更失敗', e.message, 'error');
+      }
+    }
 
-    try {
-      // 先關閉舊的
-      await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ is_active: false })
-      });
+    // 零費用發信催繳（經由 Google Apps Script 驅動，不消耗 LINE 官方額度）
+    async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
+      if (!ownerEmail || !ownerEmail.includes('@')) {
+        return Swal.fire('該店家未填寫有效 Email', '請先至店家資料補充信箱', 'warning');
+      }
 
-      if (targetStatus) {
-        // 發布維護鎖定
-        await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
+      Swal.fire({ title: '正在寄送催繳信件...', allowOutsideClick: false });
+      Swal.showLoading();
+
+      try {
+        const response = await fetch(API_URL, {
           method: "POST",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify({
-            title: "全平台維護升級中",
-            content: "系統目前進行例行伺服器升級維護，施工完畢將即刻開放。",
-            is_active: true,
-            is_maintenance: true
+            action: "sendSuperNoticeEmail",
+            secret: SUPER_KEY,
+            storeId: storeId,
+            storeName: storeName,
+            toEmail: ownerEmail,
+            subject: `【Sibyl 數位管家】系統服務授權即將到期通知 - ${storeName}`,
+            content: `親愛的 ${storeName} 負責人您好：\n\n系統提醒您，您的沙龍預約排程授權即將到期（或已過期）。\n為避免前台顧客預約下單與通知通道中斷，請盡速登入後台【方案分頁】完成線上續費。\n\n如已完成續費請忽略此信，感謝您的支持！\n\nSibyl 數位管家團隊 敬上`
           })
         });
+
+        const resData = await response.json();
+        if (resData && resData.success) {
+          Swal.fire('催繳信件已成功送達！', `已寄發至 ${ownerEmail}，完全不扣除店家的 LINE 免費訊息額度。`, 'success');
+        } else {
+          throw new Error(resData.message || '後端伺服器回應錯誤');
+        }
+      } catch(e) {
+        Swal.fire('發信失敗', e.message, 'error');
       }
-
-      Swal.fire('狀態更新成功！', `已${actionText}`, 'success');
-      checkCurrentPlatformStatus();
-    } catch (e) {
-      Swal.fire('操作失敗', e.message, 'error');
     }
-  }
-
-  // 2. 單一店家「暫時鎖定 / 解鎖」
-  async function toggleStoreLock(storeId, currentStatus) {
-    const isNowLocked = (currentStatus === 'locked');
-    const newStatus = isNowLocked ? 'active' : 'locked';
-
-    Swal.showLoading();
-    try {
-      await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ plan_status: newStatus })
-      });
-
-      Swal.fire('店家狀態已變更！', `已切換為【${newStatus === 'locked' ? '鎖定停權' : '正常運行'}】`, 'success');
-      loadAllStores();
-    } catch(e) {
-      Swal.fire('變更失敗', e.message, 'error');
-    }
-  }
-
-    // 3. 載入店家並過濾「即將到期專區」與「10 家分頁」
-  async function loadAllStores() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-      });
-      allStoresList = await res.json();
-
-      renderExpiringAlertZone();
-      renderStoresPagedTable();
-    } catch(e) {}
-  }
-
-  // 即將到期提醒專區 (7 天內到期或已過期)
-  function renderExpiringAlertZone() {
-    const alertBox = document.getElementById('expiring-alert-container');
-    if (!alertBox) return;
-
-    const now = new Date();
-    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const expiringList = allStoresList.filter(s => {
-      if (!s.expires_at) return false;
-      const exp = new Date(s.expires_at);
-      return exp <= sevenDaysLater;
-    });
-
-    if (expiringList.length === 0) {
-      alertBox.innerHTML = '<div class="text-xs text-emerald-800 bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center font-bold">目前無即將到期或欠費之店家</div>';
-      return;
-    }
-
-    alertBox.innerHTML = `
-      <div class="bg-rose-50 border border-rose-200 p-4 rounded-3xl space-y-2 mb-4 text-xs">
-        <div class="flex justify-between items-center font-bold text-rose-950">
-          <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> 即將到期/欠費通知名單 (7天內)</span>
-          <span class="px-2.5 py-0.5 bg-rose-200 text-rose-900 rounded-full text-[10px] font-black">${expiringList.length} 家需關注</span>
-        </div>
-        <div class="divide-y divide-rose-200/60">
-          ${expiringList.map(s => `
-            <div class="py-2 flex justify-between items-center">
-              <div>
-                <span class="font-bold text-rose-950">${s.store_name}</span>
-                <span class="text-[11px] text-rose-700 ml-2">到期日：${s.expires_at?.split('T')[0] || '未知'}</span>
-              </div>
-              <button onclick="sendZeroCostEmailNotice('${s.id}', '${s.store_name}', '${s.owner_email}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[11px] transition shadow-xs">
-                ✉️ 免費發送 Email 續約催繳
-              </button>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  // 10 筆分頁器渲染
-  function renderStoresPagedTable() {
-    const tbody = document.getElementById('stores-table-body');
-    const paginationBox = document.getElementById('stores-pagination-box');
-    if (!tbody) return;
-
-    const totalPages = Math.ceil(allStoresList.length / STORES_PER_PAGE) || 1;
-    const start = (storeCurrentPage - 1) * STORES_PER_PAGE;
-    const pagedStores = allStoresList.slice(start, start + STORES_PER_PAGE);
-
-    tbody.innerHTML = pagedStores.map(s => {
-      const isLocked = (s.plan_status === 'locked');
-      return `
-        <tr class="border-b border-brand-100 text-xs">
-          <td class="py-3 px-2 font-bold">${s.store_name}</td>
-          <td class="py-3 px-2">${s.industry_type || '美業'}</td>
-          <td class="py-3 px-2">${s.expires_at ? s.expires_at.split('T')[0] : '無期限'}</td>
-          <td class="py-3 px-2 font-bold ${isLocked ? 'text-red-500' : 'text-emerald-600'}">${isLocked ? '已鎖定' : '正常運行'}</td>
-          <td class="py-3 px-2 text-right">
-            <button onclick="toggleStoreLock('${s.id}', '${s.plan_status}')" class="px-2.5 py-1 rounded-lg font-bold text-xs ${isLocked ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-              ${isLocked ? '解鎖開通' : '暫時鎖定'}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    // 生成分頁按鈕 (上一頁 1 2 3 4 下一頁)
-    if (paginationBox) {
-      let pagesHtml = `<button onclick="changeStorePage(-1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === 1 ? 'opacity-40 pointer-events-none' : ''}">上一頁</button>`;
-      for (let i = 1; i <= totalPages; i++) {
-        pagesHtml += `<button onclick="goStorePage(${i})" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${i === storeCurrentPage ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-brand-800'}">${i}</button>`;
-      }
-      pagesHtml += `<button onclick="changeStorePage(1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === totalPages ? 'opacity-40 pointer-events-none' : ''}">下一頁</button>`;
-      paginationBox.innerHTML = pagesHtml;
-    }
-  }
-
-  function changeStorePage(delta) {
-    storeCurrentPage += delta;
-    renderStoresPagedTable();
-  }
-  function goStorePage(p) {
-    storeCurrentPage = p;
-    renderStoresPagedTable();
-  }
-
-  // 零成本推播：透過 Resend API 發信給業主，不消耗任何 LINE 官方免費則數
-  async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
-    if (!ownerEmail) return Swal.fire('該店家未填寫 Email', '', 'warning');
-    Swal.showLoading();
-    try {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { "Authorization": "Bearer re_您的Resend金鑰", "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "Sibyl 數位總管 <notice@heysibyl.com>",
-          to: [ownerEmail],
-          subject: `【系統服務即將到期通知】${storeName}`,
-          html: `<h3>親愛的 ${storeName} 負責人您好：</h3><p>您的沙龍預約系統授權即將到期，為避免前台預約中斷，請盡速登入後台【方案分頁】完成線上續約。</p>`
-        })
-      });
-      Swal.fire('催繳信件已成功送達！', '已由系統專屬通道發送，不扣除 LINE 額度', 'success');
-    } catch(e) {
-      Swal.fire('發信失敗', e.message, 'error');
-    }
-  }
 
     async function manualActivateStore(storeId, days) {
       Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
@@ -629,42 +561,79 @@
       });
     }
 
-    // =========================================================================
-    // ✨ 全域公告與例行維護鎖定發布核心 (精確寫入 system_announcements 表)
-    // =========================================================================
+    // 載入全域公告與當前維護鎖定狀態
     async function loadAnnouncement() {
       const statusEl = document.getElementById('current-announcement-status');
+      const indText = document.getElementById('platform-status-text');
+      const indBox = document.getElementById('platform-status-indicator');
+      const indBtn = document.getElementById('platform-action-btn-box');
+
       try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true&order=created_at.desc&limit=1`, {
           headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
         });
         const data = await res.json();
-        if (Array.isArray(data) && data.length > 0 && data[0].content) {
-          const isMaint = (data[0].is_maintenance === true);
-          statusEl.innerHTML = isMaint 
-            ? `<span class="text-rose-600 font-bold"><i class="fa-solid fa-lock"></i> [維護鎖定中]</span>`
-            : `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> [公告展示中]</span>`;
-          document.getElementById('announcement-input').value = data[0].content;
-          document.getElementById('announcement-is-maintenance').checked = isMaint;
+        
+        if (Array.isArray(data) && data.length > 0 && data[0].is_active) {
+          isPlatformMaintenanceActive = Boolean(data[0].is_maintenance);
+          
+          if (isPlatformMaintenanceActive) {
+            indBox.className = "p-4 rounded-3xl border flex items-center justify-between bg-rose-50 border-rose-200 text-rose-950";
+            indText.innerHTML = `<span class="font-black text-rose-700">🔒 全平台例行維護鎖定中 (禁止顧客下單)</span>`;
+            indBtn.innerHTML = `
+              <button onclick="togglePlatformMaintenance(false)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1">
+                <i class="fa-solid fa-lock-open text-[11px]"></i> 解除全平台鎖定
+              </button>
+            `;
+            statusEl.innerHTML = `<span class="text-rose-600 font-bold"><i class="fa-solid fa-lock"></i> [維護鎖定中]</span>`;
+          } else {
+            indBox.className = "p-4 rounded-3xl border flex items-center justify-between bg-emerald-50 border-emerald-200 text-emerald-950";
+            indText.innerHTML = `<span class="font-bold text-emerald-700">正常營運中 (公告廣播生效中)</span>`;
+            indBtn.innerHTML = `
+              <button onclick="togglePlatformMaintenance(true)" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation text-[11px]"></i> 啟動全平台維護鎖定
+              </button>
+            `;
+            statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> [跑馬公告展示中]</span>`;
+          }
+          document.getElementById('announcement-input').value = data[0].content || '';
         } else {
+          isPlatformMaintenanceActive = false;
+          indBox.className = "p-4 rounded-3xl border flex items-center justify-between bg-emerald-50 border-emerald-200 text-emerald-950";
+          indText.innerHTML = `<span class="font-bold text-emerald-700">正常營運中 (無鎖定)</span>`;
+          indBtn.innerHTML = `
+            <button onclick="togglePlatformMaintenance(true)" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1">
+              <i class="fa-solid fa-triangle-exclamation text-[11px]"></i> 啟動全平台維護鎖定
+            </button>
+          `;
           statusEl.innerHTML = `<span class="text-gray-400">目前無生效中公告</span>`;
           document.getElementById('announcement-input').value = '';
-          document.getElementById('announcement-is-maintenance').checked = false;
         }
       } catch(e) {
         statusEl.innerHTML = `<span class="text-rose-500">連線異常</span>`;
       }
     }
 
-    async function publishAnnouncement() {
-      const text = document.getElementById('announcement-input').value.trim();
-      const isMaint = document.getElementById('announcement-is-maintenance').checked;
-      
-      if (!text) return Swal.fire('請輸入公告文字', '若要清除公告，請點選「下架/清除」按鈕', 'warning');
+    // 全平台鎖定按鈕切換（徹底擺脫勾選框反悔困難）
+    async function togglePlatformMaintenance(targetLockState) {
+      const actionText = targetLockState ? '啟動全平台維護鎖定' : '解除全平台鎖定';
+      const confirm = await Swal.fire({
+        title: `確定${actionText}？`,
+        text: targetLockState 
+          ? '所有店家前台將於 15 秒內強制彈出全螢幕「升級維護中」施工遮罩，封鎖預約下單！' 
+          : '全平台店家前台將於 15 秒內解除遮罩，恢復正常預約填單。',
+        icon: targetLockState ? 'warning' : 'info',
+        showCancelButton: true,
+        confirmButtonText: `確定${actionText}`,
+        confirmButtonColor: targetLockState ? '#d33' : '#8C7355',
+        cancelButtonText: '取消'
+      });
 
+      if (!confirm.isConfirmed) return;
       Swal.showLoading();
+
       try {
-        // 1. 先將所有舊公告設為非啟用
+        // 先將所有舊公告設為失效
         await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
           method: "PATCH",
           headers: { 
@@ -675,7 +644,49 @@
           body: JSON.stringify({ is_active: false })
         });
 
-        // 2. ✨ 補上 title 欄位，解決 23502 not-null constraint 錯誤！
+        if (targetLockState) {
+          // 寫入維護鎖定紀錄
+          await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
+            method: "POST",
+            headers: { 
+              "apikey": SUPABASE_ANON_KEY, 
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+              "Content-Type": "application/json",
+              "Prefer": "return=representation"
+            },
+            body: JSON.stringify({
+              title: "全平台維護升級中",
+              content: "系統目前正進行例行伺服器升級與維護施工，施工期間暫停在線預約，造成不便敬請見諒。",
+              is_active: true,
+              is_maintenance: true
+            })
+          });
+        }
+
+        Swal.fire('狀態更新成功！', `已${actionText}，全系統將於 15 秒內完成即時同步。`, 'success');
+        loadAnnouncement();
+      } catch (err) {
+        Swal.fire('操作失敗', err.message, 'error');
+      }
+    }
+
+    // 發布常規跑馬公告
+    async function publishAnnouncement() {
+      const text = document.getElementById('announcement-input').value.trim();
+      if (!text) return Swal.fire('請輸入公告文字', '若要清除公告，請點選「下架 / 清除公告」按鈕', 'warning');
+
+      Swal.showLoading();
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
+          method: "PATCH",
+          headers: { 
+            "apikey": SUPABASE_ANON_KEY, 
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({ is_active: false })
+        });
+
         const res = await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
           method: "POST",
           headers: { 
@@ -685,24 +696,23 @@
             "Prefer": "return=representation"
           },
           body: JSON.stringify({ 
-            title: isMaint ? "系統維護公告" : "系統公告", // 補上非空的 title
+            title: "系統公告", 
             content: text, 
             is_active: true, 
-            is_maintenance: isMaint 
+            is_maintenance: false 
           })
         });
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.message || JSON.stringify(errData));
-        }
+        if (!res.ok) throw new Error("發布失敗");
 
-        Swal.fire(isMaint ? '已啟動維護鎖定！' : '公告發布成功！', '前台與後台將同步呈現', 'success');
+        Swal.fire('公告發布成功！', '所有店家前台與管理後台將於 15 秒內同步呈現。', 'success');
         loadAnnouncement();
       } catch (err) {
         Swal.fire('發布失敗', err.message, 'error');
       }
     }
+
+    // 下架所有公告與維護鎖定
     async function clearAnnouncement() {
       Swal.fire({ title: '正在下架公告...', allowOutsideClick: false });
       Swal.showLoading();
@@ -710,12 +720,16 @@
       try {
         await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
           method: "PATCH",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          headers: { 
+            "apikey": SUPABASE_ANON_KEY, 
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+            "Content-Type": "application/json" 
+          },
           body: JSON.stringify({ is_active: false, is_maintenance: false })
         });
+
         document.getElementById('announcement-input').value = '';
-        document.getElementById('announcement-is-maintenance').checked = false;
-        Swal.fire('已成功下架公告！', '前後台黃色橫幅與維護遮罩已完全解除隱藏。', 'success');
+        Swal.fire('已成功下架！', '前後台公告橫幅已完全清除隱藏。', 'success');
         loadAnnouncement();
       } catch (err) {
         Swal.fire('下架失敗', err.message, 'error');
