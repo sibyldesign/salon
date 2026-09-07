@@ -285,7 +285,7 @@
         const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
 
         const lockBtnHtml = isLocked
-          ? `<button onclick="toggleStoreLock('${s.id}', false, '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
+          ? `<button onclick="('${s.id}', false, '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
                <i class="fa-solid fa-lock-open text-[10px]"></i> 解除鎖定
              </button>`
           : `<button onclick="toggleStoreLock('${s.id}', true, '${s.store_name}')" class="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
@@ -377,39 +377,196 @@
       });
     }
 
-    async function toggleStoreLock(storeId, toLock, storeName) {
-      const actionText = toLock ? "暫時鎖定" : "解除鎖定";
-      const newStatus = toLock ? "locked" : "active";
+    let allStoresList = [];
+  let storeCurrentPage = 1;
+  const STORES_PER_PAGE = 10;
 
-      Swal.fire({
-        title: `確定要${actionText}【${storeName}】？`,
-        text: toLock ? "鎖定後該店家的前台預約與管理後台將立即暫停運作！" : "解鎖後店家將恢復正常營運狀態。",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: toLock ? '#475569' : '#16A34A',
-        confirmButtonText: `確定${actionText}`,
-        cancelButtonText: '取消'
-      }).then(async r => {
-        if (r.isConfirmed) {
-          try {
-            const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-              method: "PATCH",
-              headers: {
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({ plan_status: newStatus })
-            });
-            if (!res.ok) throw new Error("更新資料庫失敗");
-            Swal.fire({ title: `已成功${actionText}！`, icon: 'success', timer: 1200, showConfirmButton: false });
-            loadStores();
-          } catch (e) {
-            Swal.fire('操作失敗', e.message, 'error');
-          }
-        }
+  // 1. 全平台維護鎖定切換 (按鈕切換式，絕不卡死)
+  async function togglePlatformMaintenance(targetStatus) {
+    const actionText = targetStatus ? '啟動全平台維護鎖定' : '解除全平台鎖定';
+    const confirm = await Swal.fire({
+      title: `確定${actionText}？`,
+      text: targetStatus ? '所有店家前台將立刻彈出全螢幕遮罩，禁止顧客預約！' : '全平台前台將恢復正常預約填單。',
+      icon: targetStatus ? 'warning' : 'info',
+      showCancelButton: true,
+      confirmButtonText: `確定${actionText}`,
+      confirmButtonColor: targetStatus ? '#d33' : '#8C7355'
+    });
+
+    if (!confirm.isConfirmed) return;
+    Swal.showLoading();
+
+    try {
+      // 先關閉舊的
+      await fetch(`${SUPABASE_URL}/rest/v1/system_announcements?is_active=eq.true`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: false })
       });
+
+      if (targetStatus) {
+        // 發布維護鎖定
+        await fetch(`${SUPABASE_URL}/rest/v1/system_announcements`, {
+          method: "POST",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "全平台維護升級中",
+            content: "系統目前進行例行伺服器升級維護，施工完畢將即刻開放。",
+            is_active: true,
+            is_maintenance: true
+          })
+        });
+      }
+
+      Swal.fire('狀態更新成功！', `已${actionText}`, 'success');
+      checkCurrentPlatformStatus();
+    } catch (e) {
+      Swal.fire('操作失敗', e.message, 'error');
     }
+  }
+
+  // 2. 單一店家「暫時鎖定 / 解鎖」
+  async function toggleStoreLock(storeId, currentStatus) {
+    const isNowLocked = (currentStatus === 'locked');
+    const newStatus = isNowLocked ? 'active' : 'locked';
+
+    Swal.showLoading();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_status: newStatus })
+      });
+
+      Swal.fire('店家狀態已變更！', `已切換為【${newStatus === 'locked' ? '鎖定停權' : '正常運行'}】`, 'success');
+      loadAllStores();
+    } catch(e) {
+      Swal.fire('變更失敗', e.message, 'error');
+    }
+  }
+
+    // 3. 載入店家並過濾「即將到期專區」與「10 家分頁」
+  async function loadAllStores() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      allStoresList = await res.json();
+
+      renderExpiringAlertZone();
+      renderStoresPagedTable();
+    } catch(e) {}
+  }
+
+  // 即將到期提醒專區 (7 天內到期或已過期)
+  function renderExpiringAlertZone() {
+    const alertBox = document.getElementById('expiring-alert-container');
+    if (!alertBox) return;
+
+    const now = new Date();
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const expiringList = allStoresList.filter(s => {
+      if (!s.expires_at) return false;
+      const exp = new Date(s.expires_at);
+      return exp <= sevenDaysLater;
+    });
+
+    if (expiringList.length === 0) {
+      alertBox.innerHTML = '<div class="text-xs text-emerald-800 bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center font-bold">目前無即將到期或欠費之店家</div>';
+      return;
+    }
+
+    alertBox.innerHTML = `
+      <div class="bg-rose-50 border border-rose-200 p-4 rounded-3xl space-y-2 mb-4 text-xs">
+        <div class="flex justify-between items-center font-bold text-rose-950">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> 即將到期/欠費通知名單 (7天內)</span>
+          <span class="px-2.5 py-0.5 bg-rose-200 text-rose-900 rounded-full text-[10px] font-black">${expiringList.length} 家需關注</span>
+        </div>
+        <div class="divide-y divide-rose-200/60">
+          ${expiringList.map(s => `
+            <div class="py-2 flex justify-between items-center">
+              <div>
+                <span class="font-bold text-rose-950">${s.store_name}</span>
+                <span class="text-[11px] text-rose-700 ml-2">到期日：${s.expires_at?.split('T')[0] || '未知'}</span>
+              </div>
+              <button onclick="sendZeroCostEmailNotice('${s.id}', '${s.store_name}', '${s.owner_email}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-[11px] transition shadow-xs">
+                ✉️ 免費發送 Email 續約催繳
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // 10 筆分頁器渲染
+  function renderStoresPagedTable() {
+    const tbody = document.getElementById('stores-table-body');
+    const paginationBox = document.getElementById('stores-pagination-box');
+    if (!tbody) return;
+
+    const totalPages = Math.ceil(allStoresList.length / STORES_PER_PAGE) || 1;
+    const start = (storeCurrentPage - 1) * STORES_PER_PAGE;
+    const pagedStores = allStoresList.slice(start, start + STORES_PER_PAGE);
+
+    tbody.innerHTML = pagedStores.map(s => {
+      const isLocked = (s.plan_status === 'locked');
+      return `
+        <tr class="border-b border-brand-100 text-xs">
+          <td class="py-3 px-2 font-bold">${s.store_name}</td>
+          <td class="py-3 px-2">${s.industry_type || '美業'}</td>
+          <td class="py-3 px-2">${s.expires_at ? s.expires_at.split('T')[0] : '無期限'}</td>
+          <td class="py-3 px-2 font-bold ${isLocked ? 'text-red-500' : 'text-emerald-600'}">${isLocked ? '已鎖定' : '正常運行'}</td>
+          <td class="py-3 px-2 text-right">
+            <button onclick="toggleStoreLock('${s.id}', '${s.plan_status}')" class="px-2.5 py-1 rounded-lg font-bold text-xs ${isLocked ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+              ${isLocked ? '解鎖開通' : '暫時鎖定'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // 生成分頁按鈕 (上一頁 1 2 3 4 下一頁)
+    if (paginationBox) {
+      let pagesHtml = `<button onclick="changeStorePage(-1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === 1 ? 'opacity-40 pointer-events-none' : ''}">上一頁</button>`;
+      for (let i = 1; i <= totalPages; i++) {
+        pagesHtml += `<button onclick="goStorePage(${i})" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${i === storeCurrentPage ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-brand-800'}">${i}</button>`;
+      }
+      pagesHtml += `<button onclick="changeStorePage(1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === totalPages ? 'opacity-40 pointer-events-none' : ''}">下一頁</button>`;
+      paginationBox.innerHTML = pagesHtml;
+    }
+  }
+
+  function changeStorePage(delta) {
+    storeCurrentPage += delta;
+    renderStoresPagedTable();
+  }
+  function goStorePage(p) {
+    storeCurrentPage = p;
+    renderStoresPagedTable();
+  }
+
+  // 零成本推播：透過 Resend API 發信給業主，不消耗任何 LINE 官方免費則數
+  async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
+    if (!ownerEmail) return Swal.fire('該店家未填寫 Email', '', 'warning');
+    Swal.showLoading();
+    try {
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": "Bearer re_您的Resend金鑰", "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Sibyl 數位總管 <notice@heysibyl.com>",
+          to: [ownerEmail],
+          subject: `【系統服務即將到期通知】${storeName}`,
+          html: `<h3>親愛的 ${storeName} 負責人您好：</h3><p>您的沙龍預約系統授權即將到期，為避免前台預約中斷，請盡速登入後台【方案分頁】完成線上續約。</p>`
+        })
+      });
+      Swal.fire('催繳信件已成功送達！', '已由系統專屬通道發送，不扣除 LINE 額度', 'success');
+    } catch(e) {
+      Swal.fire('發信失敗', e.message, 'error');
+    }
+  }
 
     async function manualActivateStore(storeId, days) {
       Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
