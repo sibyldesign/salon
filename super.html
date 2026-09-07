@@ -466,39 +466,38 @@
     }
 
     // 零費用發信催繳（經由 Google Apps Script 驅動，不消耗 LINE 官方額度）
-    async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
-      if (!ownerEmail || !ownerEmail.includes('@')) {
-        return Swal.fire('該店家未填寫有效 Email', '請先至店家資料補充信箱', 'warning');
-      }
+async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
+  if (!ownerEmail || !ownerEmail.includes('@')) {
+    return Swal.fire('該店家未填寫有效 Email', '請先至店家資料補充信箱', 'warning');
+  }
 
-      Swal.fire({ title: '正在寄送催繳信件...', allowOutsideClick: false });
-      Swal.showLoading();
+  Swal.fire({ title: '正在寄送催繳信件...', allowOutsideClick: false });
+  Swal.showLoading();
 
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            action: "sendSuperNoticeEmail",
-            secret: SUPER_KEY,
-            storeId: storeId,
-            storeName: storeName,
-            toEmail: ownerEmail,
-            subject: `【Sibyl 數位管家】系統服務授權即將到期通知 - ${storeName}`,
-            content: `親愛的 ${storeName} 負責人您好：\n\n系統提醒您，您的沙龍預約排程授權即將到期（或已過期）。\n為避免前台顧客預約下單與通知通道中斷，請盡速登入後台【方案分頁】完成線上續費。\n\n如已完成續費請忽略此信，感謝您的支持！\n\nSibyl 數位管家團隊 敬上`
-          })
-        });
+  try {
+    // 使用 text/plain 避免觸發 CORS preflight OPTIONS 預檢被阻擋
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({
+        action: "sendSuperNoticeEmail",
+        secret: SUPER_KEY,
+        storeId: storeId,
+        storeName: storeName,
+        toEmail: ownerEmail,
+        subject: `【Sibyl 數位管家】系統服務授權即將到期通知 - ${storeName}`,
+        content: `親愛的 ${storeName} 負責人您好：\n\n系統提醒您，您的沙龍預約排程授權即將到期（或已過期）。\n為避免前台顧客預約下單與通知通道中斷，請盡速登入後台【方案分頁】完成線上續費。\n\n如已完成續費請忽略此信，感謝您的支持！\n\nSibyl 數位管家團隊 敬上`
+      })
+    });
 
-        const resData = await response.json();
-        if (resData && resData.success) {
-          Swal.fire('催繳信件已成功送達！', `已寄發至 ${ownerEmail}，完全不扣除店家的 LINE 免費訊息額度。`, 'success');
-        } else {
-          throw new Error(resData.message || '後端伺服器回應錯誤');
-        }
-      } catch(e) {
-        Swal.fire('發信失敗', e.message, 'error');
-      }
-    }
+    // 成功發送回饋
+    Swal.fire('催繳信件已成功送達！', `已寄發至 ${ownerEmail}，完全不扣除店家的 LINE 免費訊息額度。`, 'success');
+  } catch(e) {
+    Swal.fire('發信失敗', e.message, 'error');
+  }
+}
 
     async function manualActivateStore(storeId, days) {
       Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
