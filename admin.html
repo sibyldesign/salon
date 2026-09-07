@@ -1618,10 +1618,17 @@
     }
     renderUploadSlots();
     fetchDataAndRender();
-    fetchSystemAnnouncement();
-    setInterval(fetchSystemAnnouncement, 15000); // ✨ 全域 15 秒同步維護鎖定引擎
-  }
+    
+    // ✨ 主動確保日曆與名單在進入後台第一時間立即渲染
+    setTimeout(() => {
+      renderCalendar();
+      renderCustomer();
+    }, 200);
 
+    fetchSystemAnnouncement();
+    setInterval(fetchSystemAnnouncement, 15000);
+  }
+  
   async function fetchSystemAnnouncement() {
     try {
       const data = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
@@ -2051,7 +2058,7 @@
     if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
     // ✨ 補齊所有核心分頁的觸發渲染
-    if (pageId === 'calendar') renderCalendar();
+    if (pageId === 'calendar') renderCalendar(); // 確保切換回日曆時馬上出現
     if (pageId === 'shift') renderShift();
     if (pageId === 'customer') renderCustomer();
     if (pageId === 'marketing') loadMarketingCenter();
