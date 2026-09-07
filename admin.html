@@ -2255,10 +2255,13 @@
   }
   
   function renderSingleCardHTML(a) {
+    if (!a) return '';
+    const s = backendData.settings || {};
     const isNewCust = (a.customer_type === 'new');
     const custTypeBadge = isNewCust 
       ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
       : '<span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">舊朋友</span>';
+    
     const staffColor = getStaffColor(a.staffId, a.staffName);
     const staffBadgeHtml = `
       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border" style="background-color: ${staffColor.bg}; color: ${staffColor.text}; border-color: ${staffColor.border};">
@@ -2267,17 +2270,16 @@
       </span>
     `;
 
-    // 智能分離 Email 與店家內部備註
+    // 1. 智慧分離 Email 與店家內部備註
     let parsedEmail = '';
     let cleanNotes = a.notes || '';
     if (cleanNotes.includes('Email:')) {
       const parts = cleanNotes.split('Email:');
       cleanNotes = parts[0].trim();
-      parsedEmail = parts[1].trim();
+      parsedEmail = parts[1].trim().split(' ')[0];
     }
 
-    // 解析顧客預約時的加購與抵扣行為標籤
-    // 智能解析顧客預約時的加購與抵扣行為標籤
+    // 2. 解析顧客預約時的加購與抵扣行為標籤
     let marketingTagsHtml = '';
     const rawNoteStr = a.notes || '';
     const isAddonPkg = rawNoteStr.includes('加購包卡');
@@ -2286,34 +2288,47 @@
     const isUseWal = rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值金全額');
     const isUseCoupon = rawNoteStr.includes('折扣碼');
 
-    if (isAddonPkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 加購包卡</span> ';
-    if (isAddonWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 加購儲值</span> ';
-    if (isUsePkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 當下包卡抵扣</span> ';
-    if (isUseWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 當下儲值抵扣</span> ';
-    if (isUseCoupon) marketingTagsHtml += '<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 套用活動折扣碼</span> ';
+    if (isAddonPkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 線上加購包卡</span> ';
+    if (isAddonWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 線上加購儲值</span> ';
+    if (isUsePkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 勾選包卡抵扣</span> ';
+    if (isUseWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 勾選儲值抵扣</span> ';
+    if (isUseCoupon) marketingTagsHtml += '<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 活動折扣碼</span> ';
 
-    // 取得該顧客目前已有的資產（餘額/包卡次數）
-    const matchedCust = (backendData.customersList || []).find(c => c.phone === a.phone);
-    const custWalletBal = matchedCust ? Number(matchedCust.wallet_balance || 0) : 0;
-    const custPkgTimes = (backendData.packagesList || []).filter(p => p.phone === a.phone && p.remaining_times > 0)
-      .reduce((sum, p) => sum + Number(p.remaining_times || 0), 0);
+    // 3. 取得該顧客目前已有的資產（餘額/包卡次數）- 防呆預設
+    const custWalletBal = Number(a.customer_wallet_balance || a.wallet_balance || 0);
+    const custPkgTimes = Number(a.customer_package_times || a.package_times || 0);
 
     const assetBadgeHtml = `
-      <div class="text-[11px] text-brand-600 font-bold bg-brand-50/80 p-2 rounded-xl border border-brand-200/60 flex justify-between items-center mt-1">
-        <span>💳 目前剩餘包卡：<b>${custPkgTimes} 次</b></span>
-        <span>💰 目前儲值餘額：<b>$${custWalletBal}</b></span>
+      <div class="text-[11px] text-brand-700 font-bold bg-brand-50/90 p-2 rounded-xl border border-brand-200/80 flex justify-between items-center mt-1">
+        <span>💳 剩餘包卡：<b>${custPkgTimes} 次</b></span>
+        <span>💰 儲值餘額：<b>$${custWalletBal.toLocaleString()}</b></span>
       </div>
     `;
 
-    // 完工結單歷程記錄
+    // 4. 完工結單歷程記錄
     const checkoutLogHtml = a.checkout_log ? `
       <div class="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 space-y-0.5 font-medium">
         <div class="font-bold flex items-center gap-1 text-emerald-800">
-          <i class="fa-solid fa-receipt"></i> 完工結單歷程：
+          <i class="fa-solid fa-receipt"></i> 完工結單對帳歷程：
         </div>
         <div>${a.checkout_log}</div>
       </div>
     ` : '';
+
+    const auditActionHtml = (a.status === '待確認') ? `
+      <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
+        <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+          <i class="fa-solid fa-bell text-amber-600"></i> 新預約待店家審核：
+        </span>
+        <div class="flex gap-1.5 shrink-0">
+          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">核准接單</button>
+          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">婉拒</button>
+        </div>
+      </div>
+    ` : '';
+
+    const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
+    const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
 
     return `
       <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-brand-400'} border border-brand-200 shadow-sm space-y-2 text-xs">
@@ -2348,7 +2363,9 @@
           </a>
         </div>
 
-        <!-- 施作項目與金額明細 -->
+        ${auditActionHtml}
+
+        <!-- 施作項目與行銷行為標籤 -->
         <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
           <div class="font-bold text-brand-900 flex justify-between items-center">
             <span>施作項目：${a.service || '無'}</span>
@@ -2398,6 +2415,7 @@
         </div>
       </div>`;
   }
+  
   async function saveAdminNoteClean(id, email) {
     const noteVal = document.getElementById(`admin-note-${id}`).value.trim();
     const finalNotesPayload = email ? `${noteVal} Email: ${email}`.trim() : noteVal;
