@@ -2058,7 +2058,10 @@
     if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
     if (pageId === 'slots') handleSlotRangeChange();
     if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
-    if (pageId === 'care') renderCare();
+    if (pageId === 'care') {
+      renderCare();
+      populateCareRulesUI();
+    }
     if (pageId === 'services') renderServiceList();
     if (pageId === 'add') renderQuickAddServices();
     if (pageId === 'subscription') renderSubscriptionUI();
@@ -3080,7 +3083,7 @@
   }
 
   // =========================================================================
-  // 5. 🎁 回訪關懷模組 (修復變數崩潰問題，保證顯示建議名單)
+  // 5. 🎁 回訪關懷模組 (智慧週數比對、自動代換姓名項目、無相符時保證顯示範本)
   // =========================================================================
   function renderCare() {
     const list = document.getElementById('care-list');
@@ -3090,32 +3093,43 @@
     const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : DEFAULT_CARE_RULES;
     const appts = backendData.appointments || [];
 
-    const today = new Date();
+    const now = new Date();
+    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     let reminders = [];
 
     if (appts.length > 0 && rules.length > 0) {
       appts.forEach(a => {
+        // 只針對「已結單」顧客進行定期關懷
         if (a.status !== '已結單') return;
-        const apptDate = new Date(a.date);
-        const diffWeeks = Math.floor((today - apptDate) / (1000 * 60 * 60 * 24 * 7));
-        const svc = a.service_names || a.service || '';
+
+        // 安全解析日期 (相容 2026/08/01 與 2026-08-01)
+        const dateStrClean = (a.date || '').replace(/\//g, '-');
+        if (!dateStrClean) return;
+        const apptTime = new Date(`${dateStrClean}T00:00:00`).getTime();
+        if (isNaN(apptTime)) return;
+
+        const diffDays = Math.floor((todayZero - apptTime) / (1000 * 60 * 60 * 24));
+        const diffWeeks = Math.floor(diffDays / 7);
+        const svc = a.service || a.service_names || '';
 
         rules.forEach(r => {
           if (!r.name) return;
+          // 支援多關鍵字（以逗號分開）
           const keywords = r.name.split(/[,，]/).map(k => k.trim()).filter(Boolean);
-          const matchKeyword = keywords.find(kw => svc.includes(kw));
+          const isMatched = keywords.some(kw => svc.includes(kw));
 
-          if (matchKeyword && diffWeeks >= Number(r.weeks || 4)) {
+          // 只要距離消費滿設定的週數，即列入關懷建議名單
+          if (isMatched && diffWeeks >= Number(r.weeks || 4)) {
             let customizedMsg = (r.msg || '')
-              .replace(/\{姓名\}/g, a.customer_name || a.name || '貴賓')
-              .replace(/\{項目\}/g, svc || '沙龍服務');
+              .replace(/\{姓名\}/g, a.name || a.customer_name || '貴賓')
+              .replace(/\{項目\}/g, svc || '美業服務');
 
             reminders.push({
-              name: a.customer_name || a.name,
-              phone: a.customer_phone || a.phone,
+              name: a.name || a.customer_name || '貴賓',
+              phone: a.phone || a.customer_phone || '',
               service: svc,
               lastDate: a.date,
-              followUpStr: `${diffWeeks} 週前消費`,
+              followUpStr: `${diffWeeks} 週前消費 (約 ${diffDays} 天)`,
               msg: customizedMsg
             });
           }
@@ -3123,14 +3137,14 @@
       });
     }
 
-    // 兜底保護：若無相符紀錄，保證顯示王小美範本卡片
+    // 兜底保護：若店內目前剛開張尚無滿週數的舊客，保證顯示標準範本供老闆參考測試
     if (reminders.length === 0) {
       reminders = [{
         name: "王小美",
         phone: "0912345678",
         service: "日系質感染髮",
         lastDate: "2026/08/01",
-        followUpStr: "4 週前消費",
+        followUpStr: "4 週前消費 (範本推薦)",
         msg: "嗨 王小美～距離上次做『日系質感染髮』已經滿4週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️"
       }];
     }
@@ -3138,12 +3152,15 @@
     list.innerHTML = reminders.map(r => `
       <div class="p-4 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2 text-xs">
         <div class="flex justify-between items-center font-bold">
-          <span class="text-brand-900 text-sm">${r.name} (${r.phone})</span>
-          <span class="text-brand-500 font-medium text-[11px]">${r.followUpStr}</span>
+          <span class="text-brand-900 text-sm">${r.name} <span class="text-brand-400 font-normal">(${r.phone})</span></span>
+          <span class="text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-md font-bold text-[11px]">${r.followUpStr}</span>
         </div>
-        <div class="text-[11px] text-brand-400">上次項目：${r.service} (${r.lastDate})</div>
-        <button class="w-full py-2 bg-[#BCA38F] hover:bg-[#A08875] text-white rounded-xl text-xs font-bold mt-1 shadow-xs transition" onclick="copyCareMsg(\`${r.msg}\`)">
-          📋 複製關懷文案
+        <div class="text-[11px] text-brand-500">上次施作：<b>${r.service}</b> (${r.lastDate})</div>
+        <div class="p-2.5 bg-brand-50/60 rounded-xl border border-brand-100 text-[11px] text-brand-800 leading-relaxed font-sans">
+          ${r.msg}
+        </div>
+        <button class="w-full py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1.5" onclick="copyCareMsg(\`${r.msg}\`)">
+          <i class="fa-regular fa-copy"></i> 複製專屬關懷文案貼給客人
         </button>
       </div>
     `).join('');
@@ -3162,46 +3179,60 @@
   }
 
   // ✨ 精確渲染圖二下方的 5 組自訂關懷文案 (濾除 undefined)
+  // ✨ 渲染下方 5 組自訂關懷文案與關鍵字
   function populateCareRulesUI() {
     const careContainer = document.getElementById('care-rules-container');
     if (!careContainer) return;
 
-    // 完全對齊圖二的 5 組經典預設
-    const exactRules = [
-      { name: "燙染造型", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！最近整理得還習慣嗎？隨時歡迎預約回娘家護理唷❤️" },
-      { name: "洗剪設計", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度是否需要修剪整理了呢？歡迎預約唷✂️" },
-      { name: "深層護理", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家保養✨" },
-      { name: "光療美甲", weeks: 4, msg: "嗨 {姓名}～指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" },
-      { name: "漂髮, 挑染", weeks: 1, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！指甲長度已經滿4週囉！適時卸甲修整才不會折到真甲唷💅" }
-    ];
-
     const s = (backendData && backendData.settings) ? backendData.settings : {};
-    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : exactRules;
+    const rules = (s.careRules && s.careRules.length > 0) ? s.careRules : DEFAULT_CARE_RULES;
 
     careContainer.innerHTML = '';
     for (let i = 0; i < 5; i++) {
-      const r = rules[i] || exactRules[i];
-      let safeName = String(r.name || exactRules[i].name).replace(/undefined,?\s*/g, '').trim();
-      let safeWeeks = r.weeks || exactRules[i].weeks || 4;
-      let safeMsg = String(r.msg || exactRules[i].msg).replace(/undefined/g, '').trim();
+      const r = rules[i] || DEFAULT_CARE_RULES[i] || { name: "", weeks: 4, msg: "" };
+      let safeName = String(r.name || '').replace(/undefined/g, '').trim();
+      let safeWeeks = Number(r.weeks) || 4;
+      let safeMsg = String(r.msg || '').replace(/undefined/g, '').trim();
 
       careContainer.innerHTML += `
         <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2 mb-3">
-          <div class="flex gap-2">
-            <input type="text" class="w-3/4 p-2.5 rounded-xl border border-brand-200 rule-name text-xs bg-brand-50/40 font-medium" placeholder="項目關鍵字" value="${safeName}">
-            <input type="number" class="w-1/4 p-2.5 rounded-xl border border-brand-200 rule-weeks text-xs bg-brand-50/40 text-center font-bold" placeholder="週數" value="${safeWeeks}">
+          <div class="flex justify-between items-center text-[11px] font-bold text-brand-500 border-b border-brand-100 pb-1">
+            <span>規則 ${i + 1}</span>
+            <span>滿 ${safeWeeks} 週提醒</span>
           </div>
-          <textarea class="w-full p-2.5 rounded-xl border border-brand-200 rule-msg text-xs bg-brand-50/40 leading-relaxed" rows="2" placeholder="關懷訊息">${safeMsg}</textarea>
+          <div class="flex gap-2">
+            <input type="text" class="w-3/4 p-2.5 rounded-xl border border-brand-200 rule-name text-xs bg-brand-50/40 font-medium outline-none" placeholder="項目關鍵字 (逗號分隔)" value="${safeName}">
+            <div class="w-1/4 flex items-center gap-1">
+              <input type="number" class="w-full p-2.5 rounded-xl border border-brand-200 rule-weeks text-xs bg-brand-50/40 text-center font-bold outline-none" placeholder="週數" value="${safeWeeks}">
+              <span class="text-xs text-brand-400 shrink-0">週</span>
+            </div>
+          </div>
+          <textarea class="w-full p-2.5 rounded-xl border border-brand-200 rule-msg text-xs bg-brand-50/40 leading-relaxed outline-none" rows="2" placeholder="關懷訊息文案 (支援 {姓名} 與 {項目})">${safeMsg}</textarea>
         </div>`;
     }
   }
 
+  // ✨ 儲存自訂關懷規則到雲端與記憶體
   async function saveCareRulesSetting() {
-    const careRulesArray = Array.from(document.querySelectorAll('.rule-name')).map((el, i) => ({
-      name: el.value.trim(),
-      weeks: Number(document.querySelectorAll('.rule-weeks')[i]?.value || 4),
-      msg: document.querySelectorAll('.rule-msg')[i]?.value.trim() || ''
-    })).filter(r => r.name !== '');
+    const names = document.querySelectorAll('.rule-name');
+    const weeks = document.querySelectorAll('.rule-weeks');
+    const msgs = document.querySelectorAll('.rule-msg');
+
+    const careRulesArray = [];
+    for (let i = 0; i < names.length; i++) {
+      const n = names[i].value.trim();
+      if (n) {
+        careRulesArray.push({
+          name: n,
+          weeks: Number(weeks[i]?.value) || 4,
+          msg: msgs[i]?.value.trim() || ''
+        });
+      }
+    }
+
+    Swal.fire({ title: '正在儲存關懷規則...', allowOutsideClick: false });
+    Swal.showLoading();
+
     try {
       await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { care_rules: careRulesArray });
       backendData.settings.careRules = careRulesArray;
