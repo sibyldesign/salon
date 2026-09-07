@@ -1494,6 +1494,27 @@
       signatureBase64 = sigCanvas.toDataURL("image/png");
     }
 
+    // 取得加購方案與抵扣勾選狀態
+    const pkgSel = document.getElementById('addon-package-select');
+    const walSel = document.getElementById('addon-wallet-select');
+    const addonPkgName = pkgSel?.value !== 'none' ? pkgSel?.options[pkgSel.selectedIndex]?.text : '';
+    const addonWalName = walSel?.value !== 'none' ? walSel?.options[walSel.selectedIndex]?.text : '';
+    const usePkg = document.getElementById('chk-use-package')?.checked;
+    const useWal = document.getElementById('chk-use-wallet')?.checked;
+    const couponCodeVal = activeCoupon ? activeCoupon.code : '';
+
+    // 組裝結構化行銷備註字串（後台將依此自動解析）
+    let marketingNotes = [];
+    if (addonPkgName) marketingNotes.push(`【加購包卡: ${addonPkgName}】`);
+    if (addonWalName) marketingNotes.push(`【加購儲值: ${addonWalName}】`);
+    if (usePkg) marketingNotes.push(`【使用包卡扣抵】`);
+    if (useWal) marketingNotes.push(`【使用儲值金扣抵】`);
+    if (couponCodeVal) marketingNotes.push(`【使用折扣碼: ${couponCodeVal}】`);
+
+    let finalNotesArray = [];
+    if (marketingNotes.length > 0) finalNotesArray.push(marketingNotes.join(' '));
+    if (emailVal) finalNotesArray.push(`Email: ${emailVal}`);
+
     const dbPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: nameVal,
@@ -1501,14 +1522,12 @@
       customer_type: document.getElementById('custType')?.value || 'old',
       customer_notes: custNotesVal,
       line_name: document.getElementById('lineName').value.trim(),
-      notes: emailVal ? `Email: ${emailVal}` : '',
+      notes: finalNotesArray.join(' | '),
       service_names: sVal,
       price: finalPrice,
       appointment_time: appointmentIso,
       staff_id: staffIdVal,
       staff_name: staffNameVal,
-      signature_url: signatureBase64,
-      signed_at: new Date().toISOString(),
       status: "待確認"
     };
 
