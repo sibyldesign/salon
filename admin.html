@@ -2248,7 +2248,6 @@
   }
   
   function renderSingleCardHTML(a) {
-    const s = backendData.settings || {};
     const isNewCust = (a.customer_type === 'new');
     const custTypeBadge = isNewCust 
       ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
@@ -2270,23 +2269,36 @@
       parsedEmail = parts[1].trim();
     }
 
-    const auditActionHtml = (a.status === '待確認') ? `
-      <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
-        <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-          <i class="fa-solid fa-bell text-amber-600"></i> 新預約待店家審核：
-        </span>
-        <div class="flex gap-1.5 shrink-0">
-          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">核准接單</button>
-          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">婉拒</button>
-        </div>
-      </div>
-    ` : '';
+    // 解析顧客預約時的加購與抵扣行為標籤
+    let marketingTagsHtml = '';
+    const rawNoteStr = a.notes || '';
+    const isAddonPkg = rawNoteStr.includes('加購包卡');
+    const isAddonWal = rawNoteStr.includes('加購儲值');
+    const isUsePkg = rawNoteStr.includes('使用包卡') || rawNoteStr.includes('套用包卡');
+    const isUseWal = rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值金全額');
+    const isUseCoupon = rawNoteStr.includes('折扣碼');
+
+    if (isAddonPkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 線上加購包卡</span> ';
+    if (isAddonWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 線上加購儲值</span> ';
+    if (isUsePkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 當下包卡抵扣</span> ';
+    if (isUseWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 當下儲值抵扣</span> ';
+    if (isUseCoupon) marketingTagsHtml += '<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 套用活動折扣碼</span> ';
 
     const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
     const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
 
+    // 已結單後的餘額變動明細區塊
+    const checkoutLogHtml = a.checkout_log ? `
+      <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 space-y-0.5 font-medium">
+        <div class="font-bold flex items-center gap-1 text-emerald-800">
+          <i class="fa-solid fa-receipt"></i> 完工結單扣抵明細：
+        </div>
+        <div>${a.checkout_log}</div>
+      </div>
+    ` : '';
+
     return `
-      <div class="bg-white p-4 rounded-2xl border-l-4 border-l-brand-400 border border-brand-200 shadow-sm space-y-2 text-xs">
+      <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-brand-400'} border border-brand-200 shadow-sm space-y-2 text-xs">
         <div class="flex justify-between items-start">
           <div class="space-y-1">
             <div class="flex items-center gap-1.5">
@@ -2318,14 +2330,18 @@
           </a>
         </div>
 
-        ${auditActionHtml}
-
+        <!-- 施作項目與金額明細 -->
         <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-          <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-          <div class="text-brand-500 font-bold">預估金額：${a.price} 元 ${a.status==='已結單'?`(實收: <span class="text-red-500">${a.finalPrice}元</span>)`:''}</div>
+          <div class="font-bold text-brand-900 flex justify-between items-center">
+            <span>施作項目：${a.service || '無'}</span>
+            <span class="text-brand-600 font-bold">預估: ${a.price}元 ${a.status==='已結單' ? `<span class="text-emerald-700">(實收: ${a.finalPrice}元)</span>` : ''}</span>
+          </div>
+          ${marketingTagsHtml ? `<div class="flex flex-wrap gap-1 pt-1 border-t border-brand-200/50">${marketingTagsHtml}</div>` : ''}
         </div>
 
-        <!-- 整合客戶資料區 -->
+        ${checkoutLogHtml}
+
+        <!-- 顧客資料與契約 -->
         <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] text-brand-800 border border-brand-100">
           <div class="flex justify-between">
             <span>LINE 名稱：<b>${a.lineName || '未填寫'}</b></span>
@@ -2337,22 +2353,16 @@
             </div>
           ` : ''}
           ${a.signature_url ? `
-            <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex flex-col gap-1">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
-                <span class="text-[10px] text-brand-400 font-mono">${a.signed_at ? a.signed_at.replace('T', ' ').substring(0, 16) : ''}</span>
-              </div>
-              <div class="flex gap-2 items-center">
-                <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.date}')" class="px-2 py-1 bg-white border border-brand-200 rounded-lg text-blue-600 font-bold hover:underline text-[10px]">
-                  檢視簽名正本
-                </button>
-                <input type="text" readonly value="${a.signature_url}" class="flex-1 p-1 bg-white border border-brand-200 rounded-lg text-[9px] font-mono text-gray-500 truncate" title="${a.signature_url}">
-              </div>
+            <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex justify-between items-center">
+              <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
+              <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.date}')" class="text-blue-600 underline font-bold text-[10px]">
+                檢視簽名正本
+              </button>
             </div>
           ` : ''}
         </div>
 
-        <!-- 店家內部專用備註儲存區（加入防溢出 break-all） -->
+        <!-- 店家內部專用備註儲存區 -->
         <div class="flex gap-1.5 pt-1">
           <input type="text" id="admin-note-${a.id}" placeholder="店家內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
           <button onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">存備註</button>
@@ -2366,7 +2376,6 @@
         </div>
       </div>`;
   }
-
   async function saveAdminNoteClean(id, email) {
     const noteVal = document.getElementById(`admin-note-${id}`).value.trim();
     const finalNotesPayload = email ? `${noteVal} Email: ${email}`.trim() : noteVal;
@@ -2412,24 +2421,36 @@
   let currentCheckoutCustomer = null;
   let currentCheckoutPackages = [];
 
-  // 1. 開啟結單彈窗：拆解主服務與加購項目
+  // 1. 開啟結單彈窗
   async function openCheckoutModal(id, name, phone, service, price) {
     const rawAppts = backendData.appointments || [];
     const appt = rawAppts.find(a => a.id === id) || {};
+    const rawNotes = appt.notes || '';
+
+    // 計算施作服務項目的純原價 (排除加購方案)
+    let pureServiceBasePrice = 0;
+    const allServices = backendData.services || [];
+    const serviceItems = service.split(',').map(s => s.trim());
     
-    // 解析加購方案 (若備註或施作項目含有包卡或儲值)
-    let addonPrice = 0;
-    let mainBasePrice = Number(price || 0);
-    const isAddonPkg = (appt.notes && appt.notes.includes('加購包卡')) || false;
-    const isAddonWal = (appt.notes && appt.notes.includes('加購儲值')) || false;
+    serviceItems.forEach(sName => {
+      const match = allServices.find(s => s.name === sName);
+      if (match) {
+        const num = String(match.price).match(/\d+/);
+        pureServiceBasePrice += num ? Number(num[0]) : 0;
+      }
+    });
+
+    // 若未比對出服務價格，則以傳入的 price 為保底
+    if (pureServiceBasePrice === 0) pureServiceBasePrice = Number(price || 0);
 
     currentCheckoutBookingObj = { 
       id, name, phone, service, 
-      price: Number(price || 0),
-      isAddonPkg, isAddonWal,
-      rawNotes: appt.notes || ''
+      pureServiceBasePrice,
+      totalPrice: Number(price || 0),
+      rawNotes
     };
-    // 動態填入現場可加購之包卡與儲值選單
+
+    // 動態填入現場新購下拉選單
     const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
     const topupGroup = document.getElementById('topupBuyOptionsGroup');
     const pRules = backendData.settings?.packageRules || [];
@@ -2455,7 +2476,9 @@
       • 施作項目：<b>${service}</b><br>
       ${appt.notes ? `• 預約註記：<span class="text-amber-800 font-bold">${appt.notes}</span>` : ''}
     `;
-    document.getElementById('check_custom_base_price').value = price || 0;
+
+    // 正確設定基準價輸入框（填入純服務原價）
+    document.getElementById('check_custom_base_price').value = pureServiceBasePrice;
 
     // 撈取會員既有資產
     let walletBal = 0, discountRate = 1;
@@ -2477,7 +2500,7 @@
     document.getElementById('checkModalCurrentCard').innerText = `${cardTimes} 次`;
     document.getElementById('checkModalCurrentDeposit').innerText = `$${walletBal}`;
 
-    // 下拉選單連動
+    // 下拉選單選項提示
     const optCard = document.getElementById('optUseCardDeductText');
     optCard.innerText = cardTimes > 0 ? `使用【${matchedPkg.service_name}】包卡扣抵 (剩餘 ${cardTimes} 次)` : `無可用包卡 (0次)`;
     optCard.disabled = cardTimes <= 0;
@@ -2487,9 +2510,28 @@
     optDep.disabled = walletBal <= 0;
     optDep.setAttribute('data-rate', discountRate);
 
-    // 預設選單
-    document.getElementById('check_discount_use_select').value = "none";
-    document.getElementById('check_new_buy_select').value = "none";
+    // 智慧回填：自動匹配預約時的勾選狀態
+    const discountSel = document.getElementById('check_discount_use_select');
+    const newBuySel = document.getElementById('check_new_buy_select');
+
+    discountSel.value = "none";
+    newBuySel.value = "none";
+
+    // 若預約時已勾選使用包卡或儲值
+    if (rawNotes.includes('使用包卡') && cardTimes > 0) {
+      discountSel.value = "useCard";
+    } else if (rawNotes.includes('使用儲值') && walletBal > 0) {
+      discountSel.value = "useDeposit";
+    }
+
+    // 若預約時已勾選線上加購
+    if (rawNotes.includes('加購包卡')) {
+      const matchedOption = Array.from(newBuySel.options).find(opt => opt.value === 'new_pkg' && rawNotes.includes(opt.getAttribute('data-name')));
+      if (matchedOption) matchedOption.selected = true;
+    } else if (rawNotes.includes('加購儲值')) {
+      const matchedOption = Array.from(newBuySel.options).find(opt => opt.value === 'new_topup' && rawNotes.includes(opt.getAttribute('data-name')));
+      if (matchedOption) matchedOption.selected = true;
+    }
 
     recalcCheckoutTotal();
     document.getElementById('checkoutModal').classList.remove('hidden');
@@ -2499,7 +2541,7 @@
     document.getElementById('checkoutModal').classList.add('hidden');
   }
 
-  // ✨ 即時試算現場補付金額與剩餘預估明細 (與截圖完全相符)
+  // 2. 即時試算現場補付金額與前後餘額明細
   function recalcCheckoutTotal() {
     const basePrice = Number(document.getElementById('check_custom_base_price').value || 0);
     const useMethod = document.getElementById('check_discount_use_select').value;
@@ -2513,9 +2555,9 @@
     let curCard = parseInt(document.getElementById('checkModalCurrentCard').innerText) || 0;
     let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit').innerText.replace(/[^0-9]/g, '')) || 0;
 
-    // 互斥計算：包卡或儲值僅能擇一
+    // 扣抵運算（二擇一）
     if (useMethod === 'useCard' && curCard > 0) {
-      discAmt = origPrice;
+      discAmt = origPrice; // 包卡全免
       curCard -= 1;
     } else if (useMethod === 'useDeposit' && curDeposit > 0) {
       const rate = Number(document.getElementById('optUseDepositText').getAttribute('data-rate') || 1);
@@ -2531,7 +2573,7 @@
       }
     }
 
-    // 現場新購方案資產增額
+    // 現場新購資產累加
     if (newBuyOption && newBuyOption.value === 'new_pkg') {
       curCard += Number(newBuyOption.getAttribute('data-times') || 0);
     }
@@ -2541,6 +2583,7 @@
 
     let finalPay = Math.max(0, origPrice - discAmt - depDeduct) + addPrice;
 
+    // 畫面回填
     document.getElementById('check_display_orig').innerText = `$${origPrice}`;
     document.getElementById('check_display_disc').innerText = `-$${discAmt}`;
     document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
@@ -2551,7 +2594,7 @@
     document.getElementById('check_display_after_deposit').innerText = `• 剩餘儲值金：$${curDeposit.toLocaleString()}`;
   }
 
-  // 2. 送出結單：智慧計入新包卡次數與儲值金
+  // 3. 送出結單存檔並記錄資產變動歷程
   async function submitFinalCheckout() {
     Swal.showLoading();
     const finalPrice = Number(document.getElementById('check_display_final').innerText.replace(/[^0-9]/g, '') || 0);
@@ -2560,18 +2603,28 @@
     const phone = currentCheckoutBookingObj.phone;
     const custName = currentCheckoutBookingObj.name;
 
+    const beforeCard = parseInt(document.getElementById('checkModalCurrentCard').innerText) || 0;
+    const beforeDeposit = parseInt(document.getElementById('checkModalCurrentDeposit').innerText.replace(/[^0-9]/g, '')) || 0;
+    let afterCard = beforeCard;
+    let afterDeposit = beforeDeposit;
+
+    let logItems = [];
+
     try {
-      // 1. 若使用舊包卡扣除 1 次
+      // A. 核銷包卡
       if (useMethod === 'useCard') {
         const matched = currentCheckoutPackages.find(p => currentCheckoutBookingObj.service.includes(p.service_name));
         if (matched) {
-          await directSupabasePatch('customer_packages', `id=eq.${matched.id}`, { remaining_times: matched.remaining_times - 1 });
+          afterCard = matched.remaining_times - 1;
+          await directSupabasePatch('customer_packages', `id=eq.${matched.id}`, { remaining_times: afterCard });
+          logItems.push(`包卡扣 1 次 (${beforeCard}次 ➔ ${afterCard}次)`);
         }
       }
 
-      // 2. 若現場新購包卡（自動充值堂數入帳）
+      // B. 新購包卡
       if (newBuyOption && newBuyOption.value === 'new_pkg') {
         const times = Number(newBuyOption.getAttribute('data-times') || 6);
+        afterCard += times;
         await directSupabaseUpsert('customer_packages', {
           store_id: CURRENT_STORE_ID,
           customer_name: custName,
@@ -2580,30 +2633,42 @@
           total_times: times,
           remaining_times: times
         }, 'id');
+        logItems.push(`新購包卡 +${times}堂 (結餘: ${afterCard}次)`);
       }
 
-      // 3. 儲值金變動寫入資料庫
-      const finalBal = parseInt(document.getElementById('check_display_after_deposit').innerText.replace(/[^0-9]/g, '')) || 0;
-      if (currentCheckoutCustomer) {
-        await directSupabasePatch('customers', `id=eq.${currentCheckoutCustomer.id}`, { wallet_balance: finalBal });
-      } else if (newBuyOption && newBuyOption.value === 'new_topup') {
-        await directSupabaseUpsert('customers', {
-          store_id: CURRENT_STORE_ID,
-          name: custName,
-          phone: phone,
-          wallet_balance: finalBal,
-          member_discount: Number(newBuyOption.getAttribute('data-discount') || 0.9)
-        }, 'id');
+      // C. 儲值金扣除或新購充值
+      afterDeposit = parseInt(document.getElementById('check_display_after_deposit').innerText.replace(/[^0-9]/g, '')) || 0;
+      if (afterDeposit !== beforeDeposit) {
+        if (currentCheckoutCustomer) {
+          await directSupabasePatch('customers', `id=eq.${currentCheckoutCustomer.id}`, { wallet_balance: afterDeposit });
+        } else if (newBuyOption && newBuyOption.value === 'new_topup') {
+          await directSupabaseUpsert('customers', {
+            store_id: CURRENT_STORE_ID,
+            name: custName,
+            phone: phone,
+            wallet_balance: afterDeposit,
+            member_discount: Number(newBuyOption.getAttribute('data-discount') || 0.9)
+          }, 'id');
+        }
+        logItems.push(`儲值金變動 ($${beforeDeposit} ➔ $${afterDeposit})`);
       }
 
-      // 4. 結單存檔
+      // 組裝歷程字串
+      const checkoutLog = `實收補付 NT$ ${finalPrice}` + (logItems.length > 0 ? ` | ${logItems.join('，')}` : '');
+
+      // D. 寫入訂單完成狀態與明細紀錄
       await directSupabasePatch('bookings', `id=eq.${currentCheckoutBookingObj.id}`, {
         status: '已結單',
-        final_price: finalPrice
+        final_price: finalPrice,
+        checkout_log: checkoutLog
       });
 
       closeCheckoutModal();
-      Swal.fire('完工結單成功！', `實收補付：NT$ ${finalPrice}`, 'success');
+      Swal.fire({
+        title: '完工結單成功！',
+        html: `<div class="text-xs text-brand-800">${checkoutLog}</div>`,
+        icon: 'success'
+      });
       fetchDataAndRender();
     } catch (e) {
       Swal.fire('結單失敗', e.message, 'error');
