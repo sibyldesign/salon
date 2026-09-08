@@ -2290,7 +2290,6 @@
   
   function renderSingleCardHTML(a) {
     if (!a) return '';
-    const s = backendData.settings || {};
     const isNewCust = (a.customer_type === 'new');
     const custTypeBadge = isNewCust 
       ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
@@ -2304,33 +2303,31 @@
       </span>
     `;
 
-    // 1. 智慧分離 Email 與店家內部備註
+    // 1. 解析 Email 與乾淨內部備註
     let parsedEmail = '';
     let cleanNotes = a.notes || '';
     if (cleanNotes.includes('Email:')) {
       const parts = cleanNotes.split('Email:');
       cleanNotes = parts[0].trim();
-      parsedEmail = parts[1].trim().split(' ')[0];
+      parsedEmail = parts[1].trim().split(' ')[0].split('|')[0].trim();
     }
 
-    // 2. 解析顧客預約時的加購與抵扣行為標籤
+    // 2. 結構化行銷標籤 (加購、扣抵、折扣碼)
     let marketingTagsHtml = '';
     const rawNoteStr = a.notes || '';
-    const isAddonPkg = rawNoteStr.includes('加購包卡');
-    const isAddonWal = rawNoteStr.includes('加購儲值');
-    const isUsePkg = rawNoteStr.includes('使用包卡') || rawNoteStr.includes('套用包卡');
-    const isUseWal = rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值金全額');
-    const isUseCoupon = rawNoteStr.includes('折扣碼');
+    if (rawNoteStr.includes('加購包卡')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 加購包卡</span> ';
+    if (rawNoteStr.includes('加購儲值')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 加購儲值</span> ';
+    if (rawNoteStr.includes('使用包卡') || rawNoteStr.includes('包卡扣抵')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 當下包卡抵扣</span> ';
+    if (rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值抵扣')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 當下儲值抵扣</span> ';
+    if (rawNoteStr.includes('折扣碼')) {
+      const cMatch = rawNoteStr.match(/折扣碼[:\s]*([A-Za-z0-9]+)/);
+      const cCode = cMatch ? cMatch[1] : '';
+      marketingTagsHtml += `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 活動折扣碼${cCode ? ` (${cCode})` : ''}</span> `;
+    }
 
-    if (isAddonPkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 線上加購包卡</span> ';
-    if (isAddonWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 線上加購儲值</span> ';
-    if (isUsePkg) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 勾選包卡抵扣</span> ';
-    if (isUseWal) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 勾選儲值抵扣</span> ';
-    if (isUseCoupon) marketingTagsHtml += '<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 活動折扣碼</span> ';
-
-    // 3. 取得該顧客目前已有的資產（餘額/包卡次數）- 防呆預設
-    const custWalletBal = Number(a.customer_wallet_balance || a.wallet_balance || 0);
-    const custPkgTimes = Number(a.customer_package_times || a.package_times || 0);
+    // 3. 顧客資產看板
+    const custWalletBal = Number(a.wallet_balance || a.customer_wallet_balance || 0);
+    const custPkgTimes = Number(a.remaining_times || a.customer_package_times || 0);
 
     const assetBadgeHtml = `
       <div class="text-[11px] text-brand-700 font-bold bg-brand-50/90 p-2 rounded-xl border border-brand-200/80 flex justify-between items-center mt-1">
@@ -2339,24 +2336,32 @@
       </div>
     `;
 
-    // 4. 完工結單歷程記錄
-    const checkoutLogHtml = a.checkout_log ? `
-      <div class="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 space-y-0.5 font-medium">
-        <div class="font-bold flex items-center gap-1 text-emerald-800">
-          <i class="fa-solid fa-receipt"></i> 完工結單對帳歷程：
+    // 4. 契約簽署時間與按鈕
+    let signatureHtml = '';
+    if (a.signature_url) {
+      const friendlySignedTime = formatFriendlyTime(a.signed_at || a.appointment_time || a.date);
+      signatureHtml = `
+        <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex justify-between items-center text-[11px]">
+          <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] text-brand-400 font-mono">${friendlySignedTime}</span>
+            <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.appointment_time}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
+              檢視正本
+            </button>
+          </div>
         </div>
-        <div>${a.checkout_log}</div>
-      </div>
-    ` : '';
+      `;
+    }
 
+    // 5. 待審核控制列
     const auditActionHtml = (a.status === '待確認') ? `
       <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
         <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
           <i class="fa-solid fa-bell text-amber-600"></i> 新預約待店家審核：
         </span>
         <div class="flex gap-1.5 shrink-0">
-          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">核准接單</button>
-          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}')">婉拒</button>
+          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}', '${parsedEmail}')">核准接單</button>
+          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}', '${a.date}', '${a.time}', '${a.service}', '${a.lineName || ''}', '${a.phone}', '${parsedEmail}')">婉拒</button>
         </div>
       </div>
     ` : '';
@@ -2399,7 +2404,6 @@
 
         ${auditActionHtml}
 
-        <!-- 施作項目與行銷行為標籤 -->
         <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
           <div class="font-bold text-brand-900 flex justify-between items-center">
             <span>施作項目：${a.service || '無'}</span>
@@ -2409,9 +2413,6 @@
           ${assetBadgeHtml}
         </div>
 
-        ${checkoutLogHtml}
-
-        <!-- 顧客資料與契約 -->
         <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] text-brand-800 border border-brand-100">
           <div class="flex justify-between">
             <span>LINE 名稱：<b>${a.lineName || '未填寫'}</b></span>
@@ -2422,20 +2423,9 @@
               <b>📝 顧客備註/需求：</b>${a.customer_notes}
             </div>
           ` : ''}
-          ${a.signature_url ? `
-            <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex justify-between items-center">
-              <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] text-brand-400 font-mono">${formatFriendlyTime(a.signed_at || a.date)}</span>
-                <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.date}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
-                  檢視正本
-                </button>
-              </div>
-            </div>
-          ` : ''}
+          ${signatureHtml}
         </div>
 
-        <!-- 店家內部專用備註儲存區 -->
         <div class="flex gap-1.5 pt-1">
           <input type="text" id="admin-note-${a.id}" placeholder="店家內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
           <button onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">存備註</button>
@@ -2541,24 +2531,28 @@ function openCheckoutModal(bookingId, name, phone, serviceName, price) {
   const b = (backendData.appointments || []).find(a => String(a.id) === String(bookingId)) || {};
   const notesStr = b.notes || '';
 
-  // 1. 智慧拆解加購方案與抵扣標記
-  let addonPkgName = '';
-  let addonPkgPrice = 0;
-  let addonPkgTimes = 0;
-  const isUsingPkgNow = notesStr.includes('使用包卡') || notesStr.includes('套用包卡');
-  const isUsingWalNow = notesStr.includes('使用儲值') || notesStr.includes('儲值金全額');
+  // 1. 解析線上預選資訊
+  let addonName = 'none';
+  let addonPrice = 0;
+  let addonTimes = 0;
+  let addonWalletAdd = 0;
 
   if (notesStr.includes('加購包卡:')) {
-    const match = notesStr.match(/加購包卡:\s*([^】\+]+)(?:\(\+NT\$\s*(\d+)\))?/);
-    if (match) {
-      addonPkgName = match[1].trim();
-      addonPkgPrice = match[2] ? Number(match[2]) : 4000;
-      addonPkgTimes = 6; // 預設方案堂數（買5送1共6堂）
-    }
+    addonName = 'pkg_promo';
+    addonPrice = 4000;
+    addonTimes = 6;
+  } else if (notesStr.includes('加購儲值:')) {
+    addonName = 'wal_3000';
+    addonPrice = 3000;
+    addonWalletAdd = 3000;
   }
 
-  // 乾淨的內部備註（排除系統標籤）
-  let cleanNoteDisplay = notesStr
+  const isUsingPkg = notesStr.includes('使用包卡') || notesStr.includes('包卡抵扣');
+  const isUsingWal = notesStr.includes('使用儲值') || notesStr.includes('儲值金全額');
+  const hasCoupon = notesStr.includes('折扣碼:');
+
+  // 乾淨內部備註
+  const cleanNoteDisplay = notesStr
     .replace(/【[^】]+】/g, '')
     .replace(/Email:[^|]+/g, '')
     .replace(/\|/g, '')
@@ -2567,56 +2561,54 @@ function openCheckoutModal(bookingId, name, phone, serviceName, price) {
   Swal.fire({
     title: '完工結單與扣抵核算',
     html: `
-      <div class="text-left text-xs space-y-3 font-sans">
-        <!-- 資產看板 -->
+      <div class="text-left text-xs space-y-3 font-sans max-h-[75vh] overflow-y-auto pr-1">
         <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between font-bold text-emerald-900">
           <span>💳 歷史包卡剩餘：<b>${currentPkg} 次</b></span>
           <span>💰 歷史儲值餘額：<b>$${currentWallet.toLocaleString()}</b></span>
         </div>
 
-        <!-- 施作明細結構化展示 -->
         <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 space-y-1 text-[11px] text-brand-900">
           <div><b>顧客：</b>${name} (${phone})</div>
           <div><b>施作主項目：</b>${serviceName}</div>
-          ${addonPkgName ? `<div class="text-emerald-700 font-bold"><b>線上預選方案：</b>${addonPkgName} (+NT$ ${addonPkgPrice})</div>` : ''}
-          ${isUsingPkgNow ? `<div class="text-blue-700 font-bold"><b>扣抵標記：</b>✓ 顧客預約時勾選【包卡抵扣 1 堂】</div>` : ''}
+          ${addonName !== 'none' ? `<div class="text-emerald-700 font-bold"><b>線上預選加購：</b>${addonName === 'pkg_promo' ? '剪髮買5送1方案 (+NT$ 4000)' : '儲值金方案 (+NT$ 3000)'}</div>` : ''}
+          ${isUsingPkg ? `<div class="text-blue-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【包卡扣抵 1 堂】</div>` : ''}
+          ${isUsingWal ? `<div class="text-purple-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【儲值金扣抵】</div>` : ''}
+          ${hasCoupon ? `<div class="text-rose-700 font-bold"><b>線上折抵：</b>✓ 顧客套用活動折扣碼</div>` : ''}
           ${cleanNoteDisplay ? `<div class="text-brand-500"><b>內部備註：</b>${cleanNoteDisplay}</div>` : ''}
         </div>
 
-        <!-- 基準金額 -->
         <div>
           <label class="block font-bold text-brand-800 mb-1">1. 本次施作基準金額 (可微調)：</label>
-          <input type="number" id="checkout-base-price" value="${price || 800}" class="w-full p-2.5 rounded-xl border border-brand-200 text-sm font-bold text-emerald-800 bg-white" oninput="calculateCheckoutPreview()">
+          <input type="number" id="checkout-base-price" value="${price || 800}" class="w-full p-2.5 rounded-xl border border-brand-200 text-sm font-bold text-emerald-800 bg-white" oninput="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
         </div>
 
-        <!-- 抵扣舊方案 -->
         <div>
-          <label class="block font-bold text-brand-800 mb-1">2. 扣抵歷史舊方案 (包卡 / 儲值)：</label>
-          <select id="checkout-deduct-type" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview()">
-            <option value="none">無扣抵舊方案</option>
-            <option value="pkg" ${isUsingPkgNow && currentPkg > 0 ? 'selected' : ''} ${currentPkg === 0 ? 'disabled' : ''}>扣抵舊包卡 1 堂 (剩餘 ${currentPkg} 次)</option>
-            <option value="wal" ${isUsingWalNow && currentWallet > 0 ? 'selected' : ''} ${currentWallet === 0 ? 'disabled' : ''}>儲值金全額扣抵 (現有 $${currentWallet})</option>
+          <label class="block font-bold text-brand-800 mb-1">2. 扣抵歷史舊方案 (二擇一)：</label>
+          <select id="checkout-deduct-type" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+            <option value="none">無扣抵歷史方案</option>
+            <option value="pkg" ${isUsingPkg && currentPkg > 0 ? 'selected' : ''} ${currentPkg === 0 ? 'disabled' : ''}>扣抵歷史包卡 1 堂 (目前剩餘 ${currentPkg} 次)</option>
+            <option value="wal" ${isUsingWal && currentWallet > 0 ? 'selected' : ''} ${currentWallet === 0 ? 'disabled' : ''}>扣抵歷史儲值金 (目前餘額 $${currentWallet})</option>
           </select>
         </div>
 
-        <!-- 現場新購方案 -->
         <div>
-          <label class="block font-bold text-brand-800 mb-1">3. 現場新購方案：</label>
-          <select id="checkout-addon-select" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview()">
-            <option value="none" data-price="0" data-times="0">不加購方案</option>
-            <option value="pkg_promo" data-price="4000" data-times="6" ${addonPkgName ? 'selected' : ''}>
-              + 購買【剪髮買5送1方案】(+NT$ 4000，含 6 堂)
+          <label class="block font-bold text-brand-800 mb-1">3. 現場加購方案：</label>
+          <select id="checkout-addon-select" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+            <option value="none" data-price="0" data-times="0" data-wallet="0">不加購方案</option>
+            <option value="pkg_promo" data-price="4000" data-times="6" data-wallet="0" ${addonName === 'pkg_promo' ? 'selected' : ''}>
+              + 加購【剪髮買5送1方案】(+NT$ 4000，含 6 堂)
+            </option>
+            <option value="wal_3000" data-price="3000" data-times="0" data-wallet="3000" ${addonName === 'wal_3000' ? 'selected' : ''}>
+              + 加購【儲值金 $3,000】(+NT$ 3000，整單享9折)
             </option>
           </select>
         </div>
 
-        <!-- 當下加購並當下抵扣選項 -->
         <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between">
-          <span class="font-bold text-amber-900 text-[11px]">新購包卡是否當下抵扣本次消費 1 堂？</span>
-          <input type="checkbox" id="chk-use-new-pkg" class="w-4 h-4 accent-brand-500" ${isUsingPkgNow ? 'checked' : ''} onchange="calculateCheckoutPreview()">
+          <span class="font-bold text-amber-900 text-[11px]">新購方案是否「當下扣抵」本次消費？</span>
+          <input type="checkbox" id="chk-use-new-addon" class="w-4 h-4 accent-brand-500" ${(isUsingPkg || isUsingWal) ? 'checked' : ''} onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
         </div>
 
-        <!-- 計算結果預覽清單 -->
         <div id="checkout-calculation-box" class="p-3 bg-white rounded-xl border border-brand-200 text-xs space-y-1"></div>
       </div>
     `,
@@ -2624,14 +2616,30 @@ function openCheckoutModal(bookingId, name, phone, serviceName, price) {
     confirmButtonText: '確認結單並更新歷程',
     confirmButtonColor: '#8C7355',
     preConfirm: () => {
-      return executeCheckoutSubmit(bookingId, name, phone, currentPkg, currentWallet);
+      const finalRealPay = Number(document.getElementById('text-final-real-pay')?.innerText.replace(/[^0-9]/g, '') || 0);
+      const logText = document.getElementById('text-checkout-log-hidden')?.innerText || '';
+      return { finalRealPay, logText };
+    }
+  }).then(async r => {
+    if (r.isConfirmed) {
+      Swal.showLoading();
+      try {
+        await directSupabasePatch(`bookings?id=eq.${bookingId}`, {
+          status: '已結單',
+          final_price: r.value.finalRealPay,
+          checkout_log: r.value.logText
+        });
+        Swal.fire('結單完成！', '已自動回寫對帳紀錄', 'success');
+        loadInitialData();
+      } catch(e) {
+        Swal.fire('結單失敗', e.message, 'error');
+      }
     }
   });
 
   calculateCheckoutPreview(currentPkg, currentWallet);
 }
 
-// 實時計算預覽
 function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
   const basePrice = Number(document.getElementById('checkout-base-price')?.value || 0);
   const deductType = document.getElementById('checkout-deduct-type')?.value || 'none';
@@ -2639,43 +2647,53 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
   const addonOpt = addonSel?.options[addonSel.selectedIndex];
   const addonPrice = Number(addonOpt?.getAttribute('data-price') || 0);
   const addonTimes = Number(addonOpt?.getAttribute('data-times') || 0);
-  const useNewPkg = document.getElementById('chk-use-new-pkg')?.checked;
+  const addonWalletAdd = Number(addonOpt?.getAttribute('data-wallet') || 0);
+  const useNewAddon = document.getElementById('chk-use-new-addon')?.checked;
 
-  let finalPay = basePrice + addonPrice;
-  let deductDesc = "-$0";
-  let remainPkgCalc = currentPkg + addonTimes;
-  let remainWalCalc = currentWallet;
+  let deductAmount = 0;
+  let deductNote = "無扣抵";
+  let remainPkg = currentPkg + addonTimes;
+  let remainWallet = currentWallet + addonWalletAdd;
 
+  // 扣抵邏輯核算
   if (deductType === 'pkg' && currentPkg > 0) {
-    finalPay -= basePrice;
-    remainPkgCalc -= 1;
-    deductDesc = `扣抵舊包卡 1 堂 (-$${basePrice})`;
-  } else if (useNewPkg && addonTimes > 0) {
-    finalPay -= basePrice;
-    remainPkgCalc -= 1; // 6堂扣1堂 = 剩餘5堂
-    deductDesc = `當下加購扣抵 1 堂 (-$${basePrice})`;
+    deductAmount = basePrice;
+    remainPkg -= 1;
+    deductNote = `舊包卡扣抵 1 堂 (-$${basePrice})`;
   } else if (deductType === 'wal' && currentWallet > 0) {
-    const walCut = Math.min(basePrice, currentWallet);
-    finalPay -= walCut;
-    remainWalCalc -= walCut;
-    deductDesc = `儲值金抵扣 (-$${walCut})`;
+    deductAmount = Math.min(basePrice, currentWallet);
+    remainWallet -= deductAmount;
+    deductNote = `舊儲值金扣抵 (-$${deductAmount})`;
+  } else if (useNewAddon && addonTimes > 0) {
+    deductAmount = basePrice;
+    remainPkg -= 1; // 6堂扣1堂 = 5堂
+    deductNote = `新購包卡當下抵扣 1 堂 (-$${basePrice})`;
+  } else if (useNewAddon && addonWalletAdd > 0) {
+    const discountedBase = Math.round(basePrice * 0.9); // 儲值享9折
+    deductAmount = basePrice;
+    remainWallet -= discountedBase;
+    deductNote = `新購儲值扣抵享9折 (-$${basePrice}，帳戶扣除$${discountedBase})`;
   }
+
+  const finalPay = Math.max(0, (basePrice - deductAmount) + addonPrice);
+  const logStr = `實收補付 NT$ ${finalPay.toLocaleString()} (項目基準 $${basePrice}, ${deductNote}, 加購 $${addonPrice}) | 剩餘包卡: ${remainPkg}次, 剩餘儲值: $${remainWallet}`;
 
   const box = document.getElementById('checkout-calculation-box');
   if (box) {
     box.innerHTML = `
       <div class="flex justify-between"><span>1. 項目基準價：</span><span>$${basePrice}</span></div>
-      <div class="flex justify-between text-emerald-700"><span>2. 方案扣抵金額：</span><span>${deductDesc}</span></div>
-      <div class="flex justify-between text-brand-600"><span>3. 現場加購方案：</span><span>+$${addonPrice}</span></div>
-      <div class="border-t border-brand-100 pt-1 flex justify-between font-bold text-sm text-brand-900">
-        <span>現場需補付實收金額：</span>
-        <span class="text-emerald-700 font-black">$${Math.max(0, finalPay).toLocaleString()}</span>
+      <div class="flex justify-between text-emerald-700"><span>2. 方案扣抵：</span><span>-${deductAmount > 0 ? '$' + deductAmount : '$0'}</span></div>
+      <div class="flex justify-between text-brand-600"><span>3. 現場加購：</span><span>+$${addonPrice}</span></div>
+      <div class="border-t border-brand-100 pt-1.5 flex justify-between font-bold text-sm text-brand-900">
+        <span>現場需補付實收：</span>
+        <span class="text-emerald-700 font-black" id="text-final-real-pay">$${finalPay.toLocaleString()}</span>
       </div>
       <div class="p-2 bg-brand-50 rounded-lg text-[10.5px] text-brand-700 mt-2 space-y-0.5 border border-brand-100">
-        <div>📊 <b>結單扣抵後剩餘預估：</b></div>
-        <div>• 剩餘包卡：<b>${remainPkgCalc} 次</b> (新購 +${addonTimes}，扣抵 -${(deductType === 'pkg' || useNewPkg) ? 1 : 0})</div>
-        <div>• 剩餘儲值金：<b>$${remainWalCalc.toLocaleString()}</b></div>
+        <div class="font-bold">📊 結單扣抵後剩餘資產預估：</div>
+        <div>• 剩餘包卡：<b>${remainPkg} 次</b> ${addonTimes > 0 ? `(新購 +${addonTimes}堂，本次抵扣 -1堂)` : ''}</div>
+        <div>• 剩餘儲值金：<b>$${remainWallet.toLocaleString()}</b> ${addonWalletAdd > 0 ? `(新購 +$${addonWalletAdd})` : ''}</div>
       </div>
+      <span id="text-checkout-log-hidden" class="hidden">${logStr}</span>
     `;
   }
 }
@@ -2817,25 +2835,65 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  async function auditOrder(id, newStatus, name, date, time, service, lineUid, phone) {
-    if (newStatus === '婉拒') {
+  async function auditOrder(bookingId, newStatus, name, date, time, service, lineUid, phone, custEmail = '') {
+  const isApproved = (newStatus === '已確認');
+  const confirmResult = await Swal.fire({
+    title: `確定【${newStatus}】？`,
+    text: isApproved ? `核准 ${name} 於 ${date} ${time} 的預約` : `婉拒 ${name} 的預約`,
+    icon: isApproved ? 'question' : 'warning',
+    showCancelButton: true,
+    confirmButtonText: `確定${newStatus}`,
+    confirmButtonColor: isApproved ? '#7D8F7D' : '#B57979',
+    cancelButtonText: '取消'
+  });
+
+  if (!confirmResult.isConfirmed) return;
+  Swal.showLoading();
+
+  try {
+    // 1. 更新 Supabase 狀態
+    await directSupabasePatch(`bookings?id=eq.${bookingId}`, { status: newStatus });
+
+    // 2. 呼叫 GAS 後端發信與推播 (以 no-cors 避免阻擋)
+    fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        action: "auditBookingAction",
+        id: bookingId,
+        status: newStatus
+      })
+    }).catch(() => {});
+
+    // 3. 解決「已已確認」多字問題
+    const statusText = newStatus; // 乾淨狀態字串，不疊加「已」
+
+    if (!lineUid || !lineUid.startsWith('U')) {
       Swal.fire({
-        title: `婉拒 ${name} 的預約`,
-        input: 'text',
-        inputPlaceholder: '請輸入婉拒原因（例：時段額滿、專員公休）',
-        showCancelButton: true,
-        confirmButtonText: '確定婉拒',
-        confirmButtonColor: '#B57979',
-        cancelButtonText: '取消'
-      }).then(async r => {
-        if (r.isConfirmed) {
-          await executeAudit(id, '婉拒', r.value || '時段衝突', name, date, time, service, lineUid);
-        }
+        title: `${statusText} (顧客未綁定 LINE)`,
+        html: `
+          <div class="text-left text-xs space-y-2">
+            <div class="p-2.5 bg-amber-50 text-amber-900 rounded-xl border border-amber-200">
+              ⚠️ 該顧客未綁定官方 LINE，系統已為您寄發 Email 通知憑證！您亦可複製以下文字手動傳送：
+            </div>
+            <textarea id="copy-audit-text" rows="4" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-sans bg-white leading-relaxed">嗨 ${name}～您的預約已審核【${newStatus}】囉！\n🗓️ 時間：${date} ${time}\n✂️ 項目：${service}\n期待為您服務❤️</textarea>
+            <button onclick="navigator.clipboard.writeText(document.getElementById('copy-audit-text').value); Swal.fire('已複製訊息！', '', 'success');" class="w-full py-2 bg-[#8C7355] text-white rounded-xl font-bold">
+              📋 一鍵複製訊息貼給顧客
+            </button>
+          </div>
+        `,
+        icon: 'info'
       });
-      return;
+    } else {
+      Swal.fire(`預約已【${newStatus}】！`, '已同步透過 LINE 官方推播通知顧客', 'success');
     }
-    await executeAudit(id, '已確認', '', name, date, time, service, lineUid);
+
+    loadInitialData(); // 重新整理後台名單
+  } catch(e) {
+    Swal.fire('審核操作失敗', e.message, 'error');
   }
+}
 
   async function executeAudit(id, status, reason, name, date, time, service, lineUid) {
     Swal.fire({ title: '處理中...', allowOutsideClick: false });
@@ -4708,6 +4766,35 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         `).join('');
     }
   }
+
+// 宣告 safeCheck 防呆輔助函式
+function safeCheck(elId) {
+  const el = document.getElementById(elId);
+  return el ? Boolean(el.checked) : false;
+}
+
+function safeVal(elId, fallback = '') {
+  const el = document.getElementById(elId);
+  return el ? el.value.trim() : fallback;
+}
+  
+  // 頂部重新整理按鈕對應函式
+async function manualRefresh() {
+  const icon = document.querySelector('.fa-rotate-right') || document.querySelector('.fa-arrows-rotate');
+  if (icon) icon.classList.add('animate-spin');
+  await loadInitialData();
+  setTimeout(() => {
+    if (icon) icon.classList.remove('animate-spin');
+    Swal.fire({ title: '已同步最新預約！', icon: 'success', timer: 1000, showConfirmButton: false });
+  }, 400);
+}
+
+// 啟動 10 秒輪詢：自動偵測最新預約，不用重新登入
+setInterval(() => {
+  if (isLoggedIn && !document.hidden) {
+    loadInitialData(true); // 靜默背景載入
+  }
+}, 10000);
   
   function renderUploadSlots() {
     const grid = document.getElementById('promo-upload-grid');
