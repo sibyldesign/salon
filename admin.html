@@ -214,7 +214,9 @@
   <div class="font-bold text-sm text-brand-900 tracking-wide" id="top-bar-title">沙龍管理系統</div>
   <div class="flex gap-2 items-center">
     <button class="px-2.5 py-1 text-xs border border-brand-300 rounded-lg text-brand-800 font-bold hover:bg-brand-50" onclick="promptChangePin()">修改密碼</button>
-    <button class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" onclick="fetchDataAndRender()" title="重新整理">
+    <button onclick="manualRefreshAdmin()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="立即同步最新名單">
+  <i id="admin-refresh-icon" class="fa-solid fa-rotate-right text-sm"></i>
+</button>
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
     </button>
     <button class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" onclick="location.reload()" title="登出">
@@ -2853,7 +2855,12 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
   try {
     // 1. 更新 Supabase 狀態
     await directSupabasePatch(`bookings?id=eq.${bookingId}`, { status: newStatus });
-
+// 在 auditOrder 函式中，Supabase PATCH 成功後加上：
+  const targetAppt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+  if (targetAppt) {
+    targetAppt.status = newStatus; // 立即變更狀態
+    renderAppointments(); // 立即重新繪製名單卡片，無需重整
+  }
     // 2. 呼叫 GAS 後端發信與推播 (以 no-cors 避免阻擋)
     fetch(API_URL, {
       method: "POST",
@@ -4778,15 +4785,23 @@ function safeVal(elId, fallback = '') {
   return el ? el.value.trim() : fallback;
 }
   
-  // 頂部重新整理按鈕對應函式
-async function manualRefresh() {
-  const icon = document.querySelector('.fa-rotate-right') || document.querySelector('.fa-arrows-rotate');
+async function manualRefreshAdmin() {
+  const icon = document.getElementById('admin-refresh-icon');
   if (icon) icon.classList.add('animate-spin');
-  await loadInitialData();
-  setTimeout(() => {
+  
+  try {
+    await loadInitialData(); // 重新向 Supabase 撈取最新名單
+    Swal.fire({
+      title: '名單已更新！',
+      icon: 'success',
+      timer: 800,
+      showConfirmButton: false
+    });
+  } catch(e) {
+    Swal.fire('同步失敗', e.message, 'error');
+  } finally {
     if (icon) icon.classList.remove('animate-spin');
-    Swal.fire({ title: '已同步最新預約！', icon: 'success', timer: 1000, showConfirmButton: false });
-  }, 400);
+  }
 }
 
 // 啟動 10 秒輪詢：自動偵測最新預約，不用重新登入
