@@ -577,16 +577,25 @@
   let guestLineUid = "";
 
   async function resolveStoreIdAndInitLiff() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paramStoreId = urlParams.get('store_id');
+    // 1. 從網址路徑抓取短網址 (例如 /cc -> storeSlug = "cc")
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     const storeSlug = pathParts.length > 0 && !pathParts[0].includes('.html') ? pathParts[0] : null;
-    
-    if (storeSlug) {
-      const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(storeSlug)}&select=id`);
+
+    // 2. 備援相容：若舊連結仍帶有 ?s= 參數，也一併支援
+    const urlParams = new URLSearchParams(window.location.search);
+    const legacySlug = urlParams.get('s');
+    const paramStoreId = urlParams.get('store_id');
+
+    const targetSlug = storeSlug || legacySlug;
+
+    if (targetSlug) {
+      const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id`);
       if (stores && stores.length > 0) {
         CURRENT_STORE_ID = stores[0].id;
-        window.history.replaceState({}, '', `/${storeSlug}`);
+        // ✨ 如果是透過舊的 ?s= 進來的，自動幫它無痕轉址成乾淨的 /cc 網址
+        if (legacySlug && window.location.hostname !== 'localhost') {
+          window.history.replaceState({}, '', `/${targetSlug}`);
+        }
       }
     } else if (paramStoreId) {
       CURRENT_STORE_ID = paramStoreId.trim();
@@ -671,21 +680,35 @@
   // 15 秒同步監聽全域公告與例行維護鎖定
   async function checkMaintenanceAndAnnouncement() {
     try {
+      // 1. 🚨 優先檢查個別店家的狀態 (是否被總控台暫時鎖定或過期)
+      const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
+      if (storeRes && storeRes.length > 0) {
+        const s = storeRes[0];
+        if (s.plan_status === 'locked' || s.plan_status === 'expired') {
+          document.getElementById('maintenance-desc').innerText = s.plan_status === 'locked' 
+            ? `【${s.store_name}】目前授權已被總管系統暫時鎖定，暫停預約服務。` 
+            : `【${s.store_name}】系統授權已過期，請聯繫店家續約。`;
+          document.getElementById('maintenance-screen').classList.remove('hidden');
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('system-banner').classList.add('hidden');
+          return false;
+        }
+      }
+
+      // 2. 檢查全平台例行維護或公告
       const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       const banner = document.getElementById('system-banner');
       const bannerText = document.getElementById('system-banner-text');
 
       if (Array.isArray(announcements) && announcements.length > 0 && announcements[0].is_active) {
         const item = announcements[0];
-        
         if (item.is_maintenance === true) {
-          document.getElementById('maintenance-desc').innerText = item.content || "系統目前正進行例行伺服器升級與維護施工，施工期間暫停在線預約。";
+          document.getElementById('maintenance-desc').innerText = item.content || "全平台進行例行升級維護中，施工完畢將即刻開放。";
           document.getElementById('maintenance-screen').classList.remove('hidden');
           document.getElementById('booking-ui').style.display = 'none';
           banner.classList.add('hidden');
           return false;
         }
-
         if (item.content && item.content.trim() !== "") {
           bannerText.innerText = item.content;
           banner.classList.remove('hidden');
@@ -696,22 +719,11 @@
         banner.classList.add('hidden');
       }
 
-      const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
-      if (storeRes && storeRes.length > 0) {
-        const s = storeRes[0];
-        if (s.plan_status === 'locked' || s.plan_status === 'expired') {
-          document.getElementById('maintenance-desc').innerText = `【${s.store_name}】目前暫停預約服務中...`;
-          document.getElementById('maintenance-screen').classList.remove('hidden');
-          document.getElementById('booking-ui').style.display = 'none';
-          return false;
-        }
-      }
-
       document.getElementById('maintenance-screen').classList.add('hidden');
       document.getElementById('booking-ui').style.display = 'flex';
       return true;
     } catch (err) {
-      console.warn("公告與鎖定檢測異常:", err);
+      console.warn("狀態檢測異常:", err);
       return true;
     }
   }
