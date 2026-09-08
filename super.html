@@ -561,9 +561,40 @@ async function promptEditStoreLineUid(storeId, currentUid) {
       }
     }
 
-    // 零費用發信催繳（經由 Google Apps Script 驅動，不消耗 LINE 官方額度）
-// ✅ 解決 Failed to fetch：改由 GAS 後端發送 Resend，避免前端 CORS 阻擋
-// ✅ 解決 Failed to fetch：改由 GAS 後端發送 Resend，避免前端 CORS 阻擋
+// ✨ 補回短網址 Slug 編輯函式
+async function promptEditStoreSlug(storeId, currentSlug) {
+  const { value: newSlug } = await Swal.fire({
+    title: '修改前台短網址 Slug',
+    input: 'text',
+    inputLabel: '請輸入短網址後綴 (例: my-salon，前台網址將變為 /my-salon)',
+    inputValue: currentSlug || '',
+    inputPlaceholder: '例如: rosa-hair',
+    showCancelButton: true,
+    confirmButtonText: '確定儲存',
+    confirmButtonColor: '#8C7355'
+  });
+
+  if (newSlug !== undefined) {
+    Swal.showLoading();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ slug: newSlug.trim() })
+      });
+      Swal.fire('短網址已更新！', '', 'success');
+      loadStores();
+    } catch(e) {
+      Swal.fire('更新失敗', e.message, 'error');
+    }
+  }
+}
+
+// ✨ 修復催繳發信：改用 text/plain 避免跨域阻擋，並將參數精準傳至 code.gs
 async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
   if (!ownerEmail || !ownerEmail.includes('@')) {
     return Swal.fire('該店家未填寫有效 Email', '請先補充信箱', 'warning');
@@ -588,7 +619,6 @@ async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
       </div>
     `;
 
-    // 透過 GAS 代理發送 Resend
     await fetch(API_URL, {
       method: "POST",
       mode: "no-cors",
