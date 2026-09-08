@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -24,120 +24,6 @@
         }
       }
     }
-
-    // =========================================================================
-  // ✨ 行銷模組：儲值金與包卡名單 10 筆分頁控制器 ＋ 即時關鍵字快搜
-  // =========================================================================
-  let allWalletList = [];
-  let filteredWalletList = [];
-  let walletCurrentPage = 1;
-
-  let allPkgList = [];
-  let filteredPkgList = [];
-  let pkgCurrentPage = 1;
-
-  async function loadMarketingCenter() {
-    allWalletList = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&order=wallet_balance.desc`);
-    filteredWalletList = [...allWalletList];
-    renderWalletTable();
-
-    allPkgList = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&order=remaining_times.desc`);
-    filteredPkgList = [...allPkgList];
-    renderPkgTable();
-
-    // 折扣碼載入
-    try {
-      const coupons = await directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}`);
-      const couponContainer = document.getElementById('coupons-card-container');
-      if (couponContainer) {
-        couponContainer.innerHTML = (!coupons || coupons.length === 0) 
-          ? '<div class="col-span-full text-center py-4 text-brand-400 text-xs">目前無啟用中的折扣碼</div>'
-          : coupons.map(cp => `
-            <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-              <div>
-                <div class="font-bold text-brand-900 font-mono tracking-wider">${cp.code}</div>
-                <div class="text-[11px] text-brand-500">${cp.discount_type === 'cash' ? `現折 NT$ ${cp.discount_value}` : `整單享 ${cp.discount_value * 10} 折`}</div>
-              </div>
-              <button onclick="toggleCouponStatus('${cp.id}', ${!cp.is_active})" class="px-3 py-1 rounded-xl text-xs font-bold transition ${cp.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
-                ${cp.is_active ? '啟用中' : '已停用'}
-              </button>
-            </div>
-          `).join('');
-      }
-    } catch(e) {}
-  }
-
-  // 儲值金快搜與分頁
-  function handleWalletSearch(kw) {
-    const q = kw.trim().toLowerCase();
-    filteredWalletList = allWalletList.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
-    walletCurrentPage = 1;
-    renderWalletTable();
-  }
-
-  function renderWalletTable() {
-    const tbody = document.getElementById('wallet-table-body');
-    if (!tbody) return;
-    const start = (walletCurrentPage - 1) * 10;
-    const paged = filteredWalletList.slice(start, start + 10);
-    const totalPages = Math.ceil(filteredWalletList.length / 10) || 1;
-    
-    document.getElementById('wallet-page-indicator').innerText = `第 ${walletCurrentPage} 頁 / 共 ${totalPages} 頁`;
-
-    tbody.innerHTML = paged.map(c => `
-      <tr class="border-b border-brand-100 hover:bg-brand-50/50">
-        <td class="py-2.5 px-2 font-bold">${c.name || 'VIP'}</td>
-        <td class="py-2.5 px-2 font-mono">${c.phone}</td>
-        <td class="py-2.5 px-2 font-black text-brand-600">NT$ ${c.wallet_balance || 0}</td>
-        <td class="py-2.5 px-2">${c.member_discount ? `${c.member_discount * 10} 折` : '無折數'}</td>
-        <td class="py-2.5 px-2 text-right">
-          <button onclick="quickTopUpCustomer('${c.id}', '${c.name}', ${c.wallet_balance})" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold">充值</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">查無相符儲值會員</td></tr>';
-  }
-
-  function changeWalletPage(delta) {
-    const totalPages = Math.ceil(filteredWalletList.length / 10) || 1;
-    walletCurrentPage = Math.max(1, Math.min(totalPages, walletCurrentPage + delta));
-    renderWalletTable();
-  }
-
-  // 包卡堂票快搜與分頁
-  function handlePkgSearch(kw) {
-    const q = kw.trim().toLowerCase();
-    filteredPkgList = allPkgList.filter(p => (p.customer_name && p.customer_name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q)) || (p.service_name && p.service_name.toLowerCase().includes(q)));
-    pkgCurrentPage = 1;
-    renderPkgTable();
-  }
-
-  function renderPkgTable() {
-    const tbody = document.getElementById('packages-table-body');
-    if (!tbody) return;
-    const start = (pkgCurrentPage - 1) * 10;
-    const paged = filteredPkgList.slice(start, start + 10);
-    const totalPages = Math.ceil(filteredPkgList.length / 10) || 1;
-
-    document.getElementById('pkg-page-indicator').innerText = `第 ${pkgCurrentPage} 頁 / 共 ${totalPages} 頁`;
-
-    tbody.innerHTML = paged.map(p => `
-      <tr class="border-b border-brand-100 hover:bg-brand-50/50">
-        <td class="py-2.5 px-2 font-bold">${p.customer_name || '熟客'} (${p.phone})</td>
-        <td class="py-2.5 px-2">${p.service_name}</td>
-        <td class="py-2.5 px-2">${p.total_times} 堂</td>
-        <td class="py-2.5 px-2 font-black text-emerald-700">${p.remaining_times} 堂</td>
-        <td class="py-2.5 px-2 text-right">
-          <button onclick="deductPackageManual('${p.id}', ${p.remaining_times})" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold">- 扣 1 堂</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">查無相符包卡紀錄</td></tr>';
-  }
-
-  function changePkgPage(delta) {
-    const totalPages = Math.ceil(filteredPkgList.length / 10) || 1;
-    pkgCurrentPage = Math.max(1, Math.min(totalPages, pkgCurrentPage + delta));
-    renderPkgTable();
-  }
   </script>
   <style>
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -176,7 +62,8 @@
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
-  <!-- 後台專屬：全平台維護鎖定 / 單店暫時鎖定全螢幕遮罩 -->
+
+<!-- 後台專屬：全平台維護鎖定 / 單店暫時鎖定全螢幕遮罩 -->
 <div id="admin-maintenance-screen" class="fixed inset-0 bg-brand-50/98 z-[9999] flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
   <div class="w-16 h-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-amber-200">
     <i class="fa-solid fa-lock text-3xl"></i>
@@ -210,17 +97,15 @@
   </div>
 </div>
 
+<!-- 頂部導覽列 -->
 <header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm flex justify-between items-center max-w-2xl mx-auto w-full">
   <div class="font-bold text-sm text-brand-900 tracking-wide" id="top-bar-title">沙龍管理系統</div>
-  <div class="flex gap-2 items-center">
-    <button class="px-2.5 py-1 text-xs border border-brand-300 rounded-lg text-brand-800 font-bold hover:bg-brand-50" onclick="promptChangePin()">修改密碼</button>
-    <button onclick="manualRefreshAdmin()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="立即同步最新名單">
-  <i id="admin-refresh-icon" class="fa-solid fa-rotate-right text-sm"></i>
-</button>
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+  <div class="flex items-center gap-2">
+    <button type="button" onclick="handleAdminManualRefresh(this)" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="重新整理名單">
+      <i class="fa-solid fa-rotate-right text-sm"></i>
     </button>
-    <button class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" onclick="location.reload()" title="登出">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    <button type="button" onclick="handleAdminLogout()" class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" title="登出後台">
+      <i class="fa-solid fa-arrow-right-from-bracket text-sm"></i>
     </button>
   </div>
 </header>
@@ -2174,6 +2059,120 @@
 
   let selectedCalendarDate = '';
 
+  // =========================================================================
+  // ✨ 行銷模組：儲值金與包卡名單 10 筆分頁控制器 ＋ 即時關鍵字快搜
+  // =========================================================================
+  let allWalletList = [];
+  let filteredWalletList = [];
+  let walletCurrentPage = 1;
+
+  let allPkgList = [];
+  let filteredPkgList = [];
+  let pkgCurrentPage = 1;
+
+  async function loadMarketingCenter() {
+    allWalletList = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&order=wallet_balance.desc`);
+    filteredWalletList = [...allWalletList];
+    renderWalletTable();
+
+    allPkgList = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&order=remaining_times.desc`);
+    filteredPkgList = [...allPkgList];
+    renderPkgTable();
+
+    // 折扣碼載入
+    try {
+      const coupons = await directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}`);
+      const couponContainer = document.getElementById('coupons-card-container');
+      if (couponContainer) {
+        couponContainer.innerHTML = (!coupons || coupons.length === 0) 
+          ? '<div class="col-span-full text-center py-4 text-brand-400 text-xs">目前無啟用中的折扣碼</div>'
+          : coupons.map(cp => `
+            <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+              <div>
+                <div class="font-bold text-brand-900 font-mono tracking-wider">${cp.code}</div>
+                <div class="text-[11px] text-brand-500">${cp.discount_type === 'cash' ? `現折 NT$ ${cp.discount_value}` : `整單享 ${cp.discount_value * 10} 折`}</div>
+              </div>
+              <button onclick="toggleCouponStatus('${cp.id}', ${!cp.is_active})" class="px-3 py-1 rounded-xl text-xs font-bold transition ${cp.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
+                ${cp.is_active ? '啟用中' : '已停用'}
+              </button>
+            </div>
+          `).join('');
+      }
+    } catch(e) {}
+  }
+
+  // 儲值金快搜與分頁
+  function handleWalletSearch(kw) {
+    const q = kw.trim().toLowerCase();
+    filteredWalletList = allWalletList.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
+    walletCurrentPage = 1;
+    renderWalletTable();
+  }
+
+  function renderWalletTable() {
+    const tbody = document.getElementById('wallet-table-body');
+    if (!tbody) return;
+    const start = (walletCurrentPage - 1) * 10;
+    const paged = filteredWalletList.slice(start, start + 10);
+    const totalPages = Math.ceil(filteredWalletList.length / 10) || 1;
+    
+    document.getElementById('wallet-page-indicator').innerText = `第 ${walletCurrentPage} 頁 / 共 ${totalPages} 頁`;
+
+    tbody.innerHTML = paged.map(c => `
+      <tr class="border-b border-brand-100 hover:bg-brand-50/50">
+        <td class="py-2.5 px-2 font-bold">${c.name || 'VIP'}</td>
+        <td class="py-2.5 px-2 font-mono">${c.phone}</td>
+        <td class="py-2.5 px-2 font-black text-brand-600">NT$ ${c.wallet_balance || 0}</td>
+        <td class="py-2.5 px-2">${c.member_discount ? `${c.member_discount * 10} 折` : '無折數'}</td>
+        <td class="py-2.5 px-2 text-right">
+          <button onclick="quickTopUpCustomer('${c.id}', '${c.name}', ${c.wallet_balance})" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold">充值</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">查無相符儲值會員</td></tr>';
+  }
+
+  function changeWalletPage(delta) {
+    const totalPages = Math.ceil(filteredWalletList.length / 10) || 1;
+    walletCurrentPage = Math.max(1, Math.min(totalPages, walletCurrentPage + delta));
+    renderWalletTable();
+  }
+
+  // 包卡堂票快搜與分頁
+  function handlePkgSearch(kw) {
+    const q = kw.trim().toLowerCase();
+    filteredPkgList = allPkgList.filter(p => (p.customer_name && p.customer_name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q)) || (p.service_name && p.service_name.toLowerCase().includes(q)));
+    pkgCurrentPage = 1;
+    renderPkgTable();
+  }
+
+  function renderPkgTable() {
+    const tbody = document.getElementById('packages-table-body');
+    if (!tbody) return;
+    const start = (pkgCurrentPage - 1) * 10;
+    const paged = filteredPkgList.slice(start, start + 10);
+    const totalPages = Math.ceil(filteredPkgList.length / 10) || 1;
+
+    document.getElementById('pkg-page-indicator').innerText = `第 ${pkgCurrentPage} 頁 / 共 ${totalPages} 頁`;
+
+    tbody.innerHTML = paged.map(p => `
+      <tr class="border-b border-brand-100 hover:bg-brand-50/50">
+        <td class="py-2.5 px-2 font-bold">${p.customer_name || '熟客'} (${p.phone})</td>
+        <td class="py-2.5 px-2">${p.service_name}</td>
+        <td class="py-2.5 px-2">${p.total_times} 堂</td>
+        <td class="py-2.5 px-2 font-black text-emerald-700">${p.remaining_times} 堂</td>
+        <td class="py-2.5 px-2 text-right">
+          <button onclick="deductPackageManual('${p.id}', ${p.remaining_times})" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold">- 扣 1 堂</button>
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">查無相符包卡紀錄</td></tr>';
+  }
+
+  function changePkgPage(delta) {
+    const totalPages = Math.ceil(filteredPkgList.length / 10) || 1;
+    pkgCurrentPage = Math.max(1, Math.min(totalPages, pkgCurrentPage + delta));
+    renderPkgTable();
+  }
+  
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
     if (!grid) return;
@@ -4810,6 +4809,66 @@ setInterval(() => {
     loadInitialData(true); // 靜默背景載入
   }
 }, 10000);
+  
+  // 1. 智慧容錯：手動重新整理按鈕
+// 手動重新整理按鈕 (防範 CodePen 攔截 reload)
+async function handleAdminManualRefresh(btn) {
+  const icon = btn ? btn.querySelector('i') : document.querySelector('.fa-rotate-right');
+  if (icon) icon.classList.add('animate-spin');
+
+  try {
+    if (typeof loadInitialData === 'function') {
+      await loadInitialData();
+    } else if (typeof loadAdminData === 'function') {
+      await loadAdminData();
+    } else if (typeof fetchStoreData === 'function') {
+      await fetchStoreData();
+    } else if (typeof renderAppointments === 'function') {
+      renderAppointments();
+    } else {
+      window.location.href = window.location.href; // 避開 location.reload() 的沙盒報錯
+      return;
+    }
+
+    Swal.fire({
+      title: '名單已更新！',
+      icon: 'success',
+      timer: 800,
+      showConfirmButton: false
+    });
+  } catch (err) {
+    Swal.fire('同步失敗', err.message || '連線逾時', 'error');
+  } finally {
+    if (icon) icon.classList.remove('animate-spin');
+  }
+}
+
+// 登出函式 (清理 Session 並重設狀態)
+function handleAdminLogout() {
+  Swal.fire({
+    title: '確定登出管理後台？',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '確定登出',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消'
+  }).then((res) => {
+    if (res.isConfirmed) {
+      sessionStorage.clear();
+      localStorage.removeItem('admin_is_unlocked');
+      localStorage.removeItem('admin_current_token');
+
+      const lockScreen = document.getElementById('lock-screen');
+      const pinInput = document.getElementById('pin-input');
+      if (pinInput) pinInput.value = '';
+      if (lockScreen) lockScreen.classList.remove('hidden');
+
+      const cleanUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+      window.location.href = cleanUrl;
+    }
+  });
+}
   
   function renderUploadSlots() {
     const grid = document.getElementById('promo-upload-grid');
