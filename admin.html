@@ -4811,23 +4811,22 @@ setInterval(() => {
 }, 10000);
   
   // 1. 智慧容錯：手動重新整理按鈕
-// 手動重新整理按鈕 (防範 CodePen 攔截 reload)
 async function handleAdminManualRefresh(btn) {
   const icon = btn ? btn.querySelector('i') : document.querySelector('.fa-rotate-right');
   if (icon) icon.classList.add('animate-spin');
 
   try {
-    if (typeof loadInitialData === 'function') {
-      await loadInitialData();
-    } else if (typeof loadAdminData === 'function') {
+    // 依序尋找並執行後台資料載入函式
+    if (typeof loadAdminData === 'function') {
       await loadAdminData();
     } else if (typeof fetchStoreData === 'function') {
       await fetchStoreData();
+    } else if (typeof fetchAppointments === 'function') {
+      await fetchAppointments();
     } else if (typeof renderAppointments === 'function') {
       renderAppointments();
-    } else {
-      window.location.href = window.location.href; // 避開 location.reload() 的沙盒報錯
-      return;
+    } else if (typeof loadMarketingCenter === 'function') {
+      await loadMarketingCenter();
     }
 
     Swal.fire({
