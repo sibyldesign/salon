@@ -176,15 +176,19 @@
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
-  <!-- 後台全域系統維護鎖定遮罩 -->
-<div id="admin-maintenance-screen" class="fixed inset-0 bg-brand-50/95 z-[9999] flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
-  <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-amber-200">
-    <i class="fa-solid fa-screwdriver-wrench"></i>
+  <!-- 後台專屬：全平台維護鎖定 / 單店暫時鎖定全螢幕遮罩 -->
+<div id="admin-maintenance-screen" class="fixed inset-0 bg-brand-50/98 z-[9999] flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
+  <div class="w-16 h-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-amber-200">
+    <i class="fa-solid fa-lock text-3xl"></i>
   </div>
-  <h2 class="text-xl font-bold text-brand-900 mb-2">平台例行升級維護中</h2>
+  <h2 class="text-xl font-bold text-brand-900 mb-2" id="admin-lock-title">後台已暫停服務</h2>
   <p class="text-xs text-brand-700 leading-relaxed max-w-xs mb-4" id="admin-maintenance-desc">
-    系統目前正進行例行伺服器升級，期間暫停所有後台修改與填單，以確保資料完整性。施工完畢將自動解除。
+    本系統授權已被總管中心暫時鎖定或已過期，暫停所有管理操作。
   </p>
+  <a href="https://line.me/R/ti/p/@480kqjoj" target="_blank" class="px-6 py-3 bg-[#06C755] hover:bg-[#05b34c] text-white text-xs font-bold rounded-full shadow-md transition inline-flex items-center gap-2">
+    <i class="fa-brands fa-line text-sm"></i>
+    <span>聯繫官方客服續約開通</span>
+  </a>
 </div>
 
 <!-- 解鎖登入畫面 (防暴力破解 15 分鐘機制) -->
@@ -1545,24 +1549,11 @@
     if (checkLockoutStatus()) return;
     const input = document.getElementById('pin-input').value.trim();
     if (!input) return;
-    
-    // 檢查店家是否被總控台「暫時鎖定」
-    try {
-      const storeStatus = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
-      if (storeStatus && storeStatus.length > 0) {
-        const pStatus = storeStatus[0].plan_status;
-        if (pStatus === 'locked' || pStatus === 'expired') {
-          return Swal.fire({
-            title: '後台已暫停存取',
-            text: `【${storeStatus[0].store_name}】目前授權已被總管系統暫時鎖定或已過期，請聯繫官方客服續約開通。`,
-            icon: 'warning'
-          });
-        }
-      }
-    } catch(e){}
+
+    // 1. 若網址有帶 Token，優先轉換為正確的 STORE_ID
     try {
       if (CURRENT_ADMIN_TOKEN) {
-        const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
+        const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin,plan_status,store_name`);
         if (tokenRes && tokenRes.length > 0) {
           CURRENT_STORE_ID = tokenRes[0].id;
         } else {
@@ -1570,11 +1561,32 @@
           return;
         }
       }
+    } catch(e){}
+
+    // 2. 🚨 比照全域鎖定：檢查店家是否被總控台「暫時鎖定」或「已過期」
+    try {
+      const storeStatus = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
+      if (storeStatus && storeStatus.length > 0) {
+        const pStatus = storeStatus[0].plan_status;
+        if (pStatus === 'locked' || pStatus === 'expired') {
+          // 立刻彈出全螢幕阻擋遮罩
+          document.getElementById('admin-lock-title').innerText = pStatus === 'locked' ? '後台授權已暫時鎖定' : '系統授權已過期';
+          document.getElementById('admin-maintenance-desc').innerText = `【${storeStatus[0].store_name}】目前已被總管系統鎖定停權，暫停所有管理操作，請聯繫官方客服解鎖。`;
+          document.getElementById('admin-maintenance-screen').classList.remove('hidden');
+          document.getElementById('lock-screen').style.display = 'none';
+          return;
+        }
+      }
+    } catch(e){}
+
+    // 3. 獲取正確密碼與專員密碼比對
+    try {
       let correctPin = '8888';
       const [stores, settings] = await Promise.all([
         directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
         directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
       ]);
+
       if (stores && stores.length > 0 && stores[0].admin_pin) {
         correctPin = stores[0].admin_pin;
       }
@@ -1585,6 +1597,8 @@
           correctPin = staff.pin;
         }
       }
+
+      // 4. 比對密碼 (正確則進入，錯誤累計 5 次防暴力破解鎖定 15 分鐘)
       if (input === String(correctPin).trim()) {
         localStorage.removeItem(ATTEMPTS_KEY);
         localStorage.removeItem(LOCKOUT_KEY);
@@ -1648,39 +1662,42 @@
   
   async function fetchSystemAnnouncement() {
     try {
+      // 1. 先查全平台公告與維護
       const data = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       const banner = document.getElementById('system-announcement-banner');
       const bannerContent = document.getElementById('announcement-content');
       const maintScreen = document.getElementById('admin-maintenance-screen');
 
-      if (data && data.length > 0) {
-        const item = data[0];
-        const msg = (item.content || item.title || '').trim();
-
-        // ✨ 檢測到維護鎖定：立刻跳出全螢幕遮罩禁止老闆修改！
-        if (item.is_maintenance === true) {
-          if (maintScreen) {
-            document.getElementById('admin-maintenance-desc').innerText = msg || "平台正進行例行升級維護中，施工期間暫停後台編輯。";
-            maintScreen.classList.remove('hidden');
-          }
-          return;
-        } else {
-          if (maintScreen) maintScreen.classList.add('hidden');
-        }
-
-        if (msg) {
-          bannerContent.innerText = msg;
-          banner.classList.remove('hidden');
-        } else {
-          banner.classList.add('hidden');
-        }
-      } else {
-        if (banner) banner.classList.add('hidden');
-        if (maintScreen) maintScreen.classList.add('hidden');
+      if (data && data.length > 0 && data[0].is_maintenance === true) {
+        document.getElementById('admin-lock-title').innerText = '平台例行維護中';
+        document.getElementById('admin-maintenance-desc').innerText = data[0].content || "平台正進行伺服器升級，暫停所有編輯操作。";
+        maintScreen.classList.remove('hidden');
+        return;
       }
-    } catch(e) {
-      document.getElementById('system-announcement-banner')?.classList.add('hidden');
-    }
+
+      // 2. 🚨 即時檢查單店是否剛被總控台「暫時鎖定」
+      const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
+      if (storeRes && storeRes.length > 0) {
+        const pStatus = storeRes[0].plan_status;
+        if (pStatus === 'locked' || pStatus === 'expired') {
+          document.getElementById('admin-lock-title').innerText = pStatus === 'locked' ? '後台授權已暫時鎖定' : '系統授權已過期';
+          document.getElementById('admin-maintenance-desc').innerText = `【${storeRes[0].store_name}】已被總管中心設定鎖定停權，已中斷後台存取！`;
+          maintScreen.classList.remove('hidden');
+          return;
+        }
+      }
+
+      // 若正常無鎖定，解除全螢幕遮罩
+      if (maintScreen) maintScreen.classList.add('hidden');
+
+      // 處理常規廣播公告
+      if (data && data.length > 0 && data[0].content) {
+        bannerContent.innerText = data[0].content;
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    } catch(e){}
   }
   
   // ✨ 一鍵綁定官方 LINE 通知並即時回傳 User ID 至總控台
