@@ -657,6 +657,29 @@
   </button>
 
   <script>
+    // 宣告買家 (業主) 的 LINE 資訊變數
+  let buyerLineUid = "";
+  let buyerLineName = "";
+
+  // 頁面載入時透過 LIFF 取得登入者身分
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (typeof liff !== 'undefined') {
+      try {
+        await liff.init({ liffId: "2011183690-A3PkQLO3" });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          buyerLineUid = profile.userId;       // 取得 U 開頭的 33 碼 UID
+          buyerLineName = profile.displayName; // 取得 LINE 顯示名稱
+          
+          // 若畫面上有 LINE 暱稱輸入框，自動幫業主回填
+          const lineInput = document.getElementById('lineName') || document.getElementById('owner_line_name');
+          if (lineInput) lineInput.value = buyerLineName;
+        }
+      } catch (err) {
+        console.warn("LIFF 載入略過或未登入:", err);
+      }
+    }
+  });
     const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
     
