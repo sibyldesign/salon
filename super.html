@@ -199,9 +199,10 @@
         lockEl.style.display = 'none';
         loadInitialData();
       } else {
+        // ✅ 修正：移除密碼明文，改為標準安全提示
         Swal.fire({
-          title: '金鑰錯誤',
-          text: '預設管理密碼為 888',
+          title: '驗證失敗',
+          text: '管理金鑰錯誤，請重新輸入',
           icon: 'error',
           confirmButtonColor: '#8C7355'
         });
@@ -363,8 +364,9 @@
         const adminToken = s.admin_token || s.id;
         const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
         const storeSlug = s.slug || '';
-        const prettyUrl = storeSlug ? `https://salon.heysibyl.com/${storeSlug}` : `https://salon.heysibyl.com/?store_id=${s.id}`;
-        
+        // ✅ 保證任何靜態伺服器皆能開啟的標準前台網址
+        const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
+        const prettyUrl = storeSlug ? `https://salon.heysibyl.com/?s=${encodeURIComponent(storeSlug)}` : bookingUrl;
         // 專屬店家 LINE UID 快速綁定連結 (傳給業主，一鍵綁定)
         const lineBindUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}&bind_line=true`;
 
