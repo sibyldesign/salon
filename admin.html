@@ -2530,124 +2530,155 @@
   let currentCheckoutPackages = [];
 
   // 1. 開啟結單彈窗
-  async function openCheckoutModal(id, name, phone, service, price) {
-    const rawAppts = backendData.appointments || [];
-    const appt = rawAppts.find(a => a.id === id) || {};
-    const rawNotes = appt.notes || '';
+  // 智慧結單彈窗開啟
+function openCheckoutModal(bookingId, name, phone, serviceName, price) {
+  const matchedCust = (backendData.customersList || []).find(c => c.phone === phone);
+  const currentWallet = matchedCust ? Number(matchedCust.wallet_balance || 0) : 0;
+  const currentPkg = (backendData.packagesList || [])
+    .filter(p => p.phone === phone && p.remaining_times > 0)
+    .reduce((sum, p) => sum + Number(p.remaining_times || 0), 0);
 
-    // 計算服務項目的純原價
-    let pureServiceBasePrice = 0;
-    const allServices = backendData.services || [];
-    const serviceItems = service.split(',').map(s => s.trim());
-    
-    serviceItems.forEach(sName => {
-      const match = allServices.find(s => s.name === sName);
-      if (match) {
-        const num = String(match.price).match(/\d+/);
-        pureServiceBasePrice += num ? Number(num[0]) : 0;
-      }
-    });
-    if (pureServiceBasePrice === 0) pureServiceBasePrice = 800; // 保底標準洗剪
+  const b = (backendData.appointments || []).find(a => String(a.id) === String(bookingId)) || {};
+  const notesStr = b.notes || '';
 
-    currentCheckoutBookingObj = { 
-      id, name, phone, service, 
-      pureServiceBasePrice,
-      totalPrice: Number(price || 0),
-      rawNotes
-    };
+  // 1. 智慧拆解加購方案與抵扣標記
+  let addonPkgName = '';
+  let addonPkgPrice = 0;
+  let addonPkgTimes = 0;
+  const isUsingPkgNow = notesStr.includes('使用包卡') || notesStr.includes('套用包卡');
+  const isUsingWalNow = notesStr.includes('使用儲值') || notesStr.includes('儲值金全額');
 
-    // 動態填入現場可加購之包卡與儲值選單
-    const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
-    const topupGroup = document.getElementById('topupBuyOptionsGroup');
-    const pRules = backendData.settings?.packageRules || [];
-    const wRules = backendData.settings?.walletRules || [];
-
-    if (pkgGroup) {
-      pkgGroup.innerHTML = pRules.map(p => `
-        <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">
-          + 購買【${p.name}】(+NT$ ${p.price}，含 ${p.times || 6} 堂)
-        </option>
-      `).join('');
+  if (notesStr.includes('加購包卡:')) {
+    const match = notesStr.match(/加購包卡:\s*([^】\+]+)(?:\(\+NT\$\s*(\d+)\))?/);
+    if (match) {
+      addonPkgName = match[1].trim();
+      addonPkgPrice = match[2] ? Number(match[2]) : 4000;
+      addonPkgTimes = 6; // 預設方案堂數（買5送1共6堂）
     }
-    if (topupGroup) {
-      topupGroup.innerHTML = wRules.map(w => `
-        <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount}">
-          + 購買【${w.name}】(+NT$ ${w.price}，入帳 $${w.price + (w.bonus || 0)})
-        </option>
-      `).join('');
-    }
-
-    document.getElementById('check_item_detail_list').innerHTML = `
-      • 顧客：<b>${name}</b> (${phone})<br>
-      • 施作項目：<b>${service}</b><br>
-      ${rawNotes ? `• 預約選單記號：<span class="text-amber-800 font-bold">${rawNotes}</span>` : ''}
-    `;
-
-    document.getElementById('check_custom_base_price').value = pureServiceBasePrice;
-
-    // 撈取會員既有資產
-    let walletBal = 0, discountRate = 1;
-    currentCheckoutPackages = [];
-    currentCheckoutCustomer = null;
-
-    try {
-      const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`);
-      if (custs && custs.length > 0) {
-        currentCheckoutCustomer = custs[0];
-        walletBal = Number(custs[0].wallet_balance || 0);
-        discountRate = Number(custs[0].member_discount || 1);
-      }
-      currentCheckoutPackages = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`);
-    } catch(e) {}
-
-    const matchedPkg = currentCheckoutPackages.find(p => service.includes(p.service_name));
-    const cardTimes = matchedPkg ? matchedPkg.remaining_times : 0;
-    document.getElementById('checkModalCurrentCard').innerText = `${cardTimes} 次`;
-    document.getElementById('checkModalCurrentDeposit').innerText = `$${walletBal}`;
-
-    const optCard = document.getElementById('optUseCardDeductText');
-    optCard.innerText = cardTimes > 0 ? `使用【${matchedPkg.service_name}】包卡扣抵 (剩餘 ${cardTimes} 次)` : `無可用包卡 (0次)`;
-    optCard.disabled = cardTimes <= 0;
-
-    const optDep = document.getElementById('optUseDepositText');
-    optDep.innerText = walletBal > 0 ? `使用已有儲值金 (餘額 $${walletBal}，享 ${discountRate*10} 折)` : `無儲值金餘額 ($0)`;
-    optDep.disabled = walletBal <= 0;
-    optDep.setAttribute('data-rate', discountRate);
-
-    // 智慧連動：自動勾選預約時已選取的方案
-    const discountSel = document.getElementById('check_discount_use_select');
-    const newBuySel = document.getElementById('check_new_buy_select');
-
-    discountSel.value = "none";
-    newBuySel.value = "none";
-
-    // 1. 若預約備註帶有加購包卡，自動選取該包卡
-    if (rawNotes.includes('加購包卡')) {
-      for (let opt of newBuySel.options) {
-        if (opt.value === 'new_pkg' && rawNotes.includes(opt.getAttribute('data-name'))) {
-          opt.selected = true;
-          break;
-        }
-      }
-    } else if (rawNotes.includes('加購儲值')) {
-      for (let opt of newBuySel.options) {
-        if (opt.value === 'new_topup' && rawNotes.includes(opt.getAttribute('data-name'))) {
-          opt.selected = true;
-          break;
-        }
-      }
-    }
-
-    // 2. 若預約備註已註記當下包卡抵扣
-    if (rawNotes.includes('使用包卡') || rawNotes.includes('套用包卡')) {
-      discountSel.value = "useCard";
-    } else if (rawNotes.includes('使用儲值')) {
-      discountSel.value = "useDeposit";
-    }
-
-    recalcCheckoutTotal();
-    document.getElementById('checkoutModal').classList.remove('hidden');
   }
+
+  // 乾淨的內部備註（排除系統標籤）
+  let cleanNoteDisplay = notesStr
+    .replace(/【[^】]+】/g, '')
+    .replace(/Email:[^|]+/g, '')
+    .replace(/\|/g, '')
+    .trim();
+
+  Swal.fire({
+    title: '完工結單與扣抵核算',
+    html: `
+      <div class="text-left text-xs space-y-3 font-sans">
+        <!-- 資產看板 -->
+        <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between font-bold text-emerald-900">
+          <span>💳 歷史包卡剩餘：<b>${currentPkg} 次</b></span>
+          <span>💰 歷史儲值餘額：<b>$${currentWallet.toLocaleString()}</b></span>
+        </div>
+
+        <!-- 施作明細結構化展示 -->
+        <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 space-y-1 text-[11px] text-brand-900">
+          <div><b>顧客：</b>${name} (${phone})</div>
+          <div><b>施作主項目：</b>${serviceName}</div>
+          ${addonPkgName ? `<div class="text-emerald-700 font-bold"><b>線上預選方案：</b>${addonPkgName} (+NT$ ${addonPkgPrice})</div>` : ''}
+          ${isUsingPkgNow ? `<div class="text-blue-700 font-bold"><b>扣抵標記：</b>✓ 顧客預約時勾選【包卡抵扣 1 堂】</div>` : ''}
+          ${cleanNoteDisplay ? `<div class="text-brand-500"><b>內部備註：</b>${cleanNoteDisplay}</div>` : ''}
+        </div>
+
+        <!-- 基準金額 -->
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">1. 本次施作基準金額 (可微調)：</label>
+          <input type="number" id="checkout-base-price" value="${price || 800}" class="w-full p-2.5 rounded-xl border border-brand-200 text-sm font-bold text-emerald-800 bg-white" oninput="calculateCheckoutPreview()">
+        </div>
+
+        <!-- 抵扣舊方案 -->
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">2. 扣抵歷史舊方案 (包卡 / 儲值)：</label>
+          <select id="checkout-deduct-type" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview()">
+            <option value="none">無扣抵舊方案</option>
+            <option value="pkg" ${isUsingPkgNow && currentPkg > 0 ? 'selected' : ''} ${currentPkg === 0 ? 'disabled' : ''}>扣抵舊包卡 1 堂 (剩餘 ${currentPkg} 次)</option>
+            <option value="wal" ${isUsingWalNow && currentWallet > 0 ? 'selected' : ''} ${currentWallet === 0 ? 'disabled' : ''}>儲值金全額扣抵 (現有 $${currentWallet})</option>
+          </select>
+        </div>
+
+        <!-- 現場新購方案 -->
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">3. 現場新購方案：</label>
+          <select id="checkout-addon-select" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview()">
+            <option value="none" data-price="0" data-times="0">不加購方案</option>
+            <option value="pkg_promo" data-price="4000" data-times="6" ${addonPkgName ? 'selected' : ''}>
+              + 購買【剪髮買5送1方案】(+NT$ 4000，含 6 堂)
+            </option>
+          </select>
+        </div>
+
+        <!-- 當下加購並當下抵扣選項 -->
+        <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between">
+          <span class="font-bold text-amber-900 text-[11px]">新購包卡是否當下抵扣本次消費 1 堂？</span>
+          <input type="checkbox" id="chk-use-new-pkg" class="w-4 h-4 accent-brand-500" ${isUsingPkgNow ? 'checked' : ''} onchange="calculateCheckoutPreview()">
+        </div>
+
+        <!-- 計算結果預覽清單 -->
+        <div id="checkout-calculation-box" class="p-3 bg-white rounded-xl border border-brand-200 text-xs space-y-1"></div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確認結單並更新歷程',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => {
+      return executeCheckoutSubmit(bookingId, name, phone, currentPkg, currentWallet);
+    }
+  });
+
+  calculateCheckoutPreview(currentPkg, currentWallet);
+}
+
+// 實時計算預覽
+function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
+  const basePrice = Number(document.getElementById('checkout-base-price')?.value || 0);
+  const deductType = document.getElementById('checkout-deduct-type')?.value || 'none';
+  const addonSel = document.getElementById('checkout-addon-select');
+  const addonOpt = addonSel?.options[addonSel.selectedIndex];
+  const addonPrice = Number(addonOpt?.getAttribute('data-price') || 0);
+  const addonTimes = Number(addonOpt?.getAttribute('data-times') || 0);
+  const useNewPkg = document.getElementById('chk-use-new-pkg')?.checked;
+
+  let finalPay = basePrice + addonPrice;
+  let deductDesc = "-$0";
+  let remainPkgCalc = currentPkg + addonTimes;
+  let remainWalCalc = currentWallet;
+
+  if (deductType === 'pkg' && currentPkg > 0) {
+    finalPay -= basePrice;
+    remainPkgCalc -= 1;
+    deductDesc = `扣抵舊包卡 1 堂 (-$${basePrice})`;
+  } else if (useNewPkg && addonTimes > 0) {
+    finalPay -= basePrice;
+    remainPkgCalc -= 1; // 6堂扣1堂 = 剩餘5堂
+    deductDesc = `當下加購扣抵 1 堂 (-$${basePrice})`;
+  } else if (deductType === 'wal' && currentWallet > 0) {
+    const walCut = Math.min(basePrice, currentWallet);
+    finalPay -= walCut;
+    remainWalCalc -= walCut;
+    deductDesc = `儲值金抵扣 (-$${walCut})`;
+  }
+
+  const box = document.getElementById('checkout-calculation-box');
+  if (box) {
+    box.innerHTML = `
+      <div class="flex justify-between"><span>1. 項目基準價：</span><span>$${basePrice}</span></div>
+      <div class="flex justify-between text-emerald-700"><span>2. 方案扣抵金額：</span><span>${deductDesc}</span></div>
+      <div class="flex justify-between text-brand-600"><span>3. 現場加購方案：</span><span>+$${addonPrice}</span></div>
+      <div class="border-t border-brand-100 pt-1 flex justify-between font-bold text-sm text-brand-900">
+        <span>現場需補付實收金額：</span>
+        <span class="text-emerald-700 font-black">$${Math.max(0, finalPay).toLocaleString()}</span>
+      </div>
+      <div class="p-2 bg-brand-50 rounded-lg text-[10.5px] text-brand-700 mt-2 space-y-0.5 border border-brand-100">
+        <div>📊 <b>結單扣抵後剩餘預估：</b></div>
+        <div>• 剩餘包卡：<b>${remainPkgCalc} 次</b> (新購 +${addonTimes}，扣抵 -${(deductType === 'pkg' || useNewPkg) ? 1 : 0})</div>
+        <div>• 剩餘儲值金：<b>$${remainWalCalc.toLocaleString()}</b></div>
+      </div>
+    `;
+  }
+}
   
   function closeCheckoutModal() {
     document.getElementById('checkoutModal').classList.add('hidden');
