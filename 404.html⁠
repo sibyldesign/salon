@@ -570,10 +570,10 @@
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+  
+  // ✅ 修正：改用單一 let 宣告，允許後續短網址 Slug 解析動態替換
   const urlParams = new URLSearchParams(window.location.search);
-  const CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
-
-  let CURRENT_STORE_ID = "2deb066f-98f2-4283-945b-6ae0d6a89acb";
+  let CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
   let guestLineUid = "";
 
   async function resolveStoreIdAndInitLiff() {
@@ -720,6 +720,9 @@
 
   window.onload = async function() {
     try {
+      // ✅ 修正：優先解析 Slug 與取得正確的 Store ID
+      await resolveStoreIdAndInitLiff();
+
       await checkMaintenanceAndAnnouncement();
 
       const nowIso = new Date().toISOString();
