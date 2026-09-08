@@ -142,13 +142,12 @@
 
 <div id="booking-ui" class="max-w-md mx-auto flex flex-col">
   
-  <!-- 9:16 直式活動說明圖輪播 (左右按鈕採極致半透明通透磨砂質感) -->
+  <!-- 9:16 直式活動說明圖輪播 -->
   <div class="px-4 mt-4" id="bannerWrapper">
     <div class="bg-brand-100 p-3.5 rounded-3xl shadow-sm border border-brand-200/60">
       <div class="relative overflow-hidden rounded-2xl bg-white shadow-inner group">
         <div class="flex transition-transform duration-300 ease-in-out" id="carouselTrack"></div>
         
-        <!-- 通透半透明按鈕：不遮擋圖片，懸浮時微亮 -->
         <button type="button" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 hover:bg-black/45 text-white/80 hover:text-white flex items-center justify-center backdrop-blur-xs transition z-20" onclick="moveSlide(-1)">
           <i class="fa-solid fa-chevron-left text-xs"></i>
         </button>
@@ -165,7 +164,7 @@
     <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-0.5">PORTFOLIO</div>
     <div class="text-center text-[10px] text-brand-400 font-normal mb-3 tracking-wider" id="portfolio-hint-text">點選分類查看造型設計</div>
     
-    <!-- 單行橫向滑動分類列表 (禁止折行) -->
+    <!-- 單行橫向滑動分類列表 -->
     <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-3 px-1" id="portfolio-tabs"></div>
     
     <!-- 一行兩圖網格展示 -->
@@ -174,7 +173,7 @@
     <div class="text-center mt-3.5" id="portfolio-more-wrapper">
       <button type="button" id="portfolio-toggle-btn" class="px-5 py-2 rounded-full text-xs font-bold border border-brand-300 text-brand-600 bg-white hover:bg-brand-50 shadow-sm transition inline-flex items-center gap-1.5" onclick="togglePortfolioExpand()">
         <span>查看更多作品</span>
-        <i class="fa-solid fa-chevron-down text-[9px] transition-transform" id="portfolio-arrow"></i>
+        <i class="fa-solid fa-chevron-down text-[9px] transition-transform duration-200" id="portfolio-arrow"></i>
       </button>
     </div>
   </div>
@@ -219,7 +218,7 @@
             <label class="block text-xs font-bold text-brand-800">手機號碼</label>
             <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
           </div>
-          <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)" onblur="checkCustomerBenefitsByPhone()">
+          <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)">
           
           <div id="memberWalletCard" class="hidden mt-2 p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1 text-xs">
             <div class="flex justify-between items-center font-bold text-brand-900">
@@ -334,7 +333,7 @@
           <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
             <label class="block font-bold text-brand-900">1. 現場加購方案選擇：</label>
             <select id="addon-package-select" onchange="updateCheckoutSummary()" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none text-xs font-medium">
-              <option value="none" data-price="0">不加購包卡</option>
+              <option value="none" data-price="0" data-times="0">不加購包卡</option>
             </select>
             <select id="addon-wallet-select" onchange="updateCheckoutSummary()" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none text-xs font-medium">
               <option value="none" data-price="0">不加購儲值</option>
@@ -565,23 +564,18 @@
   <p class="text-xs text-brand-500 mb-4 leading-relaxed" id="successScreenMsg">店家確認排程後會立即與您聯繫確認❤️</p>
   <button type="button" class="px-8 py-3 bg-[#8C7355] text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
 </div>
-
-<script>
+  <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
   
-  // ✅ 修正：改用單一 let 宣告，允許後續短網址 Slug 解析動態替換
   const urlParams = new URLSearchParams(window.location.search);
   let CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
   let guestLineUid = "";
 
   async function resolveStoreIdAndInitLiff() {
-    // 1. 從網址路徑抓取短網址 (例如 /cc -> storeSlug = "cc")
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     const storeSlug = pathParts.length > 0 && !pathParts[0].includes('.html') ? pathParts[0] : null;
-
-    // 2. 備援相容：若舊連結仍帶有 ?s= 參數，也一併支援
     const urlParams = new URLSearchParams(window.location.search);
     const legacySlug = urlParams.get('s');
     const paramStoreId = urlParams.get('store_id');
@@ -592,7 +586,6 @@
       const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id`);
       if (stores && stores.length > 0) {
         CURRENT_STORE_ID = stores[0].id;
-        // ✨ 如果是透過舊的 ?s= 進來的，自動幫它無痕轉址成乾淨的 /cc 網址
         if (legacySlug && window.location.hostname !== 'localhost') {
           window.history.replaceState({}, '', `/${targetSlug}`);
         }
@@ -617,8 +610,7 @@
       console.warn("LIFF 啟用略過或失敗:", e);
     }
   }
-  
-  // 預設種子資料
+
   const DEFAULT_SERVICES = [
     { id: "s1", name: "洗髮造型設計", duration: 30, type: "Group_B", price: "350", isAddon: false, sortOrder: 0 },
     { id: "s2", name: "客製剪髮造型 (含洗)", duration: 45, type: "Group_B", price: "800", isAddon: false, sortOrder: 1 },
@@ -677,10 +669,8 @@
     }
   }
 
-  // 15 秒同步監聽全域公告與例行維護鎖定
   async function checkMaintenanceAndAnnouncement() {
     try {
-      // 1. 🚨 優先檢查個別店家的狀態 (是否被總控台暫時鎖定或過期)
       const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
       if (storeRes && storeRes.length > 0) {
         const s = storeRes[0];
@@ -695,7 +685,6 @@
         }
       }
 
-      // 2. 檢查全平台例行維護或公告
       const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       const banner = document.getElementById('system-banner');
       const bannerText = document.getElementById('system-banner-text');
@@ -723,7 +712,6 @@
       document.getElementById('booking-ui').style.display = 'flex';
       return true;
     } catch (err) {
-      console.warn("狀態檢測異常:", err);
       return true;
     }
   }
@@ -732,9 +720,7 @@
 
   window.onload = async function() {
     try {
-      // ✅ 修正：優先解析 Slug 與取得正確的 Store ID
       await resolveStoreIdAndInitLiff();
-
       await checkMaintenanceAndAnnouncement();
 
       const nowIso = new Date().toISOString();
@@ -823,6 +809,14 @@
 
       renderStoreUI();
       loadApprovedReviews();
+
+      // 監聽手機輸入欄位：失焦時自動帶入歷史資料
+      const phoneEl = document.getElementById('phone');
+      if (phoneEl) {
+        phoneEl.addEventListener('blur', function() {
+          if (this.value.trim().length >= 8) checkCustomerBenefitsByPhone();
+        });
+      }
     } catch (e) {
       console.error("載入失敗:", e);
     }
@@ -885,13 +879,13 @@
       </button>
     `).join('');
 
-    // 在 renderStoreUI() 中加入：
     const showPrice = (db.enableShowPrice !== false);
     const checkoutBox = document.getElementById('checkoutSummaryBox');
-    const addonSection = document.getElementById('addon-package-select')?.closest('.p-4'); // 活動方案選單區塊
+    const addonSection = document.getElementById('addon-package-select')?.closest('.p-4');
 
     if (checkoutBox) checkoutBox.style.display = showPrice ? 'block' : 'none';
     if (addonSection) addonSection.style.display = showPrice ? 'block' : 'none';
+
     const track = document.getElementById('carouselTrack');
     const dots = document.getElementById('carouselDots');
     track.innerHTML = ''; dots.innerHTML = '';
@@ -911,8 +905,8 @@
     }
 
     if (db.packageRules && db.packageRules.length > 0) {
-      document.getElementById('addon-package-select').innerHTML = '<option value="none" data-price="0">不加購包卡</option>' +
-        db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}">${p.name} (+NT$ ${p.price})</option>`).join('');
+      document.getElementById('addon-package-select').innerHTML = '<option value="none" data-price="0" data-times="0">不加購包卡</option>' +
+        db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">${p.name} (+NT$ ${p.price})</option>`).join('');
     }
     if (db.walletRules && db.walletRules.length > 0) {
       document.getElementById('addon-wallet-select').innerHTML = '<option value="none" data-price="0">不加購儲值</option>' +
@@ -924,7 +918,6 @@
     renderFrontCalendar();
   }
 
-  // ✨ 單行滑動標籤設置 (不折行、橫向拖曳)
   function setupPortfolio() {
     const sec = document.getElementById('portfolioSection');
     const tabs = document.getElementById('portfolio-tabs');
@@ -953,46 +946,45 @@
     renderPortfolioGrid();
   }
 
-  let isPortfolioExpanded = false;
+  function renderPortfolioGrid() {
+    const container = document.getElementById('portfolio-grid');
+    const btnMore = document.getElementById('portfolio-toggle-btn');
+    const moreWrapper = document.getElementById('portfolio-more-wrapper');
+    const arrow = document.getElementById('portfolio-arrow');
+    if (!container) return;
 
-function renderPortfolio() {
-  const container = document.getElementById('portfolio-grid');
-  const btnMore = document.getElementById('btn-more-portfolio');
-  if (!container) return;
+    const items = (currentPortfolioList && currentPortfolioList.length > 0) ? currentPortfolioList : (db.portfolio || []);
+    if (items.length === 0) {
+      container.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-6">該分類尚無作品展示</div>';
+      if (moreWrapper) moreWrapper.style.display = 'none';
+      return;
+    }
 
-  const items = db.portfolio || [];
-  if (items.length === 0) {
-    container.innerHTML = '<div class="col-span-2 text-center text-xs text-brand-400 py-6">尚無作品展示</div>';
-    if (btnMore) btnMore.style.display = 'none';
-    return;
+    const displayItems = isPortfolioExpanded ? items : items.slice(0, 2);
+
+    container.className = "grid grid-cols-2 gap-3";
+    container.innerHTML = displayItems.map(p => `
+      <div class="rounded-2xl overflow-hidden shadow-xs border border-brand-150 bg-white aspect-square group relative">
+        <img src="${p.img || p.img_url}" alt="${p.title || '作品'}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+        ${p.title ? `
+          <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-white">
+            <div class="text-[11px] font-bold truncate">${p.title}</div>
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+
+    if (moreWrapper && btnMore) {
+      moreWrapper.style.display = items.length > 2 ? 'block' : 'none';
+      btnMore.querySelector('span').innerText = isPortfolioExpanded ? '收合作品集' : `查看更多作品 (${items.length}款)`;
+      if (arrow) arrow.style.transform = isPortfolioExpanded ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
   }
 
-  // 預設僅展示前 2 張（一行兩圖）；點擊展開後顯示全部（每行兩圖往下延伸）
-  const displayItems = isPortfolioExpanded ? items : items.slice(0, 2);
-
-  // 固定使用 grid-cols-2 一行兩圖
-  container.className = "grid grid-cols-2 gap-3";
-  container.innerHTML = displayItems.map(p => `
-    <div class="rounded-2xl overflow-hidden shadow-xs border border-brand-150 bg-white aspect-square group relative">
-      <img src="${p.img || p.img_url}" alt="${p.title || '作品'}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-      ${p.title ? `
-        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-white">
-          <div class="text-[11px] font-bold truncate">${p.title}</div>
-        </div>
-      ` : ''}
-    </div>
-  `).join('');
-
-  if (btnMore) {
-    btnMore.style.display = items.length > 2 ? 'block' : 'none';
-    btnMore.innerText = isPortfolioExpanded ? '收合作品集 ▲' : `看更多作品 (${items.length}款) ▼`;
+  function togglePortfolioExpand() {
+    isPortfolioExpanded = !isPortfolioExpanded;
+    renderPortfolioGrid();
   }
-}
-
-function togglePortfolioMore() {
-  isPortfolioExpanded = !isPortfolioExpanded;
-  renderPortfolio();
-}
 
   async function loadApprovedReviews() {
     try {
@@ -1297,7 +1289,8 @@ function togglePortfolioMore() {
       deductText = `套用包卡抵扣 1 堂 (主項目折抵 -$${mainTotal})`;
       if (pkgNoticeBox) {
         pkgNoticeBox.classList.remove('hidden');
-        let remTimes = addonPkgFee > 0 ? 5 : Math.max(0, (memberData.packages?.[0]?.remaining_times || 1) - 1);
+        const selectedPkgTimes = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-times') || 6);
+        let remTimes = addonPkgFee > 0 ? (selectedPkgTimes - 1) : Math.max(0, (memberData.packages?.[0]?.remaining_times || 1) - 1);
         document.getElementById('text-remain-package-times').innerText = remTimes;
       }
     } else {
@@ -1507,37 +1500,76 @@ function togglePortfolioMore() {
     calculateTimesLocally();
   }
 
-  function checkPhoneLength(el) { if (el.value.trim().length >= 10) checkCustomerBenefitsByPhone(); }
+  function checkPhoneLength(el) { 
+    if (el.value.trim().length >= 10) checkCustomerBenefitsByPhone(); 
+  }
+
   async function checkCustomerBenefitsByPhone() {
     let phone = document.getElementById('phone').value.trim();
-    if (phone.length >= 8) {
-      try {
-        const [bookings, custs, pkgs] = await Promise.all([
-          directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
-          directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`),
-          directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`)
-        ]);
+    if (phone.length < 8) return;
 
-        if (Array.isArray(bookings) && bookings.length > 0) {
-          document.getElementById('name').value = bookings[0].customer_name || '';
-          if (bookings[0].line_name) document.getElementById('lineName').value = bookings[0].line_name;
-          document.getElementById('welcome-msg').innerText = `歡迎回來，${bookings[0].customer_name}！`;
-          document.getElementById('welcome-msg').classList.remove('hidden');
+    try {
+      const [bookings, custs, pkgs] = await Promise.all([
+        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+        directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`),
+        directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`)
+      ]);
+
+      if (Array.isArray(bookings) && bookings.length > 0) {
+        const lastBooking = bookings[0];
+
+        const nameInput = document.getElementById('name');
+        if (nameInput) nameInput.value = lastBooking.customer_name || '';
+
+        const lineInput = document.getElementById('lineName');
+        if (lineInput && lastBooking.line_name && !lastBooking.line_name.startsWith('U')) {
+          lineInput.value = lastBooking.line_name;
         }
 
-        if (custs && custs.length > 0) {
-          memberData.walletBalance = Number(custs[0].wallet_balance || 0);
-          memberData.discountPercent = Number(custs[0].member_discount || 1);
-          memberData.packages = pkgs || [];
-          document.getElementById('memberStatusBadge').innerText = "VIP 熟客已登入";
-          document.getElementById('memberStatusBadge').classList.remove('hidden');
-          document.getElementById('displayWalletBalance').innerText = memberData.walletBalance;
-          document.getElementById('memberWalletCard').classList.remove('hidden');
-          document.getElementById('badge-member-summary').innerText = `包卡: ${memberData.packages.length}組 | 儲值: $${memberData.walletBalance}`;
+        const emailInput = document.getElementById('custEmail') || document.getElementById('email');
+        if (emailInput && lastBooking.notes && lastBooking.notes.includes('Email:')) {
+          const parts = lastBooking.notes.split('Email:');
+          if (parts.length > 1) {
+            emailInput.value = parts[1].trim().split(' ')[0].split('|')[0].trim();
+          }
         }
-      } catch(e) {}
-      updateCheckoutSummary();
+
+        const custTypeSel = document.getElementById('custType');
+        if (custTypeSel) custTypeSel.value = 'old';
+
+        const welcomeMsg = document.getElementById('welcome-msg');
+        if (welcomeMsg) {
+          welcomeMsg.innerText = `歡迎回來，${lastBooking.customer_name}！`;
+          welcomeMsg.classList.remove('hidden');
+        }
+      }
+
+      if (custs && custs.length > 0) {
+        memberData.walletBalance = Number(custs[0].wallet_balance || 0);
+        memberData.discountPercent = Number(custs[0].member_discount || 1);
+        memberData.packages = pkgs || [];
+
+        const statusBadge = document.getElementById('memberStatusBadge');
+        if (statusBadge) {
+          statusBadge.innerText = "VIP 熟客已登入";
+          statusBadge.classList.remove('hidden');
+        }
+
+        const walletBalEl = document.getElementById('displayWalletBalance');
+        if (walletBalEl) walletBalEl.innerText = memberData.walletBalance.toLocaleString();
+
+        const walletCard = document.getElementById('memberWalletCard');
+        if (walletCard) walletCard.classList.remove('hidden');
+
+        const summaryBadge = document.getElementById('badge-member-summary');
+        if (summaryBadge) {
+          summaryBadge.innerText = `包卡: ${memberData.packages.length}組 | 儲值: $${memberData.walletBalance}`;
+        }
+      }
+    } catch(e) {
+      console.warn("自動帶入舊資料異常:", e);
     }
+    updateCheckoutSummary();
   }
 
   function setType(t, e) {
@@ -1596,7 +1628,6 @@ function togglePortfolioMore() {
       signatureBase64 = sigCanvas.toDataURL("image/png");
     }
 
-    // 取得加購方案與抵扣勾選狀態
     const pkgSel = document.getElementById('addon-package-select');
     const walSel = document.getElementById('addon-wallet-select');
     const addonPkgName = pkgSel?.value !== 'none' ? pkgSel?.options[pkgSel.selectedIndex]?.text : '';
@@ -1629,6 +1660,7 @@ function togglePortfolioMore() {
       appointment_time: appointmentIso,
       staff_id: staffIdVal,
       staff_name: staffNameVal,
+      signature_url: signatureBase64,
       status: "待確認"
     };
 
@@ -1646,12 +1678,18 @@ function togglePortfolioMore() {
       
       if (!res.ok) throw new Error(await res.text());
 
+      // 呼叫 GAS 後端觸發發信與通知（單次呼叫，避免重複通知）
       fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
           action: "submitBooking",
           store_id: CURRENT_STORE_ID,
-          data: Object.assign({}, dbPayload, { date: dValRaw, time: tVal, service: sVal })
+          data: Object.assign({}, dbPayload, { 
+            date: dValRaw, 
+            time: tVal, 
+            service: sVal,
+            signature_url: signatureBase64
+          })
         })
       }).catch(() => {});
 
