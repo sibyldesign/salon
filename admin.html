@@ -1160,6 +1160,7 @@
           <div>
             <span class="font-bold text-brand-900 block">模組 1：LINE 互動式價目表 (Flex Menu)</span>
             <span class="text-[10px] text-brand-500">顧客在官方 LINE 輸入「價目表」自動回傳精美輪播卡片 (預設啟用)</span>
+            <span class="text-[10px] text-emerald-700 font-bold">✓ 採用 Reply API，完全 0 元計費、不佔用任何 LINE 官方帳號則數</span>
           </div>
           <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
         </label>
@@ -1167,6 +1168,7 @@
           <div>
             <span class="font-bold text-brand-900 block">模組 2：自動化排程預約提醒引擎</span>
             <span class="text-[10px] text-brand-500">預約日前一天早上 9:00 自動推播提醒給客人 (需填寫下方 LINE Token)</span>
+            <span class="text-[10px] text-rose-600 font-bold">⚠️ 注意：此功能會透過 LINE Messaging API 主動發送訊息，會消耗您的 LINE 官方帳號付費 Push 則數（免費額度用完後 LINE 將另外計費）</span>
           </div>
           <input type="checkbox" id="cfg-toggle-auto-reminder" class="accent-brand-400">
         </label>
@@ -1543,6 +1545,21 @@
     if (checkLockoutStatus()) return;
     const input = document.getElementById('pin-input').value.trim();
     if (!input) return;
+    
+    // 檢查店家是否被總控台「暫時鎖定」
+    try {
+      const storeStatus = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
+      if (storeStatus && storeStatus.length > 0) {
+        const pStatus = storeStatus[0].plan_status;
+        if (pStatus === 'locked' || pStatus === 'expired') {
+          return Swal.fire({
+            title: '後台已暫停存取',
+            text: `【${storeStatus[0].store_name}】目前授權已被總管系統暫時鎖定或已過期，請聯繫官方客服續約開通。`,
+            icon: 'warning'
+          });
+        }
+      }
+    } catch(e){}
     try {
       if (CURRENT_ADMIN_TOKEN) {
         const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
