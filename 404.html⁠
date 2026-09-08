@@ -1628,6 +1628,7 @@
       signatureBase64 = sigCanvas.toDataURL("image/png");
     }
 
+    // 取得加購方案與折抵勾選狀態
     const pkgSel = document.getElementById('addon-package-select');
     const walSel = document.getElementById('addon-wallet-select');
     const addonPkgName = pkgSel?.value !== 'none' ? pkgSel?.options[pkgSel.selectedIndex]?.text : '';
@@ -1665,6 +1666,7 @@
     };
 
     try {
+      // ✅ 唯一一次寫入資料庫：取得建立的單筆 ID，絕不重複發起第二次寫入！
       const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
         method: "POST",
         headers: {
@@ -1677,18 +1679,23 @@
       });
       
       if (!res.ok) throw new Error(await res.text());
+      const insertedRows = await res.json();
+      const newBookingId = (insertedRows && insertedRows.length > 0) ? insertedRows[0].id : '';
 
-      // 呼叫 GAS 後端觸發發信與通知（單次呼叫，避免重複通知）
+      // 呼叫 GAS：僅負責推播給業主個人與寄發信件
       fetch(API_URL, {
         method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: "submitBooking",
           store_id: CURRENT_STORE_ID,
           data: Object.assign({}, dbPayload, { 
+            id: newBookingId,
             date: dValRaw, 
             time: tVal, 
             service: sVal,
-            signature_url: signatureBase64
+            signature_url: signatureBase64 
           })
         })
       }).catch(() => {});
