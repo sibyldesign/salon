@@ -37,7 +37,7 @@
         <h1 class="text-base font-bold text-brand-900">Sibyl SaaS 總管系統</h1>
         <p class="text-xs text-brand-400 mt-0.5">請輸入管理金鑰</p>
       </div>
-      <input type="password" id="super-key-input" class="w-full text-center text-xl tracking-[0.2em] py-2.5 rounded-xl border border-brand-200 focus:ring-2 focus:ring-brand-400 outline-none" placeholder="管理密碼" maxlength="10">
+      <input type="password" id="super-key-input" onkeydown="if(event.key==='Enter') checkSuperKey()" class="w-full text-center text-xl tracking-[0.2em] py-2.5 rounded-xl border border-brand-200 focus:ring-2 focus:ring-brand-400 outline-none" placeholder="管理密碼" maxlength="10">
       <button onclick="checkSuperKey()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-md transition text-xs">驗證進入</button>
     </div>
   </div>
@@ -181,26 +181,43 @@
     const SUPER_KEY = "888";
 
     let allStores = [];
+    let allStoresList = []; // 👈 補上宣告
     let currentFilter = 'ALL';
     let currentPage = 1;
+    let storeCurrentPage = 1; // 👈 補上宣告
     const PAGE_SIZE = 10;
+    const STORES_PER_PAGE = 10; // 👈 補上宣告
     let isPlatformMaintenanceActive = false;
 
     function checkSuperKey() {
-      const val = document.getElementById('super-key-input').value.trim();
+      const inputEl = document.getElementById('super-key-input');
+      const lockEl = document.getElementById('super-lock');
+      if (!inputEl || !lockEl) return;
+
+      const val = inputEl.value.trim();
       if (val === SUPER_KEY) {
-        document.getElementById('super-lock').style.display = 'none';
+        lockEl.style.display = 'none';
         loadInitialData();
       } else {
-        Swal.fire('金鑰錯誤', '管理密碼為 888', 'error');
-        document.getElementById('super-key-input').value = '';
+        Swal.fire({
+          title: '金鑰錯誤',
+          text: '預設管理密碼為 888',
+          icon: 'error',
+          confirmButtonColor: '#8C7355'
+        });
+        inputEl.value = '';
       }
     }
 
     function loadInitialData() {
-      loadStores();
-      loadAnnouncement();
-      loadWishes();
+      try {
+        if (typeof loadStores === 'function') loadStores();
+        if (typeof loadAnnouncement === 'function') loadAnnouncement();
+        if (typeof loadWishes === 'function') loadWishes();
+        if (typeof loadAllStores === 'function') loadAllStores();
+      } catch (err) {
+        console.warn("載入初始資料時發生非致命異常:", err);
+      }
     }
 
     function switchSuperTab(tabId) {
@@ -232,6 +249,18 @@
       }
     }
 
+    async function loadAllStores() {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      allStoresList = await res.json();
+      document.getElementById('stores-total-count').innerText = `共 ${allStoresList.length} 家店`;
+      renderExpiringAlertZone();
+      renderStoresPagedTable();
+    } catch(e) {}
+  }
+    
     // 7 天內到期或已過期警示專區
     function renderExpiringAlertZone() {
       const alertBox = document.getElementById('expiring-alert-container');
@@ -322,26 +351,34 @@
       }
 
       container.innerHTML = pageStores.map(s => {
-        const isPending = (s.plan_status === 'pending');
         const isActive = (s.plan_status === 'active');
         const isLocked = (s.plan_status === 'locked');
         const isExpired = (s.plan_status === 'expired');
 
         let statusBadge = '<span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">下單未付款</span>';
         if (isActive) statusBadge = '<span class="px-2.5 py-0.5 bg-green-100 text-green-800 rounded-full text-[10px] font-bold">已開通 (運行中)</span>';
-        if (isLocked) statusBadge = '<span class="px-2.5 py-0.5 bg-gray-200 text-gray-800 rounded-full text-[10px] font-bold">🔒 已手動鎖定</span>';
+        if (isLocked) statusBadge = '<span class="px-2.5 py-0.5 bg-gray-200 text-gray-800 rounded-full text-[10px] font-bold">🔒 已鎖定 (前後台封鎖)</span>';
         if (isExpired) statusBadge = '<span class="px-2.5 py-0.5 bg-red-100 text-red-800 rounded-full text-[10px] font-bold">已過期停權</span>';
 
         const adminToken = s.admin_token || s.id;
         const adminUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}`;
-        const bookingUrl = `https://salon.heysibyl.com/?store_id=${s.id}`;
+        const storeSlug = s.slug || '';
+        const prettyUrl = storeSlug ? `https://salon.heysibyl.com/${storeSlug}` : `https://salon.heysibyl.com/?store_id=${s.id}`;
+        
+        // 專屬店家 LINE UID 快速綁定連結 (傳給業主，一鍵綁定)
+        const lineBindUrl = `https://salon.heysibyl.com/admin.html?token=${adminToken}&bind_line=true`;
+
+        const hasLineUid = Boolean(s.owner_line_uid && s.owner_line_uid.startsWith('U'));
+        const lineUidBadge = hasLineUid 
+          ? `<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">✓ 已綁定</span> <code class="text-[10px] text-gray-500">${s.owner_line_uid.substring(0, 8)}...</code>` 
+          : `<span class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold">未綁定</span>`;
 
         const lockBtnHtml = isLocked
           ? `<button onclick="toggleStoreLock('${s.id}', 'locked', '${s.store_name}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
                <i class="fa-solid fa-lock-open text-[10px]"></i> 解除鎖定
              </button>`
           : `<button onclick="toggleStoreLock('${s.id}', 'active', '${s.store_name}')" class="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
-               <i class="fa-solid fa-lock text-[10px]"></i> 暫時鎖定
+               <i class="fa-solid fa-lock text-[10px]"></i> 暫時鎖定 (含後台)
              </button>`;
 
         return `
@@ -354,7 +391,7 @@
                 </div>
                 <div class="text-[11px] text-brand-400 mt-0.5 font-mono flex items-center gap-2">
                   <span>ID: ${s.id}</span>
-                  <button onclick="navigator.clipboard.writeText('${adminUrl}'); Swal.fire('已複製專屬後台 Token 網址！', '', 'success')" class="text-blue-600 hover:underline">複製後台連結</button>
+                  <button onclick="navigator.clipboard.writeText('${adminUrl}'); Swal.fire('已複製後台連結！', '', 'success')" class="text-blue-600 hover:underline">複製後台連結</button>
                 </div>
               </div>
               <div class="text-right">
@@ -364,23 +401,41 @@
             </div>
 
             <div class="p-3 bg-brand-50 rounded-2xl border border-brand-100 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+              <div class="flex items-center gap-1">
+                <b>前台短網址：</b>
+                <a href="${prettyUrl}" target="_blank" class="font-mono text-blue-600 underline font-bold truncate max-w-[160px] sm:max-w-xs" title="前往預約前台">
+                  /${storeSlug || '未設Slug'}
+                </a>
+                <button onclick="promptEditStoreSlug('${s.id}', '${storeSlug}')" class="text-brand-500 hover:text-brand-700 p-1" title="修改短網址 Slug">
+                  <i class="fa-solid fa-pen text-[10px]"></i>
+                </button>
+              </div>
               <div><b>負責人手機：</b><a href="tel:${s.owner_phone}" class="text-blue-600 underline">${s.owner_phone || '無'}</a></div>
               <div><b>電子信箱：</b>${s.owner_email || '無'}</div>
-              <div><b>LINE 稱呼：</b><span class="font-bold text-brand-900">${s.owner_line_name || '未填'}</span></div>
-              <div><b>LINE UID：</b><code class="text-blue-600 font-bold">${s.owner_line_uid || '未綁定'}</code></div>
+              <div class="flex items-center gap-1">
+                <b>LINE UID：</b>
+                ${lineUidBadge}
+                <button onclick="promptEditStoreLineUid('${s.id}', '${s.owner_line_uid || ''}')" class="text-blue-600 underline text-[10px] ml-1">手動填入</button>
+                <button onclick="navigator.clipboard.writeText('${lineBindUrl}'); Swal.fire('已複製業主專屬 LINE 綁定連結！', '貼給業主點擊即可自動綁定', 'success')" class="text-brand-500 underline text-[10px] ml-1">複製綁定連結</button>
+              </div>
               <div><b>後台密碼：</b><code>${s.admin_pin || '8888'}</code></div>
               <div><b>建立時間：</b>${s.created_at ? s.created_at.replace('T', ' ').substring(0, 16) : '未知'}</div>
             </div>
 
             <div class="flex gap-2 flex-wrap items-center justify-between pt-1 border-t border-brand-100">
-              <button onclick="copyDunText('${s.store_name}', '${s.owner_line_name || '負責人'}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs">
-                📋 複製催繳文案
-              </button>
+              <div class="flex gap-1.5 flex-wrap">
+                <button onclick="copyDunText('${s.store_name}', '${s.owner_line_name || '負責人'}')" class="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs">
+                  📋 LINE 催繳文案
+                </button>
+                <button onclick="copyEmailDunText('${s.store_name}', '${s.expires_at ? s.expires_at.split('T')[0] : ''}')" class="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-xs">
+                  ✉️ Email 催繳文案
+                </button>
+              </div>
               <div class="flex gap-1.5 flex-wrap items-center">
                 <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
                   <i class="fa-solid fa-key text-[10px]"></i> 後台
                 </a>
-                <a href="${bookingUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
+                <a href="${prettyUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition inline-flex items-center gap-1">
                   <i class="fa-solid fa-mobile-screen text-[10px]"></i> 前台
                 </a>
                 ${lockBtnHtml}
@@ -397,7 +452,7 @@
             </div>
           </div>`;
       }).join('');
-    }
+    } // 👈 補上這個大括號，結束 renderStores() 函式！
 
     // 10 筆分頁控制器 (上一頁、1 2 3 4、下一頁)
     function renderPagination(totalPages) {
@@ -427,7 +482,48 @@
       container.innerHTML = html;
     }
 
-    function changePage(page) {
+    // 複製 Email 催繳信文案
+function copyEmailDunText(storeName, expireDate) {
+  const txt = `主旨：【Sibyl 數位管家】系統服務授權即將到期通知 - ${storeName}\n\n親愛的 ${storeName} 負責人您好：\n\n感謝您使用 Sibyl 美業沙龍線上排程系統。提醒您，您的系統授權將於 ${expireDate || '近期'} 到期。\n為確保您的顧客線上預約與後台排班運作不中斷，請盡速前往後台【方案分頁】完成線上續約。\n\n如有任何疑問或需人工對帳，歡迎直接回覆此信或聯繫官方 LINE：@480kqjoj\n\nSibyl 數位管家團隊 敬上`;
+  navigator.clipboard.writeText(txt).then(() => {
+    Swal.fire({ title: 'Email 催繳文案已複製！', icon: 'success', timer: 1500, showConfirmButton: false });
+  });
+}
+
+// 手動填入或修改業主的 LINE UID
+async function promptEditStoreLineUid(storeId, currentUid) {
+  const { value: newUid } = await Swal.fire({
+    title: '手動綁定業主 LINE UID',
+    input: 'text',
+    inputLabel: '請輸入業主的 LINE User ID (格式為 U 開頭的 33 碼英數字)',
+    inputValue: currentUid,
+    inputPlaceholder: '例如：U7a9de3e44632bd2ac64c5dc...',
+    showCancelButton: true,
+    confirmButtonText: '確認儲存',
+    confirmButtonColor: '#8C7355'
+  });
+
+  if (newUid !== undefined) {
+    Swal.showLoading();
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ owner_line_uid: newUid.trim() })
+      });
+      Swal.fire('LINE UID 已更新！', '', 'success');
+      loadStores();
+    } catch(e) {
+      Swal.fire('更新失敗', e.message, 'error');
+    }
+  }
+}
+      
+      function changePage(page) {
       currentPage = page;
       renderStores();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -466,78 +562,93 @@
     }
 
     // 零費用發信催繳（經由 Google Apps Script 驅動，不消耗 LINE 官方額度）
+// ✅ 解決 Failed to fetch：改由 GAS 後端發送 Resend，避免前端 CORS 阻擋
 async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
   if (!ownerEmail || !ownerEmail.includes('@')) {
-    return Swal.fire('該店家未填寫有效 Email', '請先至店家資料補充信箱', 'warning');
+    return Swal.fire('該店家未填寫有效 Email', '請先補充信箱', 'warning');
   }
 
-  Swal.fire({ title: '正在寄送催繳信件...', allowOutsideClick: false });
+  Swal.fire({ title: '正在發送催繳通知信...', allowOutsideClick: false });
   Swal.showLoading();
 
   try {
-    // 使用 text/plain 避免觸發 CORS preflight OPTIONS 預檢被阻擋
+    const adminUrl = `https://salon.heysibyl.com/admin.html?token=${storeId}`;
+    const htmlContent = `
+      <div style="font-family: 'Noto Sans TC', sans-serif; max-width: 520px; margin: auto; padding: 25px; border: 1px solid #DFD1C0; border-radius: 16px; background-color: #ffffff;">
+        <h3 style="color: #8C7355; margin-top: 0;">親愛的 ${storeName} 負責人您好：</h3>
+        <p style="font-size: 13px; color: #5E4C38; line-height: 1.6;">
+          系統提醒您，您的【美業沙龍線上預約排程系統】授權即將到期（或已過期）。<br>
+          為避免前台顧客預約與後台管理中斷，請盡速完成線上續費。
+        </p>
+        <div style="margin: 20px 0; text-align: center;">
+          <a href="${adminUrl}" style="display: inline-block; padding: 12px 24px; background-color: #8C7355; color: #fff; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 13px;">登入後台立即續約 ➔</a>
+        </div>
+        <p style="font-size: 11px; color: #A68A68; text-align: center;">此信件由 Sibyl 數位總管自動發送</p>
+      </div>
+    `;
+
+    // 透過 GAS 代理發送 Resend
     await fetch(API_URL, {
       method: "POST",
       mode: "no-cors",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         action: "sendSuperNoticeEmail",
         secret: SUPER_KEY,
-        storeId: storeId,
-        storeName: storeName,
-        toEmail: ownerEmail,
-        subject: `【Sibyl 數位管家】系統服務授權即將到期通知 - ${storeName}`,
-        content: `親愛的 ${storeName} 負責人您好：\n\n系統提醒您，您的沙龍預約排程授權即將到期（或已過期）。\n為避免前台顧客預約下單與通知通道中斷，請盡速登入後台【方案分頁】完成線上續費。\n\n如已完成續費請忽略此信，感謝您的支持！\n\nSibyl 數位管家團隊 敬上`
+        toEmail: ownerEmail.trim(),
+        subject: `【系統授權即將到期通知】${storeName} 線上預約排程系統`,
+        htmlBody: htmlContent
       })
     });
 
-    // 成功發送回饋
-    Swal.fire('催繳信件已成功送達！', `已寄發至 ${ownerEmail}，完全不扣除店家的 LINE 免費訊息額度。`, 'success');
+    Swal.fire('催繳信件已送出！', `已寄至 ${ownerEmail}，不扣除店家 LINE 免費額度。`, 'success');
   } catch(e) {
     Swal.fire('發信失敗', e.message, 'error');
   }
 }
 
     async function manualActivateStore(storeId, days) {
-      Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
-      Swal.showLoading();
+  Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
+  Swal.showLoading();
 
-      const baseDate = new Date();
-      baseDate.setDate(baseDate.getDate() + Number(days));
+  const baseDate = new Date();
+  baseDate.setDate(baseDate.getDate() + Number(days));
 
-      try {
-        const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-          method: "PATCH",
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "return=representation"
-          },
-          body: JSON.stringify({
-            plan_status: "active",
-            expires_at: baseDate.toISOString()
-          })
-        });
+  try {
+    // 1. 直寫 Supabase (確保狀態立刻生效)
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        plan_status: "active",
+        expires_at: baseDate.toISOString()
+      })
+    });
 
-        if (!patchRes.ok) throw new Error("資料庫更新失敗");
+    if (!patchRes.ok) throw new Error("資料庫更新失敗");
 
-        await fetch(API_URL, {
-          method: "POST",
-          body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
-        });
+    // 2. 呼叫 GAS 寄發開通信 (使用 no-cors 杜絕 fetch 報錯)
+    fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
+    }).catch(() => {});
 
-        Swal.fire({ 
-          title: '店家已成功開通！', 
-          text: `狀態已轉為 active，到期日延長至 ${baseDate.toISOString().split('T')[0]}`, 
-          icon: 'success' 
-        });
-        loadStores();
-      } catch(e) {
-        Swal.fire('開通失敗', e.message, 'error');
-      }
-    }
+    Swal.fire({ 
+      title: '店家已成功開通！', 
+      text: `已開通為 active，到期日展延至 ${baseDate.toISOString().split('T')[0]}`, 
+      icon: 'success' 
+    });
+    loadStores();
+  } catch(e) {
+    Swal.fire('開通失敗', e.message, 'error');
+  }
+}
 
     function deleteStorePrompt(storeId, name) {
       Swal.fire({
@@ -560,6 +671,45 @@ async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
       });
     }
 
+    function renderStoresPagedTable() {
+    const tbody = document.getElementById('stores-table-body');
+    const paginationBox = document.getElementById('stores-pagination-box');
+    if (!tbody) return;
+
+    const totalPages = Math.ceil(allStoresList.length / STORES_PER_PAGE) || 1;
+    const start = (storeCurrentPage - 1) * STORES_PER_PAGE;
+    const pagedStores = allStoresList.slice(start, start + STORES_PER_PAGE);
+
+    tbody.innerHTML = pagedStores.map(s => {
+      const isLocked = (s.plan_status === 'locked');
+      return `
+        <tr class="border-b border-brand-100 text-xs">
+          <td class="py-3 px-2 font-bold">${s.store_name}</td>
+          <td class="py-3 px-2">${s.industry_type || '美業'}</td>
+          <td class="py-3 px-2">${s.expires_at ? s.expires_at.split('T')[0] : '無期限'}</td>
+          <td class="py-3 px-2 font-bold ${isLocked ? 'text-red-500' : 'text-emerald-600'}">${isLocked ? '已鎖定' : '正常運行'}</td>
+          <td class="py-3 px-2 text-right">
+            <button onclick="toggleStoreLock('${s.id}', '${s.plan_status}')" class="px-2.5 py-1 rounded-lg font-bold text-xs transition ${isLocked ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200'}">
+              ${isLocked ? '解鎖開通' : '暫時鎖定'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    if (paginationBox) {
+      let pagesHtml = `<button onclick="changeStorePage(-1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === 1 ? 'opacity-40 pointer-events-none' : ''}">上一頁</button><div class="flex gap-1">`;
+      for (let i = 1; i <= totalPages; i++) {
+        pagesHtml += `<button onclick="goStorePage(${i})" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${i === storeCurrentPage ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-brand-800'}">${i}</button>`;
+      }
+      pagesHtml += `</div><button onclick="changeStorePage(1)" class="px-2.5 py-1 rounded-lg border text-xs font-bold ${storeCurrentPage === totalPages ? 'opacity-40 pointer-events-none' : ''}">下一頁</button>`;
+      paginationBox.innerHTML = pagesHtml;
+    }
+  }
+
+  function changeStorePage(delta) { storeCurrentPage += delta; renderStoresPagedTable(); }
+  function goStorePage(p) { storeCurrentPage = p; renderStoresPagedTable(); }
+    
     // 載入全域公告與當前維護鎖定狀態
     async function loadAnnouncement() {
       const statusEl = document.getElementById('current-announcement-status');
