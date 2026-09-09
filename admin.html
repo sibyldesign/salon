@@ -405,16 +405,51 @@
   </div>
 
   <!-- 分頁 7. 🔍 查詢分頁 -->
-  <div id="page-search" class="page space-y-4" style="display: none;">
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🔍 搜尋過往與當前預約</div>
-      <div class="flex gap-2">
-        <input type="text" id="search-keyword" class="flex-1 p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50" placeholder="輸入 電話 / 姓名 / LINE名稱">
-        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-sm transition" onclick="executeSearch()">搜尋</button>
-      </div>
+  <!-- 查詢分頁：關鍵字 ＋ 日期區間完整歷史檢索 -->
+<div id="page-search" class="page max-w-2xl mx-auto space-y-4" style="display: none;">
+  <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold text-brand-900">🔍 預約歷史查詢與客戶檔案調閱</span>
+      <span class="text-[10px] text-brand-400">支援關鍵字與特定日期區間全態檢索</span>
     </div>
-    <div id="search-results-area" class="space-y-3"></div>
+
+    <!-- 關鍵字搜尋框 -->
+    <div class="flex gap-2">
+      <input type="text" id="search-keyword" placeholder="輸入顧客姓名、手機號碼或 LINE 名稱..." class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none">
+      <button onclick="executeAdvancedSearch()" class="px-4 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0">
+        搜尋關鍵字
+      </button>
+    </div>
+
+    <!-- ✨ 新增：日期區間多功能檢索工具列 -->
+    <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-100 space-y-2">
+      <div class="text-[11px] font-bold text-brand-800 flex items-center justify-between">
+        <span>📅 依預約日期區間篩選：</span>
+        <button type="button" onclick="searchTodayAppts()" class="text-[10px] text-[#8C7355] underline font-bold">快速查今日所有預約</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[10px] text-brand-500 mb-0.5">開始日期：</label>
+          <input type="date" id="search-start-date" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs outline-none">
+        </div>
+        <div>
+          <label class="block text-[10px] text-brand-500 mb-0.5">結束日期：</label>
+          <input type="date" id="search-end-date" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs outline-none">
+        </div>
+      </div>
+      <button onclick="executeDateRangeSearch()" class="w-full py-2 bg-brand-200 hover:bg-brand-300 text-brand-900 rounded-xl font-bold text-xs transition">
+        查詢此區間內所有狀態卡片 (含已結單/取消/婉拒)
+      </button>
+    </div>
   </div>
+
+  <!-- 搜尋結果顯示區 -->
+  <div id="search-results-area" class="space-y-3">
+    <div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">
+      請輸入關鍵字或選取日期區間進行調閱
+    </div>
+  </div>
+</div>
 
   <!-- 分頁 8. ⚡ 手動新增預約 (完整小前台版) -->
   <div id="page-add" class="page space-y-4" style="display: none;">
@@ -917,6 +952,19 @@
       <span>建立並儲存此專員</span>
     </button>
   </div>
+  <!-- 專員個人獨立後台連結提示卡片 -->
+<div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1 mt-3">
+  <div class="font-bold flex items-center gap-1.5">
+    <i class="fa-solid fa-circle-info text-amber-600"></i>
+    <span>專員個人專屬後台連結說明：</span>
+  </div>
+  <p class="text-[11.5px] leading-relaxed text-amber-800">
+    店長若希望專員<b>僅查看自己的排程與業績</b>（隱藏全店營業額與全域設定），請複製以下專屬網址格式提供給專員：<br>
+    <code class="bg-white px-2 py-0.5 rounded border border-amber-300 font-mono text-[11px] text-amber-950 block mt-1 select-all">
+      https://salon.heysibyl.com/admin.html?store_id=店家ID&staff=專員編號
+    </code>
+    專員使用此專屬網址登入時，只需輸入自己的專屬密碼，即可進入個人工作台！
+  </p>
 </div>
 
     <!-- 基本資料與 Logo 上傳 -->
@@ -2372,6 +2420,17 @@
       </div>
     `;
 
+    // 在 renderSingleCardHTML 內：
+    let liveSignButtonHtml = '';
+    if (!a.signature_url) {
+      const liveSignUrl = `live_sign.html?store_id=${CURRENT_STORE_ID}&booking_id=${a.id}&cust_name=${encodeURIComponent(a.name)}&cust_phone=${encodeURIComponent(a.phone)}`;
+      liveSignButtonHtml = `
+        <a href="${liveSignUrl}" target="_blank" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-[11px] shadow-xs transition flex items-center gap-1">
+          <i class="fa-solid fa-file-signature text-[10px]"></i> 現場補簽
+        </a>
+      `;
+    }
+    
     let signatureHtml = '';
     if (a.signature_url) {
       const friendlySignedTime = formatFriendlyTime(a.signed_at || a.appointment_time || a.date);
@@ -2466,11 +2525,12 @@
         </div>
 
         <div class="flex gap-1.5 pt-1 flex-wrap text-[11px] items-center">
-          <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-          <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button class="px-2.5 py-1 bg-[#7D8F7D] text-white rounded-lg font-bold" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
-          <button class="px-2.5 py-1 bg-[#B57979] text-white rounded-lg font-bold" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
-        </div>
+  <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
+  <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+  <button class="px-2.5 py-1 bg-[#7D8F7D] text-white rounded-lg font-bold" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
+  ${liveSignButtonHtml}
+  <button class="px-2.5 py-1 bg-[#B57979] text-white rounded-lg font-bold" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
+</div>
       </div>`;
   }
   
@@ -3339,32 +3399,38 @@
       const staffStats = {};
       const completedList = rawAppts.filter(r => r.status === '已結單' && (!sD || (r.appointment_time && r.appointment_time >= `${sD.replace(/\//g,'-')}T00:00:00`)));
 
-      completedList.forEach(a => {
-        const sName = a.staff_name || '不指定';
-        if (!staffStats[sName]) staffStats[sName] = { count: 0, hours: 0, revenue: 0 };
-        staffStats[sName].count++;
-        staffStats[sName].hours += (Number(a.duration || 60) / 60);
-        staffStats[sName].revenue += Number(a.final_price !== null && a.final_price !== undefined ? a.final_price : (a.price || 0));
-      });
-
-      const rate = Number(backendData.settings?.commissionRate ?? 50);
-      const tbody = document.getElementById('staff-commission-tbody');
-      if (tbody) {
-        tbody.innerHTML = Object.keys(staffStats).map(sName => {
-          const st = staffStats[sName];
-          const comm = Math.round(st.revenue * (rate / 100));
-          return `
-            <tr class="hover:bg-brand-50/50 border-b border-brand-100">
-              <td class="py-2.5 px-2 font-bold">${sName}</td>
-              <td class="py-2.5 px-2">${st.count} 人次</td>
-              <td class="py-2.5 px-2 font-mono">${st.hours.toFixed(1)} hr</td>
-              <td class="py-2.5 px-2 font-mono">NT$ ${st.revenue.toLocaleString()}</td>
-              <td class="py-2.5 px-2 font-bold">${rate}%</td>
-              <td class="py-2.5 px-2 text-right font-black text-[#8C7355]">NT$ ${comm.toLocaleString()}</td>
-            </tr>
-          `;
-        }).join('') || '<tr><td colspan="6" class="text-center py-4 text-brand-400">目前尚無已結單專員資料</td></tr>';
+      // 在 renderRevenue() 專員業績計算迴圈內：
+    completedList.forEach(a => {
+      const sName = a.staff_name || '不指定';
+      if (!staffStats[sName]) staffStats[sName] = { count: 0, designatedCount: 0, hours: 0, revenue: 0 };
+      staffStats[sName].count++;
+      if (a.staff_name && a.staff_name !== '不指定') {
+        staffStats[sName].designatedCount++; // 統計指定客次數
       }
+      staffStats[sName].hours += (Number(a.duration || 60) / 60);
+      staffStats[sName].revenue += Number(a.final_price !== null && a.final_price !== undefined ? a.final_price : (a.price || 0));
+    });
+
+    const rate = Number(backendData.settings?.commissionRate ?? 50);
+    const designatedBonusPerCust = 50; // 每位指定客獎金 50 元 (可依需求調整)
+
+    tbody.innerHTML = Object.keys(staffStats).map(sName => {
+      const st = staffStats[sName];
+      const comm = Math.round(st.revenue * (rate / 100));
+      const designatedBonus = st.designatedCount * designatedBonusPerCust;
+      const totalSalary = comm + designatedBonus;
+
+      return `
+        <tr class="hover:bg-brand-50/50 border-b border-brand-100">
+          <td class="py-2.5 px-2 font-bold">${sName}</td>
+          <td class="py-2.5 px-2">${st.count} 人 (指定 ${st.designatedCount})</td>
+          <td class="py-2.5 px-2 font-mono">NT$ ${st.revenue.toLocaleString()}</td>
+          <td class="py-2.5 px-2 font-bold">${rate}%</td>
+          <td class="py-2.5 px-2 font-mono text-emerald-700">+NT$ ${designatedBonus}</td>
+          <td class="py-2.5 px-2 text-right font-black text-[#8C7355]">NT$ ${totalSalary.toLocaleString()}</td>
+        </tr>
+      `;
+    }).join('');
     }
   }
 
@@ -3816,39 +3882,94 @@
   }
 
 // ==========================================
-// 📌 智慧全能搜尋引擎模組 (電話、姓名、LINE名稱)
+// 📌 智慧全能搜尋引擎模組 (關鍵字 ＋ 日期區間多狀態完整調閱)
 // ==========================================
-  async function executeSearch() {
-    const kw = document.getElementById('search-keyword').value.trim();
-    const area = document.getElementById('search-results-area');
-    if (!kw) {
-      return Swal.fire('請輸入搜尋關鍵字', '可輸入 LINE名稱、顧客姓名或手機號碼', 'warning');
-    }
+async function executeAdvancedSearch() {
+  const kw = document.getElementById('search-keyword').value.trim();
+  const area = document.getElementById('search-results-area');
+  if (!kw) return Swal.fire('請輸入搜尋關鍵字', '可輸入姓名、手機或 LINE 名稱', 'warning');
 
-    Swal.fire({ title: '正在查詢該客人的全部預約...', allowOutsideClick: false });
-    Swal.showLoading();
+  Swal.fire({ title: '正在調閱客戶歷程...', allowOutsideClick: false });
+  Swal.showLoading();
 
-    try {
-      const endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)&order=appointment_time.desc&select=*`;
-      const records = await directSupabaseFetch(endpoint);
-      
-      Swal.close();
+  try {
+    const endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)&order=appointment_time.desc&select=*`;
+    const records = await directSupabaseFetch(endpoint);
+    Swal.close();
 
-      if (!records || records.length === 0) {
-        area.innerHTML = '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無此 LINE名稱 / 姓名 / 電話 的預約紀錄</div>';
-        return;
-      }
-
-      area.innerHTML = `
-        <div class="text-xs font-bold text-brand-900 mb-2 px-1">
-          🔍 搜尋「${kw}」共找到 ${records.length} 筆預約卡片：
-        </div>
-        ${records.map(a => renderSingleCardHTML(a)).join('')}
-      `;
-    } catch (e) {
-      Swal.fire('查詢失敗', e.message, 'error');
-    }
+    renderSearchResults(records, `搜尋關鍵字「${kw}」`);
+  } catch (e) {
+    Swal.fire('查詢失敗', e.message, 'error');
   }
+}
+
+async function executeDateRangeSearch() {
+  const sD = document.getElementById('search-start-date').value;
+  const eD = document.getElementById('search-end-date').value;
+  if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
+
+  Swal.fire({ title: '正在查詢區間預約...', allowOutsideClick: false });
+  Swal.showLoading();
+
+  try {
+    const startIso = `${sD}T00:00:00+08:00`;
+    const endIso = `${eD}T23:59:59+08:00`;
+    const endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${startIso}&appointment_time=lte.${endIso}&order=appointment_time.asc&select=*`;
+    const records = await directSupabaseFetch(endpoint);
+    Swal.close();
+
+    renderSearchResults(records, `區間【${sD} ~ ${eD}】`);
+  } catch(e) {
+    Swal.fire('查詢失敗', e.message, 'error');
+  }
+}
+
+function searchTodayAppts() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('search-start-date').value = today;
+  document.getElementById('search-end-date').value = today;
+  executeDateRangeSearch();
+}
+
+function renderSearchResults(records, titleText) {
+  const area = document.getElementById('search-results-area');
+  if (!records || records.length === 0) {
+    area.innerHTML = `<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無 ${titleText} 之相關紀錄</div>`;
+    return;
+  }
+
+  // 格式化為標準卡片物件
+  const formattedAppts = records.map(b => {
+    const d = new Date(b.appointment_time);
+    const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+    return {
+      id: b.id,
+      date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+      time: timeStr,
+      name: b.customer_name,
+      phone: b.customer_phone,
+      customer_type: b.customer_type || 'old',
+      customer_notes: b.customer_notes || '',
+      lineName: b.line_name || '',
+      service: b.service_names || '',
+      price: Number(b.price) || 0,
+      finalPrice: Number(b.final_price ?? b.price),
+      notes: b.notes || '',
+      staffId: b.staff_id || 'all',
+      staffName: b.staff_name || '不指定',
+      status: b.status || '待確認',
+      signature_url: b.signature_url || '',
+      signed_at: b.signed_at || ''
+    };
+  });
+
+  area.innerHTML = `
+    <div class="text-xs font-bold text-brand-900 mb-1 px-1 flex justify-between items-center">
+      <span>🔍 ${titleText} 共調閱出 <b>${formattedAppts.length}</b> 筆預約卡片：</span>
+    </div>
+    ${formattedAppts.map(a => renderSingleCardHTML(a)).join('')}
+  `;
+}
 
 // ==========================================
 // 📌 後台快速代客預約模組 (完整小前台版)
@@ -3978,38 +4099,44 @@
     calcAdminQuickSummary();
   }
 
-  function calcAdminQuickSummary() {
-    const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
-    let basePrice = 0;
-    checked.forEach(cb => {
-      const num = (cb.getAttribute('data-price') || '0').match(/\d+/);
-      basePrice += num ? Number(num[0]) : 0;
-    });
+  // 智慧計算後台新增預約的即時金額與折抵
+function calcAdminQuickSummary() {
+  const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
+  let basePrice = 0;
+  checked.forEach(cb => {
+    const num = (cb.getAttribute('data-price') || '0').match(/\d+/);
+    basePrice += num ? Number(num[0]) : 0;
+  });
 
-    const pkgSel = document.getElementById('quick-addon-pkg');
-    const walSel = document.getElementById('quick-addon-wal');
-    const addonPkgPrice = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
-    const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
-    const totalAddon = addonPkgPrice + addonWalPrice;
+  const pkgSel = document.getElementById('quick-addon-pkg');
+  const walSel = document.getElementById('quick-addon-wal');
+  const addonPkgPrice = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
+  const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
+  const totalAddon = addonPkgPrice + addonWalPrice;
 
-    const usePkg = document.getElementById('quick-use-pkg');
-    const useWal = document.getElementById('quick-use-wal');
+  const usePkg = document.getElementById('quick-use-pkg')?.checked;
+  const useWal = document.getElementById('quick-use-wal')?.checked;
+  const couponInput = document.getElementById('quick-coupon-code')?.value.trim();
 
-    let deductPrice = 0;
-    if (usePkg && usePkg.checked && basePrice > 0) {
-      deductPrice = basePrice;
-    } else if (useWal && useWal.checked && basePrice > 0) {
-      deductPrice = Math.round(basePrice * 0.1);
-    }
+  let deductPrice = 0;
+  let deductText = '無折抵';
 
-    let finalPrice = Math.max(0, basePrice - deductPrice) + totalAddon;
-
-    document.getElementById('quick-disp-base').innerText = `$${basePrice}`;
-    document.getElementById('quick-disp-deduct').innerText = `-$${deductPrice}`;
-    document.getElementById('quick-disp-addon').innerText = `+$${totalAddon}`;
-    document.getElementById('admin-quick-total-price').innerText = finalPrice.toLocaleString();
-    document.getElementById('quick-final-price').value = finalPrice;
+  if (usePkg && basePrice > 0) {
+    deductPrice = basePrice;
+    deductText = '包卡全額折抵主項目';
+  } else if (useWal && basePrice > 0) {
+    deductPrice = Math.round(basePrice * 0.1); // 儲值享9折
+    deductText = '儲值卡扣抵享 9 折優惠';
   }
+
+  let finalPrice = Math.max(0, basePrice - deductPrice) + totalAddon;
+
+  document.getElementById('quick-disp-base').innerText = `$${basePrice}`;
+  document.getElementById('quick-disp-deduct').innerText = `-$${deductPrice} (${deductText})`;
+  document.getElementById('quick-disp-addon').innerText = `+$${totalAddon}`;
+  document.getElementById('admin-quick-total-price').innerText = finalPrice.toLocaleString();
+  document.getElementById('quick-final-price').value = finalPrice;
+}
 
   async function adminQuickCheckCustomer(phoneVal) {
     const phone = phoneVal.trim();
@@ -4045,65 +4172,105 @@
     }
   }
 
-  async function submitAdminQuickBooking() {
-    const phone = document.getElementById('quick-phone').value.trim();
-    const name = document.getElementById('quick-name').value.trim();
-    const email = document.getElementById('quick-email').value.trim();
-    const service = document.getElementById('quick-service-names').value.trim();
-    const date = document.getElementById('quick-date').value;
-    const time = document.getElementById('quick-time').value;
-    const staffId = document.getElementById('quick-staff-id').value;
-    const staffName = document.getElementById('quick-staff-name').value;
-    const finalPrice = Number(document.getElementById('quick-final-price').value || 0);
-    const userNotes = document.getElementById('quick-notes').value.trim();
+  // 提交後台新增預約 (生成與前台完全規格一致的預約紀錄)
+async function submitAdminQuickBooking() {
+  const phone = document.getElementById('quick-phone').value.trim();
+  const name = document.getElementById('quick-name').value.trim();
+  const email = document.getElementById('quick-email').value.trim();
+  const service = document.getElementById('quick-service-names').value.trim();
+  const date = document.getElementById('quick-date').value;
+  const time = document.getElementById('quick-time').value;
+  const staffId = document.getElementById('quick-staff-id').value || 'all';
+  const staffName = document.getElementById('quick-staff-name').value || '不指定';
+  const finalPrice = Number(document.getElementById('quick-final-price').value || 0);
+  const userNotes = document.getElementById('quick-notes').value.trim();
 
-    if (!phone || !name || !service || !date || !time) {
-      return Swal.fire('請填寫完整預約資料', '電話、姓名、服務項目、日期與進場時段為必填！', 'warning');
-    }
-
-    Swal.fire({ title: '正在建立排程...', allowOutsideClick: false });
-    Swal.showLoading();
-
-    const appointmentIso = `${date}T${time}:00+08:00`;
-    const notesPayload = `${userNotes ? userNotes + ' ' : ''}${email ? `Email: ${email}` : ''}`.trim();
-
-    try {
-      await directSupabaseUpsert('bookings', {
-        store_id: CURRENT_STORE_ID,
-        customer_name: name,
-        customer_phone: phone,
-        customer_type: 'old',
-        line_name: document.getElementById('quick-line').value.trim() || '',
-        service_names: service,
-        price: finalPrice,
-        final_price: finalPrice,
-        appointment_time: appointmentIso,
-        staff_id: staffId,
-        staff_name: staffName,
-        notes: notesPayload,
-        status: '已確認'
-      }, 'id');
-
-      Swal.fire({ title: '成功新增預約排程！', icon: 'success', timer: 1500, showConfirmButton: false });
-
-      document.getElementById('quick-phone').value = '';
-      document.getElementById('quick-name').value = '';
-      document.getElementById('quick-line').value = '';
-      document.getElementById('quick-email').value = '';
-      document.getElementById('quick-service-names').value = '';
-      document.getElementById('quick-date').value = '';
-      document.getElementById('quick-time').value = '';
-      document.getElementById('quick-notes').value = '';
-      document.querySelectorAll('#admin-quick-service-grid input').forEach(cb => cb.checked = false);
-      document.getElementById('admin-quick-slot-grid').innerHTML = '<div class="col-span-full text-center py-3 text-brand-400">請先選擇服務項目與日期</div>';
-      calcAdminQuickSummary();
-
-      fetchDataAndRender();
-    } catch(err) {
-      Swal.fire('新增失敗', err.message, 'error');
-    }
+  if (!phone || !name || !service || !date || !time) {
+    return Swal.fire('請填寫完整預約資料', '電話、姓名、服務項目、日期與進場時段為必填！', 'warning');
   }
 
+  // 封裝加購與扣抵標籤
+  const pkgSel = document.getElementById('quick-addon-pkg');
+  const walSel = document.getElementById('quick-addon-wal');
+  const addonPkgName = pkgSel?.value !== 'none' ? pkgSel?.options[pkgSel.selectedIndex]?.text : '';
+  const addonWalName = walSel?.value !== 'none' ? walSel?.options[walSel.selectedIndex]?.text : '';
+  const usePkg = document.getElementById('quick-use-pkg')?.checked;
+  const useWal = document.getElementById('quick-use-wal')?.checked;
+  const couponCode = document.getElementById('quick-coupon-code')?.value.trim();
+
+  let marketingNotes = [];
+  if (addonPkgName) marketingNotes.push(`【加購包卡: ${addonPkgName}】`);
+  if (addonWalName) marketingNotes.push(`【加購儲值: ${addonWalName}】`);
+  if (usePkg) marketingNotes.push(`【使用包卡扣抵】`);
+  if (useWal) marketingNotes.push(`【使用儲值金扣抵】`);
+  if (couponCode) marketingNotes.push(`【使用折扣碼: ${couponCode}】`);
+
+  let finalNotesArray = [];
+  if (userNotes) finalNotesArray.push(userNotes);
+  if (marketingNotes.length > 0) finalNotesArray.push(marketingNotes.join(' '));
+  if (email) finalNotesArray.push(`Email: ${email}`);
+
+  Swal.fire({ title: '正在建立排程...', allowOutsideClick: false });
+  Swal.showLoading();
+
+  const appointmentIso = `${date}T${time}:00+08:00`;
+  const payload = {
+    store_id: CURRENT_STORE_ID,
+    customer_name: name,
+    customer_phone: phone,
+    customer_type: 'old',
+    line_name: document.getElementById('quick-line').value.trim() || '',
+    service_names: service,
+    price: finalPrice,
+    final_price: finalPrice,
+    appointment_time: appointmentIso,
+    staff_id: staffId,
+    staff_name: staffName,
+    notes: finalNotesArray.join(' | '),
+    status: '已確認'
+  };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+    const newBookings = await res.json();
+    const newId = newBookings && newBookings[0] ? newBookings[0].id : '';
+
+    // 背景觸發 GAS 寄信給顧客與店家
+    fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        action: "submitBooking",
+        store_id: CURRENT_STORE_ID,
+        data: Object.assign({}, payload, { id: newId, date: date.replace(/-/g, '/'), time: time })
+      })
+    }).catch(() => {});
+
+    Swal.fire({
+      title: '成功建立預約！',
+      text: '已同步登記於排程與名單中',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    // 切換回名單分頁查看
+    fetchDataAndRender();
+    switchPage('customer', document.querySelectorAll('.nav-item')[2]);
+  } catch(err) {
+    Swal.fire('新增失敗', err.message, 'error');
+  }
+}
 // ==========================================
 // 📌 系統訂閱授權與金流開通模組
 // ==========================================
