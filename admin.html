@@ -1047,43 +1047,41 @@
 
       <div class="text-xs font-bold text-brand-900 pt-2 border-t border-brand-100">進階自動化模組開關</div>
       <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+        <!-- 模組 1：0 元計費價目表保持獨立 -->
+        <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/50 border border-brand-200/60">
           <div>
-            <span class="font-bold text-brand-900 block">模組 1：LINE 互動式價目表 (Flex Menu)</span>
-            <span class="text-[10px] text-brand-500">顧客在官方 LINE 輸入「價目表」自動回傳精美輪播卡片 (預設啟用)</span>
-            <span class="text-[10px] text-emerald-700 font-bold">✓ 採用 Reply API，完全 0 元計費、不佔用任何 LINE 官方帳號則數</span>
+            <span class="font-bold text-brand-900 block">LINE 互動式價目表</span>
+            <span class="text-[10px] text-brand-500 block">顧客在官方 LINE 輸入「價目表」自動回傳精美輪播卡片 (預設啟用)</span>
+            <span class="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ 採用 Reply API，完全 0 元計費、不佔用任何 LINE 官方帳號則數</span>
           </div>
           <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">模組 2：自動化排程預約提醒引擎</span>
-            <span class="text-[10px] text-brand-500">預約日前一天早上 9:00 自動推播提醒給客人 (需填寫下方 LINE Token)</span>
-            <span class="text-[10px] text-rose-600 font-bold">⚠️ 注意：此功能會透過 LINE Messaging API 主動發送訊息，會消耗您的 LINE 官方帳號付費 Push 則數（免費額度用完後 LINE 將另外計費）</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-auto-reminder" class="accent-brand-400">
         </label>
       </div>
     </div>
 
-    <!-- LINE 官方自動推播與 Channel Access Token 欄位 -->
+    <!-- LINE 官方自動推播總開關與 Channel Access Token 欄位 (兩者合一) -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold text-brand-900">💬 官方 LINE 自動推播通知設定</span>
+        <span class="text-xs font-bold text-brand-900">💬 官方LINE自動推播通知設定</span>
         <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 設定 3 步驟</button>
       </div>
+
       <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/80 border border-brand-200">
-          <span class="font-bold text-brand-900">是否開通官方 LINE 自動通知客人 (預約成功 / 即將到來提醒)</span>
-          <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400">
+        <!-- 整合後的二合一總開關 -->
+        <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
+          <div>
+            <span class="font-bold text-brand-900 block">啟用官方LINE自動推播通知</span>
+            <span class="text-[11px] text-brand-500 block mt-0.5">含：接單成功即時通知 ＋ 預約日前一天主動提醒顧客</span>
+            <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 會消耗 LINE 官方帳號 Push 則數（免費用完後由 LINE 另計）</span>
+          </div>
+          <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400 w-4 h-4 ml-2">
         </label>
-        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-800 leading-relaxed">
-          📌 <b>說明：</b>開啟後系統將以店家的 LINE 官方帳號自動發送「審核通過確認」、「預約成立」與「到來前提醒」。訊息額度將從您的 LINE 官方帳號免費則數中扣除。
-        </div>
+
         <div>
           <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
-          <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
+          <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
         </div>
+
         <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
           ⚠️ <b>貼心提示：</b>無法自行找到 Channel Access Token 沒關係，可點擊上方「設定 3 步驟」或聯繫 Sibyl 官方客服協助設定。
         </div>
@@ -1268,6 +1266,9 @@
 </div>
 
 <script>
+// ==========================================
+// 📌 核心全域常數與環境狀態設定模組
+// ==========================================
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
   const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
@@ -1290,9 +1291,12 @@
   let pendingSlotsList = [];
   let currentCheckoutBookingObj = null;
 
+// ==========================================
+// 📌 專員莫蘭迪色盤與系統種子資料庫模組
+// ==========================================
   // ✨ 依序為紅、橙、黃、綠、藍、紫 低飽和莫蘭迪色盤
   const STAFF_MORANDI_PALETTE = [
-    { dot: '#9E9E9E', bg: '#F5F5F5', text: '#616161', border: '#E0E0E0' }, // 0: 不指定 (沉穩淺灰，清楚區別)
+    { dot: '#9E9E9E', bg: '#F5F5F5', text: '#616161', border: '#E0E0E0' }, // 0: 不指定 (沉穩淺灰)
     { dot: '#E57373', bg: '#FFEBEE', text: '#C62828', border: '#FFCDD2' }, // 1: 柔紅
     { dot: '#FFB74D', bg: '#FFF3E0', text: '#EF6C00', border: '#FFE0B2' }, // 2: 柔橙
     { dot: '#DCE775', bg: '#F9FBE7', text: '#827717', border: '#F0F4C3' }, // 3: 柔黃綠
@@ -1310,7 +1314,7 @@
     { name: "漂髮, 挑染, 歐美手刷染", weeks: 1, msg: "嗨 {姓名}～漂髮後前幾天洗頭記得加強補水鎖色，有任何整理疑問隨時詢問唷✨" }
   ];
 
-  // ✨ 預設服務項目列表 (剪、燙、染、護、SPA)
+  // ✨ 預設服務項目列表
   const DEFAULT_SERVICES = [
     { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0 },
     { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1 },
@@ -1319,7 +1323,7 @@
     { id: "def-svc-5", name: "深層頭皮淨化去角質SPA", price: "800", duration: 40, type: "Group_A", isAddon: true, sortOrder: 4 }
   ];
 
-  // ✨ 預設作品展示列表 (精緻美業作品圖庫)
+  // ✨ 預設作品展示列表
   const DEFAULT_PORTFOLIO = [
     { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 },
     { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80", sortOrder: 1 },
@@ -1327,6 +1331,9 @@
     { id: "def-port-4", cat: "頭皮護理", title: "深層水光頭皮修護SPA", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80", sortOrder: 3 }
   ];
 
+// ==========================================
+// 📌 專員色彩解析與活動規範輔助函式
+// ==========================================
   async function savePromoRulesText() {
     const text = document.getElementById('cfg-promo-rules-input').value.trim();
     await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: text });
@@ -1351,6 +1358,9 @@
     return STAFF_MORANDI_PALETTE[hash % STAFF_MORANDI_PALETTE.length];
   }
 
+// ==========================================
+// 📌 後台安全防護與防暴力破解機制模組
+// ==========================================
   const MAX_ATTEMPTS = 5;
   const LOCKOUT_MINUTES = 15;
   const ATTEMPTS_KEY = `sibyl_attempts_${CURRENT_STORE_ID}`;
@@ -1398,6 +1408,9 @@
     }, 1000);
   }
 
+// ==========================================
+// 📌 Supabase RESTful 資料庫直連引擎模組
+// ==========================================
   async function directSupabaseFetch(endpoint) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
@@ -1432,6 +1445,9 @@
     return await res.json();
   }
 
+// ==========================================
+// 📌 身分驗證、解鎖登入與全域鎖定檢測模組
+// ==========================================
   async function checkPin() {
     if (checkLockoutStatus()) return;
     const input = document.getElementById('pin-input').value.trim();
@@ -1456,7 +1472,6 @@
       if (storeStatus && storeStatus.length > 0) {
         const pStatus = storeStatus[0].plan_status;
         if (pStatus === 'locked' || pStatus === 'expired') {
-          // 立刻彈出全螢幕阻擋遮罩
           document.getElementById('admin-lock-title').innerText = pStatus === 'locked' ? '後台授權已暫時鎖定' : '系統授權已過期';
           document.getElementById('admin-maintenance-desc').innerText = `【${storeStatus[0].store_name}】目前已被總管系統鎖定停權，暫停所有管理操作，請聯繫官方客服解鎖。`;
           document.getElementById('admin-maintenance-screen').classList.remove('hidden');
@@ -1485,10 +1500,11 @@
         }
       }
 
-      // 4. 比對密碼 (正確則進入，錯誤累計 5 次防暴力破解鎖定 15 分鐘)
+      // 4. 比對密碼
       if (input === String(correctPin).trim()) {
         localStorage.removeItem(ATTEMPTS_KEY);
         localStorage.removeItem(LOCKOUT_KEY);
+        sessionStorage.setItem('admin_session_unlocked', 'true');
         enterDashboard();
       } else {
         let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
@@ -1506,6 +1522,7 @@
       }
     } catch (e) {
       if (input === '8888') {
+        sessionStorage.setItem('admin_session_unlocked', 'true');
         enterDashboard();
       } else {
         document.getElementById('lock-error').innerText = '連線異常，請稍後重試';
@@ -1537,7 +1554,6 @@
     renderUploadSlots();
     fetchDataAndRender();
     
-    // ✨ 主動確保日曆與名單在進入後台第一時間立即渲染
     setTimeout(() => {
       renderCalendar();
       renderCustomer();
@@ -1549,7 +1565,6 @@
   
   async function fetchSystemAnnouncement() {
     try {
-      // 1. 先查全平台公告與維護
       const data = await directSupabaseFetch(`system_announcements?is_active=eq.true&order=created_at.desc&limit=1`);
       const banner = document.getElementById('system-announcement-banner');
       const bannerContent = document.getElementById('announcement-content');
@@ -1562,7 +1577,6 @@
         return;
       }
 
-      // 2. 🚨 即時檢查單店是否剛被總控台「暫時鎖定」
       const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
       if (storeRes && storeRes.length > 0) {
         const pStatus = storeRes[0].plan_status;
@@ -1574,10 +1588,8 @@
         }
       }
 
-      // 若正常無鎖定，解除全螢幕遮罩
       if (maintScreen) maintScreen.classList.add('hidden');
 
-      // 處理常規廣播公告
       if (data && data.length > 0 && data[0].content) {
         bannerContent.innerText = data[0].content;
         banner.classList.remove('hidden');
@@ -1587,7 +1599,6 @@
     } catch(e){}
   }
   
-  // ✨ 一鍵綁定官方 LINE 通知並即時回傳 User ID 至總控台
   async function openLineBindLiff() {
     Swal.fire({
       title: '綁定 Sibyl 官方 LINE 服務通知',
@@ -1616,7 +1627,6 @@
             const uid = profile.userId;
             const displayName = profile.displayName;
 
-            // 寫入資料庫 stores 表
             await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
               owner_line_uid: uid,
               owner_line_name: displayName
@@ -1687,6 +1697,9 @@
     });
   }
 
+// ==========================================
+// 📌 雲端資料同步與全域狀態載入模組 (雙備援機制)
+// ==========================================
   async function fetchDataAndRender() {
     try {
       let stores = [], settings = [], services = [], portfolios = [], bookings = [];
@@ -1755,7 +1768,6 @@
         }
       }
 
-      // ✨ 若資料庫查無服務，強制回退 DEFAULT_SERVICES (保證出現)
       const validServices = (services && services.length > 0) ? services.map(s => ({
         id: s.id, 
         name: s.service_name || s.name, 
@@ -1766,7 +1778,6 @@
         sortOrder: s.sort_order || s.sortOrder || 0
       })) : DEFAULT_SERVICES;
 
-      // ✨ 若資料庫查無作品，強制回退 DEFAULT_PORTFOLIO (保證出現)
       const validPortfolios = (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
         id: p.id, 
         cat: p.category || p.cat, 
@@ -1969,6 +1980,9 @@
     });
   }
 
+// ==========================================
+// 📌 核心頁面分頁路由與導覽切換模組
+// ==========================================
   function switchPage(pageId, el) {
     document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(n => {
@@ -1978,8 +1992,7 @@
     if (target) target.style.display = 'block';
     if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
-    // ✨ 補齊所有核心分頁的觸發渲染
-    if (pageId === 'calendar') renderCalendar(); // 確保切換回日曆時馬上出現
+    if (pageId === 'calendar') renderCalendar();
     if (pageId === 'shift') renderShift();
     if (pageId === 'customer') renderCustomer();
     if (pageId === 'marketing') loadMarketingCenter();
@@ -1995,7 +2008,7 @@
     if (pageId === 'subscription') renderSubscriptionUI();
     if (pageId === 'settings') populateSettings();
   }
-  // ✨ 好評標籤編輯管理器
+
   function renderReviewTagsManager() {
     const box = document.getElementById('review-tags-manage-box');
     if (!box) return;
@@ -2059,9 +2072,9 @@
 
   let selectedCalendarDate = '';
 
-  // =========================================================================
-  // ✨ 行銷模組：儲值金與包卡名單 10 筆分頁控制器 ＋ 即時關鍵字快搜
-  // =========================================================================
+// ==========================================
+// 📌 會員行銷中心模組 (儲值金、包卡、折扣碼與分頁)
+// ==========================================
   let allWalletList = [];
   let filteredWalletList = [];
   let walletCurrentPage = 1;
@@ -2079,7 +2092,6 @@
     filteredPkgList = [...allPkgList];
     renderPkgTable();
 
-    // 折扣碼載入
     try {
       const coupons = await directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}`);
       const couponContainer = document.getElementById('coupons-card-container');
@@ -2101,7 +2113,6 @@
     } catch(e) {}
   }
 
-  // 儲值金快搜與分頁
   function handleWalletSearch(kw) {
     const q = kw.trim().toLowerCase();
     filteredWalletList = allWalletList.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
@@ -2137,7 +2148,6 @@
     renderWalletTable();
   }
 
-  // 包卡堂票快搜與分頁
   function handlePkgSearch(kw) {
     const q = kw.trim().toLowerCase();
     filteredPkgList = allPkgList.filter(p => (p.customer_name && p.customer_name.toLowerCase().includes(q)) || (p.phone && p.phone.includes(q)) || (p.service_name && p.service_name.toLowerCase().includes(q)));
@@ -2172,7 +2182,9 @@
     pkgCurrentPage = Math.max(1, Math.min(totalPages, pkgCurrentPage + delta));
     renderPkgTable();
   }
-  
+  // ==========================================
+// 📌 行事曆日曆檢視與日期關聯渲染模組
+// ==========================================
   function renderCalendar() {
     const grid = document.getElementById('cal-grid');
     if (!grid) return;
@@ -2213,7 +2225,7 @@
 
   function showApptsInCalendar(dateStr) {
     selectedCalendarDate = dateStr;
-    renderCalendar(); // 重繪並保持選取高亮
+    renderCalendar();
     const container = document.getElementById('selected-date-appts');
     if (!container) return;
     const appts = (backendData.appointments || []).filter(a => a.date === dateStr);
@@ -2228,11 +2240,13 @@
       ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
   }
 
+// ==========================================
+// 📌 顧客預約卡片渲染引擎與審核管理模組
+// ==========================================
   function renderCustomer() {
     const appts = backendData.appointments || [];
     const now = new Date();
 
-    // 判斷是否已逾期 (預約時間小於當前時間)
     const isPastAppt = (a) => {
       if (!a.date) return false;
       const timeStr = a.time || "23:59";
@@ -2240,13 +2254,11 @@
       return apptDate < now;
     };
 
-    // 1. 待審核專區：未逾期且 (待確認 或 (已報末五碼且未核對))
     const pendingAudit = appts.filter(a => 
       !isPastAppt(a) &&
       (a.status === '待確認' || (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed))
     );
 
-    // 2. 需付訂金但未回報名單：未逾期、未取消、未結單、未核對且未報末五碼
     const unpaidDeposit = appts.filter(a => 
       !isPastAppt(a) &&
       a.status !== '已取消' && 
@@ -2278,7 +2290,6 @@
       `).join('');
     }
 
-    // 3. 常規清單：過濾已逾期的即將到來名單
     const statusFilter = document.getElementById('filter-status').value;
     let normalAppts = appts;
     if (statusFilter === 'ALL') {
@@ -2304,7 +2315,6 @@
       </span>
     `;
 
-    // 1. 解析 Email 與乾淨內部備註
     let parsedEmail = '';
     let cleanNotes = a.notes || '';
     if (cleanNotes.includes('Email:')) {
@@ -2313,20 +2323,18 @@
       parsedEmail = parts[1].trim().split(' ')[0].split('|')[0].trim();
     }
 
-    // 2. 結構化行銷標籤 (加購、扣抵、折扣碼)
     let marketingTagsHtml = '';
     const rawNoteStr = a.notes || '';
     if (rawNoteStr.includes('加購包卡')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold">🎁 加購包卡</span> ';
     if (rawNoteStr.includes('加購儲值')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md text-[10px] font-bold">🪙 加購儲值</span> ';
     if (rawNoteStr.includes('使用包卡') || rawNoteStr.includes('包卡扣抵')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-md text-[10px] font-bold">🎟️ 當下包卡抵扣</span> ';
-    if (rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值抵扣')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 當下儲值抵扣</span> ';
+    if (rawNoteStr.includes('使用儲值') || rawNoteStr.includes('儲值扣抵')) marketingTagsHtml += '<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md text-[10px] font-bold">💰 當下儲值抵扣</span> ';
     if (rawNoteStr.includes('折扣碼')) {
       const cMatch = rawNoteStr.match(/折扣碼[:\s]*([A-Za-z0-9]+)/);
       const cCode = cMatch ? cMatch[1] : '';
       marketingTagsHtml += `<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md text-[10px] font-bold">🏷️ 活動折扣碼${cCode ? ` (${cCode})` : ''}</span> `;
     }
 
-    // 3. 顧客資產看板
     const custWalletBal = Number(a.wallet_balance || a.customer_wallet_balance || 0);
     const custPkgTimes = Number(a.remaining_times || a.customer_package_times || 0);
 
@@ -2337,7 +2345,6 @@
       </div>
     `;
 
-    // 4. 契約簽署時間與按鈕
     let signatureHtml = '';
     if (a.signature_url) {
       const friendlySignedTime = formatFriendlyTime(a.signed_at || a.appointment_time || a.date);
@@ -2354,7 +2361,6 @@
       `;
     }
 
-    // 5. 待審核控制列
     const auditActionHtml = (a.status === '待確認') ? `
       <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
         <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
@@ -2453,7 +2459,6 @@
     fetchDataAndRender();
   }
 
-  // ✨ 時間戳轉繁體中文友善格式 (自動轉換為台灣本地時區)
   function formatFriendlyTime(isoStr) {
     if (!isoStr) return '';
     try {
@@ -2466,7 +2471,6 @@
     }
   }
 
-  // ✨ 強化版契約檢視彈窗：支援滿版垂直平滑滾動、手寫簽名清晰縮放、一鍵新分頁檢視原圖
   function viewDigitalContract(name, sigUrl, signedAt) {
     const s = backendData.settings || {};
     const friendlyTime = formatFriendlyTime(signedAt);
@@ -2475,12 +2479,10 @@
       title: s.contractTitle || '美業服務定型化契約書',
       html: `
         <div class="text-left text-xs space-y-3 text-brand-800 p-1">
-          <!-- 契約內文滾動區 (固定高度、美化滾動條) -->
           <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 text-[11.5px] leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto font-sans shadow-inner">
             ${s.contractContent || '一、本沙龍服務均由專業技術人員施作，施作前已充分溝通。\n二、顧客應誠實告知過敏史或特殊體質。\n三、預約如需改期請提前 24 小時提出。'}
           </div>
 
-          <!-- 簽署人與手寫簽名區 -->
           <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2 shadow-xs">
             <div class="flex justify-between items-center font-bold text-brand-900 border-b border-brand-100 pb-1.5">
               <span>立約簽署人：${name}</span>
@@ -2492,7 +2494,6 @@
               <div class="text-[10px] text-brand-400 mt-1">（顧客親筆電子簽章存證正本）</div>
             </div>
 
-            <!-- 電腦版/手機版通用圖片網址直開與複製 -->
             <div class="flex items-center gap-1.5 pt-1">
               <a href="${sigUrl}" target="_blank" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] shrink-0 transition flex items-center gap-1">
                 <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> 開啟原圖
@@ -2512,198 +2513,192 @@
       }
     });
   }
+  
   function closeCheckoutModal() {
-    document.getElementById('checkout-modal').classList.add('hidden');
+    const m = document.getElementById('checkout-modal') || document.getElementById('checkoutModal');
+    if (m) m.classList.add('hidden');
   }
 
-  // ✨ 結單對帳核心邏輯 (對齊截圖算法)
+// ==========================================
+// 📌 智慧完工結單、資產扣抵與對帳核算核心模組
+// ==========================================
   let currentCheckoutCustomer = null;
   let currentCheckoutPackages = [];
 
-  // 1. 開啟結單彈窗
-  // 智慧結單彈窗開啟
-function openCheckoutModal(bookingId, name, phone, serviceName, price) {
-  const matchedCust = (backendData.customersList || []).find(c => c.phone === phone);
-  const currentWallet = matchedCust ? Number(matchedCust.wallet_balance || 0) : 0;
-  const currentPkg = (backendData.packagesList || [])
-    .filter(p => p.phone === phone && p.remaining_times > 0)
-    .reduce((sum, p) => sum + Number(p.remaining_times || 0), 0);
+  function openCheckoutModal(bookingId, name, phone, serviceName, price) {
+    const matchedCust = (backendData.customersList || []).find(c => c.phone === phone);
+    const currentWallet = matchedCust ? Number(matchedCust.wallet_balance || 0) : 0;
+    const currentPkg = (backendData.packagesList || [])
+      .filter(p => p.phone === phone && p.remaining_times > 0)
+      .reduce((sum, p) => sum + Number(p.remaining_times || 0), 0);
 
-  const b = (backendData.appointments || []).find(a => String(a.id) === String(bookingId)) || {};
-  const notesStr = b.notes || '';
+    const b = (backendData.appointments || []).find(a => String(a.id) === String(bookingId)) || {};
+    const notesStr = b.notes || '';
 
-  // 1. 解析線上預選資訊
-  let addonName = 'none';
-  let addonPrice = 0;
-  let addonTimes = 0;
-  let addonWalletAdd = 0;
+    let addonName = 'none';
+    let addonPrice = 0;
+    let addonTimes = 0;
+    let addonWalletAdd = 0;
 
-  if (notesStr.includes('加購包卡:')) {
-    addonName = 'pkg_promo';
-    addonPrice = 4000;
-    addonTimes = 6;
-  } else if (notesStr.includes('加購儲值:')) {
-    addonName = 'wal_3000';
-    addonPrice = 3000;
-    addonWalletAdd = 3000;
-  }
-
-  const isUsingPkg = notesStr.includes('使用包卡') || notesStr.includes('包卡抵扣');
-  const isUsingWal = notesStr.includes('使用儲值') || notesStr.includes('儲值金全額');
-  const hasCoupon = notesStr.includes('折扣碼:');
-
-  // 乾淨內部備註
-  const cleanNoteDisplay = notesStr
-    .replace(/【[^】]+】/g, '')
-    .replace(/Email:[^|]+/g, '')
-    .replace(/\|/g, '')
-    .trim();
-
-  Swal.fire({
-    title: '完工結單與扣抵核算',
-    html: `
-      <div class="text-left text-xs space-y-3 font-sans max-h-[75vh] overflow-y-auto pr-1">
-        <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between font-bold text-emerald-900">
-          <span>💳 歷史包卡剩餘：<b>${currentPkg} 次</b></span>
-          <span>💰 歷史儲值餘額：<b>$${currentWallet.toLocaleString()}</b></span>
-        </div>
-
-        <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 space-y-1 text-[11px] text-brand-900">
-          <div><b>顧客：</b>${name} (${phone})</div>
-          <div><b>施作主項目：</b>${serviceName}</div>
-          ${addonName !== 'none' ? `<div class="text-emerald-700 font-bold"><b>線上預選加購：</b>${addonName === 'pkg_promo' ? '剪髮買5送1方案 (+NT$ 4000)' : '儲值金方案 (+NT$ 3000)'}</div>` : ''}
-          ${isUsingPkg ? `<div class="text-blue-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【包卡扣抵 1 堂】</div>` : ''}
-          ${isUsingWal ? `<div class="text-purple-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【儲值金扣抵】</div>` : ''}
-          ${hasCoupon ? `<div class="text-rose-700 font-bold"><b>線上折抵：</b>✓ 顧客套用活動折扣碼</div>` : ''}
-          ${cleanNoteDisplay ? `<div class="text-brand-500"><b>內部備註：</b>${cleanNoteDisplay}</div>` : ''}
-        </div>
-
-        <div>
-          <label class="block font-bold text-brand-800 mb-1">1. 本次施作基準金額 (可微調)：</label>
-          <input type="number" id="checkout-base-price" value="${price || 800}" class="w-full p-2.5 rounded-xl border border-brand-200 text-sm font-bold text-emerald-800 bg-white" oninput="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
-        </div>
-
-        <div>
-          <label class="block font-bold text-brand-800 mb-1">2. 扣抵歷史舊方案 (二擇一)：</label>
-          <select id="checkout-deduct-type" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
-            <option value="none">無扣抵歷史方案</option>
-            <option value="pkg" ${isUsingPkg && currentPkg > 0 ? 'selected' : ''} ${currentPkg === 0 ? 'disabled' : ''}>扣抵歷史包卡 1 堂 (目前剩餘 ${currentPkg} 次)</option>
-            <option value="wal" ${isUsingWal && currentWallet > 0 ? 'selected' : ''} ${currentWallet === 0 ? 'disabled' : ''}>扣抵歷史儲值金 (目前餘額 $${currentWallet})</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block font-bold text-brand-800 mb-1">3. 現場加購方案：</label>
-          <select id="checkout-addon-select" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
-            <option value="none" data-price="0" data-times="0" data-wallet="0">不加購方案</option>
-            <option value="pkg_promo" data-price="4000" data-times="6" data-wallet="0" ${addonName === 'pkg_promo' ? 'selected' : ''}>
-              + 加購【剪髮買5送1方案】(+NT$ 4000，含 6 堂)
-            </option>
-            <option value="wal_3000" data-price="3000" data-times="0" data-wallet="3000" ${addonName === 'wal_3000' ? 'selected' : ''}>
-              + 加購【儲值金 $3,000】(+NT$ 3000，整單享9折)
-            </option>
-          </select>
-        </div>
-
-        <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between">
-          <span class="font-bold text-amber-900 text-[11px]">新購方案是否「當下扣抵」本次消費？</span>
-          <input type="checkbox" id="chk-use-new-addon" class="w-4 h-4 accent-brand-500" ${(isUsingPkg || isUsingWal) ? 'checked' : ''} onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
-        </div>
-
-        <div id="checkout-calculation-box" class="p-3 bg-white rounded-xl border border-brand-200 text-xs space-y-1"></div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '確認結單並更新歷程',
-    confirmButtonColor: '#8C7355',
-    preConfirm: () => {
-      const finalRealPay = Number(document.getElementById('text-final-real-pay')?.innerText.replace(/[^0-9]/g, '') || 0);
-      const logText = document.getElementById('text-checkout-log-hidden')?.innerText || '';
-      return { finalRealPay, logText };
+    if (notesStr.includes('加購包卡:')) {
+      addonName = 'pkg_promo';
+      addonPrice = 4000;
+      addonTimes = 6;
+    } else if (notesStr.includes('加購儲值:')) {
+      addonName = 'wal_3000';
+      addonPrice = 3000;
+      addonWalletAdd = 3000;
     }
-  }).then(async r => {
-    if (r.isConfirmed) {
-      Swal.showLoading();
-      try {
-        await directSupabasePatch(`bookings?id=eq.${bookingId}`, {
-          status: '已結單',
-          final_price: r.value.finalRealPay,
-          checkout_log: r.value.logText
-        });
-        Swal.fire('結單完成！', '已自動回寫對帳紀錄', 'success');
-        loadInitialData();
-      } catch(e) {
-        Swal.fire('結單失敗', e.message, 'error');
+
+    const isUsingPkg = notesStr.includes('使用包卡') || notesStr.includes('包卡抵扣');
+    const isUsingWal = notesStr.includes('使用儲值') || notesStr.includes('儲值金全額');
+    const hasCoupon = notesStr.includes('折扣碼:');
+
+    const cleanNoteDisplay = notesStr
+      .replace(/【[^】]+】/g, '')
+      .replace(/Email:[^|]+/g, '')
+      .replace(/\|/g, '')
+      .trim();
+
+    Swal.fire({
+      title: '完工結單與扣抵核算',
+      html: `
+        <div class="text-left text-xs space-y-3 font-sans max-h-[75vh] overflow-y-auto pr-1">
+          <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between font-bold text-emerald-900">
+            <span>💳 歷史包卡剩餘：<b>${currentPkg} 次</b></span>
+            <span>💰 歷史儲值餘額：<b>$${currentWallet.toLocaleString()}</b></span>
+          </div>
+
+          <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 space-y-1 text-[11px] text-brand-900">
+            <div><b>顧客：</b>${name} (${phone})</div>
+            <div><b>施作主項目：</b>${serviceName}</div>
+            ${addonName !== 'none' ? `<div class="text-emerald-700 font-bold"><b>線上預選加購：</b>${addonName === 'pkg_promo' ? '剪髮買5送1方案 (+NT$ 4000)' : '儲值金方案 (+NT$ 3000)'}</div>` : ''}
+            ${isUsingPkg ? `<div class="text-blue-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【包卡扣抵 1 堂】</div>` : ''}
+            ${isUsingWal ? `<div class="text-purple-700 font-bold"><b>線上扣抵：</b>✓ 顧客選擇【儲值金扣抵】</div>` : ''}
+            ${hasCoupon ? `<div class="text-rose-700 font-bold"><b>線上折抵：</b>✓ 顧客套用活動折扣碼</div>` : ''}
+            ${cleanNoteDisplay ? `<div class="text-brand-500"><b>內部備註：</b>${cleanNoteDisplay}</div>` : ''}
+          </div>
+
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">1. 本次施作基準金額 (可微調)：</label>
+            <input type="number" id="checkout-base-price" value="${price || 800}" class="w-full p-2.5 rounded-xl border border-brand-200 text-sm font-bold text-emerald-800 bg-white" oninput="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+          </div>
+
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">2. 扣抵歷史舊方案 (二擇一)：</label>
+            <select id="checkout-deduct-type" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+              <option value="none">無扣抵歷史方案</option>
+              <option value="pkg" ${isUsingPkg && currentPkg > 0 ? 'selected' : ''} ${currentPkg === 0 ? 'disabled' : ''}>扣抵歷史包卡 1 堂 (目前剩餘 ${currentPkg} 次)</option>
+              <option value="wal" ${isUsingWal && currentWallet > 0 ? 'selected' : ''} ${currentWallet === 0 ? 'disabled' : ''}>扣抵歷史儲值金 (目前餘額 $${currentWallet})</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">3. 現場加購方案：</label>
+            <select id="checkout-addon-select" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+              <option value="none" data-price="0" data-times="0" data-wallet="0">不加購方案</option>
+              <option value="pkg_promo" data-price="4000" data-times="6" data-wallet="0" ${addonName === 'pkg_promo' ? 'selected' : ''}>
+                + 加購【剪髮買5送1方案】(+NT$ 4000，含 6 堂)
+              </option>
+              <option value="wal_3000" data-price="3000" data-times="0" data-wallet="3000" ${addonName === 'wal_3000' ? 'selected' : ''}>
+                + 加購【儲值金 $3,000】(+NT$ 3000，整單享9折)
+              </option>
+            </select>
+          </div>
+
+          <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 flex items-center justify-between">
+            <span class="font-bold text-amber-900 text-[11px]">新購方案是否「當下扣抵」本次消費？</span>
+            <input type="checkbox" id="chk-use-new-addon" class="w-4 h-4 accent-brand-500" ${(isUsingPkg || isUsingWal) ? 'checked' : ''} onchange="calculateCheckoutPreview(${currentPkg}, ${currentWallet})">
+          </div>
+
+          <div id="checkout-calculation-box" class="p-3 bg-white rounded-xl border border-brand-200 text-xs space-y-1"></div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確認結單並更新歷程',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => {
+        const finalRealPay = Number(document.getElementById('text-final-real-pay')?.innerText.replace(/[^0-9]/g, '') || 0);
+        const logText = document.getElementById('text-checkout-log-hidden')?.innerText || '';
+        return { finalRealPay, logText };
       }
+    }).then(async r => {
+      if (r.isConfirmed) {
+        Swal.showLoading();
+        try {
+          await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+            status: '已結單',
+            final_price: r.value.finalRealPay,
+            checkout_log: r.value.logText
+          });
+          Swal.fire('結單完成！', '已自動回寫對帳紀錄', 'success');
+          fetchDataAndRender();
+        } catch(e) {
+          Swal.fire('結單失敗', e.message, 'error');
+        }
+      }
+    });
+
+    calculateCheckoutPreview(currentPkg, currentWallet);
+  }
+
+  function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
+    const basePrice = Number(document.getElementById('checkout-base-price')?.value || 0);
+    const deductType = document.getElementById('checkout-deduct-type')?.value || 'none';
+    const addonSel = document.getElementById('checkout-addon-select');
+    const addonOpt = addonSel?.options[addonSel.selectedIndex];
+    const addonPrice = Number(addonOpt?.getAttribute('data-price') || 0);
+    const addonTimes = Number(addonOpt?.getAttribute('data-times') || 0);
+    const addonWalletAdd = Number(addonOpt?.getAttribute('data-wallet') || 0);
+    const useNewAddon = document.getElementById('chk-use-new-addon')?.checked;
+
+    let deductAmount = 0;
+    let deductNote = "無扣抵";
+    let remainPkg = currentPkg + addonTimes;
+    let remainWallet = currentWallet + addonWalletAdd;
+
+    if (deductType === 'pkg' && currentPkg > 0) {
+      deductAmount = basePrice;
+      remainPkg -= 1;
+      deductNote = `舊包卡扣抵 1 堂 (-$${basePrice})`;
+    } else if (deductType === 'wal' && currentWallet > 0) {
+      deductAmount = Math.min(basePrice, currentWallet);
+      remainWallet -= deductAmount;
+      deductNote = `舊儲值金扣抵 (-$${deductAmount})`;
+    } else if (useNewAddon && addonTimes > 0) {
+      deductAmount = basePrice;
+      remainPkg -= 1;
+      deductNote = `新購包卡當下抵扣 1 堂 (-$${basePrice})`;
+    } else if (useNewAddon && addonWalletAdd > 0) {
+      const discountedBase = Math.round(basePrice * 0.9);
+      deductAmount = basePrice;
+      remainWallet -= discountedBase;
+      deductNote = `新購儲值扣抵享9折 (-$${basePrice}，帳戶扣除$${discountedBase})`;
     }
-  });
 
-  calculateCheckoutPreview(currentPkg, currentWallet);
-}
+    const finalPay = Math.max(0, (basePrice - deductAmount) + addonPrice);
+    const logStr = `實收補付 NT$ ${finalPay.toLocaleString()} (項目基準 $${basePrice}, ${deductNote}, 加購 $${addonPrice}) | 剩餘包卡: ${remainPkg}次, 剩餘儲值: $${remainWallet}`;
 
-function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
-  const basePrice = Number(document.getElementById('checkout-base-price')?.value || 0);
-  const deductType = document.getElementById('checkout-deduct-type')?.value || 'none';
-  const addonSel = document.getElementById('checkout-addon-select');
-  const addonOpt = addonSel?.options[addonSel.selectedIndex];
-  const addonPrice = Number(addonOpt?.getAttribute('data-price') || 0);
-  const addonTimes = Number(addonOpt?.getAttribute('data-times') || 0);
-  const addonWalletAdd = Number(addonOpt?.getAttribute('data-wallet') || 0);
-  const useNewAddon = document.getElementById('chk-use-new-addon')?.checked;
-
-  let deductAmount = 0;
-  let deductNote = "無扣抵";
-  let remainPkg = currentPkg + addonTimes;
-  let remainWallet = currentWallet + addonWalletAdd;
-
-  // 扣抵邏輯核算
-  if (deductType === 'pkg' && currentPkg > 0) {
-    deductAmount = basePrice;
-    remainPkg -= 1;
-    deductNote = `舊包卡扣抵 1 堂 (-$${basePrice})`;
-  } else if (deductType === 'wal' && currentWallet > 0) {
-    deductAmount = Math.min(basePrice, currentWallet);
-    remainWallet -= deductAmount;
-    deductNote = `舊儲值金扣抵 (-$${deductAmount})`;
-  } else if (useNewAddon && addonTimes > 0) {
-    deductAmount = basePrice;
-    remainPkg -= 1; // 6堂扣1堂 = 5堂
-    deductNote = `新購包卡當下抵扣 1 堂 (-$${basePrice})`;
-  } else if (useNewAddon && addonWalletAdd > 0) {
-    const discountedBase = Math.round(basePrice * 0.9); // 儲值享9折
-    deductAmount = basePrice;
-    remainWallet -= discountedBase;
-    deductNote = `新購儲值扣抵享9折 (-$${basePrice}，帳戶扣除$${discountedBase})`;
+    const box = document.getElementById('checkout-calculation-box');
+    if (box) {
+      box.innerHTML = `
+        <div class="flex justify-between"><span>1. 項目基準價：</span><span>$${basePrice}</span></div>
+        <div class="flex justify-between text-emerald-700"><span>2. 方案扣抵：</span><span>-${deductAmount > 0 ? '$' + deductAmount : '$0'}</span></div>
+        <div class="flex justify-between text-brand-600"><span>3. 現場加購：</span><span>+$${addonPrice}</span></div>
+        <div class="border-t border-brand-100 pt-1.5 flex justify-between font-bold text-sm text-brand-900">
+          <span>現場需補付實收：</span>
+          <span class="text-emerald-700 font-black" id="text-final-real-pay">$${finalPay.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-brand-50 rounded-lg text-[10.5px] text-brand-700 mt-2 space-y-0.5 border border-brand-100">
+          <div class="font-bold">📊 結單扣抵後剩餘資產預估：</div>
+          <div>• 剩餘包卡：<b>${remainPkg} 次</b> ${addonTimes > 0 ? `(新購 +${addonTimes}堂，本次抵扣 -1堂)` : ''}</div>
+          <div>• 剩餘儲值金：<b>$${remainWallet.toLocaleString()}</b> ${addonWalletAdd > 0 ? `(新購 +$${addonWalletAdd})` : ''}</div>
+        </div>
+        <span id="text-checkout-log-hidden" class="hidden">${logStr}</span>
+      `;
+    }
   }
 
-  const finalPay = Math.max(0, (basePrice - deductAmount) + addonPrice);
-  const logStr = `實收補付 NT$ ${finalPay.toLocaleString()} (項目基準 $${basePrice}, ${deductNote}, 加購 $${addonPrice}) | 剩餘包卡: ${remainPkg}次, 剩餘儲值: $${remainWallet}`;
-
-  const box = document.getElementById('checkout-calculation-box');
-  if (box) {
-    box.innerHTML = `
-      <div class="flex justify-between"><span>1. 項目基準價：</span><span>$${basePrice}</span></div>
-      <div class="flex justify-between text-emerald-700"><span>2. 方案扣抵：</span><span>-${deductAmount > 0 ? '$' + deductAmount : '$0'}</span></div>
-      <div class="flex justify-between text-brand-600"><span>3. 現場加購：</span><span>+$${addonPrice}</span></div>
-      <div class="border-t border-brand-100 pt-1.5 flex justify-between font-bold text-sm text-brand-900">
-        <span>現場需補付實收：</span>
-        <span class="text-emerald-700 font-black" id="text-final-real-pay">$${finalPay.toLocaleString()}</span>
-      </div>
-      <div class="p-2 bg-brand-50 rounded-lg text-[10.5px] text-brand-700 mt-2 space-y-0.5 border border-brand-100">
-        <div class="font-bold">📊 結單扣抵後剩餘資產預估：</div>
-        <div>• 剩餘包卡：<b>${remainPkg} 次</b> ${addonTimes > 0 ? `(新購 +${addonTimes}堂，本次抵扣 -1堂)` : ''}</div>
-        <div>• 剩餘儲值金：<b>$${remainWallet.toLocaleString()}</b> ${addonWalletAdd > 0 ? `(新購 +$${addonWalletAdd})` : ''}</div>
-      </div>
-      <span id="text-checkout-log-hidden" class="hidden">${logStr}</span>
-    `;
-  }
-}
-  
-  function closeCheckoutModal() {
-    document.getElementById('checkoutModal').classList.add('hidden');
-  }
-
-  // 2. 即時試算現場補付金額與前後餘額明細
   function recalcCheckoutTotal() {
     const basePrice = Number(document.getElementById('check_custom_base_price').value || 0);
     const useMethod = document.getElementById('check_discount_use_select').value;
@@ -2717,9 +2712,8 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     let curCard = parseInt(document.getElementById('checkModalCurrentCard').innerText) || 0;
     let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit').innerText.replace(/[^0-9]/g, '')) || 0;
 
-    // 扣抵運算（二擇一）
     if (useMethod === 'useCard' && curCard > 0) {
-      discAmt = origPrice; // 包卡全免
+      discAmt = origPrice;
       curCard -= 1;
     } else if (useMethod === 'useDeposit' && curDeposit > 0) {
       const rate = Number(document.getElementById('optUseDepositText').getAttribute('data-rate') || 1);
@@ -2735,7 +2729,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       }
     }
 
-    // 現場新購資產累加
     if (newBuyOption && newBuyOption.value === 'new_pkg') {
       curCard += Number(newBuyOption.getAttribute('data-times') || 0);
     }
@@ -2745,7 +2738,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
     let finalPay = Math.max(0, origPrice - discAmt - depDeduct) + addPrice;
 
-    // 畫面回填
     document.getElementById('check_display_orig').innerText = `$${origPrice}`;
     document.getElementById('check_display_disc').innerText = `-$${discAmt}`;
     document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
@@ -2756,7 +2748,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     document.getElementById('check_display_after_deposit').innerText = `• 剩餘儲值金：$${curDeposit.toLocaleString()}`;
   }
 
-  // 3. 送出結單存檔並記錄資產變動歷程
   async function submitFinalCheckout() {
     Swal.showLoading();
     const finalPrice = Number(document.getElementById('check_display_final').innerText.replace(/[^0-9]/g, '') || 0);
@@ -2773,7 +2764,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     let logDetails = [];
 
     try {
-      // 1. 扣抵舊包卡 1 堂
       if (useMethod === 'useCard') {
         const matched = currentCheckoutPackages.find(p => currentCheckoutBookingObj.service.includes(p.service_name));
         if (matched) {
@@ -2783,7 +2773,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         }
       }
 
-      // 2. 當下加購新包卡（堂數累加）
       if (newBuyOption && newBuyOption.value === 'new_pkg') {
         const addTimes = Number(newBuyOption.getAttribute('data-times') || 6);
         afterCard += addTimes;
@@ -2798,7 +2787,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         logDetails.push(`加購新包卡 +${addTimes}堂 (結餘: ${afterCard}堂)`);
       }
 
-      // 3. 儲值金扣款或新購充值
       afterDeposit = parseInt(document.getElementById('check_display_after_deposit').innerText.replace(/[^0-9]/g, '')) || 0;
       if (afterDeposit !== beforeDeposit) {
         if (currentCheckoutCustomer) {
@@ -2817,7 +2805,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
       const checkoutLog = `實收補付 NT$ ${finalPrice}` + (logDetails.length > 0 ? ` (${logDetails.join('，')})` : '');
 
-      // 4. 寫入訂單完成狀態與完整結單歷程
       await directSupabasePatch('bookings', `id=eq.${currentCheckoutBookingObj.id}`, {
         status: '已結單',
         final_price: finalPrice,
@@ -2836,70 +2823,70 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
+// ==========================================
+// 📌 訂單狀態審核、狀態快更與取消記錄模組
+// ==========================================
   async function auditOrder(bookingId, newStatus, name, date, time, service, lineUid, phone, custEmail = '') {
-  const isApproved = (newStatus === '已確認');
-  const confirmResult = await Swal.fire({
-    title: `確定【${newStatus}】？`,
-    text: isApproved ? `核准 ${name} 於 ${date} ${time} 的預約` : `婉拒 ${name} 的預約`,
-    icon: isApproved ? 'question' : 'warning',
-    showCancelButton: true,
-    confirmButtonText: `確定${newStatus}`,
-    confirmButtonColor: isApproved ? '#7D8F7D' : '#B57979',
-    cancelButtonText: '取消'
-  });
+    const isApproved = (newStatus === '已確認');
+    const confirmResult = await Swal.fire({
+      title: `確定【${newStatus}】？`,
+      text: isApproved ? `核准 ${name} 於 ${date} ${time} 的預約` : `婉拒 ${name} 的預約`,
+      icon: isApproved ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonText: `確定${newStatus}`,
+      confirmButtonColor: isApproved ? '#7D8F7D' : '#B57979',
+      cancelButtonText: '取消'
+    });
 
-  if (!confirmResult.isConfirmed) return;
-  Swal.showLoading();
+    if (!confirmResult.isConfirmed) return;
 
-  try {
-    // 1. 更新 Supabase 狀態
-    await directSupabasePatch(`bookings?id=eq.${bookingId}`, { status: newStatus });
-// 在 auditOrder 函式中，Supabase PATCH 成功後加上：
-  const targetAppt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
-  if (targetAppt) {
-    targetAppt.status = newStatus; // 立即變更狀態
-    renderAppointments(); // 立即重新繪製名單卡片，無需重整
-  }
-    // 2. 呼叫 GAS 後端發信與推播 (以 no-cors 避免阻擋)
-    fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        action: "auditBookingAction",
-        id: bookingId,
-        status: newStatus
-      })
-    }).catch(() => {});
-
-    // 3. 解決「已已確認」多字問題
-    const statusText = newStatus; // 乾淨狀態字串，不疊加「已」
-
-    if (!lineUid || !lineUid.startsWith('U')) {
-      Swal.fire({
-        title: `${statusText} (顧客未綁定 LINE)`,
-        html: `
-          <div class="text-left text-xs space-y-2">
-            <div class="p-2.5 bg-amber-50 text-amber-900 rounded-xl border border-amber-200">
-              ⚠️ 該顧客未綁定官方 LINE，系統已為您寄發 Email 通知憑證！您亦可複製以下文字手動傳送：
-            </div>
-            <textarea id="copy-audit-text" rows="4" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-sans bg-white leading-relaxed">嗨 ${name}～您的預約已審核【${newStatus}】囉！\n🗓️ 時間：${date} ${time}\n✂️ 項目：${service}\n期待為您服務❤️</textarea>
-            <button onclick="navigator.clipboard.writeText(document.getElementById('copy-audit-text').value); Swal.fire('已複製訊息！', '', 'success');" class="w-full py-2 bg-[#8C7355] text-white rounded-xl font-bold">
-              📋 一鍵複製訊息貼給顧客
-            </button>
-          </div>
-        `,
-        icon: 'info'
-      });
-    } else {
-      Swal.fire(`預約已【${newStatus}】！`, '已同步透過 LINE 官方推播通知顧客', 'success');
+    const targetAppt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    if (targetAppt) {
+      targetAppt.status = newStatus;
+      renderCustomer();
     }
 
-    loadInitialData(); // 重新整理後台名單
-  } catch(e) {
-    Swal.fire('審核操作失敗', e.message, 'error');
+    Swal.showLoading();
+
+    try {
+      await directSupabasePatch('bookings', `id=eq.${bookingId}`, { status: newStatus });
+
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: "auditBookingAction",
+          id: bookingId,
+          status: newStatus
+        })
+      }).catch(() => {});
+
+      if (!lineUid || !lineUid.startsWith('U')) {
+        Swal.fire({
+          title: `${newStatus} (顧客未綁定 LINE)`,
+          html: `
+            <div class="text-left text-xs space-y-2">
+              <div class="p-2.5 bg-amber-50 text-amber-900 rounded-xl border border-amber-200">
+                ⚠️ 該顧客未綁定官方 LINE，系統已發送 Email 憑證！您亦可複製以下文字傳送：
+              </div>
+              <textarea id="copy-audit-text" rows="4" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-sans bg-white leading-relaxed">嗨 ${name}～您的預約已審核【${newStatus}】囉！\n🗓️ 時間：${date} ${time}\n✂️ 項目：${service}\n期待為您服務❤️</textarea>
+              <button onclick="navigator.clipboard.writeText(document.getElementById('copy-audit-text').value); Swal.fire('已複製！', '', 'success');" class="w-full py-2 bg-[#8C7355] text-white rounded-xl font-bold">
+                📋 一鍵複製訊息貼給顧客
+              </button>
+            </div>
+          `,
+          icon: 'info'
+        });
+      } else {
+        Swal.fire(`預約已【${newStatus}】！`, '已同步透過官方 LINE 推播通知顧客', 'success');
+      }
+      fetchDataAndRender();
+    } catch(e) {
+      Swal.fire('操作失敗', e.message, 'error');
+      fetchDataAndRender();
+    }
   }
-}
 
   async function executeAudit(id, status, reason, name, date, time, service, lineUid) {
     Swal.fire({ title: '處理中...', allowOutsideClick: false });
@@ -3073,6 +3060,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     });
   }
 
+// ==========================================
+// 📌 專員排班調度與時段開關控制模組
+// ==========================================
   function renderShift() {
     const staffList = backendData.settings?.staffList || [{ id: "all", name: "不指定" }];
     const staffBtns = document.getElementById('staff-shift-buttons');
@@ -3200,6 +3190,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
+// ==========================================
+// 📌 營業額對帳、營收分析與專員業績抽成模組
+// ==========================================
   function renderRevenueSelect() {
     const sel = document.getElementById('rev-service-select');
     const svcs = backendData.services || [];
@@ -3207,7 +3200,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     svcs.forEach(s => { sel.innerHTML += `<option value="${s.name}">${s.name}</option>`; });
   }
 
-  // 切換選單時觸發，負責展開或隱藏自訂日期區間框
   function handleRevenueTimeFilterChange() {
     const val = document.getElementById('rev-time-filter')?.value;
     const customBox = document.getElementById('rev-custom-range-box');
@@ -3233,7 +3225,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     const currentYear = now.getFullYear();
     const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-    // ✨ 智慧日期區間過濾 (只要有填寫開始與結束日期，即優先以自訂區間篩選)
     const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
     const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
 
@@ -3251,7 +3242,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       allAppts = allAppts.filter(a => a.date && a.date.replace(/-/g, '/').startsWith(prevYm));
     }
 
-    // 服務項目過濾
     if (selectedSvc !== 'ALL') {
       allAppts = allAppts.filter(a => (a.service || '').includes(selectedSvc));
     }
@@ -3298,7 +3288,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       }
     });
 
-    // 畫面數據回填
     const avgTicket = completedCount > 0 ? Math.round(paidTotal / completedCount) : 0;
     document.getElementById('metric-avg-ticket').innerText = `${avgTicket.toLocaleString()}元`;
 
@@ -3315,7 +3304,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     if (listArea) listArea.innerHTML = paidListHtml || '<div class="text-center text-xs text-brand-400 py-3">尚無已結單資料</div>';
     if (unpaidListArea) unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
 
-    // 專員業績抽成統計
     const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
     const commSection = document.getElementById('staff-revenue-section');
     if (commSection) commSection.style.display = isCalcEnabled ? 'block' : 'none';
@@ -3353,9 +3341,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  // =========================================================================
-  // 5. 🎁 回訪關懷模組 (智慧週數比對、自動代換姓名項目、無相符時保證顯示範本)
-  // =========================================================================
+// ==========================================
+// 📌 售後關懷與週期回訪文案推薦模組
+// ==========================================
   function renderCare() {
     const list = document.getElementById('care-list');
     if (!list) return;
@@ -3370,10 +3358,8 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
     if (appts.length > 0 && rules.length > 0) {
       appts.forEach(a => {
-        // 只針對「已結單」顧客進行定期關懷
         if (a.status !== '已結單') return;
 
-        // 安全解析日期 (相容 2026/08/01 與 2026-08-01)
         const dateStrClean = (a.date || '').replace(/\//g, '-');
         if (!dateStrClean) return;
         const apptTime = new Date(`${dateStrClean}T00:00:00`).getTime();
@@ -3385,11 +3371,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
         rules.forEach(r => {
           if (!r.name) return;
-          // 支援多關鍵字（以逗號分開）
           const keywords = r.name.split(/[,，]/).map(k => k.trim()).filter(Boolean);
           const isMatched = keywords.some(kw => svc.includes(kw));
 
-          // 只要距離消費滿設定的週數，即列入關懷建議名單
           if (isMatched && diffWeeks >= Number(r.weeks || 4)) {
             let customizedMsg = (r.msg || '')
               .replace(/\{姓名\}/g, a.name || a.customer_name || '貴賓')
@@ -3408,7 +3392,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       });
     }
 
-    // 兜底保護：若店內目前剛開張尚無滿週數的舊客，保證顯示標準範本供老闆參考測試
     if (reminders.length === 0) {
       reminders = [{
         name: "王小美",
@@ -3449,8 +3432,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     });
   }
 
-  // ✨ 精確渲染圖二下方的 5 組自訂關懷文案 (濾除 undefined)
-  // ✨ 渲染下方 5 組自訂關懷文案與關鍵字
   function populateCareRulesUI() {
     const careContainer = document.getElementById('care-rules-container');
     if (!careContainer) return;
@@ -3483,7 +3464,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  // ✨ 儲存自訂關懷規則到雲端與記憶體
   async function saveCareRulesSetting() {
     const names = document.querySelectorAll('.rule-name');
     const weeks = document.querySelectorAll('.rule-weeks');
@@ -3514,15 +3494,13 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  // ✨ 服務列表保證出現 (含 Fallback 兜底)
-  // =========================================================================
-  // 6. ✂️ 服務項目模組 (完全對齊圖一畫面：洗髮、燙髮、剪髮、護髮)
-  // =========================================================================
+// ==========================================
+// 📌 服務項目管理與排序控制模組
+// ==========================================
   function renderServiceList() {
     const container = document.getElementById('service-list-container');
     if (!container) return;
 
-    // ✨ 圖一完全相符的 4 筆預設項目
     const image1Services = [
       { id: "img1-s1", name: "洗髮", duration: 30, type: "Group_B", price: "300", isAddon: false },
       { id: "img1-s2", name: "燙髮", duration: 180, type: "Group_A", price: "2000-4000", isAddon: false },
@@ -3566,6 +3544,7 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         </div>`;
     }).join('');
   }
+
   async function moveServiceOrder(idx, dir) {
     const svcs = backendData.services || [];
     const targetIdx = idx + dir;
@@ -3656,7 +3635,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     });
   }
 
-  // ✨ 作品展示保證出現 (含 Fallback 兜底)
+// ==========================================
+// 📌 作品藝廊展示、上傳與順序調配模組
+// ==========================================
   function renderPortfolioList() {
     const container = document.getElementById('portfolio-list-container');
     const ports = (backendData.portfolio && backendData.portfolio.length > 0) ? backendData.portfolio : DEFAULT_PORTFOLIO;
@@ -3807,7 +3788,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     });
   }
 
-  // ✨ 支援以 LINE名稱、姓名或電話獨立/綜合搜尋該客人的全部預約卡片
+// ==========================================
+// 📌 智慧全能搜尋引擎模組 (電話、姓名、LINE名稱)
+// ==========================================
   async function executeSearch() {
     const kw = document.getElementById('search-keyword').value.trim();
     const area = document.getElementById('search-results-area');
@@ -3819,7 +3802,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     Swal.showLoading();
 
     try {
-      // 同步向 Supabase 查詢符合電話、姓名或 line_name 的紀錄
       const endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)&order=appointment_time.desc&select=*`;
       const records = await directSupabaseFetch(endpoint);
       
@@ -3830,29 +3812,21 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         return;
       }
 
-      // 格式化並渲染該客人的全部預約卡片
-      const initData = getInitialDataAPI ? getInitialDataAPI(CURRENT_STORE_ID) : { services: backendData.services || [] };
-      const formattedAppts = records.map(r => formatApptObj ? formatApptObj(r, initData.services) : r);
-
       area.innerHTML = `
         <div class="text-xs font-bold text-brand-900 mb-2 px-1">
-          🔍 搜尋「${kw}」共找到 ${formattedAppts.length} 筆預約卡片：
+          🔍 搜尋「${kw}」共找到 ${records.length} 筆預約卡片：
         </div>
-        ${formattedAppts.map(a => renderSingleCardHTML(a)).join('')}
+        ${records.map(a => renderSingleCardHTML(a)).join('')}
       `;
     } catch (e) {
       Swal.fire('查詢失敗', e.message, 'error');
     }
   }
-  // 1. 初始化後台新增分頁的服務與專員選項
-  // 渲染專員、項目、加購方案下拉選單
-  // =========================================================================
-  // ⚡ 後台新增預約：完整小前台版 (整合專員排班、動態時段、加購折抵與試算)
-  // =========================================================================
 
-  // 1. 渲染新增預約介面：專員、服務項目、加購方案
+// ==========================================
+// 📌 後台快速代客預約模組 (完整小前台版)
+// ==========================================
   function renderQuickAddServices() {
-    // 渲染專員按鈕
     const staffList = (backendData.settings && backendData.settings.staffList) || [{ id: "all", name: "不指定" }];
     const staffGrid = document.getElementById('admin-quick-staff-grid');
     if (staffGrid) {
@@ -3863,7 +3837,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       `).join('');
     }
 
-    // 渲染服務項目網格 (複選卡片)
     const svcGrid = document.getElementById('admin-quick-service-grid');
     if (svcGrid) {
       const svcs = backendData.services || [];
@@ -3878,7 +3851,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
       `).join('');
     }
 
-    // 渲染加購包卡與儲值選單
     const pkgSel = document.getElementById('quick-addon-pkg');
     const walSel = document.getElementById('quick-addon-wal');
     const pRules = backendData.settings?.packageRules || [];
@@ -3894,7 +3866,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  // 2. 選擇專員
   function selectAdminQuickStaff(id, name, el) {
     document.querySelectorAll('.admin-staff-btn').forEach(b => {
       b.className = "admin-staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition bg-brand-50/50 border-brand-200 text-brand-800";
@@ -3905,7 +3876,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     calcAdminQuickSlots();
   }
 
-  // 3. 勾選服務項目聯動
   function handleAdminQuickServiceChange() {
     const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
     document.getElementById('quick-service-names').value = checked.map(el => el.value).join(', ');
@@ -3913,7 +3883,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     calcAdminQuickSlots();
   }
 
-  // 4. 動態運算排班可用時段 (排除休息與已預約時段)
   function calcAdminQuickSlots() {
     const dStr = document.getElementById('quick-date')?.value;
     const staffId = document.getElementById('quick-staff-id')?.value || 'all';
@@ -3971,7 +3940,17 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     document.getElementById('quick-time').value = timeStr;
   }
 
-  // 5. 即時試算小計金額
+  function handleAdminQuickDeductChange(type) {
+    const usePkg = document.getElementById('quick-use-pkg');
+    const useWal = document.getElementById('quick-use-wal');
+    if (type === 'package' && usePkg.checked) {
+      useWal.checked = false;
+    } else if (type === 'wallet' && useWal.checked) {
+      usePkg.checked = false;
+    }
+    calcAdminQuickSummary();
+  }
+
   function calcAdminQuickSummary() {
     const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
     let basePrice = 0;
@@ -3986,22 +3965,14 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
     const totalAddon = addonPkgPrice + addonWalPrice;
 
-    // ✨ 後台新增預約：包卡與儲值互斥控制函式
-  function handleAdminQuickDeductChange(type) {
     const usePkg = document.getElementById('quick-use-pkg');
     const useWal = document.getElementById('quick-use-wal');
-    if (type === 'package' && usePkg.checked) {
-      useWal.checked = false;
-    } else if (type === 'wallet' && useWal.checked) {
-      usePkg.checked = false;
-    }
-    calcAdminQuickSummary();
-  }
+
     let deductPrice = 0;
-    if (usePkg.checked && basePrice > 0) {
-      deductPrice = basePrice; // 包卡全額折抵主服務
-    } else if (useWal.checked && basePrice > 0) {
-      deductPrice = Math.round(basePrice * 0.1); // 儲值享折扣
+    if (usePkg && usePkg.checked && basePrice > 0) {
+      deductPrice = basePrice;
+    } else if (useWal && useWal.checked && basePrice > 0) {
+      deductPrice = Math.round(basePrice * 0.1);
     }
 
     let finalPrice = Math.max(0, basePrice - deductPrice) + totalAddon;
@@ -4013,7 +3984,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     document.getElementById('quick-final-price').value = finalPrice;
   }
 
-  // 6. 電話自動快查舊客資料與 Email 自動回填
   async function adminQuickCheckCustomer(phoneVal) {
     const phone = phoneVal.trim();
     const hint = document.getElementById('admin-quick-member-hint');
@@ -4048,7 +4018,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-  // 7. 提交新增預約排程
   async function submitAdminQuickBooking() {
     const phone = document.getElementById('quick-phone').value.trim();
     const name = document.getElementById('quick-name').value.trim();
@@ -4090,7 +4059,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
       Swal.fire({ title: '成功新增預約排程！', icon: 'success', timer: 1500, showConfirmButton: false });
 
-      // 清空重置表單
       document.getElementById('quick-phone').value = '';
       document.getElementById('quick-name').value = '';
       document.getElementById('quick-line').value = '';
@@ -4109,6 +4077,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
+// ==========================================
+// 📌 系統訂閱授權與金流開通模組
+// ==========================================
   function renderSubscriptionUI() {
     const p = backendData.planInfo || {};
     document.getElementById('sub-plan-name').innerText = p.planName || '美業標準版';
@@ -4151,6 +4122,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     });
   }
 
+// ==========================================
+// 📌 圖片上傳 (ImgBB API) 與檔案轉碼模組
+// ==========================================
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -4198,7 +4172,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
         promoImgsArray[idx] = data.data.url;
         document.getElementById(`slot-${idx}`).style.backgroundImage = `url('${data.data.url}')`;
         document.getElementById(`slot-${idx}`).innerHTML = '';
-        // 🔄 同步寫入文字框備存
         const imgsTextarea = document.getElementById('cfg-promo-imgs-text');
         if (imgsTextarea) imgsTextarea.value = promoImgsArray.filter(Boolean).join('\n');
         Swal.fire({ title: '上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
@@ -4210,6 +4183,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
+// ==========================================
+// 📌 每週公休與特殊休假管理模組
+// ==========================================
   function addCustomOffDate() {
     const dateVal = document.getElementById('new-custom-off-date').value;
     if (!dateVal) return;
@@ -4254,6 +4230,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
+// ==========================================
+// 📌 店家專員人事架構配置模組
+// ==========================================
   function addStaffMember() {
     const id = document.getElementById('new-staff-id').value.trim();
     const name = document.getElementById('new-staff-name').value.trim();
@@ -4272,6 +4251,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     saveStoreSettings();
   }
 
+// ==========================================
+// 📌 行銷彈窗操作 (儲值充值、包卡核銷、折扣碼增減)
+// ==========================================
   function openRechargeModal() {
     Swal.fire({
       title: '手動為顧客儲值充值',
@@ -4432,6 +4414,9 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     loadMarketingCenter();
   }
 
+// ==========================================
+// 📌 顧客評價審核與上架管理模組
+// ==========================================
   async function loadAdminReviews() {
     try {
       const reviews = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`);
@@ -4467,13 +4452,14 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     loadAdminReviews();
   }
 
-  // 修正 1：換日期時徹底重置，不再殘留舊選取
+// ==========================================
+// 📌 9:16 限動空檔一鍵產生與發布模組
+// ==========================================
   function handleSlotRangeChange() {
     const startVal = document.getElementById('slot-start-date').value;
     const endVal = document.getElementById('slot-end-date').value;
     if (!startVal) return;
 
-    // 清空上次選取的暫存
     pendingSlotsList = [];
     renderPendingSlotsList();
 
@@ -4563,10 +4549,12 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     window.open(`https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`, '_blank');
   }
 
+// ==========================================
+// 📌 系統全域設定載入與表單填寫模組 (含二合一推播讀取)
+// ==========================================
   function populateSettings() {
     let s = backendData.settings || {};
     
-    // 優先讀取 local 快照防止資料庫欄位空值清空輸入
     try {
       const cached = JSON.parse(localStorage.getItem(`sibyl_settings_${CURRENT_STORE_ID}`) || '{}');
       s = Object.assign({}, cached, s);
@@ -4575,10 +4563,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     const setVal = (id, val) => {
       const el = document.getElementById(id);
       if (el && val !== undefined && val !== null) el.value = val;
-    };
-    const setCheck = (id, val) => {
-      const el = document.getElementById(id);
-      if (el && val !== undefined && val !== null) el.checked = Boolean(val);
     };
 
     setVal('cfg-title', s.storeName || s.display_title);
@@ -4599,13 +4583,14 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     setVal('cfg-ig', s.ig || s.ig_url);
     setVal('cfg-map', s.map || s.map_url);
     setVal('cfg-promo-rules-input', s.promoRulesText || s.promo_rules_text);
-    setVal('cfg-line-token', s.lineChannelToken || s.line_channel_token);
     setVal('cfg-commission-rate', s.commissionRate || s.commission_rate || 50);
 
     setVal('cfg-contract-title', s.contractTitle || s.contract_title || '美業服務定型化契約書');
     setVal('cfg-contract-content', s.contractContent || s.contract_content || '');
 
-    // 說明圖清單回填
+    // LINE Token 填值
+    setVal('cfg-line-token', s.lineChannelToken || s.line_channel_token);
+
     const promoImgs = s.promoImgs || s.promo_imgs || [];
     if (Array.isArray(promoImgs)) {
       promoImgsArray = promoImgs;
@@ -4637,14 +4622,18 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     safeCheck('cfg-toggle-line-one-click', s.enableLineOneClickAudit ?? true);
     safeCheck('cfg-toggle-featured-shop', s.enableFeaturedShop === true);
     safeCheck('cfg-toggle-flex-menu', s.enableFlexMenu ?? true);
-    safeCheck('cfg-toggle-auto-reminder', s.enableAutoReminder === true);
+
+    // ✨ 二合一總開關讀取回填 (相容舊欄位 enable_auto_reminder 或 enable_line_auto_notify)
+    const isNotifyChecked = (s.enable_line_auto_notify === true || s.enableLineAutoNotify === true || s.enable_auto_reminder === true || s.enableAutoReminder === true);
+    safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
+
     safeCheck('cfg-toggle-wallet', s.enableWallet ?? true);
     safeCheck('cfg-toggle-packages', s.enablePackages ?? true);
     safeCheck('cfg-toggle-coupons', s.enableCoupons ?? true);
     safeCheck('cfg-toggle-reviews', s.enableReviews ?? true);
     safeCheck('cfg-toggle-commission-calc', s.enableCommissionCalc ?? true);
+    safeCheck('cfg-toggle-contract', s.enableContract === true);
 
-    // 公休勾選
     if (Array.isArray(s.weeklyOffDays)) {
       document.querySelectorAll('#weekly-off-grid input').forEach(input => {
         input.checked = s.weeklyOffDays.includes(Number(input.value));
@@ -4653,7 +4642,10 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
 
     populateCareRulesUI();
   }
-  
+
+// ==========================================
+// 📌 方案規則庫增刪彈窗模組 (包卡與儲值方案)
+// ==========================================
   function openAddWalletRuleModal() {
     Swal.fire({
       title: '新增門市儲值金方案',
@@ -4736,7 +4728,6 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     renderPlanRules();
   }
 
-// ✨ 補回遺失的行銷方案規則庫渲染函式
   function renderPlanRules() {
     const wContainer = document.getElementById('wallet-rules-container');
     const pContainer = document.getElementById('package-rules-container');
@@ -4773,101 +4764,91 @@ function calculateCheckoutPreview(currentPkg = 0, currentWallet = 0) {
     }
   }
 
-// 宣告 safeCheck 防呆輔助函式
-function safeCheck(elId) {
-  const el = document.getElementById(elId);
-  return el ? Boolean(el.checked) : false;
-}
-
-function safeVal(elId, fallback = '') {
-  const el = document.getElementById(elId);
-  return el ? el.value.trim() : fallback;
-}
-  
-async function manualRefreshAdmin() {
-  const icon = document.getElementById('admin-refresh-icon');
-  if (icon) icon.classList.add('animate-spin');
-  
-  try {
-    await loadInitialData(); // 重新向 Supabase 撈取最新名單
-    Swal.fire({
-      title: '名單已更新！',
-      icon: 'success',
-      timer: 800,
-      showConfirmButton: false
-    });
-  } catch(e) {
-    Swal.fire('同步失敗', e.message, 'error');
-  } finally {
-    if (icon) icon.classList.remove('animate-spin');
+// ==========================================
+// 📌 表單防呆輔助函式與手動重新整理/登出模組
+// ==========================================
+  function safeCheck(elId, val = false) {
+    const el = document.getElementById(elId);
+    if (!el) return false;
+    if (val !== undefined && val !== null) el.checked = Boolean(val);
+    return Boolean(el.checked);
   }
-}
 
-// 啟動 10 秒輪詢：自動偵測最新預約，不用重新登入
-setInterval(() => {
-  if (isLoggedIn && !document.hidden) {
-    loadInitialData(true); // 靜默背景載入
+  function safeVal(elId, fallback = '') {
+    const el = document.getElementById(elId);
+    return el ? el.value.trim() : fallback;
   }
-}, 10000);
   
-  // 1. 智慧容錯：手動重新整理按鈕
-async function handleAdminManualRefresh(btn) {
-  const icon = btn ? btn.querySelector('i') : document.querySelector('.fa-rotate-right');
-  if (icon) icon.classList.add('animate-spin');
-
-  try {
-    // 依序尋找並執行後台資料載入函式
-    if (typeof loadAdminData === 'function') {
-      await loadAdminData();
-    } else if (typeof fetchStoreData === 'function') {
-      await fetchStoreData();
-    } else if (typeof fetchAppointments === 'function') {
-      await fetchAppointments();
-    } else if (typeof renderAppointments === 'function') {
-      renderAppointments();
-    } else if (typeof loadMarketingCenter === 'function') {
-      await loadMarketingCenter();
+  async function manualRefreshAdmin() {
+    const icon = document.getElementById('admin-refresh-icon');
+    if (icon) icon.classList.add('animate-spin');
+    
+    try {
+      await fetchDataAndRender();
+      Swal.fire({
+        title: '名單已更新！',
+        icon: 'success',
+        timer: 800,
+        showConfirmButton: false
+      });
+    } catch(e) {
+      Swal.fire('同步失敗', e.message, 'error');
+    } finally {
+      if (icon) icon.classList.remove('animate-spin');
     }
-
-    Swal.fire({
-      title: '名單已更新！',
-      icon: 'success',
-      timer: 800,
-      showConfirmButton: false
-    });
-  } catch (err) {
-    Swal.fire('同步失敗', err.message || '連線逾時', 'error');
-  } finally {
-    if (icon) icon.classList.remove('animate-spin');
   }
-}
 
-// 登出函式 (清理 Session 並重設狀態)
-function handleAdminLogout() {
-  Swal.fire({
-    title: '確定登出管理後台？',
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: '確定登出',
-    confirmButtonColor: '#8C7355',
-    cancelButtonText: '取消'
-  }).then((res) => {
-    if (res.isConfirmed) {
-      sessionStorage.clear();
-      localStorage.removeItem('admin_is_unlocked');
-      localStorage.removeItem('admin_current_token');
-
-      const lockScreen = document.getElementById('lock-screen');
-      const pinInput = document.getElementById('pin-input');
-      if (pinInput) pinInput.value = '';
-      if (lockScreen) lockScreen.classList.remove('hidden');
-
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-      window.location.href = cleanUrl;
+  setInterval(() => {
+    if (sessionStorage.getItem('admin_session_unlocked') === 'true' && !document.hidden) {
+      fetchDataAndRender();
     }
-  });
-}
+  }, 10000);
+  
+  async function handleAdminManualRefresh(btn) {
+    const icon = btn ? btn.querySelector('i') : document.querySelector('.fa-rotate-right');
+    if (icon) icon.classList.add('animate-spin');
+
+    try {
+      await fetchDataAndRender();
+
+      Swal.fire({
+        title: '名單已更新！',
+        icon: 'success',
+        timer: 800,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire('同步失敗', err.message || '連線逾時', 'error');
+    } finally {
+      if (icon) icon.classList.remove('animate-spin');
+    }
+  }
+
+  function handleAdminLogout() {
+    Swal.fire({
+      title: '確定登出管理後台？',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: '確定登出',
+      confirmButtonColor: '#8C7355',
+      cancelButtonText: '取消'
+    }).then((res) => {
+      if (res.isConfirmed) {
+        sessionStorage.clear();
+        localStorage.removeItem('admin_is_unlocked');
+        localStorage.removeItem('admin_current_token');
+
+        const lockScreen = document.getElementById('lock-screen');
+        const pinInput = document.getElementById('pin-input');
+        if (pinInput) pinInput.value = '';
+        if (lockScreen) lockScreen.classList.remove('hidden');
+
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+        window.location.href = cleanUrl;
+      }
+    });
+  }
   
   function renderUploadSlots() {
     const grid = document.getElementById('promo-upload-grid');
@@ -4882,6 +4863,9 @@ function handleAdminLogout() {
     }
   }
 
+// ==========================================
+// 📌 核心儲存設定模組 (含二合一推播同步儲存回寫)
+// ==========================================
   async function saveStoreSettings() {
     Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false });
     Swal.showLoading();
@@ -4898,12 +4882,13 @@ function handleAdminLogout() {
     const auditBookingVal = document.getElementById('cfg-toggle-audit-booking')?.checked ?? currentSettings.enableAuditBooking ?? true;
     const depositVal = document.getElementById('cfg-toggle-deposit')?.checked ?? currentSettings.enableDeposit ?? true;
 
-    // 說明圖網址清單處理
     const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
     const textImgsArray = rawImgsText.split('\n').map(u => u.trim()).filter(Boolean);
     const finalPromoImgs = textImgsArray.length > 0 ? textImgsArray : promoImgsArray.filter(Boolean);
 
-    // 唯一宣告 payload 物件
+    // ✨ 二合一開關狀態讀取
+    const isLineNotifyActive = Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked);
+
     const payload = {
       store_id: CURRENT_STORE_ID,
       display_title: document.getElementById('cfg-title')?.value.trim() || currentSettings.storeName || '專業美業沙龍',
@@ -4935,11 +4920,14 @@ function handleAdminLogout() {
       enable_cust_notes: document.getElementById('cfg-toggle-cust-notes')?.checked ?? currentSettings.enableCustNotes ?? true,
       enable_quick_contact: document.getElementById('cfg-toggle-quick-contact')?.checked ?? currentSettings.enableQuickContact ?? true,
       enable_cancel_reason: document.getElementById('cfg-toggle-cancel-reason')?.checked ?? currentSettings.enableCancelReason ?? true,
-      enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
+
+      // ✨ 二合一總開關寫入：同時回寫 enable_line_auto_notify 與 enable_auto_reminder
+      enable_line_auto_notify: isLineNotifyActive,
+      enable_auto_reminder: isLineNotifyActive,
+
       enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
       enable_featured_shop: Boolean(document.getElementById('cfg-toggle-featured-shop')?.checked),
       enable_flex_menu: document.getElementById('cfg-toggle-flex-menu')?.checked ?? currentSettings.enableFlexMenu ?? true,
-      enable_auto_reminder: document.getElementById('cfg-toggle-auto-reminder')?.checked ?? currentSettings.enableAutoReminder ?? false,
       commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
       enable_commission_calc: Boolean(document.getElementById('cfg-toggle-commission-calc')?.checked),
       enable_wallet: Boolean(document.getElementById('cfg-toggle-wallet')?.checked),
@@ -4977,8 +4965,39 @@ function handleAdminLogout() {
     }
   }
   
+// ==========================================
+// 📌 DOMContentLoaded 頁面初始化生命週期 (強制喚醒密碼登入鎖)
+// ==========================================
   window.addEventListener('DOMContentLoaded', () => {
+    const lockScreen = document.getElementById('lock-screen');
+    const mainContent = document.getElementById('main-content');
+    const bottomNav = document.getElementById('bottom-nav');
+
+    // 1. 強制喚起密碼登入畫面
+    if (lockScreen) {
+      lockScreen.style.display = 'flex';
+      lockScreen.classList.remove('hidden');
+    }
+    if (mainContent) mainContent.style.display = 'none';
+    if (bottomNav) bottomNav.style.display = 'none';
+
+    // 2. 清除上次的暫存解鎖標記，確保每次進來都要輸入密碼
+    sessionStorage.removeItem('admin_session_unlocked');
+
+    // 3. 檢查是否處於暴力破解鎖定 15 分鐘冷卻中
     checkLockoutStatus();
+
+    // 4. 自動聚焦密碼輸入框，方便直接打字
+    const pinInput = document.getElementById('pin-input');
+    if (pinInput) {
+      pinInput.value = '';
+      setTimeout(() => pinInput.focus(), 300);
+      
+      // 支援按 Enter 鍵直接登入
+      pinInput.onkeydown = (e) => {
+        if (e.key === 'Enter') checkPin();
+      };
+    }
   });
 </script>
 </body>
