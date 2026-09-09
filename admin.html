@@ -889,21 +889,35 @@
       <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="填寫提供給客人的保養注意事項..."></textarea>
     </div>
 
-    <!-- 專員管理 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">👥 專員名單管理 (員工網址認代號)</div>
-      <div class="text-[11px] text-brand-400 bg-brand-50 p-2.5 rounded-xl leading-relaxed">
-        💡 <b>專員網址用法：</b> <code>admin.html?token=你的Token&staff=代號</code><br>
-        🔒 <b>提示：</b> 各專員密碼皆存於資料庫，專員亦可於其後台自行修改。
-      </div>
-      <div class="space-y-2" id="staff-list-container"></div>
-      <div class="flex gap-2 pt-2">
-        <input type="text" id="new-staff-id" class="w-1/3 p-2 rounded-xl border border-brand-200 text-xs" placeholder="代號 (如 a)">
-        <input type="text" id="new-staff-name" class="w-1/3 p-2 rounded-xl border border-brand-200 text-xs" placeholder="姓名 (如 店長)">
-        <input type="text" id="new-staff-pin" class="w-1/4 p-2 rounded-xl border border-brand-200 text-xs" placeholder="密碼" value="8888">
-        <button class="flex-1 py-2 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition" onclick="addStaffMember()">新增</button>
-      </div>
+    <!-- 專員名單管理卡片 -->
+<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+  <div class="flex items-center justify-between">
+    <div>
+      <span class="text-xs font-bold text-brand-900 block">👥 門市專員/設計師名單管理</span>
+      <span class="text-[10px] text-brand-400">專員可設獨立專用登入密碼，綁定個人 LINE 接收指名通知</span>
     </div>
+    <span id="staff-count-badge" class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">0 位專員</span>
+  </div>
+
+  <!-- ✨ 1. 已建立的專員列表容器 (支援顯示、即時修改、刪除) -->
+  <div id="staff-manager-list" class="space-y-2">
+    <!-- 由 JavaScript 自動動態渲染 -->
+  </div>
+
+  <!-- ✨ 2. 新增專員快捷輸入區 -->
+  <div class="pt-2 border-t border-brand-100 space-y-2">
+    <div class="text-[11px] font-bold text-brand-800">＋ 新增專員名冊</div>
+    <div class="grid grid-cols-3 gap-2">
+      <input type="text" id="new-staff-id" placeholder="專員編號 (如: S01)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
+      <input type="text" id="new-staff-name" placeholder="專員姓名 (如: Emily)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
+      <input type="password" id="new-staff-pin" placeholder="專屬密碼 (預設8888)" maxlength="6" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none font-mono">
+    </div>
+    <button type="button" onclick="addStaffMember()" class="w-full py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1">
+      <i class="fa-solid fa-plus text-[10px]"></i>
+      <span>建立並儲存此專員</span>
+    </button>
+  </div>
+</div>
 
     <!-- 基本資料與 Logo 上傳 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -1989,6 +2003,10 @@
       n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
     });
     const target = document.getElementById('page-' + pageId);
+    if (pageId === 'settings') {
+      populateSettings();
+      renderStaffManager(); // ✨ 確保切到設定分頁時專員列表不會空白
+    }
     if (target) target.style.display = 'block';
     if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
@@ -4231,25 +4249,166 @@
   }
 
 // ==========================================
-// 📌 店家專員人事架構配置模組
+// 📌 專員名冊管理模組 (含即時列表渲染、修改、刪除、雙向綁定)
 // ==========================================
-  function addStaffMember() {
-    const id = document.getElementById('new-staff-id').value.trim();
-    const name = document.getElementById('new-staff-name').value.trim();
-    const pin = document.getElementById('new-staff-pin').value.trim() || '8888';
-    if (!id || !name) { Swal.fire('請填寫代號與姓名', '', 'warning'); return; }
-    const list = backendData.settings.staffList || [];
-    list.push({ id, name, pin });
-    document.getElementById('new-staff-id').value = '';
-    document.getElementById('new-staff-name').value = '';
-    saveStoreSettings();
+
+// 1. 渲染專員名冊列表 (黏著現有資料、呈現 LINE 綁定狀態)
+function renderStaffManager() {
+  const container = document.getElementById('staff-manager-list');
+  const countBadge = document.getElementById('staff-count-badge');
+  if (!container) return;
+
+  const rawList = backendData.settings?.staffList || [];
+  // 排除「不指定」，僅管理實體專員
+  const staffs = rawList.filter(s => s.id !== 'all');
+
+  if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
+
+  if (staffs.length === 0) {
+    container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
+    return;
   }
 
-  function removeStaffMember(id) {
-    let list = backendData.settings.staffList || [];
-    backendData.settings.staffList = list.filter(s => s.id !== id);
-    saveStoreSettings();
+  container.innerHTML = staffs.map((s, idx) => {
+    const isLineBound = Boolean(s.line_uid && s.line_uid.startsWith('U'));
+    return `
+      <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+        <div class="space-y-0.5">
+          <div class="flex items-center gap-1.5 font-bold text-brand-900">
+            <span class="text-sm">${s.name}</span>
+            <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
+            ${isLineBound 
+              ? '<span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">✓ LINE 已綁定</span>' 
+              : '<span class="px-1.5 py-0.2 bg-gray-200 text-gray-600 rounded text-[9px]">LINE 未綁定</span>'}
+          </div>
+          <div class="text-[11px] text-brand-500 font-mono">
+            專屬密碼：<span class="tracking-widest">••••</span>
+            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 hover:underline ml-1 font-sans font-bold text-[10px]">改密碼</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="promptEditStaffName('${s.id}', '${s.name}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] transition">
+            改名
+          </button>
+          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg font-bold text-[11px] transition">
+            刪除
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 2. 新增專員 (防重複代號、自動補齊不指定、即時寫入 Supabase)
+async function addStaffMember() {
+  const id = document.getElementById('new-staff-id').value.trim();
+  const name = document.getElementById('new-staff-name').value.trim();
+  const pin = document.getElementById('new-staff-pin').value.trim() || '8888';
+
+  if (!id || !name) {
+    return Swal.fire('請填寫專員編號與姓名', '', 'warning');
   }
+
+  let list = backendData.settings?.staffList || [];
+  // 確保始終有預設「不指定」選項
+  if (!list.some(s => s.id === 'all')) {
+    list.unshift({ id: "all", name: "不指定", pin: "8888" });
+  }
+
+  // 檢查代號是否重複
+  if (list.some(s => s.id.toLowerCase() === id.toLowerCase())) {
+    return Swal.fire('專員編號已存在', '請更換其他編號或代號', 'warning');
+  }
+
+  list.push({ id, name, pin, line_uid: "" });
+  backendData.settings.staffList = list;
+
+  // 清空輸入框
+  document.getElementById('new-staff-id').value = '';
+  document.getElementById('new-staff-name').value = '';
+  document.getElementById('new-staff-pin').value = '';
+
+  renderStaffManager();
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+  Swal.fire({ title: `專員【${name}】已建立！`, icon: 'success', timer: 1000, showConfirmButton: false });
+}
+
+// 3. 修改專員姓名
+function promptEditStaffName(staffId, oldName) {
+  Swal.fire({
+    title: '修改專員姓名',
+    input: 'text',
+    inputValue: oldName,
+    showCancelButton: true,
+    confirmButtonText: '儲存',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消'
+  }).then(async r => {
+    if (r.isConfirmed && r.value && r.value.trim() !== '') {
+      const list = backendData.settings?.staffList || [];
+      const staff = list.find(s => s.id === staffId);
+      if (staff) {
+        staff.name = r.value.trim();
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+        renderStaffManager();
+        Swal.fire({ title: '專員姓名已更新！', icon: 'success', timer: 1000, showConfirmButton: false });
+      }
+    }
+  });
+}
+
+// 4. 修改專員獨立密碼
+function promptEditStaffPin(staffId, staffName, currentPin) {
+  Swal.fire({
+    title: `修改 ${staffName} 的專屬密碼`,
+    input: 'password',
+    inputValue: currentPin,
+    inputPlaceholder: '請輸入 4-6 位數密碼',
+    showCancelButton: true,
+    confirmButtonText: '確定更新',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消'
+  }).then(async r => {
+    if (r.isConfirmed && r.value && r.value.trim() !== '') {
+      const list = backendData.settings?.staffList || [];
+      const staff = list.find(s => s.id === staffId);
+      if (staff) {
+        staff.pin = r.value.trim();
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+        renderStaffManager();
+        Swal.fire({ title: '密碼更新成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+      }
+    }
+  });
+}
+
+// 5. 刪除專員 (具備防呆確認、自動解除 LINE 綁定、即時回寫)
+function removeStaffMember(id, name) {
+  Swal.fire({
+    title: `確定移除專員【${name}】？`,
+    text: '刪除後，該專員的獨立登入與 LINE 指名推播將一併解除。',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: '確定刪除',
+    cancelButtonText: '保留'
+  }).then(async r => {
+    if (r.isConfirmed) {
+      let list = backendData.settings?.staffList || [];
+      list = list.filter(s => s.id !== id);
+      // 確保仍有「不指定」
+      if (!list.some(s => s.id === 'all')) {
+        list.unshift({ id: "all", name: "不指定", pin: "8888" });
+      }
+
+      backendData.settings.staffList = list;
+      renderStaffManager();
+      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+      Swal.fire({ title: `已移除專員 ${name}`, icon: 'success', timer: 1000, showConfirmButton: false });
+    }
+  });
+}
 
 // ==========================================
 // 📌 行銷彈窗操作 (儲值充值、包卡核銷、折扣碼增減)
@@ -4641,6 +4800,7 @@
     }
 
     populateCareRulesUI();
+    renderStaffManager(); // ✨ 自動將雲端專員名單載入並渲染出來
   }
 
 // ==========================================
