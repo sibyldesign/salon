@@ -590,11 +590,12 @@
     const targetSlug = storeSlug || legacySlug;
 
     if (targetSlug) {
-      const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id`);
-      if (stores && stores.length > 0) {
-        CURRENT_STORE_ID = stores[0].id;
-        if (legacySlug && window.location.hostname !== 'localhost') {
-          window.history.replaceState({}, '', `/${targetSlug}`);
+  const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id,slug`);
+  if (stores && stores.length > 0) {
+    CURRENT_STORE_ID = stores[0].id;
+    // 標籤：保留短網址在瀏覽器列，不被 query string 覆蓋
+    if (window.location.pathname !== `/${stores[0].slug}`) {
+      window.history.replaceState({}, '', `/${stores[0].slug}`);
         }
       }
     } else if (paramStoreId) {
@@ -832,6 +833,7 @@
   function renderStoreUI() {
     document.getElementById('brand-title').innerText = db.storeName;
     document.getElementById('brand-subtitle').innerText = db.subtitle;
+    document.getElementById('live-sign-link').href = 'live_sign.html?store_id=' + CURRENT_STORE_ID;
     
     const logoImg = document.getElementById('store-logo-img');
     const logoPlaceholder = document.getElementById('store-logo-placeholder');
