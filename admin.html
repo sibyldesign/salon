@@ -1074,33 +1074,42 @@
     </div>
 
     <!-- LINE 官方自動推播總開關與 Channel Access Token 欄位 (兩者合一) -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-bold text-brand-900">💬 官方LINE自動推播通知設定</span>
-        <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 設定 3 步驟</button>
-      </div>
-
-      <div class="space-y-2 text-xs">
-        <!-- 整合後的二合一總開關 -->
-        <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用官方LINE自動推播通知</span>
-            <span class="text-[11px] text-brand-500 block mt-0.5">含：接單成功即時通知 ＋ 預約日前一天主動提醒顧客</span>
-            <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 會消耗 LINE 官方帳號 Push 則數（免費用完後由 LINE 另計）</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400 w-4 h-4 ml-2">
-        </label>
-
-        <div>
-          <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
-          <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
-        </div>
-
-        <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
-          ⚠️ <b>貼心提示：</b>無法自行找到 Channel Access Token 沒關係，可點擊上方「設定 3 步驟」或聯繫 Sibyl 官方客服協助設定。
-        </div>
-      </div>
+<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+  <div class="flex items-center justify-between">
+    <span class="text-xs font-bold text-brand-900">💬 官方 LINE 自動推播通知設定</span>
+    <div class="flex items-center gap-1.5">
+      <!-- ✨ 業主一鍵綁定觸發按鈕 -->
+      <button type="button" class="text-[11px] bg-[#06C755] hover:bg-[#05b34c] text-white px-2.5 py-1 rounded-lg font-bold shadow-xs transition flex items-center gap-1" onclick="openOwnerLineBindModal()">
+        <i class="fa-brands fa-line text-sm"></i>
+        <span>連動業主個人 LINE</span>
+      </button>
+      <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">
+        📖 設定 3 步驟
+      </button>
     </div>
+  </div>
+
+  <div class="space-y-2 text-xs">
+    <!-- 整合後的二合一總開關 -->
+    <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
+      <div>
+        <span class="font-bold text-brand-900 block">啟用官方 LINE 自動推播通知</span>
+        <span class="text-[11px] text-brand-500 block mt-0.5">含：接單成功即時通知 ＋ 預約日前一天主動提醒顧客</span>
+        <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 會消耗 LINE 官方帳號 Push 則數（免費用完後由 LINE 另計）</span>
+      </div>
+      <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400 w-4 h-4 ml-2">
+    </label>
+
+    <div>
+      <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
+      <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
+    </div>
+
+    <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
+      ⚠️ <b>貼心提示：</b>無法自行找到 Channel Access Token 沒關係，可點擊上方「設定 3 步驟」或聯繫 Sibyl 官方客服協助設定。
+    </div>
+  </div>
+</div>
 
     <!-- 說明圖與換行公告設定 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -4259,7 +4268,6 @@ function renderStaffManager() {
   if (!container) return;
 
   const rawList = backendData.settings?.staffList || [];
-  // 排除「不指定」，僅管理實體專員
   const staffs = rawList.filter(s => s.id !== 'all');
 
   if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
@@ -4278,8 +4286,8 @@ function renderStaffManager() {
             <span class="text-sm">${s.name}</span>
             <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
             ${isLineBound 
-              ? '<span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">✓ LINE 已綁定</span>' 
-              : '<span class="px-1.5 py-0.2 bg-gray-200 text-gray-600 rounded text-[9px]">LINE 未綁定</span>'}
+              ? '<span class="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded text-[9px] font-bold">✓ LINE 已連動</span>' 
+              : '<span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9px] font-bold">LINE 未連動</span>'}
           </div>
           <div class="text-[11px] text-brand-500 font-mono">
             專屬密碼：<span class="tracking-widest">••••</span>
@@ -4288,10 +4296,15 @@ function renderStaffManager() {
         </div>
 
         <div class="flex items-center gap-1.5">
-          <button type="button" onclick="promptEditStaffName('${s.id}', '${s.name}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] transition">
+          <!-- ✨ 一鍵產生該專員的綁定按鈕與轉傳連結 -->
+          <button type="button" onclick="openStaffLineBindModal('${s.id}', '${s.name}')" class="px-2.5 py-1 ${isLineBound ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-[#06C755] text-white shadow-xs'} rounded-lg font-bold text-[11px] transition flex items-center gap-1">
+            <i class="fa-brands fa-line"></i>
+            <span>${isLineBound ? '重設連動' : '連動 LINE'}</span>
+          </button>
+          <button type="button" onclick="promptEditStaffName('${s.id}', '${s.name}')" class="px-2 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] transition">
             改名
           </button>
-          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg font-bold text-[11px] transition">
+          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg font-bold text-[11px] transition">
             刪除
           </button>
         </div>
@@ -4407,6 +4420,102 @@ function removeStaffMember(id, name) {
       await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
       Swal.fire({ title: `已移除專員 ${name}`, icon: 'success', timer: 1000, showConfirmButton: false });
     }
+  });
+}
+
+  // ==========================================
+// 📌 業主端專屬：產生 LINE 一鍵綁定按鈕與轉傳連結
+// ==========================================
+function openOwnerLineBindModal() {
+  const lineUrl = backendData.settings?.line || backendData.settings?.line_url || '';
+  // 從店家 LINE 網址提取 LINE ID (例如 https://line.me/R/ti/p/@1234abcd -> @1234abcd)
+  let lineId = '';
+  const match = lineUrl.match(/@[\w\d\-_]+/);
+  if (match) {
+    lineId = match[0];
+  }
+
+  const bindText = encodeURIComponent(`綁定店家 ${CURRENT_STORE_ID}`);
+  // 若有抓到官方帳號 ID 則使用自動帶文字連結，否則回退到通用連結
+  const directLineLink = lineId 
+    ? `https://line.me/R/oaMessage/${lineId}/?${bindText}`
+    : `https://line.me/R/ti/p/@480kqjoj`; // 若無設定則導向預設官方客服
+
+  Swal.fire({
+    title: '🏪 業主專用：LINE 預約通報綁定',
+    html: `
+      <div class="text-left text-xs space-y-3 p-1 text-brand-800">
+        <p class="leading-relaxed bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-[11.5px]">
+          綁定後，顧客所有新預約、審核接單卡片將<b>第一時間私訊給您的個人 LINE</b>。
+        </p>
+
+        <!-- 本機直接跳轉 -->
+        <a href="${directLineLink}" target="_blank" class="w-full py-3 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition no-underline">
+          <i class="fa-brands fa-line text-base"></i>
+          <span>開啟 LINE 並送出綁定指令</span>
+        </a>
+
+        <!-- 轉傳或手動複製 -->
+        <div class="pt-2 border-t border-brand-100 space-y-1.5">
+          <div class="font-bold text-[11px]">或複製綁定指令手動傳入官方 LINE：</div>
+          <div class="flex gap-1.5">
+            <input type="text" readonly value="綁定店家 ${CURRENT_STORE_ID}" id="owner-bind-cmd" class="flex-1 p-2 bg-brand-50 border border-brand-200 rounded-xl text-xs font-mono">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('owner-bind-cmd').value); Swal.fire('已複製指令！', '請直接到官方 LINE 對話框貼上送出', 'success')" class="px-3 py-2 bg-brand-100 text-brand-800 rounded-xl font-bold text-xs shrink-0">
+              複製指令
+            </button>
+          </div>
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true
+  });
+}
+  // ==========================================
+// 📌 專員端專屬：產生該專員的一鍵綁定按鈕與專屬網址
+// ==========================================
+function openStaffLineBindModal(staffId, staffName) {
+  const lineUrl = backendData.settings?.line || backendData.settings?.line_url || '';
+  let lineId = '';
+  const match = lineUrl.match(/@[\w\d\-_]+/);
+  if (match) {
+    lineId = match[0];
+  }
+
+  const bindText = encodeURIComponent(`綁定專員 ${staffName}`);
+  const directLineLink = lineId 
+    ? `https://line.me/R/oaMessage/${lineId}/?${bindText}`
+    : `https://line.me/R/ti/p/@480kqjoj`;
+
+  Swal.fire({
+    title: `✂️ 專員【${staffName}】專屬 LINE 綁定`,
+    html: `
+      <div class="text-left text-xs space-y-3 p-1 text-brand-800">
+        <p class="leading-relaxed bg-brand-50 p-2.5 rounded-xl border border-brand-200 text-[11.5px]">
+          專員完成綁定後，只要顧客線上預約<b>指名該專員</b>，官方 LINE 就會第一時間自動私訊通知專員！
+        </p>
+
+        <!-- 本機若是專員手機直接點擊 -->
+        <a href="${directLineLink}" target="_blank" class="w-full py-3 bg-[#06C755] hover:bg-[#05b34c] text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-sm transition no-underline">
+          <i class="fa-brands fa-line text-base"></i>
+          <span>點此開啟 LINE 立即為【${staffName}】綁定</span>
+        </a>
+
+        <!-- 產生連結給店長轉傳給專員 -->
+        <div class="pt-2 border-t border-brand-100 space-y-1.5">
+          <div class="font-bold text-[11px]">轉傳給專員專用的「一鍵綁定連結」：</div>
+          <div class="flex gap-1.5">
+            <input type="text" readonly value="${directLineLink}" id="staff-bind-link-${staffId}" class="flex-1 p-2 bg-brand-50 border border-brand-200 rounded-xl text-xs font-mono truncate">
+            <button onclick="navigator.clipboard.writeText(document.getElementById('staff-bind-link-${staffId}').value); Swal.fire('已複製專屬連結！', '請傳送給該專員，專員點開即可一鍵綁定', 'success')" class="px-3 py-2 bg-[#8C7355] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
+              複製連結
+            </button>
+          </div>
+          <div class="text-[10px] text-brand-400">💡 提示：店長可把此連結貼到 LINE 私訊傳給專員，專員點開按送出即可綁定。</div>
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCloseButton: true
   });
 }
 
