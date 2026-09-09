@@ -70,6 +70,9 @@
       <button id="tab-btn-announcement" onclick="switchSuperTab('announcement')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200">
         <i class="fa-solid fa-bullhorn mr-1"></i> 全平台即時公告、維護鎖定與許願池
       </button>
+      <button id="tab-btn-biolinks" onclick="switchSuperTab('biolinks')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200">
+  <i class="fa-solid fa-link mr-1"></i> 微頁名冊與密碼管理 (BioLink)
+</button>
     </div>
   </div>
 
@@ -171,6 +174,19 @@
         </div>
       </section>
     </div>
+
+    <!-- 分頁 3：微頁名冊與 PIN 碼管理 -->
+<div id="super-page-biolinks" class="space-y-4" style="display: none;">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-address-card text-brand-500"></i>
+      <span>全平台微頁名冊 (link.heysibyl.com)</span>
+    </h2>
+    <span id="biolink-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
+  </div>
+
+  <div id="biolinks-container" class="space-y-3"></div>
+</div>
 
   </main>
 
@@ -966,6 +982,121 @@ async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
         }
       });
     }
+
+    // 在 switchSuperTab 中補上 biolinks 判斷
+const originSwitchSuperTab = switchSuperTab;
+switchSuperTab = function(tabId) {
+  document.getElementById('super-page-stores').style.display = (tabId === 'stores') ? 'block' : 'none';
+  document.getElementById('super-page-announcement').style.display = (tabId === 'announcement') ? 'block' : 'none';
+  document.getElementById('super-page-biolinks').style.display = (tabId === 'biolinks') ? 'block' : 'none';
+
+  document.getElementById('tab-btn-stores').className = (tabId === 'stores')
+    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+
+  document.getElementById('tab-btn-announcement').className = (tabId === 'announcement')
+    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+
+  document.getElementById('tab-btn-biolinks').className = (tabId === 'biolinks')
+    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+
+  if (tabId === 'biolinks') loadBioLinks();
+};
+
+// 讀取 bio_stores 表格資料
+async function loadBioLinks() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bio_stores?order=created_at.desc`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    const list = await res.json();
+    document.getElementById('biolink-count-badge').innerText = `共 ${list.length} 位用戶`;
+    
+    const container = document.getElementById('biolinks-container');
+    if (list.length === 0) {
+      container.innerHTML = '<div class="text-center py-6 text-xs text-brand-400">目前尚無微頁用戶註冊</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(item => `
+      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2.5 text-xs">
+        <div class="flex justify-between items-center">
+          <div>
+            <span class="font-bold text-sm text-brand-900">${item.brand_name}</span>
+            <span class="ml-2 font-mono text-[11px] text-blue-600 font-semibold">/${item.slug}</span>
+          </div>
+          <a href="https://link.heysibyl.com/?u=${item.slug}" target="_blank" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition text-[11px]">
+            查看公開頁 ➔
+          </a>
+        </div>
+        
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-100 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+          <div><b>電子信箱：</b>${item.owner_email || '無'}</div>
+          <div><b>目前 PIN 碼：</b><code class="font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">${item.admin_pin || '8888'}</code></div>
+          <div><b>使用色系：</b>${item.theme || 'cashmere-latte'}</div>
+          <div><b>開通時間：</b>${item.created_at ? item.created_at.split('T')[0] : ''}</div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-1 border-t border-brand-100">
+          <button onclick="resetBioPinPrompt('${item.id}', '${item.brand_name}', '${item.admin_pin}')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs">
+            重設 PIN 碼
+          </button>
+          <button onclick="deleteBioStorePrompt('${item.id}', '${item.brand_name}')" class="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold">
+            刪除帳號
+          </button>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    console.error("載入微頁用戶失敗:", e);
+  }
+}
+
+// 人工重設 PIN 碼
+async function resetBioPinPrompt(id, brandName, currentPin) {
+  const { value: newPin } = await Swal.fire({
+    title: `重設【${brandName}】PIN 碼`,
+    input: 'text',
+    inputValue: currentPin,
+    inputLabel: '請輸入新的 4-6 位數管理 PIN 碼',
+    showCancelButton: true,
+    confirmButtonText: '確定更新',
+    confirmButtonColor: '#8C7355'
+  });
+
+  if (newPin) {
+    await fetch(`${SUPABASE_URL}/rest/v1/bio_stores?id=eq.${id}`, {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ admin_pin: newPin.trim() })
+    });
+    Swal.fire('PIN 碼已更新！', `新密碼為：${newPin}`, 'success');
+    loadBioLinks();
+  }
+}
+
+// 刪除微頁用戶
+async function deleteBioStorePrompt(id, brandName) {
+  const confirm = await Swal.fire({
+    title: `確定刪除【${brandName}】？`,
+    text: '該品牌連結頁面與所屬卡片將被永久清除！',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: '確定刪除'
+  });
+
+  if (confirm.isConfirmed) {
+    await fetch(`${SUPABASE_URL}/rest/v1/bio_stores?id=eq.${id}`, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    Swal.fire('已刪除用戶！', '', 'success');
+    loadBioLinks();
+  }
+}
   </script>
 </body>
 </html>
