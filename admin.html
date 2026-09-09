@@ -2272,7 +2272,11 @@
     
     for (let i = 1; i <= daysInMonth; i++) {
       let dStr = `${calYear}/${String(calMonth+1).padStart(2,'0')}/${String(i).padStart(2,'0')}`;
-      let apptsToday = (backendData.appointments || []).filter(a => a.date === dStr && a.status !== '已取消');
+      let apptsToday = (backendData.appointments || []).filter(a => 
+  a.date === dStr && 
+  a.status !== '已取消' && 
+  a.status !== '婉拒'
+);
       let isSelected = (selectedCalendarDate === dStr);
       
       let dotsHtml = apptsToday.slice(0, 4).map(a => {
@@ -2329,11 +2333,13 @@
       return apptDate < now;
     };
 
+    // 1. 新進預約審核專區：未逾期且符合條件
     const pendingAudit = appts.filter(a => 
       !isPastAppt(a) &&
       (a.status === '待確認' || (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed))
     );
 
+    // 2. 尚未收到訂金回報專區：未逾期且符合條件
     const unpaidDeposit = appts.filter(a => 
       !isPastAppt(a) &&
       a.status !== '已取消' && 
@@ -2365,17 +2371,33 @@
       `).join('');
     }
 
+    // 3. ✨ 即將到來排程名單過濾（融合第一段邏輯：過期未處理且非已結單者自動移出待辦）
     const statusFilter = document.getElementById('filter-status').value;
     let normalAppts = appts;
+
     if (statusFilter === 'ALL') {
-      normalAppts = appts.filter(a => a.status !== '已結單' && a.status !== '已取消' && !isPastAppt(a));
+      normalAppts = appts.filter(a => {
+        if (a.status === '已取消' || a.status === '婉拒') return false;
+        
+        // 檢查是否已過期 (預約時間已過且非已結單)
+        const apptDateTime = new Date(`${a.date.replace(/\//g, '-')}T${a.time || '00:00'}:00`);
+        if (apptDateTime < now && a.status !== '已結單') {
+          return false; // 過期未處理自動移出待辦名單
+        }
+        return !isPastAppt(a) && a.status !== '已結單';
+      });
     } else {
       normalAppts = appts.filter(a => a.status === statusFilter);
     }
+
     document.getElementById('cust-content-area').innerHTML = normalAppts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無排程名單</div>';
   }
   
   function renderSingleCardHTML(a) {
+    const createdTimeText = a.created_at ? formatFriendlyTime(a.created_at).slice(5) : ''; // 顯示 MM/DD HH:mm
+    
+    // 在顧客姓名下方或預約時間旁加入：
+    // <span class="text-[10px] text-brand-400 font-normal">下單於: ${createdTimeText}</span>
     if (!a) return '';
     const isNewCust = (a.customer_type === 'new');
     const custTypeBadge = isNewCust 
@@ -2431,15 +2453,19 @@
       `;
     }
     
+    // 契約簽署時間與檢視按鈕
     let signatureHtml = '';
     if (a.signature_url) {
-      const friendlySignedTime = formatFriendlyTime(a.signed_at || a.appointment_time || a.date);
+      // 優先使用簽名記錄時間 signed_at，次選預約建立時間 created_at，最後才用預約時間
+      const rawSignedTime = a.signed_at || a.created_at || (a.date + ' ' + (a.time || '12:00'));
+      const friendlySignedTime = formatFriendlyTime(rawSignedTime);
+      
       signatureHtml = `
         <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex justify-between items-center text-[11px]">
           <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
           <div class="flex items-center gap-1.5">
             <span class="text-[10px] text-brand-400 font-mono">${friendlySignedTime}</span>
-            <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${a.signed_at || a.appointment_time}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
+            <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${rawSignedTime}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
               檢視正本
             </button>
           </div>
@@ -3100,31 +3126,61 @@
   }
 
   function openEditServiceModal(id) {
-    const svcs = backendData.services || [];
-    let opts = svcs.map(s => `<option value="${s.name}" data-price="${s.price}" data-dur="${s.duration}">${s.name} (${s.price}元)</option>`).join('');
-    Swal.fire({
-      title: '變更預約項目',
-      html: `<select id="swal-new-svc" class="swal2-input text-xs" style="width:85%;">${opts}</select>`,
-      showCancelButton: true, confirmButtonText: '確定更新', confirmButtonColor: '#8C7355',
-      preConfirm: () => {
-        const sel = document.getElementById('swal-new-svc');
-        return { svc: sel.value, price: sel.options[sel.selectedIndex].getAttribute('data-price'), dur: sel.options[sel.selectedIndex].getAttribute('data-dur') };
+  const svcs = backendData.services || [];
+  const appt = (backendData.appointments || []).find(a => String(a.id) === String(id));
+  const currentSvcs = appt ? appt.service.split(',').map(s => s.trim()) : [];
+
+  let checkboxHtml = svcs.map(s => {
+    const isChecked = currentSvcs.includes(s.name) ? 'checked' : '';
+    return `
+      <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50 border border-brand-200 text-xs cursor-pointer">
+        <div class="flex items-center gap-2">
+          <input type="checkbox" value="${s.name}" data-price="${s.price}" class="edit-svc-cb accent-[#8C7355]" ${isChecked}>
+          <span class="font-bold">${s.isAddon ? '✨ ' : ''}${s.name}</span>
+        </div>
+        <span class="text-brand-500 font-bold">$${s.price}</span>
+      </label>
+    `;
+  }).join('');
+
+  Swal.fire({
+    title: '變更/加購施作項目',
+    html: `
+      <div class="text-left space-y-1.5 max-h-60 overflow-y-auto p-1">
+        ${checkboxHtml}
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定更新項目與金額',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消',
+    preConfirm: () => {
+      const selected = Array.from(document.querySelectorAll('.edit-svc-cb:checked'));
+      if (selected.length === 0) {
+        Swal.showValidationMessage('請至少勾選一個項目');
+        return false;
       }
-    }).then(async r => {
-      if (r.isConfirmed) {
-        try {
-          await directSupabasePatch('bookings', `id=eq.${id}`, { service_names: r.value.svc, price: Number(r.value.price) });
-          fetchDataAndRender();
-        } catch (e) {
-          await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "updateBookingService", id: id, service: r.value.svc, price: Number(r.value.price), duration: r.value.dur })
-          });
-          fetchDataAndRender();
-        }
-      }
-    });
-  }
+      let total = 0;
+      selected.forEach(cb => {
+        const p = Number((cb.getAttribute('data-price') || '0').match(/\d+/)?.[0] || 0);
+        total += p;
+      });
+      return {
+        names: selected.map(cb => cb.value).join(', '),
+        totalPrice: total
+      };
+    }
+  }).then(async r => {
+    if (r.isConfirmed) {
+      await directSupabasePatch('bookings', `id=eq.${id}`, {
+        service_names: r.value.names,
+        price: r.value.totalPrice
+      });
+      Swal.fire('項目已更新！', `最新金額：NT$ ${r.value.totalPrice}`, 'success');
+      fetchDataAndRender();
+    }
+  });
+}
 
   function openRescheduleModal(id, name, oldDate, oldTime) {
     Swal.fire({
