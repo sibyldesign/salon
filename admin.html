@@ -949,6 +949,21 @@
         </code>
       </p>
     </div>
+
+    <!-- 專員個人獨立後台連結提示卡片 (自動帶入真實店家 ID) -->
+<div class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1.5 mt-3">
+  <div class="font-bold flex items-center justify-between text-[11px] text-amber-800">
+    <span class="flex items-center gap-1.5">
+      <i class="fa-solid fa-circle-info text-amber-600"></i>
+      <span>專員個人專屬後台分權連結說明</span>
+    </span>
+    <span class="text-[10px] bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded-md font-mono font-bold" id="disp-current-store-id">ID: 載入中...</span>
+  </div>
+  <p class="text-[11px] leading-relaxed text-amber-800">
+    專員使用專屬連結登入時，<b>僅能查看並管理自己的班表與個人業績</b>（系統會自動隱藏全店營業額與全域設定）。<br>
+    💡 <b>操作方式：</b>您無需手動查找店家 ID，直接在上方專員名單點擊 <b>「複製專屬連結」</b> 傳送給專員即可！
+  </p>
+</div>
   </div>
 
   <!-- 3. 【通知通報】官方 LINE 推播、業主接單卡片與 0 元純 Email 存查 -->
@@ -4751,6 +4766,19 @@ function renderStaffManager() {
   }).join('');
 }
 
+function copyStaffWorkplaceUrl(staffId, staffName) {
+  const cleanUrl = `${window.location.origin}${window.location.pathname}?store_id=${CURRENT_STORE_ID}&staff=${encodeURIComponent(staffId)}`;
+  navigator.clipboard.writeText(cleanUrl).then(() => {
+    Swal.fire({
+      title: '已複製專員工作台連結！',
+      text: `已複製【${staffName}】的專屬分權連結，請傳給專員。`,
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  });
+}
+  
 // 2. 新增專員 (防重複代號、自動補齊不指定、即時寫入 Supabase)
 async function addStaffMember() {
   const id = document.getElementById('new-staff-id').value.trim();
@@ -5275,6 +5303,9 @@ function loadMohwContractTemplate() {
       s = Object.assign({}, cached, s);
     } catch(e){}
 
+    const dispStoreId = document.getElementById('disp-current-store-id');
+if (dispStoreId) dispStoreId.innerText = `店家 ID: ${CURRENT_STORE_ID}`;
+    
     const setVal = (id, val) => {
       const el = document.getElementById(id);
       if (el && val !== undefined && val !== null) el.value = val;
