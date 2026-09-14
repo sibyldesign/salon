@@ -1944,7 +1944,8 @@
             deposit_confirmed: b.deposit_confirmed === true,
             deposit_deducted: Number(b.deposit_deducted || 0),
             signature_url: b.signature_url || '',
-            signed_at: b.signed_at || ''
+            signed_at: b.signed_at || '',
+            created_at: b.created_at || '' // ✨ 確保下單時間完整送入前端模型
           };
         }) : [
           {
@@ -2372,9 +2373,13 @@
 // ==========================================
 // 📌 顧客預約卡片渲染引擎與審核管理模組
 // ==========================================
+  // ==========================================
+// 📌 顧客預約卡片渲染引擎 (含訂金模組開關自動隱藏與過期自動過濾)
+// ==========================================
   function renderCustomer() {
     const appts = backendData.appointments || [];
     const now = new Date();
+    const isDepositEnabled = backendData.settings?.enableDeposit !== false;
 
     const isPastAppt = (a) => {
       if (!a.date) return false;
@@ -2383,24 +2388,32 @@
       return apptDate < now;
     };
 
-    // 1. 新進預約審核專區：未逾期且符合條件
+    // 1. 待審核專區：未逾期且 (待確認 或 (開啟訂金且已報末五碼未核對))
     const pendingAudit = appts.filter(a => 
       !isPastAppt(a) &&
-      (a.status === '待確認' || (Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed))
+      (a.status === '待確認' || (isDepositEnabled && Boolean(a.depositLast5 || a.deposit_last5) && !a.deposit_confirmed))
     );
 
-    // 2. 尚未收到訂金回報專區：未逾期且符合條件
-    const unpaidDeposit = appts.filter(a => 
+    // 2. 需付訂金但未回報名單：僅在「開啟收訂金模組」時才統計與顯示
+    const unpaidDeposit = isDepositEnabled ? appts.filter(a => 
       !isPastAppt(a) &&
       a.status !== '已取消' && 
       a.status !== '已結單' && 
       !a.deposit_confirmed &&
       !Boolean(a.depositLast5 || a.deposit_last5) &&
       (a.customer_type === 'new' || backendData.settings.depositMode === 'all')
-    );
+    ) : [];
+
+    // ✨ 控制「專區 2：尚未收到訂金回報」提醒框的顯示與隱藏
+    const unpaidDepositWrapper = document.getElementById('unpaid-deposit-container')?.closest('div.bg-rose-50\\/80');
+    if (unpaidDepositWrapper) {
+      unpaidDepositWrapper.style.display = isDepositEnabled ? 'block' : 'none';
+    }
 
     document.getElementById('pending-audit-badge').innerText = `${pendingAudit.length} 筆待處理`;
-    document.getElementById('unpaid-deposit-badge').innerText = `${unpaidDeposit.length} 筆未回報`;
+    if (isDepositEnabled) {
+      document.getElementById('unpaid-deposit-badge').innerText = `${unpaidDeposit.length} 筆未回報`;
+    }
 
     const pendingContainer = document.getElementById('pending-audit-container');
     if (pendingAudit.length === 0) {
@@ -2410,30 +2423,28 @@
     }
 
     const unpaidContainer = document.getElementById('unpaid-deposit-container');
-    if (unpaidDeposit.length === 0) {
-      unpaidContainer.innerHTML = '<div class="text-center text-xs text-rose-800/60 py-1">全員皆已完成訂金付款</div>';
-    } else {
-      unpaidContainer.innerHTML = unpaidDeposit.map(a => `
-        <div class="p-2.5 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs">
-          <div><b class="text-rose-950">${a.name || a.customer_name}</b> (${a.phone || a.customer_phone}) - ${a.service || a.service_names}</div>
-          <span class="text-[10px] font-bold text-rose-600">尚未收到後五碼</span>
-        </div>
-      `).join('');
+    if (isDepositEnabled && unpaidContainer) {
+      if (unpaidDeposit.length === 0) {
+        unpaidContainer.innerHTML = '<div class="text-center text-xs text-rose-800/60 py-1">全員皆已完成訂金付款</div>';
+      } else {
+        unpaidContainer.innerHTML = unpaidDeposit.map(a => `
+          <div class="p-2.5 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs">
+            <div><b class="text-rose-950">${a.name || a.customer_name}</b> (${a.phone || a.customer_phone}) - ${a.service || a.service_names}</div>
+            <span class="text-[10px] font-bold text-rose-600">尚未收到後五碼</span>
+          </div>
+        `).join('');
+      }
     }
 
-    // 3. ✨ 即將到來排程名單過濾（融合第一段邏輯：過期未處理且非已結單者自動移出待辦）
+    // 3. 即將到來排程名單過濾 (已取消、婉拒、過期未結單皆自動移出)
     const statusFilter = document.getElementById('filter-status').value;
     let normalAppts = appts;
 
     if (statusFilter === 'ALL') {
       normalAppts = appts.filter(a => {
         if (a.status === '已取消' || a.status === '婉拒') return false;
-        
-        // 檢查是否已過期 (預約時間已過且非已結單)
         const apptDateTime = new Date(`${a.date.replace(/\//g, '-')}T${a.time || '00:00'}:00`);
-        if (apptDateTime < now && a.status !== '已結單') {
-          return false; // 過期未處理自動移出待辦名單
-        }
+        if (apptDateTime < now && a.status !== '已結單') return false;
         return !isPastAppt(a) && a.status !== '已結單';
       });
     } else {
@@ -2443,14 +2454,15 @@
     document.getElementById('cust-content-area').innerHTML = normalAppts.map(a => renderSingleCardHTML(a)).join('') || '<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">目前無排程名單</div>';
   }
   
+  // ==========================================
+// 📌 預約卡片 HTML 渲染 (下單時間戳記 ＋ 正確契約簽署時間)
+// ==========================================
   function renderSingleCardHTML(a) {
-    const createdTimeText = a.created_at ? formatFriendlyTime(a.created_at).slice(5) : ''; // 顯示 MM/DD HH:mm
-
-const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : '';
-    
-    // 在顧客姓名下方或預約時間旁加入：
-    // <span class="text-[10px] text-brand-400 font-normal">下單於: ${createdTimeText}</span>
     if (!a) return '';
+
+    // 1. ✨ 下單時間戳記：提取 created_at (精確到日時分)
+    const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : '';
+
     const isNewCust = (a.customer_type === 'new');
     const custTypeBadge = isNewCust 
       ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">新朋友</span>' 
@@ -2494,7 +2506,7 @@ const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : ''
       </div>
     `;
 
-    // 在 renderSingleCardHTML 內：
+    // 現場補簽按鈕
     let liveSignButtonHtml = '';
     if (!a.signature_url) {
       const liveSignUrl = `live_sign.html?store_id=${CURRENT_STORE_ID}&booking_id=${a.id}&cust_name=${encodeURIComponent(a.name)}&cust_phone=${encodeURIComponent(a.phone)}`;
@@ -2505,19 +2517,18 @@ const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : ''
       `;
     }
     
-    // 契約簽署時間與檢視按鈕
+    // ✨ 2. 契約真實簽署時間修正：絕不回退到預約日期，抓取真實簽署或建單時間
     let signatureHtml = '';
     if (a.signature_url) {
-      // 優先使用簽名記錄時間 signed_at，次選預約建立時間 created_at，最後才用預約時間
-      const rawSignedTime = a.signed_at || a.created_at || (a.date + ' ' + (a.time || '12:00'));
-      const friendlySignedTime = formatFriendlyTime(rawSignedTime);
+      const realSignedTime = a.signed_at || a.created_at || new Date().toISOString();
+      const friendlySignedTime = formatFriendlyTime(realSignedTime);
       
       signatureHtml = `
         <div class="pt-1.5 mt-1 border-t border-brand-200/60 flex justify-between items-center text-[11px]">
           <span class="font-bold text-emerald-700">✓ 已簽署定型化契約</span>
           <div class="flex items-center gap-1.5">
             <span class="text-[10px] text-brand-400 font-mono">${friendlySignedTime}</span>
-            <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${rawSignedTime}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
+            <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${realSignedTime}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-700 rounded-md font-bold text-[10.5px]">
               檢視正本
             </button>
           </div>
@@ -2544,14 +2555,13 @@ const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : ''
       <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-brand-400'} border border-brand-200 shadow-sm space-y-2 text-xs">
         <div class="flex justify-between items-start">
           <div class="space-y-1">
-            <div class="flex items-center gap-1.5">
-              
-<div class="flex flex-col">
-      <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
-      ${createdTimeFriendly ? `<span class="text-[10px] text-brand-400 font-mono">下單於：${createdTimeFriendly}</span>` : ''}
-    </div>
-              
-              ${custTypeBadge}
+            <div class="flex items-center gap-2">
+              <div class="flex flex-col">
+                <span class="text-brand-500 font-bold text-sm leading-tight">${a.date} ${a.time}</span>
+                <!-- ✨ 清楚展示下單時間戳記 -->
+                ${createdTimeFriendly ? `<span class="text-[10px] text-brand-400 font-mono mt-0.5">下單於：${createdTimeFriendly}</span>` : ''}
+              </div>
+              <div class="self-start">${custTypeBadge}</div>
             </div>
             <div class="font-bold text-brand-900 text-sm">
               ${a.name} <span class="text-brand-400 font-normal">(${a.phone})</span>
@@ -2608,12 +2618,12 @@ const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : ''
         </div>
 
         <div class="flex gap-1.5 pt-1 flex-wrap text-[11px] items-center">
-  <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改項目</button>
-  <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-  <button class="px-2.5 py-1 bg-[#7D8F7D] text-white rounded-lg font-bold" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
-  ${liveSignButtonHtml}
-  <button class="px-2.5 py-1 bg-[#B57979] text-white rounded-lg font-bold" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
-</div>
+          <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold" onclick="openEditServiceModal('${a.id}')">改/加項目</button>
+          <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button class="px-2.5 py-1 bg-[#7D8F7D] text-white rounded-lg font-bold" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
+          ${liveSignButtonHtml}
+          <button class="px-2.5 py-1 bg-[#B57979] text-white rounded-lg font-bold" onclick="handleCancelBookingPrompt('${a.id}', '${a.name}')">取消</button>
+        </div>
       </div>`;
   }
   
