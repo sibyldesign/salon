@@ -900,23 +900,29 @@
     </div>
 
     <!-- 定型化契約與數位簽署設定 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="flex items-center justify-between">
-        <span class="text-xs font-bold text-brand-900">📑 定型化契約與手寫數位簽署模組</span>
-        <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355]">
-      </div>
-      <div class="text-[11px] text-brand-500 leading-relaxed">
-        開啟後前台將要求顧客於送單前「詳閱條款並親筆手寫簽名」，並強制填寫 Email 寄發合約存證副本。簽署圖檔直傳 Supabase Storage 並永久保存於後台名單。
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold text-brand-800 mb-1">契約書主標題：</label>
-        <input type="text" id="cfg-contract-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="例如：美業服務定型化契約書">
-      </div>
-      <div>
-        <label class="block text-[11px] font-bold text-brand-800 mb-1">契約條款詳細內容：</label>
-        <textarea id="cfg-contract-content" rows="4" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 leading-relaxed" placeholder="請逐條填寫定型化服務契約條款..."></textarea>
-      </div>
+<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+  <div class="flex items-center justify-between">
+    <span class="text-xs font-bold text-brand-900">📑 定型化契約與手寫數位簽署模組</span>
+    <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355] w-4 h-4">
+  </div>
+  <div class="text-[11px] text-brand-500 leading-relaxed">
+    開啟後前台將要求顧客於送單前「詳閱條款並親筆手寫簽名」，並強制填寫 Email 寄發合約存證副本。簽署圖檔直傳資料庫並永久保存於後台名單。
+  </div>
+  <div>
+    <label class="block text-[11px] font-bold text-brand-800 mb-1">契約書主標題：</label>
+    <input type="text" id="cfg-contract-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="例如：美容定型化契約書">
+  </div>
+  <div>
+    <div class="flex justify-between items-center mb-1">
+      <label class="text-[11px] font-bold text-brand-800">契約條款詳細內容：</label>
+      <!-- 一鍵重設載入官方範本 -->
+      <button type="button" onclick="loadMohwContractTemplate()" class="text-[11px] text-[#8C7355] hover:underline font-bold">
+        ＋ 載入衛福部官方標準範本
+      </button>
     </div>
+    <textarea id="cfg-contract-content" rows="6" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 leading-relaxed" placeholder="請逐條填寫定型化服務契約條款..."></textarea>
+  </div>
+</div>
 
     <!-- 居家保養小叮嚀 -->
     <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -1361,6 +1367,50 @@
 
   let pendingSlotsList = [];
   let currentCheckoutBookingObj = null;
+
+  const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字第1120300459號函發布
+【美容定型化契約書】
+
+立契約書人：
+消費者 (以下簡稱甲方)
+美容業者 (以下簡稱乙方)
+
+簽訂契約前，乙方已將本契約交付甲方審閱，並確認甲方已詳閱各條款。甲乙雙方同意就美容服務事項依下列約定辦理：
+
+第 一 條 (美容之定義與服務範圍)
+本契約所稱美容，指除瘦身美容以外之從事化粧、臉部美容、肌膚保養、身體油壓、脫毛、美甲、美容諮詢等行為。乙方完成前述項目之方式依預約明細確認。
+
+第 二 條 (權利義務之依據)
+甲乙雙方關於本件美容之權利義務，依本契約條款之約定定之；本契約未約定者，依有關法令及誠信原則定之。
+
+第 三 條 (費用明確性原則)
+本契約之服務總費用(含所需商品、材料費、服務費及指定服務人員費)依預約明細為準。繳費項目未明列者，乙方不得向甲方收取。
+
+第 四 條 (乙方之詢問及處置義務)
+乙方於實施美容項目前，應詢問、確認甲方有無因患疾現正治療中、是否屬過敏性體質、現有無服用何種藥物、肌膚有無敏感性等事項。甲方對於乙方之詢問應誠實告知。
+接受美容服務期間，任一方發現甲方身體狀況有異樣或實施部位有異常現象時，應即告知他方，乙方並應即中止實施。
+
+第 五 條 (預約受領與改期)
+甲方受領美容服務應事先預約。甲方如無法依約定時間接受服務，應於約定時間前通知乙方改期。
+
+第 六 條 (實施前，甲方任意解除契約之退費規定)
+甲方於服務實施前因甲方任意解除本契約者，乙方應於解約日後十五日內將已收取之費用扣除解約手續費後退還於甲方。
+解約手續費為本契約總費用百分之五。若未約定解約手續費之金額時，乙方不得扣除解約手續費。
+
+第 七 條 (實施後，甲方任意終止契約之退費規定)
+甲方於服務實施後因甲方任意終止本契約者，乙方應於終止日後三十日內將已繳全部費用扣除已接受服務之費用，並扣除已拆封附屬商品金額，及再扣除解約手續費後退還於甲方。
+解約手續費為剩餘金額百分之十。
+
+第 八 條 (不可歸責於雙方之解約退費)
+因天災、不可抗力，或甲方因疾病、健康情形不佳致難以繼續接受本契約服務者，得解除或終止契約。乙方應退還扣除已服務費用後之剩餘款項，且不得扣除解約手續費。
+
+第 九 條 (個人資料保護)
+乙方因實施美容服務知悉之甲方個人資料，均應予以保密並依個人資料保護法相關規定辦理。
+
+第 十 條 (爭議處理與管轄法院)
+因本契約所生之消費爭議，雙方得依消費者保護法申請調解。如有訴訟，甲乙雙方同意以消費關係發生地之地方法院為第一審管轄法院。
+
+本契約經甲方於線上確認並完成親筆數位簽名後生效，系統自動存證並寄送副本。`;
 
 // ==========================================
 // 📌 專員莫蘭迪色盤與系統種子資料庫模組
@@ -2395,6 +2445,8 @@
   
   function renderSingleCardHTML(a) {
     const createdTimeText = a.created_at ? formatFriendlyTime(a.created_at).slice(5) : ''; // 顯示 MM/DD HH:mm
+
+const createdTimeFriendly = a.created_at ? formatFriendlyTime(a.created_at) : '';
     
     // 在顧客姓名下方或預約時間旁加入：
     // <span class="text-[10px] text-brand-400 font-normal">下單於: ${createdTimeText}</span>
@@ -2493,7 +2545,12 @@
         <div class="flex justify-between items-start">
           <div class="space-y-1">
             <div class="flex items-center gap-1.5">
-              <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+              
+<div class="flex flex-col">
+      <span class="text-brand-500 font-bold text-sm">${a.date} ${a.time}</span>
+      ${createdTimeFriendly ? `<span class="text-[10px] text-brand-400 font-mono">下單於：${createdTimeFriendly}</span>` : ''}
+    </div>
+              
               ${custTypeBadge}
             </div>
             <div class="font-bold text-brand-900 text-sm">
@@ -5040,7 +5097,16 @@ function openStaffLineBindModal(staffId, staffName) {
     window.open(`https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`, '_blank');
   }
 
-// ==========================================
+// 點擊按鈕直接覆蓋填入衛福部範本
+function loadMohwContractTemplate() {
+  const textarea = document.getElementById('cfg-contract-content');
+  const titleInput = document.getElementById('cfg-contract-title');
+  if (textarea) textarea.value = DEFAULT_MOHW_BEAUTY_CONTRACT;
+  if (titleInput && !titleInput.value.trim()) titleInput.value = "美容定型化契約書";
+  Swal.fire({ title: '已載入衛福部標準範本！', icon: 'success', timer: 1000, showConfirmButton: false });
+}
+  
+  // ==========================================
 // 📌 系統全域設定載入與表單填寫模組 (含二合一推播讀取)
 // ==========================================
   function populateSettings() {
@@ -5114,6 +5180,21 @@ function openStaffLineBindModal(staffId, staffName) {
     safeCheck('cfg-toggle-featured-shop', s.enableFeaturedShop === true);
     safeCheck('cfg-toggle-flex-menu', s.enableFlexMenu ?? true);
 
+    const contractTitleInput = document.getElementById('cfg-contract-title');
+  const contractContentInput = document.getElementById('cfg-contract-content');
+
+  const titleVal = s.contractTitle || s.contract_title || '美容定型化契約書';
+  const contentVal = s.contractContent || s.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT;
+
+  if (contractTitleInput) contractTitleInput.value = titleVal;
+  if (contractContentInput) contractContentInput.value = contentVal;
+    
+    // 若後台尚未設定契約內文，自動預設填入衛福部範本
+  const contractInput = document.getElementById('cfg-contract-content');
+  if (contractInput && !contractInput.value.trim()) {
+    contractInput.value = DEFAULT_BEAUTY_CONTRACT.replace('{店家名稱}', s.storeName || '本沙龍');
+  }
+    
     // ✨ 二合一總開關讀取回填 (相容舊欄位 enable_auto_reminder 或 enable_line_auto_notify)
     const isNotifyChecked = (s.enable_line_auto_notify === true || s.enableLineAutoNotify === true || s.enable_auto_reminder === true || s.enableAutoReminder === true);
     safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
@@ -5341,20 +5422,57 @@ function openStaffLineBindModal(staffId, staffName) {
       }
     });
   }
+
+  function deletePromoImg(idx, e) {
+  if (e) e.stopPropagation(); // 防止點擊刪除鍵時觸發檔案選擇器
+  
+  promoImgsArray[idx] = "";
+  
+  // 同步清空後台多行文字輸入框
+  const imgsTextarea = document.getElementById('cfg-promo-imgs-text');
+  if (imgsTextarea) {
+    imgsTextarea.value = promoImgsArray.filter(Boolean).join('\n');
+  }
+  
+  // 重新渲染畫面
+  renderUploadSlots();
+  Swal.fire({ title: `已移除說明圖 ${idx + 1}`, icon: 'success', timer: 800, showConfirmButton: false });
+}
   
   function renderUploadSlots() {
-    const grid = document.getElementById('promo-upload-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    for (let i = 0; i < 7; i++) {
-      grid.innerHTML += `
-        <div class="aspect-[9/16] rounded-xl border-2 border-dashed border-brand-200 flex items-center justify-center bg-cover bg-center cursor-pointer bg-brand-50 relative overflow-hidden" id="slot-${i}" onclick="document.getElementById('file-${i}').click()">
-          <span class="text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded-md">圖${i+1}</span>
-          <input type="file" id="file-${i}" class="hidden" accept="image/*" onchange="handleImgUpload(${i}, this)" />
-        </div>`;
-    }
-  }
+  const grid = document.getElementById('promo-upload-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  
+  for (let i = 0; i < 7; i++) {
+    const hasImg = Boolean(promoImgsArray[i]);
+    grid.innerHTML += `
+      <div class="aspect-[9/16] rounded-xl border-2 border-dashed border-brand-200 flex items-center justify-center bg-cover bg-center cursor-pointer bg-brand-50 relative overflow-hidden group" 
+           id="slot-${i}" 
+           style="${hasImg ? `background-image: url('${promoImgsArray[i]}');` : ''}"
+           onclick="document.getElementById('file-${i}').click()">
+        
+        <!-- 標籤 -->
+        <span class="text-[10px] bg-black/50 text-white px-1.5 py-0.5 rounded-md absolute bottom-1.5 left-1.5 pointer-events-none">
+          圖${i + 1}
+        </span>
+        
+        <!-- 刪除按鈕 (有圖時顯示) -->
+        ${hasImg ? `
+          <button type="button" 
+                  onclick="deletePromoImg(${i}, event)" 
+                  class="absolute top-1 right-1 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-md transition z-10" 
+                  title="刪除此圖">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        ` : `
+          <span class="text-[10px] text-brand-300 pointer-events-none">+ 上傳</span>
+        `}
 
+        <input type="file" id="file-${i}" class="hidden" accept="image/*" onchange="handleImgUpload(${i}, this)" />
+      </div>`;
+  }
+}
 // ==========================================
 // 📌 核心儲存設定模組 (含二合一推播同步儲存回寫)
 // ==========================================
@@ -5449,8 +5567,8 @@ function openStaffLineBindModal(staffId, staffName) {
       }, 'id');
       await directSupabaseUpsert('store_settings', payload, 'store_id');
       localStorage.setItem(`sibyl_settings_${CURRENT_STORE_ID}`, JSON.stringify(payload));
-      backendData.settings = Object.assign({}, backendData.settings, payload);
-      populateSettings();
+  backendData.settings = Object.assign({}, payload); // 直接同步最新記憶體，不讀取舊快取
+  populateSettings();
       Swal.fire({ title: '設定已完整儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
     } catch (e) {
       Swal.fire({ title: '儲存失敗', text: e.message, icon: 'error' });
