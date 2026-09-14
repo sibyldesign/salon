@@ -840,357 +840,505 @@
     </div>
   </div>
 
-  <!-- 分頁 10. 設定 (新增定型化契約內容填寫與商城選品關閉提示) -->
-  <div id="page-settings" class="page space-y-4" style="display: none;">
-    <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
-      <div class="flex items-center gap-2 text-sm font-bold text-red-500">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-        店家公休控制台
-      </div>
-      <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2.5">
-        <div class="text-xs font-bold text-brand-900">1. 勾選每週固定公休日</div>
-        <div class="grid grid-cols-4 gap-2 text-xs" id="weekly-off-grid">
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="0" class="accent-brand-400"> 日</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="1" class="accent-brand-400"> 一</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="2" class="accent-brand-400"> 二</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="3" class="accent-brand-400"> 三</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="4" class="accent-brand-400"> 四</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="5" class="accent-brand-400"> 五</label>
-          <label class="flex items-center gap-1.5 p-2 bg-white rounded-xl border border-brand-200"><input type="checkbox" value="6" class="accent-brand-400"> 六</label>
-        </div>
-      </div>
-      <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2.5">
-        <div class="text-xs font-bold text-brand-900">2. 指定特殊公休日</div>
-        <div class="flex gap-2">
-          <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white">
-          <button class="px-3.5 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition" onclick="addCustomOffDate()">+ 新增</button>
-        </div>
-        <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
-      </div>
-      <button class="w-full py-3 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="saveOffDaysSetting()">儲存公休設定</button>
+  <!-- ========================================================================= -->
+<!-- 📌 分頁 10. 店家全域設定 (依常用頻率重新編排・模組分類聚合版) -->
+<!-- ========================================================================= -->
+<div id="page-settings" class="page space-y-4" style="display: none;">
+
+  <!-- 1. 【高頻核心】預約審核、線下訂金與緩衝時間規則 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-clipboard-check text-brand-500"></i>
+        <span>預約審核機制與訂金收取規則</span>
+      </span>
+      <span class="text-[10px] text-brand-400">接單防撞期核心</span>
     </div>
 
-    <!-- 審核與訂金設定 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">預約審核與訂金規則</div>
-      <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <span class="font-medium">啟用 預約先由店家審核 (核准後系統自動通知顧客)</span>
-          <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <span class="font-medium">啟用 線下收取訂金機制 (前台同步顯示匯款卡片與小計扣除)</span>
-          <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
-        </label>
-      </div>
-      
-      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-        <label class="block text-xs font-bold text-brand-800">訂金收取條件對象：</label>
-        <select id="cfg-deposit-mode" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white">
-          <option value="new_only">1. 僅「新朋友」需付訂金</option>
-          <option value="all">2. 「新朋友與舊朋友」皆需付訂金</option>
-        </select>
-        <div class="flex items-center gap-2 pt-1">
-          <span class="text-xs font-bold text-brand-800 shrink-0">每筆訂金金額：</span>
-          <input type="number" id="cfg-deposit-amount" class="w-full p-2 text-xs rounded-xl border border-brand-200 bg-white" placeholder="例如：500">
-          <span class="text-xs text-brand-500 shrink-0">元</span>
+    <div class="space-y-2 text-xs">
+      <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 border border-brand-200/60 cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">啟用 預約先由店家審核接單</span>
+          <span class="text-[10px] text-brand-500">開啟時：新訂單標記為「待確認」，店家可於 LINE 或後台按確認接單才成立</span>
         </div>
-      </div>
-      <textarea id="cfg-deposit-info" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="匯款銀行帳號與說明文字..."></textarea>
+        <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400 w-4 h-4 ml-2" checked>
+      </label>
+
+      <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 border border-brand-200/60 cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">啟用 線下預收訂金機制</span>
+          <span class="text-[10px] text-brand-500">開啟時：前台送單後顯示店家匯款卡片與回報後五碼按鈕，名單開啟防呆提醒</span>
+        </div>
+        <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400 w-4 h-4 ml-2" checked>
+      </label>
     </div>
 
-    <!-- 定型化契約與數位簽署設定 -->
-<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="flex items-center justify-between">
-    <span class="text-xs font-bold text-brand-900">📑 定型化契約與手寫數位簽署模組</span>
-    <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355] w-4 h-4">
+    <!-- 訂金詳細設定 -->
+    <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2.5 text-xs">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[11px] font-bold text-brand-800 mb-1">訂金收取對象：</label>
+          <select id="cfg-deposit-mode" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-white outline-none">
+            <option value="new_only">1. 僅「新朋友」需付訂金</option>
+            <option value="all">2. 「新舊朋友」皆需付訂金</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-brand-800 mb-1">每筆定額訂金金額：</label>
+          <div class="flex items-center gap-1.5">
+            <input type="number" id="cfg-deposit-amount" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-white outline-none" placeholder="例如：500">
+            <span class="text-brand-500 font-bold">元</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] font-bold text-brand-800 mb-1">匯款銀行帳號與說明文字：</label>
+        <textarea id="cfg-deposit-info" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white leading-relaxed outline-none" placeholder="例：玉山銀行 (808) 帳號 1234-5678-9012，匯款完成後請於系統填寫帳號末五碼..."></textarea>
+      </div>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between">
+        <label class="text-xs font-bold text-brand-800">預約緩衝禁約時間 (小時)</label>
+        <span class="text-[10px] text-brand-400">💡 顧客無法預約 X 小時以內的臨時時段</span>
+      </div>
+      <input type="number" id="cfg-buffer" class="w-full p-2.5 mt-1 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" placeholder="例：1">
+    </div>
   </div>
-  <div class="text-[11px] text-brand-500 leading-relaxed">
-    開啟後前台將要求顧客於送單前「詳閱條款並親筆手寫簽名」，並強制填寫 Email 寄發合約存證副本。簽署圖檔直傳資料庫並永久保存於後台名單。
-  </div>
-  <div>
-    <label class="block text-[11px] font-bold text-brand-800 mb-1">契約書主標題：</label>
-    <input type="text" id="cfg-contract-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="例如：美容定型化契約書">
-  </div>
-  <div>
-    <div class="flex justify-between items-center mb-1">
-      <label class="text-[11px] font-bold text-brand-800">契約條款詳細內容：</label>
-      <!-- 一鍵重設載入官方範本 -->
-      <button type="button" onclick="loadMohwContractTemplate()" class="text-[11px] text-[#8C7355] hover:underline font-bold">
-        ＋ 載入衛福部官方標準範本
+
+  <!-- 2. 【高頻核心】專員名單管理與獨立分權工作台 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <div>
+        <span class="text-xs font-bold text-brand-900 block flex items-center gap-1.5">
+          <i class="fa-solid fa-user-group text-brand-500"></i>
+          <span>門市專員名冊與獨立排班設定</span>
+        </span>
+        <span class="text-[10px] text-brand-400">設定專屬登入密碼，專員可連動個人 LINE 接收指名預約推播</span>
+      </div>
+      <span id="staff-count-badge" class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">0 位專員</span>
+    </div>
+
+    <!-- 專員名單動態渲染容器 -->
+    <div id="staff-manager-list" class="space-y-2"></div>
+
+    <!-- 新增專員輸入表單 -->
+    <div class="pt-2 border-t border-brand-100 space-y-2 text-xs">
+      <div class="font-bold text-brand-800 text-[11px]">＋ 登記新專員</div>
+      <div class="grid grid-cols-3 gap-2">
+        <input type="text" id="new-staff-id" placeholder="專員編號 (如: S01)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
+        <input type="text" id="new-staff-name" placeholder="姓名 (如: Emily)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
+        <input type="password" id="new-staff-pin" placeholder="獨立密碼 (預設8888)" maxlength="6" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none font-mono">
+      </div>
+      <button type="button" onclick="addStaffMember()" class="w-full py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1">
+        <i class="fa-solid fa-plus text-[10px]"></i>
+        <span>建立並保存專員資料</span>
       </button>
     </div>
-    <textarea id="cfg-contract-content" rows="6" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 leading-relaxed" placeholder="請逐條填寫定型化服務契約條款..."></textarea>
-  </div>
-</div>
 
-    <!-- 居家保養小叮嚀 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🌿 居家保養小叮嚀內容</div>
-      <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="填寫提供給客人的保養注意事項..."></textarea>
+    <!-- 專員專屬分流工作台說明卡 -->
+    <div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1">
+      <div class="font-bold flex items-center gap-1 text-[11px] text-amber-800">
+        <i class="fa-solid fa-circle-info text-amber-600"></i>
+        <span>專員專屬分權後台連結（隱藏全店營收與全域設定）：</span>
+      </div>
+      <p class="text-[11px] leading-relaxed text-amber-800">
+        店長可將下方專屬連結複製給專員，專員登入後僅可查看與操作自己的班表與業績：<br>
+        <code class="bg-white px-2 py-0.5 rounded border border-amber-300 font-mono text-[10.5px] text-amber-950 block mt-1 select-all break-all">
+          https://salon.heysibyl.com/admin.html?store_id=店家ID&staff=專員編號
+        </code>
+      </p>
+    </div>
+  </div>
+
+  <!-- 3. 【通知通報】官方 LINE 推播、業主接單卡片與 0 元純 Email 存查 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-brands fa-line text-emerald-600 text-sm"></i>
+        <span>預約通報與推播管道設定 (LINE / Email)</span>
+      </span>
+      <div class="flex items-center gap-1.5">
+        <button type="button" class="text-[11px] bg-[#06C755] hover:bg-[#05b34c] text-white px-2.5 py-1 rounded-lg font-bold shadow-xs transition flex items-center gap-1" onclick="openOwnerLineBindModal()">
+          <i class="fa-brands fa-line"></i>
+          <span>連動業主個人 LINE</span>
+        </button>
+        <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">📖 設定 3 步驟</button>
+      </div>
     </div>
 
-    <!-- 專員名單管理卡片 -->
-<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="flex items-center justify-between">
-    <div>
-      <span class="text-xs font-bold text-brand-900 block">👥 門市專員/設計師名單管理</span>
-      <span class="text-[10px] text-brand-400">專員可設獨立專用登入密碼，綁定個人 LINE 接收指名通知</span>
-    </div>
-    <span id="staff-count-badge" class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">0 位專員</span>
-  </div>
-
-  <!-- ✨ 1. 已建立的專員列表容器 (支援顯示、即時修改、刪除) -->
-  <div id="staff-manager-list" class="space-y-2">
-    <!-- 由 JavaScript 自動動態渲染 -->
-  </div>
-
-  <!-- ✨ 2. 新增專員快捷輸入區 -->
-  <div class="pt-2 border-t border-brand-100 space-y-2">
-    <div class="text-[11px] font-bold text-brand-800">＋ 新增專員名冊</div>
-    <div class="grid grid-cols-3 gap-2">
-      <input type="text" id="new-staff-id" placeholder="專員編號 (如: S01)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
-      <input type="text" id="new-staff-name" placeholder="專員姓名 (如: Emily)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
-      <input type="password" id="new-staff-pin" placeholder="專屬密碼 (預設8888)" maxlength="6" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none font-mono">
-    </div>
-    <button type="button" onclick="addStaffMember()" class="w-full py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center justify-center gap-1">
-      <i class="fa-solid fa-plus text-[10px]"></i>
-      <span>建立並儲存此專員</span>
-    </button>
-  </div>
-  <!-- 專員個人獨立後台連結提示卡片 -->
-<div class="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1 mt-3">
-  <div class="font-bold flex items-center gap-1.5">
-    <i class="fa-solid fa-circle-info text-amber-600"></i>
-    <span>專員個人專屬後台連結說明：</span>
-  </div>
-  <p class="text-[11.5px] leading-relaxed text-amber-800">
-    店長若希望專員<b>僅查看自己的排程與業績</b>（隱藏全店營業額與全域設定），請複製以下專屬網址格式提供給專員：<br>
-    <code class="bg-white px-2 py-0.5 rounded border border-amber-300 font-mono text-[11px] text-amber-950 block mt-1 select-all">
-      https://salon.heysibyl.com/admin.html?store_id=店家ID&staff=專員編號
-    </code>
-    專員使用此專屬網址登入時，只需輸入自己的專屬密碼，即可進入個人工作台！
-  </p>
-</div>
-
-    <!-- 基本資料與 Logo 上傳 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">🏪 品牌資料與 LOGO 上傳</div>
-      <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店家名稱">
-      <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="副標題">
-      
-      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-        <label class="block text-xs font-bold text-brand-800">前台頂部 LOGO 圖片 (高度 150px、自動置中留白)</label>
-        <div class="flex gap-2 items-center">
-          <input type="file" id="logo-file-input" accept="image/*" class="text-xs text-brand-800 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-400 file:text-white hover:file:bg-brand-500 cursor-pointer">
-          <button type="button" onclick="uploadLogoImgBB()" class="px-4 py-2 bg-brand-800 hover:bg-black text-white text-xs font-bold rounded-xl shadow-sm transition">上傳轉網址</button>
+    <div class="space-y-2.5 text-xs">
+      <!-- 管道 1：業主端通報模式 (LINE Push 卡片 vs 0 元純 Email) -->
+      <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">新預約主動推播至【業主個人 LINE】(含接單/婉拒按鈕)</span>
+          <span class="text-[11px] text-brand-500 block mt-0.5">關閉時：改為「純發送業主信箱存查副本」，完全 0 元、不消耗任何 LINE 付費則數</span>
+          <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 開啟時：每筆新預約下單會扣除店家 LINE 官方帳號 1 則 Push 推播額度</span>
         </div>
-        <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 text-xs bg-white" placeholder="上傳後自動產生圖片網址" readonly>
-        <div id="logo-preview-box" class="w-full h-[150px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2" style="display: none;">
+        <input type="checkbox" id="cfg-toggle-owner-line-push" class="accent-brand-400 w-4 h-4 ml-2" checked>
+      </label>
+
+      <!-- 管道 2：顧客端自動推播 (接單通過 ＋ 前一日排程到期提醒) -->
+      <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">啟用官方 LINE 主動推播給【預約顧客】</span>
+          <span class="text-[11px] text-brand-500 block mt-0.5">含：接單成功即時推播 ＋ 預約日前一天晚上自動提醒防放鳥</span>
+          <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 會消耗店家的 LINE 官方帳號 Push 則數（免費用完後由 LINE 另計）</span>
+        </div>
+        <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400 w-4 h-4 ml-2">
+      </label>
+
+      <!-- 管道 3：LINE 互動式價目表 (0 元 Reply API) -->
+      <label class="flex items-center justify-between p-2.5 rounded-2xl bg-brand-50/50 border border-brand-200/60 cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">LINE 互動式價目表 (Flex Menu)</span>
+          <span class="text-[10px] text-brand-500 block">顧客在官方 LINE 聊天室輸入「價目表」自動回傳精美輪播卡片</span>
+          <span class="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ 採用 Reply API，完全 0 元計費、不佔用任何 LINE 官方帳號則數額度</span>
+        </div>
+        <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400 w-4 h-4 ml-2" checked>
+      </label>
+
+      <!-- API Token 填寫區 -->
+      <div class="pt-1">
+        <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
+        <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
+      </div>
+
+      <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
+        ⚠️ <b>貼心提示：</b>若僅使用「純 Email 0 元通知」，此欄位可留空；若要啟用官方 LINE 自動通知，請依上方指南填入權杖。
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 【門市排班】營業時段、預約網格間隔與公休日控制台 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-clock text-brand-500"></i>
+        <span>門市營業時段、排班間隔與公休日</span>
+      </span>
+      <span class="text-[10px] text-brand-400">時段網格排程</span>
+    </div>
+
+    <!-- 營業與網格時段 -->
+    <div class="space-y-2 text-xs">
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-brand-800 mb-1 text-[11px]">每日營業開始時間：</label>
+          <input type="time" id="cfg-shift-start" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" value="09:00">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-800 mb-1 text-[11px]">每日最後接單時間：</label>
+          <input type="time" id="cfg-shift-end" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" value="19:00">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-brand-800 mb-1 text-[11px]">前台可約時段切分間隔：</label>
+        <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none">
+          <option value="30">每 30 分鐘為一格時段</option>
+          <option value="60">每 60 分鐘為一格時段</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 每週固定公休日 -->
+    <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
+      <div class="font-bold text-brand-900">每週固定公休日 (勾選之星期前台不開放預約)：</div>
+      <div class="grid grid-cols-7 gap-1.5 text-center" id="weekly-off-grid">
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="0" class="accent-brand-400"><span class="mt-1 font-bold">日</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="1" class="accent-brand-400"><span class="mt-1 font-bold">一</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="2" class="accent-brand-400"><span class="mt-1 font-bold">二</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="3" class="accent-brand-400"><span class="mt-1 font-bold">三</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="4" class="accent-brand-400"><span class="mt-1 font-bold">四</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="5" class="accent-brand-400"><span class="mt-1 font-bold">五</span></label>
+        <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="6" class="accent-brand-400"><span class="mt-1 font-bold">六</span></label>
+      </div>
+    </div>
+
+    <!-- 指定特殊公休日 -->
+    <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
+      <div class="font-bold text-brand-900">指定特殊休假／國定店休日：</div>
+      <div class="flex gap-2">
+        <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        <button class="px-4 py-2 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-xs font-bold transition" onclick="addCustomOffDate()">+ 加入休假</button>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
+    </div>
+  </div>
+
+  <!-- 5. 【品牌資料】店名、LOGO 圖片與前台顯示設定 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-store text-brand-500"></i>
+        <span>門市品牌資料與前台外觀</span>
+      </span>
+      <span class="text-[10px] text-brand-400">前台視覺設定</span>
+    </div>
+
+    <div class="space-y-2.5 text-xs">
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">沙龍門市名稱：</label>
+        <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：Solara Hair Salon">
+      </div>
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">副標題 / 品牌理念標語：</label>
+        <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：日系質感燙染・客製化頭皮養護專家">
+      </div>
+
+      <!-- LOGO 上傳與開關區 -->
+      <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+        <div class="flex items-center justify-between">
+          <label class="font-bold text-brand-900 text-xs">前台頂部 LOGO 圖片展示</label>
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <span class="text-[11px] text-brand-600">啟用展示</span>
+            <input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked>
+          </label>
+        </div>
+        <div class="flex gap-2 items-center">
+          <input type="file" id="logo-file-input" accept="image/*" class="text-xs text-brand-800 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-400 file:text-white hover:file:bg-brand-500 cursor-pointer">
+          <button type="button" onclick="uploadLogoImgBB()" class="px-3 py-1.5 bg-brand-800 hover:bg-black text-white text-xs font-bold rounded-xl shadow-xs transition shrink-0">上傳轉網址</button>
+        </div>
+        <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 text-xs bg-white outline-none text-gray-500 font-mono" placeholder="上傳後自動生成圖檔網址，亦可貼入直鏈" readonly>
+        <div id="logo-preview-box" class="w-full h-[120px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2" style="display: none;">
           <img id="logo-preview-img" class="max-h-full max-w-full object-contain" src="">
         </div>
       </div>
-      <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="店面地址 (留空則不顯示)">
-      <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="營業時間文字">
+
       <div>
-        <div class="flex items-center justify-between">
-          <label class="text-xs font-bold text-brand-800">預約緩衝禁約時間 (小時)</label>
-          <span class="text-[10px] text-brand-400">💡 顧客無法預約 X 小時以內的即時時段</span>
-        </div>
-        <input type="number" id="cfg-buffer" class="w-full p-2.5 mt-1 rounded-xl border border-brand-200 text-xs" placeholder="例：1">
+        <label class="block font-bold text-brand-800 mb-1">店面地址：</label>
+        <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：台北市大安區忠孝東路四段 100 號">
+      </div>
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">營業時間文字說明：</label>
+        <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：週一至週六 10:30 - 20:00 (每週日固定公休)">
       </div>
     </div>
+  </div>
 
-    <!-- 排班時段 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">營業排班時段與間隔</div>
-      <div class="grid grid-cols-2 gap-2">
-        <input type="time" id="cfg-shift-start" class="p-2.5 rounded-xl border border-brand-200 text-xs" value="09:00">
-        <input type="time" id="cfg-shift-end" class="p-2.5 rounded-xl border border-brand-200 text-xs" value="19:00">
-      </div>
-      <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs">
-        <option value="30">每 30 分鐘一格</option>
-        <option value="60">每 60 分鐘一格</option>
-      </select>
+  <!-- 6. 【功能模組總開關板】同類型整合・直覺勾選 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-toggle-on text-brand-500"></i>
+        <span>進階功能與行銷模組開關控制板</span>
+      </span>
+      <span class="text-[10px] text-brand-400">依門市營運自由啟閉</span>
     </div>
 
-    <!-- 專員抽成計算設定 -->
-      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900">💰 專員個人業績抽成比例設定</div>
-        <div>
-          <label class="text-xs font-bold text-brand-800">各專員個人抽成比例預設值 (%)</label>
-          <input type="number" id="cfg-commission-rate" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs mt-1 bg-brand-50/50 font-bold" value="50">
-        </div>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 text-xs">
-          <span>啟用 專員個人業績抽成與工時計算模組 (於業績分頁展示)</span>
-          <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
+    <!-- A. 顧客預約體驗模組 -->
+    <div class="space-y-2 text-xs">
+      <div class="font-bold text-brand-800 text-[11px]">👥 顧客預約流程選項：</div>
+      <div class="space-y-1.5">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 指定專員選取 (前台允許顧客指定設計師)</span>
+          <input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked>
         </label>
-      </div>
-
-    <!-- 完整模組開關清單 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">功能模組開關</div>
-      <div class="space-y-2 text-xs">
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 前台頂部 Logo 圖片</span><input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 自動寄送預約副本 Email</span><input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 指定專員選取</span><input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 多位專員獨立排班</span><input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 說明圖輪播</span><input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 新舊客身份選取</span><input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 作品集專區</span><input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50"><span>啟用 居家保養叮嚀</span><input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked></label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 前台顯示服務金額</span>
-            <span class="text-[10px] text-brand-500">關閉時前台隱藏項目金額與試算，適合現場諮詢報價</span>
-          </div>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 多位專員獨立排班 (各專員時段互不佔用)</span>
+          <input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 新朋友/舊朋友身份選取</span>
+          <input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 前台顯示服務金額 (關閉時隱藏價格，適合現場報價)</span>
           <input type="checkbox" id="cfg-toggle-show-price" class="accent-brand-400" checked>
         </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 前台顧客「特殊需求與膚況/髮況備註」</span>
-            <span class="text-[10px] text-brand-500">讓客人在前台預約時備註過敏史、需卸甲或特殊要求</span>
-          </div>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 前台顧客「特殊需求與膚況/髮況備註」</span>
           <input type="checkbox" id="cfg-toggle-cust-notes" class="accent-brand-400" checked>
         </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 後台「一鍵電話與 LINE/WhatsApp 快速聯繫」</span>
-            <span class="text-[10px] text-brand-500">在名單卡片直接點選按鈕一鍵撥號或開啟通訊軟體</span>
-          </div>
+      </div>
+    </div>
+
+    <!-- B. 會員與行銷增長模組 -->
+    <div class="space-y-2 text-xs pt-2 border-t border-brand-100">
+      <div class="font-bold text-brand-800 text-[11px]">🎟️ 會員行銷與評價增長：</div>
+      <div class="space-y-1.5">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 會員儲值金系統 (輸入電話自動帶出餘額與折扣)</span>
+          <input type="checkbox" id="cfg-toggle-wallet" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 包卡堂票核銷模組 (買幾送幾、現場完工結單自動扣抵)</span>
+          <input type="checkbox" id="cfg-toggle-packages" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 活動促銷折扣碼 (前台輸入代碼現折或比例折扣)</span>
+          <input type="checkbox" id="cfg-toggle-coupons" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 顧客好評展示牆 (前台展示經後台審核核准之真實評價)</span>
+          <input type="checkbox" id="cfg-toggle-reviews" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 作品集展示專區</span>
+          <input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 居家保養叮嚀內容展示</span>
+          <input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked>
+        </label>
+      </div>
+    </div>
+
+    <!-- C. 後台內部管理輔助模組 -->
+    <div class="space-y-2 text-xs pt-2 border-t border-brand-100">
+      <div class="font-bold text-brand-800 text-[11px]">⚙️ 後台營運輔助工具：</div>
+      <div class="space-y-1.5">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 後台「一鍵電話與 LINE/WhatsApp 快速聯繫」按鈕</span>
           <input type="checkbox" id="cfg-toggle-quick-contact" class="accent-brand-400" checked>
         </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 取消預約時填寫「取消原因記錄」</span>
-            <span class="text-[10px] text-brand-500">後台點取消時彈出原因記錄框，方便顧客經營分析</span>
-          </div>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 取消預約時填寫「原因記錄」(供流失顧客經營分析)</span>
           <input type="checkbox" id="cfg-toggle-cancel-reason" class="accent-brand-400" checked>
         </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 LINE 對話框「一鍵接單/婉拒」</span>
-            <span class="text-[10px] text-brand-500">預約成立自動推播審核卡片至老闆個人 LINE</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-line-one-click" class="accent-brand-400" checked>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 自動寄送顧客預約確認副本 Email</span>
+          <input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked>
         </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
+          <span>啟用 說明圖輪播模組</span>
+          <input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked>
+        </label>
+        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 hover:bg-brand-50 cursor-pointer">
           <div>
-            <span class="font-bold text-brand-900 block">啟用 老師推薦・沙龍專屬選品專區</span>
-            <span class="text-[10px] text-amber-700 font-bold">※ 預設關閉。需另外加購開通專屬商城系統 (shop.html)</span>
+            <span class="block">啟用 沙龍專屬選品專區 (商城模組)</span>
+            <span class="text-[10px] text-amber-700">需加購開通專屬 shop.html 商城系統</span>
           </div>
           <input type="checkbox" id="cfg-toggle-featured-shop" class="accent-brand-400">
         </label>
-
-        <!-- 行銷功能開關 -->
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 會員儲值金系統</span>
-            <span class="text-[10px] text-brand-500">輸入電話自動帶出餘額與整單折扣試算</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-wallet" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 包卡堂票核銷模組</span>
-            <span class="text-[10px] text-brand-500">支援買幾送一與堂數結單自動扣抵</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-packages" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 活動促銷折扣碼</span>
-            <span class="text-[10px] text-brand-500">顧客送單前可填寫代碼享有現折或打折</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-coupons" class="accent-brand-400" checked>
-        </label>
-        <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50">
-          <div>
-            <span class="font-bold text-brand-900 block">啟用 顧客好評展示牆</span>
-            <span class="text-[10px] text-brand-500">前台展示通過後台審核核准之真實評價</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-reviews" class="accent-brand-400" checked>
-        </label>
       </div>
-
-      <div class="text-xs font-bold text-brand-900 pt-2 border-t border-brand-100">進階自動化模組開關</div>
-      <div class="space-y-2 text-xs">
-        <!-- 模組 1：0 元計費價目表保持獨立 -->
-        <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/50 border border-brand-200/60">
-          <div>
-            <span class="font-bold text-brand-900 block">LINE 互動式價目表</span>
-            <span class="text-[10px] text-brand-500 block">顧客在官方 LINE 輸入「價目表」自動回傳精美輪播卡片 (預設啟用)</span>
-            <span class="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ 採用 Reply API，完全 0 元計費、不佔用任何 LINE 官方帳號則數</span>
-          </div>
-          <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
-        </label>
-      </div>
-    </div>
-
-    <!-- LINE 官方自動推播總開關與 Channel Access Token 欄位 (兩者合一) -->
-<div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="flex items-center justify-between">
-    <span class="text-xs font-bold text-brand-900">💬 官方 LINE 自動推播通知設定</span>
-    <div class="flex items-center gap-1.5">
-      <!-- ✨ 業主一鍵綁定觸發按鈕 -->
-      <button type="button" class="text-[11px] bg-[#06C755] hover:bg-[#05b34c] text-white px-2.5 py-1 rounded-lg font-bold shadow-xs transition flex items-center gap-1" onclick="openOwnerLineBindModal()">
-        <i class="fa-brands fa-line text-sm"></i>
-        <span>連動業主個人 LINE</span>
-      </button>
-      <button type="button" class="text-[11px] bg-brand-200 text-brand-800 px-2.5 py-1 rounded-lg font-bold hover:bg-brand-300 transition" onclick="showLineGuideModal()">
-        📖 設定 3 步驟
-      </button>
     </div>
   </div>
 
-  <div class="space-y-2 text-xs">
-    <!-- 整合後的二合一總開關 -->
-    <label class="flex items-center justify-between p-3 rounded-2xl bg-brand-50/80 border border-brand-200 cursor-pointer">
-      <div>
-        <span class="font-bold text-brand-900 block">啟用官方 LINE 自動推播通知</span>
-        <span class="text-[11px] text-brand-500 block mt-0.5">含：接單成功即時通知 ＋ 預約日前一天主動提醒顧客</span>
-        <span class="text-[10px] text-rose-600 font-bold block mt-0.5">⚠️ 會消耗 LINE 官方帳號 Push 則數（免費用完後由 LINE 另計）</span>
-      </div>
-      <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400 w-4 h-4 ml-2">
-    </label>
-
-    <div>
-      <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token (API 權杖)：</label>
-      <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
+  <!-- 7. 【專員抽成】薪資與業績拆帳計算設定 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-coins text-brand-500"></i>
+        <span>專員業績抽成與算薪模組</span>
+      </span>
+      <label class="flex items-center gap-1.5 cursor-pointer">
+        <span class="text-[11px] text-brand-600">啟用計算</span>
+        <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
+      </label>
     </div>
-
-    <div class="p-2.5 bg-gray-50 rounded-xl border border-gray-200 text-[11px] text-gray-500 leading-relaxed">
-      ⚠️ <b>貼心提示：</b>無法自行找到 Channel Access Token 沒關係，可點擊上方「設定 3 步驟」或聯繫 Sibyl 官方客服協助設定。
+    <div class="text-xs">
+      <label class="block font-bold text-brand-800 mb-1">各專員預設服務項目抽成比例 (%)：</label>
+      <div class="flex items-center gap-2">
+        <input type="number" id="cfg-commission-rate" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 font-bold outline-none" value="50">
+        <span class="text-brand-500 font-bold">%</span>
+      </div>
+      <p class="text-[10px] text-brand-400 mt-1">※ 啟用後將在「業績分頁」自動依結單實收試算每位專員的業績與應發抽成</p>
     </div>
   </div>
-</div>
 
-    <!-- 說明圖與換行公告設定 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">說明圖管理與滿版公告</div>
+  <!-- 8. 【活動圖文】9:16 說明圖上傳與換行公告 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-images text-brand-500"></i>
+        <span>活動說明圖與滿版置頂公告</span>
+      </span>
+      <span class="text-[10px] text-brand-400">前台圖文視覺</span>
+    </div>
+    <div class="space-y-3 text-xs">
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1">前台公告文字 (支援換行)：</label>
-        <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white" placeholder="填寫店家最新公告（支援直接按 Enter 換行）"></textarea>
+        <label class="block font-bold text-brand-800 mb-1">前台置頂公告文字 (支援按 Enter 換行)：</label>
+        <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white leading-relaxed outline-none" placeholder="填寫店家最新公告事項..."></textarea>
       </div>
       <div>
-        <label class="block text-xs font-bold text-brand-800 mb-1.5">活動說明圖 (9:16 直式，最多 7 張)：</label>
+        <div class="flex justify-between items-center mb-1">
+          <label class="font-bold text-brand-800">活動說明圖 (9:16 直式，最多 7 張)：</label>
+          <span class="text-[10px] text-brand-400">點擊卡片上傳，右上角紅叉可直接刪除</span>
+        </div>
         <div class="grid grid-cols-4 gap-2 mb-2" id="promo-upload-grid"></div>
-        <label class="block text-[11px] font-bold text-brand-700 mb-1">說明圖網址清單 (自動產生或手動備份，一行一個網址)：</label>
-        <textarea id="cfg-promo-imgs-text" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white" placeholder="上傳後自動產生圖片網址，亦可手動貼入網址..."></textarea>
+        <label class="block text-[11px] font-bold text-brand-700 mb-1">說明圖網址清單 (一行一個網址)：</label>
+        <textarea id="cfg-promo-imgs-text" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none" placeholder="上傳後自動產生圖片網址..."></textarea>
       </div>
     </div>
+  </div>
 
-    <!-- 通知與社群連結 -->
-    <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-      <div class="text-xs font-bold text-brand-900">通知與社群連結</div>
-      <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="官方 LINE 連結網址">
-      <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Instagram 網址">
-      <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs" placeholder="Google 地圖網址">
-      <button class="w-full py-3 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-2xl shadow-md transition" onclick="saveStoreSettings()">儲存全部設定</button>
+  <!-- 9. 【法律存證】定型化契約內容與手寫數位簽署 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-file-signature text-brand-500"></i>
+        <span>定型化契約與親筆數位簽署存證</span>
+      </span>
+      <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355] w-4 h-4">
     </div>
+    <div class="text-[11px] text-brand-500 leading-relaxed">
+      開啟後前台將要求顧客送單前「詳閱條款並親筆手寫簽名」，並強制填寫 Email 寄發合約存證副本。簽署圖檔直傳資料庫並永久保存於後台名單。
+    </div>
+    <div class="space-y-2.5 text-xs">
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">契約書主標題：</label>
+        <input type="text" id="cfg-contract-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" placeholder="例如：美容定型化契約書">
+      </div>
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <label class="font-bold text-brand-800">契約條款詳細內容：</label>
+          <button type="button" onclick="loadMohwContractTemplate()" class="text-[11px] text-[#8C7355] hover:underline font-bold">
+            ＋ 載入衛福部官方標準範本
+          </button>
+        </div>
+        <textarea id="cfg-contract-content" rows="6" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 leading-relaxed outline-none" placeholder="請逐條填寫定型化服務契約條款..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. 【文案與叮嚀】居家保養注意事項 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-leaf text-brand-500"></i>
+        <span>🌿 居家保養小叮嚀內容</span>
+      </span>
+      <span class="text-[10px] text-brand-400">前台專區展示</span>
+    </div>
+    <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none leading-relaxed" placeholder="填寫提供給客人的施作後保養注意事項..."></textarea>
+  </div>
+
+  <!-- 11. 【社群導流與地圖連結】 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-share-nodes text-brand-500"></i>
+        <span>社群平台與 Google 地圖導航</span>
+      </span>
+      <span class="text-[10px] text-brand-400">前台底部按鈕</span>
+    </div>
+    <div class="space-y-2 text-xs">
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">官方 LINE 帳號好友連結 (https://lin.ee/...)：</label>
+        <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：https://lin.ee/abc1234">
+      </div>
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">Instagram 官方主頁網址：</label>
+        <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：https://instagram.com/salon_brand">
+      </div>
+      <div>
+        <label class="block font-bold text-brand-800 mb-1">Google 地圖導航網址：</label>
+        <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：https://maps.app.goo.gl/xyz...">
+      </div>
+    </div>
+  </div>
+
+  <!-- 最底部吸底或明顯的儲存按鈕 -->
+  <div class="pt-2">
+    <button type="button" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-2xl shadow-lg transition tracking-widest flex items-center justify-center gap-2" onclick="saveStoreSettings()">
+      <i class="fa-solid fa-floppy-disk"></i>
+      <span>儲存全部系統設定</span>
+    </button>
+  </div>
   </div>
 </main>
-
+  
 <!-- 底部導覽列 -->
 <!-- 底部導覽列（墊高 min-h、加大點擊高度、加入 pb-safe 防手勢誤觸） -->
 <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white/95 backdrop-blur-md border-t border-brand-200/90 shadow-xl pb-[env(safe-area-inset-bottom,12px)]">
@@ -1346,16 +1494,16 @@
 // ==========================================
 // 📌 核心全域常數與環境狀態設定模組
 // ==========================================
-  const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
-  const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
-  const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
+   SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
+   SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
+   API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+   IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
   
-  const urlParams = new URLSearchParams(window.location.search);
-  const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
+   urlParams = new URLSearchParams(window.location.search);
+   CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
   let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
-  const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
-  const VIP_PARAM = urlParams.get('vip') || null;
+   CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
+   VIP_PARAM = urlParams.get('vip') || null;
   let backendData = {};
   let currentShiftDate = 'ALL';
   let activeShiftStaffId = 'all';
@@ -1368,7 +1516,7 @@
   let pendingSlotsList = [];
   let currentCheckoutBookingObj = null;
 
-  const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字第1120300459號函發布
+   DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字第1120300459號函發布
 【美容定型化契約書】
 
 立契約書人：
@@ -1416,7 +1564,7 @@
 // 📌 專員莫蘭迪色盤與系統種子資料庫模組
 // ==========================================
   // ✨ 依序為紅、橙、黃、綠、藍、紫 低飽和莫蘭迪色盤
-  const STAFF_MORANDI_PALETTE = [
+   STAFF_MORANDI_PALETTE = [
     { dot: '#9E9E9E', bg: '#F5F5F5', text: '#616161', border: '#E0E0E0' }, // 0: 不指定 (沉穩淺灰)
     { dot: '#E57373', bg: '#FFEBEE', text: '#C62828', border: '#FFCDD2' }, // 1: 柔紅
     { dot: '#FFB74D', bg: '#FFF3E0', text: '#EF6C00', border: '#FFE0B2' }, // 2: 柔橙
@@ -1427,7 +1575,7 @@
   ];
 
   // ✨ 補齊具備逗號 "," 的多關鍵字預設文案庫
-  const DEFAULT_CARE_RULES = [
+   DEFAULT_CARE_RULES = [
     { name: "燙染造型, 染髮, 漂髮, 挑染, 質感染髮", weeks: 12, msg: "嗨 {姓名}～距離上次做『{項目}』已經滿12週囉！髮色與光澤維持得還好嗎？隨時歡迎預約回娘家補染護理唷❤️" },
     { name: "洗剪設計, 剪髮, 造型設計, 洗剪", weeks: 4, msg: "嗨 {姓名}～距離上次剪髮已經滿4週囉！長度與厚度是否需要修剪整理了呢？歡迎預約唷✂️" },
     { name: "深層護理, 頭皮SPA, 結構護理, 護髮", weeks: 4, msg: "嗨 {姓名}～定期深層護理能維持光澤質感，歡迎預約回娘家享受放鬆洗護時光✨" },
@@ -1436,7 +1584,7 @@
   ];
 
   // ✨ 預設服務項目列表
-  const DEFAULT_SERVICES = [
+   DEFAULT_SERVICES = [
     { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0 },
     { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1 },
     { id: "def-svc-3", name: "客製溫塑燙髮 (含洗剪護)", price: "3200-4800", duration: 150, type: "Group_A", isAddon: false, sortOrder: 2 },
@@ -1445,7 +1593,7 @@
   ];
 
   // ✨ 預設作品展示列表
-  const DEFAULT_PORTFOLIO = [
+   DEFAULT_PORTFOLIO = [
     { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 },
     { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80", sortOrder: 1 },
     { id: "def-port-3", cat: "美甲光療", title: "法式裸透晶石貓眼", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80", sortOrder: 2 },
@@ -1456,7 +1604,7 @@
 // 📌 專員色彩解析與活動規範輔助函式
 // ==========================================
   async function savePromoRulesText() {
-    const text = document.getElementById('cfg-promo-rules-input').value.trim();
+     text = document.getElementById('cfg-promo-rules-input').value.trim();
     await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: text });
     backendData.settings.promoRulesText = text;
     Swal.fire('說明文字已更新！', '前台已同步生效', 'success');
@@ -1466,7 +1614,7 @@
     if (!staffId || staffId === 'all' || staffId === '不指定') {
       return STAFF_MORANDI_PALETTE[0];
     }
-    const staffList = (backendData.settings && backendData.settings.staffList) || [];
+     staffList = (backendData.settings && backendData.settings.staffList) || [];
     const validStaffs = staffList.filter(s => s.id !== 'all');
     const index = validStaffs.findIndex(s => s.id === staffId || s.name === staffName);
     
@@ -5205,9 +5353,12 @@ function loadMohwContractTemplate() {
     contractInput.value = DEFAULT_BEAUTY_CONTRACT.replace('{店家名稱}', s.storeName || '本沙龍');
   }
     
-    // ✨ 二合一總開關讀取回填 (相容舊欄位 enable_auto_reminder 或 enable_line_auto_notify)
-    const isNotifyChecked = (s.enable_line_auto_notify === true || s.enableLineAutoNotify === true || s.enable_auto_reminder === true || s.enableAutoReminder === true);
-    safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
+    // 業主 LINE Push 卡片通報開關 (預設開啟)
+safeCheck('cfg-toggle-owner-line-push', s.enableOwnerLinePush ?? true);
+    
+    // 顧客 LINE 自動通知與前一日提醒 (二合一)
+const isNotifyChecked = (s.enable_line_auto_notify === true || s.enableLineAutoNotify === true || s.enable_auto_reminder === true || s.enableAutoReminder === true);
+safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
 
     safeCheck('cfg-toggle-wallet', s.enableWallet ?? true);
     safeCheck('cfg-toggle-packages', s.enablePackages ?? true);
@@ -5545,6 +5696,9 @@ function loadMohwContractTemplate() {
       enable_line_auto_notify: isLineNotifyActive,
       enable_auto_reminder: isLineNotifyActive,
 
+      enable_owner_line_push: Boolean(document.getElementById('cfg-toggle-owner-line-push')?.checked),
+      enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
+      enable_auto_reminder: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
       enable_line_one_click_audit: document.getElementById('cfg-toggle-line-one-click')?.checked ?? currentSettings.enableLineOneClickAudit ?? true,
       enable_featured_shop: Boolean(document.getElementById('cfg-toggle-featured-shop')?.checked),
       enable_flex_menu: document.getElementById('cfg-toggle-flex-menu')?.checked ?? currentSettings.enableFlexMenu ?? true,
