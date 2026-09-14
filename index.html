@@ -569,7 +569,7 @@
   </div>
   <h2 class="text-xl font-bold text-brand-900 mb-2">預約申請已送出！</h2>
   <p class="text-xs text-brand-500 mb-4 leading-relaxed" id="successScreenMsg">店家確認排程後會立即與您聯繫確認❤️</p>
-  <button type="button" class="px-8 py-3 bg-[#8C7355] text-white text-xs font-bold rounded-full shadow-md" onclick="location.reload()">返回首頁</button>
+  <button type="button" class="px-8 py-3 bg-[#8C7355] text-white text-xs font-bold rounded-full shadow-md" onclick="window.location.href = window.location.pathname;">返回首頁</button>
 </div>
   <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
@@ -840,16 +840,21 @@
   if (serviceSection && db.enableFlexMenu !== undefined) {
     serviceSection.style.display = (db.enableFlexMenu !== false) ? 'block' : 'none';
   }
-    const logoImg = document.getElementById('store-logo-img');
-    const logoPlaceholder = document.getElementById('store-logo-placeholder');
-    if (db.logoUrl && db.enableLogo) {
+    const logoWrapper = document.getElementById('store-logo-wrapper');
+  const logoImg = document.getElementById('store-logo-img');
+  const logoPlaceholder = document.getElementById('store-logo-placeholder');
+
+  if (db.enableLogo && db.logoUrl) {
+    if (logoWrapper) logoWrapper.style.display = 'flex';
+    if (logoImg) {
       logoImg.src = db.logoUrl;
       logoImg.classList.remove('hidden');
-      logoPlaceholder.classList.add('hidden');
-    } else {
-      logoImg.classList.add('hidden');
-      logoPlaceholder.classList.remove('hidden');
     }
+    if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
+  } else {
+    // 業主若關閉 LOGO，徹底將整區隱藏，不留空白高度！
+    if (logoWrapper) logoWrapper.style.display = 'none';
+  }
 
     document.getElementById('promo-text').innerText = db.promoText;
     document.getElementById('nav-ig').href = db.ig || '#';
@@ -926,6 +931,28 @@
       document.getElementById('addon-wallet-select').innerHTML = '<option value="none" data-price="0">不加購儲值</option>' +
         db.walletRules.map(w => `<option value="${w.name}" data-price="${w.price}" data-discount="${w.discount}">${w.name} (整單享 ${w.discount*10} 折 + 贈 $${w.bonus})</option>`).join('');
     }
+
+    // 獨立控制加購包卡選單
+  const pkgSelect = document.getElementById('addon-package-select');
+  if (pkgSelect) {
+    pkgSelect.style.display = (db.enablePackages !== false) ? 'block' : 'none';
+  }
+
+  // 獨立控制加購儲值金選單
+  const walSelect = document.getElementById('addon-wallet-select');
+  if (walSelect) {
+    walSelect.style.display = (db.enableWallet !== false) ? 'block' : 'none';
+  }
+
+  // 獨立控制折抵勾選區
+  const chkPkgLabel = document.getElementById('chk-use-package')?.closest('label');
+  if (chkPkgLabel) {
+    chkPkgLabel.style.display = (db.enablePackages !== false) ? 'flex' : 'none';
+  }
+  const chkWalLabel = document.getElementById('chk-use-wallet')?.closest('label');
+  if (chkWalLabel) {
+    chkWalLabel.style.display = (db.enableWallet !== false) ? 'flex' : 'none';
+  }
 
     setupPortfolio();
     renderServices();
