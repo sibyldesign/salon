@@ -160,17 +160,35 @@
         </div>
       </section>
 
-      <!-- 店家許願池回報區 -->
-      <section class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-lightbulb text-amber-500"></i>
-            <span>店家功能許願池清單</span>
-          </h2>
-          <button onclick="loadWishes()" class="text-[11px] text-brand-500 hover:underline">重新整理</button>
+      <!-- 店家與微頁許願池回報區 (升級支援微頁標籤與即時管理) -->
+      <section class="bg-white p-6 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b border-brand-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center text-xs">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </span>
+            <div>
+              <h2 class="text-xs font-bold text-brand-900">數位管家 ╳ 租戶功能許願池</h2>
+              <p class="text-[10px] text-brand-400">收集來自美業沙龍系統與品牌微頁業主的功能反饋</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="wish-count-badge" class="text-[10px] px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-bold">0 則許願</span>
+            <button onclick="loadWishes()" class="p-1.5 text-brand-500 hover:bg-brand-50 rounded-lg transition" title="重新整理">
+              <i class="fa-solid fa-rotate-right text-xs"></i>
+            </button>
+          </div>
         </div>
-        <div id="wishes-container" class="space-y-2 text-xs">
-          <div class="text-center py-4 text-brand-400">目前尚無許願紀錄</div>
+
+        <!-- 來源分類篩選 -->
+        <div class="flex gap-2">
+          <button onclick="filterWishes('ALL', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs">全部</button>
+          <button onclick="filterWishes('biolink', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">品牌微頁 (link.heysibyl)</button>
+          <button onclick="filterWishes('salon', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">美業系統 (salon)</button>
+        </div>
+
+        <div id="wishes-container" class="space-y-2.5 text-xs">
+          <div class="text-center py-6 text-brand-400">讀取許願紀錄中...</div>
         </div>
       </section>
     </div>
@@ -934,53 +952,136 @@ async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
       }
     }
 
-    // 許願池讀取與刪除
-    async function loadWishes() {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?order=created_at.desc&limit=30`, {
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        const wishes = await res.json();
-        const container = document.getElementById('wishes-container');
-        if (!wishes || wishes.length === 0) {
-          container.innerHTML = '<div class="text-center py-4 text-brand-400">目前尚無許願回報</div>';
-          return;
-        }
-        container.innerHTML = wishes.map(w => `
-          <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-start gap-3">
-            <div class="space-y-1 flex-1">
-              <div class="flex items-center gap-2 font-bold text-brand-900">
-                <span>🏪 ${w.store_name || '店家'}</span>
-                <span class="text-[10px] text-brand-500 font-normal">${w.created_at ? w.created_at.split('T')[0] : ''}</span>
-              </div>
-              <p class="text-brand-700 leading-relaxed">${w.content}</p>
-            </div>
-            <button onclick="deleteWishPrompt('${w.id}')" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg text-xs font-bold transition shrink-0">
-              <i class="fa-solid fa-trash text-[10px]"></i> 刪除
-            </button>
-          </div>
-        `).join('');
-      } catch(e){}
+    // ==========================================
+    // 許願池雙向整合讀取 (支援 system_feedbacks 與 feature_wishes)
+    // ==========================================
+    let allWishesList = [];
+    let currentWishFilter = 'ALL';
+
+    function filterWishes(type, btn) {
+      currentWishFilter = type;
+      document.querySelectorAll('.wish-filter-btn').forEach(b => {
+        b.className = "wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200";
+      });
+      btn.className = "wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs";
+      renderWishes();
     }
 
-    function deleteWishPrompt(id) {
-      Swal.fire({
+    async function loadWishes() {
+      const container = document.getElementById('wishes-container');
+      const badge = document.getElementById('wish-count-badge');
+      allWishesList = [];
+
+      try {
+        // 1. 讀取微頁系統 feedback (system_feedbacks)
+        const resFeedbacks = await fetch(`${SUPABASE_URL}/rest/v1/system_feedbacks?order=created_at.desc&limit=30`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (resFeedbacks.ok) {
+          const list1 = await resFeedbacks.json();
+          list1.forEach(item => {
+            allWishesList.push({
+              id: item.id,
+              source: 'biolink',
+              store_name: item.brand_name || item.store_slug || '微頁用戶',
+              content: item.content || '',
+              created_at: item.created_at || '',
+              table: 'system_feedbacks'
+            });
+          });
+        }
+      } catch (e) {}
+
+      try {
+        // 2. 讀取美業系統許願 (feature_wishes)
+        const resWishes = await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?order=created_at.desc&limit=30`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (resWishes.ok) {
+          const list2 = await resWishes.json();
+          list2.forEach(item => {
+            allWishesList.push({
+              id: item.id,
+              source: 'salon',
+              store_name: item.store_name || '美業店家',
+              content: item.content || item.wish_text || '',
+              created_at: item.created_at || '',
+              table: 'feature_wishes'
+            });
+          });
+        }
+      } catch (e) {}
+
+      // 依時間由新到舊排序
+      allWishesList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      if (badge) badge.innerText = `共 ${allWishesList.length} 則許願`;
+
+      renderWishes();
+    }
+
+    function renderWishes() {
+      const container = document.getElementById('wishes-container');
+      if (!container) return;
+
+      let filtered = allWishesList;
+      if (currentWishFilter !== 'ALL') {
+        filtered = allWishesList.filter(w => w.source === currentWishFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無符合的許願紀錄</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.map(w => {
+        const isBiolink = (w.source === 'biolink');
+        const badge = isBiolink 
+          ? `<span class="px-2 py-0.5 rounded-full bg-[#EAE1D5] text-[#5A4C40] text-[9px] font-bold">品牌微頁</span>`
+          : `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold">美業沙龍</span>`;
+
+        const dateStr = w.created_at ? w.created_at.replace('T', ' ').substring(0, 16) : '';
+
+        return `
+          <div class="p-4 bg-brand-50/70 hover:bg-brand-50 rounded-2xl border border-brand-200/80 transition flex justify-between items-start gap-3">
+            <div class="space-y-1.5 flex-1">
+              <div class="flex items-center gap-2">
+                ${badge}
+                <span class="font-bold text-brand-900">${w.store_name}</span>
+                <span class="text-[10px] text-brand-400 font-mono">${dateStr}</span>
+              </div>
+              <p class="text-brand-800 text-xs leading-relaxed pl-1 whitespace-pre-line">${w.content}</p>
+            </div>
+            <button onclick="deleteSuperWishPrompt('${w.id}', '${w.table}')" class="px-2.5 py-1 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-semibold transition shrink-0 shadow-2xs">
+              <i class="fa-solid fa-trash text-[10px] mr-0.5"></i> 刪除
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function deleteSuperWishPrompt(id, tableName) {
+      const confirm = await Swal.fire({
         title: '確定刪除此則許願？',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         confirmButtonText: '確定刪除',
         cancelButtonText: '取消'
-      }).then(async r => {
-        if (r.isConfirmed) {
-          await fetch(`${SUPABASE_URL}/rest/v1/feature_wishes?id=eq.${id}`, {
+      });
+
+      if (confirm.isConfirmed) {
+        Swal.showLoading();
+        try {
+          await fetch(`${SUPABASE_URL}/rest/v1/${tableName}?id=eq.${id}`, {
             method: "DELETE",
             headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
           });
-          Swal.fire({ title: '已刪除！', icon: 'success', timer: 1000, showConfirmButton: false });
+          Swal.fire({ title: '已成功移除！', icon: 'success', timer: 1000, showConfirmButton: false });
           loadWishes();
+        } catch (e) {
+          Swal.fire('刪除失敗', e.message, 'error');
         }
-      });
+      }
     }
 
     // 在 switchSuperTab 中補上 biolinks 判斷
