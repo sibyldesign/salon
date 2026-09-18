@@ -81,6 +81,9 @@
     <!-- 分頁 1：店家名冊與開通狀態 -->
     <div id="super-page-stores" class="space-y-4">
       
+      <!-- 🚨 新店家下單未開通 / 待對帳提醒專區 -->
+<div id="pending-activation-container"></div>
+      
       <!-- 即將到期 / 欠費通知警示專區 -->
       <div id="expiring-alert-container"></div>
 
@@ -481,6 +484,9 @@
                 <button onclick="manualActivateStore('${s.id}', 365)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">
                   +1年
                 </button>
+                <button onclick="manualActivateStore('${s.id}', 365, '${s.store_name}')" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">
+  開通/續約
+</button>
                 <button onclick="deleteStorePrompt('${s.id}', '${s.store_name}')" class="px-2.5 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-xl font-bold transition">
                   刪除
                 </button>
@@ -674,47 +680,108 @@ async function sendZeroCostEmailNotice(storeId, storeName, ownerEmail) {
   }
 }
 
-    async function manualActivateStore(storeId, days) {
-  Swal.fire({ title: '正在開通帳號...', allowOutsideClick: false });
-  Swal.showLoading();
+    // ==========================================
+// 📌 總管手動開通/展延店家 (支援自訂天數與任意到期日)
+// ==========================================
+async function manualActivateStore(storeId, defaultDays = 365, storeName = '') {
+  const today = new Date();
+  const defDate = new Date(today.getTime() + defaultDays * 24 * 60 * 60 * 1000);
+  const defDateStr = defDate.toISOString().split('T')[0];
 
-  const baseDate = new Date();
-  baseDate.setDate(baseDate.getDate() + Number(days));
+  const { value: formValues } = await Swal.fire({
+    title: `手動開通 / 展延授權`,
+    html: `
+      <div class="text-left text-xs space-y-3 p-1 text-brand-800">
+        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200">
+          <b>店家名稱：</b>${storeName || storeId}
+        </div>
+        <div>
+          <label class="block font-bold mb-1">快捷選擇展延期限：</label>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" onclick="document.getElementById('swal-exp-days').value=30; updateSwalExpDate(30);" class="py-1.5 bg-brand-100 rounded-lg font-bold hover:bg-brand-200">+30天 (月)</button>
+            <button type="button" onclick="document.getElementById('swal-exp-days').value=90; updateSwalExpDate(90);" class="py-1.5 bg-brand-100 rounded-lg font-bold hover:bg-brand-200">+90天 (季)</button>
+            <button type="button" onclick="document.getElementById('swal-exp-days').value=365; updateSwalExpDate(365);" class="py-1.5 bg-brand-500 text-white rounded-lg font-bold hover:bg-brand-600">+1年 (年繳)</button>
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold mb-1">開通天數 (自動計算到期日)：</label>
+          <input type="number" id="swal-exp-days" value="${defaultDays}" class="w-full p-2 rounded-xl border border-brand-200 text-xs outline-none" oninput="updateSwalExpDate(this.value)">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">精確到期截止日 (可手動自訂選取)：</label>
+          <input type="date" id="swal-exp-date" value="${defDateStr}" class="w-full p-2 rounded-xl border border-brand-200 text-xs outline-none font-bold text-brand-900">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定開通並發送開通信件',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消',
+    preConfirm: () => {
+      const chosenDate = document.getElementById('swal-exp-date').value;
+      const chosenDays = Number(document.getElementById('swal-exp-days').value || 30);
+      if (!chosenDate) {
+        Swal.showValidationMessage('請選取或輸入到期截止日');
+        return false;
+      }
+      return { chosenDate, chosenDays };
+    }
+  });
 
-  try {
-    // 1. 直寫 Supabase (確保狀態立刻生效)
-    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-      method: "PATCH",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        plan_status: "active",
-        expires_at: baseDate.toISOString()
-      })
-    });
+  if (formValues) {
+    Swal.fire({ title: '正在開通帳號並寄送憑證...', allowOutsideClick: false });
+    Swal.showLoading();
 
-    if (!patchRes.ok) throw new Error("資料庫更新失敗");
+    const targetIso = `${formValues.chosenDate}T23:59:59+08:00`;
 
-    // 2. 呼叫 GAS 寄發開通信 (使用 no-cors 杜絕 fetch 報錯)
-    fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "saRenewStore", targetStoreId: storeId, days: days, secret: SUPER_KEY })
-    }).catch(() => {});
+    try {
+      // 1. 直寫 Supabase 更新店家狀態為 active
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          plan_status: "active",
+          expires_at: targetIso
+        })
+      });
 
-    Swal.fire({ 
-      title: '店家已成功開通！', 
-      text: `已開通為 active，到期日展延至 ${baseDate.toISOString().split('T')[0]}`, 
-      icon: 'success' 
-    });
-    loadStores();
-  } catch(e) {
-    Swal.fire('開通失敗', e.message, 'error');
+      if (!res.ok) throw new Error("資料庫寫入失敗");
+
+      // 2. 觸發 GAS 發送開通確認信與實戰包
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: "saRenewStore",
+          targetStoreId: storeId,
+          days: formValues.chosenDays,
+          secret: SUPER_KEY
+        })
+      }).catch(() => {});
+
+      Swal.fire({
+        title: '🎉 店家開通成功！',
+        text: `狀態已轉為正常運行中，授權截止日為：${formValues.chosenDate}`,
+        icon: 'success'
+      });
+      loadStores();
+    } catch(err) {
+      Swal.fire('開通失敗', err.message, 'error');
+    }
   }
+}
+
+// 輔助動態計算截止日
+function updateSwalExpDate(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + Number(days || 0));
+  const el = document.getElementById('swal-exp-date');
+  if (el) el.value = d.toISOString().split('T')[0];
 }
 
     function deleteStorePrompt(storeId, name) {
