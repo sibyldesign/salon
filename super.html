@@ -229,23 +229,64 @@
     function checkSuperKey() {
       const inputEl = document.getElementById('super-key-input');
       const lockEl = document.getElementById('super-lock');
-      if (!inputEl || !lockEl) return;
+      if (!inputEl) return;
 
       const val = inputEl.value.trim();
+
       if (val === SUPER_KEY) {
-        lockEl.style.display = 'none';
-        loadInitialData();
+        // 1. 強制隱藏登入遮罩 (雙重保險：style + hidden class)
+        if (lockEl) {
+          lockEl.style.display = 'none';
+          lockEl.classList.add('hidden');
+        }
+
+        // 2. 標記已登入 Session，避免重新整理時重複卡住
+        sessionStorage.setItem('super_admin_logged', 'true');
+
+        // 3. 彈出成功小提示
+        Swal.fire({
+          title: '解鎖成功！',
+          text: '正在載入租戶資料庫...',
+          icon: 'success',
+          timer: 800,
+          showConfirmButton: false
+        });
+
+        // 4. 容錯非同步載入資料 (就算資料庫連線失敗，也不會卡死登入)
+        setTimeout(() => {
+          try {
+            loadInitialData();
+          } catch(err) {
+            console.error("資料載入異常:", err);
+          }
+        }, 100);
+
       } else {
-        // ✅ 修正：移除密碼明文，改為標準安全提示
         Swal.fire({
           title: '驗證失敗',
-          text: '管理金鑰錯誤，請重新輸入',
+          text: '管理金鑰錯誤，請輸入正確密碼！',
           icon: 'error',
           confirmButtonColor: '#8C7355'
         });
         inputEl.value = '';
+        inputEl.focus();
       }
     }
+
+    // 支援若本來就已登入，免重打密碼直接進
+    window.addEventListener('DOMContentLoaded', () => {
+      const lockEl = document.getElementById('super-lock');
+      if (sessionStorage.getItem('super_admin_logged') === 'true') {
+        if (lockEl) {
+          lockEl.style.display = 'none';
+          lockEl.classList.add('hidden');
+        }
+        loadInitialData();
+      } else {
+        const inputEl = document.getElementById('super-key-input');
+        if (inputEl) setTimeout(() => inputEl.focus(), 300);
+      }
+    });
 
     function loadInitialData() {
       try {
@@ -261,6 +302,8 @@
     function switchSuperTab(tabId) {
       document.getElementById('super-page-stores').style.display = (tabId === 'stores') ? 'block' : 'none';
       document.getElementById('super-page-announcement').style.display = (tabId === 'announcement') ? 'block' : 'none';
+      const biolinkPage = document.getElementById('super-page-biolinks');
+      if (biolinkPage) biolinkPage.style.display = (tabId === 'biolinks') ? 'block' : 'none';
 
       document.getElementById('tab-btn-stores').className = (tabId === 'stores')
         ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
@@ -269,6 +312,15 @@
       document.getElementById('tab-btn-announcement').className = (tabId === 'announcement')
         ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
         : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+
+      const biolinkBtn = document.getElementById('tab-btn-biolinks');
+      if (biolinkBtn) {
+        biolinkBtn.className = (tabId === 'biolinks')
+          ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
+          : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
+      }
+
+      if (tabId === 'biolinks' && typeof loadBioLinks === 'function') loadBioLinks();
     }
 
     async function loadStores() {
@@ -280,6 +332,7 @@
         document.getElementById('store-count-badge').innerText = `共 ${allStores.length} 間店家`;
         
         renderExpiringAlertZone();
+        renderPendingActivationZone();
         currentPage = 1;
         renderStores();
       } catch(e) {
@@ -288,16 +341,18 @@
     }
 
     async function loadAllStores() {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-      });
-      allStoresList = await res.json();
-      document.getElementById('stores-total-count').innerText = `共 ${allStoresList.length} 家店`;
-      renderExpiringAlertZone();
-      renderStoresPagedTable();
-    } catch(e) {}
-  }
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/stores?order=created_at.desc`, {
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        allStoresList = await res.json();
+        const totalBadge = document.getElementById('stores-total-count') || document.getElementById('store-count-badge');
+        if (totalBadge) totalBadge.innerText = `共 ${allStoresList.length} 家店`;
+        renderExpiringAlertZone();
+        renderPendingActivationZone();
+        renderStoresPagedTable();
+      } catch(e) {}
+    }
     
     // 7 天內到期或已過期警示專區
     function renderExpiringAlertZone() {
@@ -352,6 +407,47 @@
       renderStores();
     }
 
+    // 渲染待開通/待對帳警示專區
+    // 渲染待開通/待對帳警示專區 (修復語法錯誤版)
+    function renderPendingActivationZone() {
+      const box = document.getElementById('pending-activation-container');
+      if (!box) return;
+
+      const pendingStores = allStores.filter(s => s.plan_status === 'pending');
+      if (pendingStores.length === 0) {
+        box.innerHTML = '';
+        return;
+      }
+
+      box.innerHTML = `
+        <div class="bg-amber-50 border border-amber-300 p-4 rounded-3xl space-y-2 mb-4 text-xs">
+          <div class="flex justify-between items-center font-bold text-amber-950">
+            <span class="flex items-center gap-1.5">
+              <i class="fa-solid fa-bell text-amber-600 animate-bounce"></i> 
+              🚨 新店家已下單 / 待開通名單 (共 ${pendingStores.length} 間)
+            </span>
+            <span class="px-2.5 py-0.5 bg-amber-200 text-amber-900 rounded-full text-[10px] font-black">需確認入帳</span>
+          </div>
+          <div class="divide-y divide-amber-200/60">
+            ${pendingStores.map(s => `
+              <div class="py-2.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <span class="font-bold text-brand-900 text-sm">${s.store_name}</span>
+                  <span class="text-[11px] text-amber-800 ml-2">方案：${s.plan_name || '未指定'}</span>
+                  <span class="text-[11px] text-gray-500 ml-2">(${s.owner_email || '無信箱'}) - ${s.owner_phone || '無電話'}</span>
+                </div>
+                <div class="flex gap-1.5">
+                  <button onclick="manualActivateStore('${s.id}', 365, '${s.store_name}')" class="px-3 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-[11px] shadow-xs transition">
+                    ✓ 手動開通
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    
     function renderStores() {
       const kw = (document.getElementById('store-search-kw')?.value || '').trim().toLowerCase();
       const container = document.getElementById('stores-container');
@@ -1151,28 +1247,6 @@ function updateSwalExpDate(days) {
       }
     }
 
-    // 在 switchSuperTab 中補上 biolinks 判斷
-const originSwitchSuperTab = switchSuperTab;
-switchSuperTab = function(tabId) {
-  document.getElementById('super-page-stores').style.display = (tabId === 'stores') ? 'block' : 'none';
-  document.getElementById('super-page-announcement').style.display = (tabId === 'announcement') ? 'block' : 'none';
-  document.getElementById('super-page-biolinks').style.display = (tabId === 'biolinks') ? 'block' : 'none';
-
-  document.getElementById('tab-btn-stores').className = (tabId === 'stores')
-    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
-    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
-
-  document.getElementById('tab-btn-announcement').className = (tabId === 'announcement')
-    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
-    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
-
-  document.getElementById('tab-btn-biolinks').className = (tabId === 'biolinks')
-    ? "px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs"
-    : "px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200";
-
-  if (tabId === 'biolinks') loadBioLinks();
-};
-
 // 讀取 bio_stores 表格資料
 async function loadBioLinks() {
   try {
@@ -1268,3 +1342,5 @@ async function deleteBioStorePrompt(id, brandName) {
   </script>
 </body>
 </html>
+
+
