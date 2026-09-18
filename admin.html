@@ -1121,6 +1121,11 @@
       </div>
 
       <div>
+  <label class="block text-[11px] font-bold text-brand-800 mb-1">門市預約專線電話 (選填，展示於前台與顧客通知信)：</label>
+  <input type="tel" id="cfg-phone" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例如：02-23456789 或 0912-345678 (留空則不顯示)">
+</div>
+
+      <div>
         <label class="block font-bold text-brand-800 mb-1">店面地址：</label>
         <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none" placeholder="例：台北市大安區忠孝東路四段 100 號">
       </div>
@@ -3437,15 +3442,32 @@
 // 📌 專員排班調度與時段開關控制模組
 // ==========================================
   function renderShift() {
-    const staffList = backendData.settings?.staffList || [{ id: "all", name: "不指定" }];
+    // 確保 staffList 包含目前店內所有已建檔專員
+    let staffList = (backendData.settings?.staffList || []).slice();
+    if (!staffList.some(s => s.id === 'all')) {
+      staffList.unshift({ id: "all", name: "不指定" });
+    }
+
+    // 若當前是專員獨立登入 (CURRENT_STAFF_PARAM 存在)
+    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+      activeShiftStaffId = CURRENT_STAFF_PARAM;
+      // 專員工作台：僅顯示該專員本人按鈕，隱藏全店「不指定」
+      staffList = staffList.filter(s => s.id === CURRENT_STAFF_PARAM);
+      
+      // 若名冊內還沒有此專員物件，自動補上
+      if (staffList.length === 0) {
+        staffList = [{ id: CURRENT_STAFF_PARAM, name: `專員 (${CURRENT_STAFF_PARAM})` }];
+      }
+    }
+
     const staffBtns = document.getElementById('staff-shift-buttons');
     if (staffBtns) {
       staffBtns.innerHTML = staffList.map(s => {
         const color = getStaffColor(s.id, s.name);
         const isSelected = (activeShiftStaffId === s.id);
         return `
-          <button class="px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
-            isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-sm' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+          <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition inline-flex items-center gap-1.5 ${
+            isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
           }" onclick="switchShiftStaff('${s.id}')">
             <span class="w-2 h-2 rounded-full shrink-0" style="background-color: ${isSelected ? '#FFFFFF' : color.dot};"></span>
             <span>${s.name}</span>
@@ -3479,9 +3501,9 @@
             <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center shadow-xs text-xs">
               <div>
                 <div class="font-bold text-brand-900">${d.date}</div>
-                <div class="text-[11px] text-brand-400">點擊右側以進入設定各時段</div>
+                <div class="text-[11px] text-brand-400">點擊右側進入排班管理</div>
               </div>
-              <button class="px-3.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 font-bold rounded-xl text-xs transition" onclick="selectShiftDate('${d.date}')">排定班表 ➔</button>
+              <button class="px-3.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 font-bold rounded-xl text-xs transition" onclick="selectShiftDate('${d.date}')">排定時段 ➔</button>
             </div>
           `).join('')}
         </div>`;
@@ -3500,27 +3522,29 @@
     }
 
     const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
+    // 即時合併雲端班表
+    const cloudStaffSchedules = backendData.settings?.staffSchedules || {};
     if (!shiftSlotStates[staffKey]) {
-      shiftSlotStates[staffKey] = (backendData.settings?.staffSchedules && backendData.settings.staffSchedules[staffKey]) || {};
+      shiftSlotStates[staffKey] = Object.assign({}, cloudStaffSchedules[staffKey] || {});
       slots.forEach(t => {
         if (shiftSlotStates[staffKey][t] === undefined) shiftSlotStates[staffKey][t] = false;
       });
     }
 
     const realStaffs = (backendData.settings?.staffList || []).filter(st => st.id !== 'all');
-    const isAllStaffLocked = (activeShiftStaffId === 'all' && realStaffs.length > 0);
+    const isAllStaffLocked = (!CURRENT_STAFF_PARAM && activeShiftStaffId === 'all' && realStaffs.length > 0);
 
     content.innerHTML = `
       <div class="bg-white rounded-3xl border border-brand-200 overflow-hidden shadow-sm">
         <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
           <div>
-            <div class="font-bold text-xs text-brand-900">📅 ${currentShiftDate} 當日班表</div>
-            ${isAllStaffLocked ? '<div class="text-[10px] text-amber-700 font-bold mt-0.5">※ 已設有獨立專員，不指定時段由專員排班綜合計算，此處唯讀鎖定。</div>' : '<div class="text-[10px] text-brand-400">綠色代表接受預約，紅色代表該時段休息</div>'}
+            <div class="font-bold text-xs text-brand-900">📅 ${currentShiftDate} 班表設定</div>
+            ${isAllStaffLocked ? '<div class="text-[10px] text-amber-700 font-bold mt-0.5">※ 已啟用獨立專員，不指定時段由專員班表自動綜合計算。</div>' : '<div class="text-[10px] text-brand-400">綠色代表開放預約，紅色代表休息關閉</div>'}
           </div>
           ${!isAllStaffLocked ? `
             <div class="flex gap-1.5">
-              <button class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="toggleAllShift('${staffKey}', false)">全休</button>
-              <button class="px-2.5 py-1 bg-[#8C7355] text-white rounded-lg text-xs font-bold hover:bg-[#7A6246]" onclick="toggleAllShift('${staffKey}', true)">全開</button>
+              <button type="button" class="px-2.5 py-1 border border-brand-300 rounded-lg text-xs font-bold hover:bg-brand-100" onclick="toggleAllShift('${staffKey}', false)">全休</button>
+              <button type="button" class="px-2.5 py-1 bg-[#8C7355] text-white rounded-lg text-xs font-bold hover:bg-[#7A6246]" onclick="toggleAllShift('${staffKey}', true)">全開</button>
             </div>
           ` : ''}
         </div>
@@ -3529,7 +3553,7 @@
           return `
             <div class="p-3 flex justify-between items-center text-xs">
               <span class="font-bold text-brand-800 font-mono text-sm">${t}</span>
-              <button class="px-4 py-1.5 rounded-full text-xs font-bold transition ${isAllStaffLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : (isOpen ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200')}" 
+              <button type="button" class="px-4 py-1.5 rounded-full text-xs font-bold transition ${isAllStaffLocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : (isOpen ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-rose-100 text-rose-800 hover:bg-rose-200')}" 
                 ${isAllStaffLocked ? 'disabled' : `onclick="toggleSlotState('${staffKey}', '${t}', this)"`}>
                 ${isOpen ? '上班中 (開放預約)' : '已關閉 (休息)'}
               </button>
@@ -5314,6 +5338,7 @@ if (dispStoreId) dispStoreId.innerText = `店家 ID: ${CURRENT_STORE_ID}`;
     setVal('cfg-title', s.storeName || s.display_title);
     setVal('cfg-subtitle', s.subtitle || s.display_subtitle);
     setVal('cfg-logo', s.logoUrl || s.logo_url);
+    setVal('cfg-phone', s.storePhone || s.store_phone || '');
     setVal('cfg-address', s.address);
     setVal('cfg-hours', s.businessHours || s.business_hours);
     setVal('cfg-buffer', s.bookingBufferHours || s.booking_buffer_hours);
@@ -5574,21 +5599,30 @@ safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
     if (icon) icon.classList.add('animate-spin');
 
     try {
+      // 1. 清空暫存中的髒排班狀態
+      shiftSlotStates = {};
+      
+      // 2. 重新自 Supabase 讀取最新預約、班表與設定
       await fetchDataAndRender();
 
+      // 3. 根據當前分頁即時重繪
+      if (typeof renderCalendar === 'function') renderCalendar();
+      if (typeof renderCustomer === 'function') renderCustomer();
+      if (typeof renderShift === 'function') renderShift();
+      if (typeof renderRevenue === 'function') renderRevenue();
+
       Swal.fire({
-        title: '名單已更新！',
+        title: '已同步最新名單與排班！',
         icon: 'success',
-        timer: 800,
+        timer: 700,
         showConfirmButton: false
       });
     } catch (err) {
-      Swal.fire('同步失敗', err.message || '連線逾時', 'error');
+      Swal.fire('同步失敗', err.message || '網路連線異常', 'error');
     } finally {
       if (icon) icon.classList.remove('animate-spin');
     }
   }
-
   function handleAdminLogout() {
     Swal.fire({
       title: '確定登出管理後台？',
@@ -5697,6 +5731,7 @@ safeCheck('cfg-toggle-line-auto-notify', isNotifyChecked);
       display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() ?? currentSettings.subtitle ?? '',
       enable_logo: document.getElementById('cfg-toggle-logo')?.checked ?? currentSettings.enableLogo ?? true,
       logo_url: document.getElementById('cfg-logo')?.value.trim() ?? currentSettings.logoUrl ?? '',
+      store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
       address: document.getElementById('cfg-address')?.value.trim() ?? currentSettings.address ?? '',
       business_hours: document.getElementById('cfg-hours')?.value.trim() ?? currentSettings.businessHours ?? '',
       booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || currentSettings.bookingBufferHours || 1),
