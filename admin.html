@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>沙龍與寵物管理系統 | 管理後台</title>
+  <title>沙龍與店家管理後台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,13 +36,30 @@
     }
     .swal2-title { color: #3D3126 !important; font-size: 1.15rem !important; font-weight: 700 !important; }
     .swal2-html-container { color: #5C4B3C !important; }
-    .swal2-confirm { background-color: #8C7355 !important; border-radius: 0.85rem !important; font-weight: 700 !important; }
-    .swal2-cancel { background-color: #EBE5DF !important; color: #5C4B3C !important; border-radius: 0.85rem !important; font-weight: 700 !important; }
+    .swal2-confirm, .swal2-styled.swal2-confirm {
+      background-color: #8C7355 !important;
+      color: #FFFFFF !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.6rem 1.6rem !important;
+      box-shadow: 0 2px 4px rgba(140, 115, 85, 0.2) !important;
+      border: none !important;
+    }
+    .swal2-confirm:hover { background-color: #7A6246 !important; }
+    .swal2-cancel, .swal2-styled.swal2-cancel {
+      background-color: #EBE5DF !important;
+      color: #5C4B3C !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.6rem 1.4rem !important;
+      border: none !important;
+    }
+    .swal2-cancel:hover { background-color: #DFD1C0 !important; }
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-28">
 
-  <!-- 1. 全平台/單店維護鎖定全螢幕遮罩 -->
+  <!-- 後台專屬：全平台維護鎖定 / 單店暫時鎖定全螢幕遮罩 -->
   <div id="admin-maintenance-screen" class="fixed inset-0 bg-brand-50/98 z-[9999] flex flex-col items-center justify-center p-6 text-center backdrop-blur-md hidden">
     <div class="w-16 h-16 bg-amber-100 text-amber-700 rounded-3xl flex items-center justify-center text-2xl mb-4 shadow-sm border border-amber-200">
       <i class="fa-solid fa-lock text-3xl"></i>
@@ -57,15 +74,15 @@
     </a>
   </div>
 
-  <!-- 2. 解鎖登入畫面 (防暴力破解 15 分鐘機制) -->
+  <!-- 解鎖登入畫面 (防暴力破解 15 分鐘機制) -->
   <div id="lock-screen" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs space-y-3">
       <div class="w-12 h-12 mx-auto bg-brand-100 rounded-full flex items-center justify-center text-brand-500 text-xl">
         <i class="fa-solid fa-shield-halved"></i>
       </div>
       <div>
-        <div class="text-base font-bold text-brand-900" id="lock-title">管理後台</div>
-        <div class="text-[10px] text-brand-400 mt-0.5">高安全加密保護中</div>
+        <div class="text-base font-bold text-brand-900" id="lock-title">沙龍管理後台</div>
+        <div class="text-[10px] text-brand-400 mt-0.5">安全加密通道驗證中</div>
       </div>
       <div id="lock-error" class="text-xs text-red-500 min-h-[1rem]"></div>
       <input type="password" id="pin-input" class="w-full text-center text-2xl tracking-[0.3em] py-3 rounded-xl border border-brand-200 mb-2 focus:ring-2 focus:ring-brand-400 focus:outline-none" placeholder="請輸入密碼" maxlength="6">
@@ -76,7 +93,7 @@
     </div>
   </div>
 
-  <!-- 3. 頂部導覽列 -->
+  <!-- 頂部導覽列 -->
   <header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm flex justify-between items-center max-w-2xl mx-auto w-full">
     <div class="font-bold text-sm text-brand-900 tracking-wide" id="top-bar-title">沙龍管理系統</div>
     <div class="flex items-center gap-2">
@@ -89,24 +106,38 @@
     </div>
   </header>
 
-  <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
+  <!-- 頂部透明化系統架構與外掛狀態看板 -->
+  <div id="system-architecture-bar" class="max-w-2xl mx-auto px-4 py-2 my-2 bg-white rounded-2xl border border-brand-200 shadow-xs flex flex-wrap items-center justify-between text-[11px]">
+    <div class="flex items-center gap-1.5 font-bold text-brand-900">
+      <i class="fa-solid fa-layer-group text-[#8C7355]"></i>
+      <span>系統運行架構：</span>
+      <span id="arch-mode-badge" class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-md font-mono">美業模式</span>
+    </div>
+    <div class="flex items-center gap-2 text-gray-500 font-mono text-[10px]" id="arch-modules-status">
+      <span id="mod-core" title="核心：日曆/排班/名單">🟢 Core</span>
+      <span id="mod-mkt" title="行銷：儲值/包卡/折扣碼">🟢 Mkt</span>
+      <span id="mod-pet" title="寵物美容外掛">⚪ Pet (Off)</span>
+      <span id="mod-inv" title="進銷存與耗材">⚪ Inv (Off)</span>
+    </div>
+  </div>
 
-    <!-- ✨ 頂部透明化系統架構與外掛狀態看板 -->
-    <div id="system-architecture-bar" class="bg-white p-3 rounded-2xl border border-brand-200 shadow-xs mb-4 flex flex-wrap items-center justify-between text-xs gap-2">
-      <div class="flex items-center gap-2 font-bold text-brand-900">
-        <i class="fa-solid fa-layer-group text-[#8C7355]"></i>
-        <span>系統運行模式：</span>
-        <span id="arch-mode-badge" class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-lg font-mono">美業模式</span>
+  <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
+    <!-- 手機即時推播狀態卡片 -->
+    <div class="bg-amber-50/90 border border-amber-200 p-3.5 rounded-2xl mb-4 shadow-xs text-xs text-amber-900 space-y-2">
+      <div class="flex justify-between items-center font-bold">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-bell text-amber-600"></i> 手機即時推播通知運作中
+        </span>
+        <button onclick="refreshPushPermission()" class="px-2.5 py-1 bg-white hover:bg-amber-100 text-amber-800 rounded-lg font-bold border border-amber-300 shadow-xs transition text-[11px] flex items-center gap-1">
+          <i class="fa-solid fa-arrows-rotate text-[10px]"></i> 重新整理推播權限
+        </button>
       </div>
-      <div class="flex items-center gap-2 font-mono text-[11px]" id="arch-modules-status">
-        <span id="mod-core" class="text-emerald-700 font-bold" title="核心：日曆/排班/名單">🟢 Core</span>
-        <span id="mod-mkt" class="text-emerald-700 font-bold" title="行銷：儲值/包卡/折扣碼">🟢 Mkt</span>
-        <span id="mod-pet" class="text-gray-400" title="寵物美容與住宿模組">⚪ Pet (Off)</span>
-        <span id="mod-inv" class="text-gray-400" title="進銷存與耗材扣除模組">⚪ Inv (Off)</span>
-      </div>
+      <p class="text-[11px] text-amber-800 leading-relaxed">
+        💡 <b>若收不到推播：</b>不需重新加入主畫面，點選右上方按鈕即可重置通道授權。
+      </p>
     </div>
 
-    <!-- 即時廣播通知橫幅 -->
+    <!-- 即時公告橫幅 -->
     <div id="system-announcement-banner" class="bg-amber-100/90 border border-amber-300 p-3.5 rounded-2xl mb-4 shadow-sm text-xs text-amber-900 hidden">
       <div class="flex items-center gap-2">
         <span class="font-bold shrink-0">📢 [系統公告]</span>
@@ -118,13 +149,9 @@
     <div id="page-calendar" class="page space-y-4">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm">
         <div class="flex justify-between items-center mb-3">
-          <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(-1)">
-            <i class="fa-solid fa-chevron-left text-xs"></i>
-          </button>
+          <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(-1)">❮</button>
           <div id="cal-month-title" class="font-bold text-sm text-brand-900"></div>
-          <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(1)">
-            <i class="fa-solid fa-chevron-right text-xs"></i>
-          </button>
+          <button class="p-2 border border-brand-300 rounded-full text-brand-800 hover:bg-brand-50" onclick="changeCalMonth(1)">❯</button>
         </div>
         <div class="grid grid-cols-7 gap-1 text-center text-xs" id="cal-grid"></div>
       </div>
@@ -133,9 +160,8 @@
       </div>
     </div>
 
-    <!-- 分頁 2. 名單總覽 (含待審核、訂金與排程名單) -->
+    <!-- 分頁 2. 名單總覽 -->
     <div id="page-customer" class="page space-y-4" style="display: none;">
-      <!-- 專區 1：新進審核專區 -->
       <div class="bg-amber-50/90 border-2 border-amber-300 p-4 rounded-3xl space-y-3 shadow-xs">
         <div class="flex justify-between items-center">
           <span class="font-black text-amber-950 text-xs flex items-center gap-1.5">
@@ -143,10 +169,11 @@
           </span>
           <span id="pending-audit-badge" class="px-2.5 py-0.5 bg-amber-200 text-amber-900 text-[10px] font-bold rounded-full">0 筆待處理</span>
         </div>
-        <div id="pending-audit-container" class="space-y-2.5"></div>
+        <div id="pending-audit-container" class="space-y-2.5">
+          <div class="text-center text-xs text-amber-800/70 py-3">目前無待審核預約</div>
+        </div>
       </div>
 
-      <!-- 專區 2：訂金未回報專區 -->
       <div class="bg-rose-50/80 border border-rose-200 p-4 rounded-3xl space-y-2.5 shadow-xs">
         <div class="flex justify-between items-center">
           <span class="font-bold text-rose-950 text-xs flex items-center gap-1.5">
@@ -157,7 +184,6 @@
         <div id="unpaid-deposit-container" class="space-y-2"></div>
       </div>
 
-      <!-- 專區 3：即將到來的排程名單 -->
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center pb-2 border-b border-brand-100">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
@@ -204,16 +230,15 @@
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-brand-700 mb-1 text-[11px]">開始日期</label>
-              <input type="date" id="rev-start-date" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="renderRevenue()">
+              <input type="date" id="rev-start-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white" onchange="renderRevenue()">
             </div>
             <div>
               <label class="block font-bold text-brand-700 mb-1 text-[11px]">結束日期</label>
-              <input type="date" id="rev-end-date" class="w-full p-2 rounded-xl border border-brand-200 bg-white" onchange="renderRevenue()">
+              <input type="date" id="rev-end-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white" onchange="renderRevenue()">
             </div>
           </div>
         </div>
 
-        <!-- 經營指標卡片 -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
           <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200">
             <div class="text-[10px] text-brand-400 font-bold">已結單實收業績</div>
@@ -233,7 +258,6 @@
           </div>
         </div>
 
-        <!-- 專員抽成表 -->
         <div id="staff-revenue-section" class="pt-2 border-t border-brand-100 space-y-2.5">
           <div class="flex justify-between items-center">
             <span class="text-xs font-bold text-brand-900 flex items-center gap-1">
@@ -258,7 +282,6 @@
           </div>
         </div>
 
-        <!-- 已結單明細 -->
         <div class="pt-2 border-t border-brand-100 space-y-3">
           <select id="rev-service-select" class="w-full text-xs border border-brand-200 rounded-xl p-2.5 bg-brand-50" onchange="renderRevenue()">
             <option value="ALL">全部服務項目總覽</option>
@@ -282,7 +305,14 @@
         <div id="care-list" class="space-y-2"></div>
       </div>
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900">⚙️ 自訂關懷週期與文案 (單位：週)</div>
+        <div class="text-xs font-bold text-brand-900">⚙️ 自訂 5 組關懷週期與文案 (單位：週)</div>
+        <div class="text-[11px] text-amber-700 bg-amber-50 p-3 rounded-2xl border border-amber-200 leading-relaxed space-y-1">
+          <div class="font-bold flex items-center gap-1">
+            <i class="fa-solid fa-lightbulb text-amber-600"></i> 設定技巧與變數說明：
+          </div>
+          <p>• 支援多組關鍵字（逗號分隔）：<code>染髮, 漂髮, 挑染</code></p>
+          <p>• 自動替換參數：<code>{姓名}</code> 與 <code>{項目}</code></p>
+        </div>
         <div id="care-rules-container" class="space-y-2"></div>
         <button class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md transition" onclick="saveCareRulesSetting()">儲存關懷規則</button>
       </div>
@@ -291,7 +321,7 @@
     <!-- 分頁 6. 服務項目與作品 -->
     <div id="page-services" class="page space-y-4" style="display: none;">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增/編輯服務項目</div>
+        <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目</div>
         <input type="hidden" id="edit-svc-id">
         <div class="grid grid-cols-2 gap-2">
           <input type="text" id="svc-name" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="服務名稱">
@@ -304,12 +334,6 @@
             <option value="Group_B">Group B (全程專屬類)</option>
           </select>
         </div>
-        <!-- 扣卡點數設定 (支援通用多階包卡) -->
-        <div class="flex items-center gap-2 px-1">
-          <label class="text-xs font-bold text-brand-800">包卡扣除點數：</label>
-          <input type="number" id="svc-package-points" class="w-20 p-2 rounded-xl border border-brand-200 text-xs bg-white text-center font-bold" value="1">
-          <span class="text-xs text-brand-400">點 (洗澡扣1點、大美容扣2點...)</span>
-        </div>
         <div class="flex items-center gap-2 px-1">
           <input type="checkbox" id="svc-is-addon" class="accent-brand-400 rounded">
           <label class="text-xs font-medium text-brand-800">設為「加購項目」</label>
@@ -320,12 +344,25 @@
         </div>
       </div>
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-        <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表</div>
+        <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表 (點擊箭頭可排序)</div>
         <div id="service-list-container" class="space-y-2"></div>
+      </div>
+
+      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="text-xs font-bold text-brand-900">新增作品集</div>
+        <input type="text" id="work-cat" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="分類 (例如：造型染髮)">
+        <input type="text" id="work-title" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="作品標題">
+        <input type="text" id="work-link" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50" placeholder="IG 外部連結 (選填)">
+        <input type="file" id="work-file" class="w-full p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50" accept="image/*">
+        <button class="w-full py-2.5 bg-brand-400 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-md transition" onclick="uploadAndSavePortfolio()">發布作品</button>
+      </div>
+      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
+        <div class="text-xs font-bold text-brand-900 mb-2">作品展示列表</div>
+        <div id="portfolio-list-container" class="grid grid-cols-2 gap-2"></div>
       </div>
     </div>
 
-    <!-- 分頁 7. 查詢分頁 (歷史調閱) -->
+    <!-- 分頁 7. 查詢分頁 -->
     <div id="page-search" class="page space-y-4" style="display: none;">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex gap-2">
@@ -333,37 +370,45 @@
           <button onclick="executeAdvancedSearch()" class="px-4 py-2.5 bg-[#8C7355] text-white rounded-xl text-xs font-bold shrink-0">搜尋</button>
         </div>
         <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-100 space-y-2">
+          <div class="flex justify-between items-center text-[11px] font-bold text-brand-800">
+            <span>📅 依預約日期區間篩選：</span>
+            <button onclick="searchTodayAppts()" class="text-[10px] text-[#8C7355] underline">查今日所有預約</button>
+          </div>
           <div class="grid grid-cols-2 gap-2">
             <input type="date" id="search-start-date" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs">
             <input type="date" id="search-end-date" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs">
           </div>
-          <button onclick="executeDateRangeSearch()" class="w-full py-2 bg-brand-200 hover:bg-brand-300 text-brand-900 rounded-xl font-bold text-xs transition">依日期區間調閱</button>
+          <button onclick="executeDateRangeSearch()" class="w-full py-2 bg-brand-200 hover:bg-brand-300 text-brand-900 rounded-xl font-bold text-xs transition">查詢此區間全部紀錄</button>
         </div>
       </div>
       <div id="search-results-area" class="space-y-3"></div>
     </div>
 
-    <!-- 分頁 8. ⚡ 手動代客預約 -->
+    <!-- 分頁 8. 手動新增預約 -->
     <div id="page-add" class="page space-y-4" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
-        <div class="font-bold text-brand-900 text-sm border-b border-brand-100 pb-2">代客新增預約建檔</div>
+        <div class="font-bold text-brand-900 text-sm border-b border-brand-100 pb-2">代客新增預約排程</div>
         <div>
-          <label class="block font-bold text-brand-800 mb-1">顧客手機號碼 (必填快查)：</label>
+          <label class="block font-bold text-brand-800 mb-1">顧客手機 (自動快查舊客)：</label>
           <input type="tel" id="quick-phone" placeholder="0912345678" class="w-full p-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold" oninput="adminQuickCheckCustomer(this.value)">
           <div class="text-[10px] text-emerald-700 font-bold mt-1" id="admin-quick-member-hint"></div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="quick-name" placeholder="姓名 *" class="p-2.5 rounded-xl border border-brand-200 bg-white">
-          <input type="text" id="quick-line" placeholder="LINE 名稱" class="p-2.5 rounded-xl border border-brand-200 bg-white">
+          <input type="text" id="quick-name" placeholder="顧客姓名 *" class="p-2.5 rounded-xl border border-brand-200 bg-white">
+          <input type="text" id="quick-line" placeholder="LINE 顯示名稱" class="p-2.5 rounded-xl border border-brand-200 bg-white">
         </div>
         <div>
-          <label class="block font-bold text-brand-800 mb-1">指定服務專員：</label>
+          <label class="block font-bold text-brand-800 mb-1">顧客電子信箱 (寄送預約證明)：</label>
+          <input type="email" id="quick-email" placeholder="user@gmail.com" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">指定專員：</label>
           <div class="grid grid-cols-3 gap-2" id="admin-quick-staff-grid"></div>
           <input type="hidden" id="quick-staff-id" value="all">
           <input type="hidden" id="quick-staff-name" value="不指定">
         </div>
         <div>
-          <label class="block font-bold text-brand-800 mb-1">選擇項目：</label>
+          <label class="block font-bold text-brand-800 mb-1">選擇項目 (可複選)：</label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="admin-quick-service-grid"></div>
           <input type="hidden" id="quick-service-names">
         </div>
@@ -380,26 +425,95 @@
             <input type="hidden" id="quick-time">
           </div>
         </div>
-        <button type="button" onclick="submitAdminQuickBooking()" class="w-full py-3.5 bg-[#8C7355] text-white font-bold rounded-2xl shadow-md transition">✓ 建立預約排程</button>
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+          <label class="block font-bold text-brand-900">加購與方案折抵：</label>
+          <select id="quick-addon-pkg" onchange="calcAdminQuickSummary()" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs"></select>
+          <select id="quick-addon-wal" onchange="calcAdminQuickSummary()" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs"></select>
+          <div class="flex gap-4 pt-1">
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="quick-use-pkg" onchange="handleAdminQuickDeductChange('package')"> 包卡扣抵</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="quick-use-wal" onchange="handleAdminQuickDeductChange('wallet')"> 儲值扣抵</label>
+          </div>
+        </div>
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
+          <div class="flex justify-between items-center font-bold text-brand-900">
+            <span>現場實收預估：</span>
+            <span class="text-base font-black text-[#8C7355]">NT$ <span id="admin-quick-total-price">0</span></span>
+          </div>
+          <input type="hidden" id="quick-final-price" value="0">
+        </div>
+        <button type="button" onclick="submitAdminQuickBooking()" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl shadow-md transition">✓ 建立預約排程</button>
       </div>
     </div>
 
-    <!-- 分頁 9. 行銷與會員管理中心 (儲值金/包卡/折扣碼) -->
-    <div id="page-marketing" class="page space-y-4" style="display: none;">
-      <!-- 會員儲值金管理 -->
+    <!-- 分頁 9. 方案分頁 -->
+    <div id="page-subscription" class="page space-y-4" style="display: none;">
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="text-xs font-bold text-brand-900">💳 目前系統訂閱狀態</div>
+        <div class="p-4 bg-brand-50 rounded-2xl space-y-2 text-xs border border-brand-100">
+          <div class="flex justify-between"><span class="text-brand-500">系統版本</span><span class="font-bold text-brand-900" id="sub-plan-name">美業標準版</span></div>
+          <div class="flex justify-between"><span class="text-brand-500">終止訂閱日</span><span class="font-bold text-brand-900" id="sub-expire-date">載入中...</span></div>
+          <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-green-600" id="sub-status-badge">正常運行中</span></div>
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="text-xs font-bold text-brand-900">功能許願池</div>
+        <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none" placeholder="告訴我們您希望增加什麼功能？"></textarea>
+        <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs shadow-md transition">送出功能願望</button>
+      </div>
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="text-xs font-bold text-brand-900">⚡ 選擇方案線上續費 (支援信用卡/超商)</div>
+        <div class="space-y-2" id="plan-options-container"></div>
+      </div>
+    </div>
+
+    <!-- 分頁 10. 行銷中心 -->
+    <div id="page-marketing" class="page space-y-5" style="display: none;">
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
+        <div class="flex justify-between items-center">
+          <label class="font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「使用規則與說明」文字內容編輯
+          </label>
+          <button onclick="savePromoRulesText()" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition">儲存說明內容</button>
+        </div>
+        <textarea id="cfg-promo-rules-input" rows="4" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed" placeholder="輸入前台活動區塊規則說明..."></textarea>
+      </div>
+
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
+          <div>
+            <h2 class="text-xs font-bold text-brand-900">門市方案規則庫設定（前台活動加購選單連動）</h2>
+            <p class="text-[11px] text-brand-500 mt-0.5">前台預約時的包卡與儲值加購選單將同步此規則庫</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-brand-800">🪙 門市儲值金方案清單</span>
+            <button onclick="openAddWalletRuleModal()" class="text-[11px] px-2.5 py-1 bg-brand-100 text-brand-800 rounded-lg font-bold">+ 新增儲值方案</button>
+          </div>
+          <div id="wallet-rules-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        </div>
+        <div class="space-y-2 pt-2 border-t border-brand-100">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-brand-800">🎫 門市包卡堂票方案清單</span>
+            <button onclick="openAddPackageRuleModal()" class="text-[11px] px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold">+ 新增包卡方案</button>
+          </div>
+          <div id="package-rules-container" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+        </div>
+      </div>
+
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5"><i class="fa-solid fa-wallet text-brand-500"></i> 會員儲值金管理</span>
-          <button onclick="openRechargeModal()" class="px-3 py-1.5 bg-brand-500 text-white rounded-xl text-xs font-bold">+ 充值入帳</button>
+          <span class="text-xs font-bold text-brand-900"><i class="fa-solid fa-wallet text-brand-500"></i> 會員儲值金管理</span>
+          <button onclick="openRechargeModal()" class="px-3 py-1.5 bg-brand-500 text-white rounded-xl text-xs font-bold">+ 手動儲值充值</button>
         </div>
-        <input type="text" id="search-wallet-input" oninput="handleWalletSearch(this.value)" placeholder="🔍 快搜姓名或手機..." class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs">
+        <input type="text" id="search-wallet-input" oninput="handleWalletSearch(this.value)" placeholder="🔍 快搜姓名或電話..." class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
               <tr class="border-b border-brand-200 text-brand-400">
-                <th class="py-2 px-2">姓名/歸屬</th>
-                <th class="py-2 px-2">手機</th>
-                <th class="py-2 px-2">餘額</th>
+                <th class="py-2 px-2">顧客姓名</th>
+                <th class="py-2 px-2">手機號碼</th>
+                <th class="py-2 px-2">儲值餘額</th>
                 <th class="py-2 px-2">折數</th>
                 <th class="py-2 px-2 text-right">操作</th>
               </tr>
@@ -409,10 +523,9 @@
         </div>
       </div>
 
-      <!-- 包卡堂票管理 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5"><i class="fa-solid fa-ticket text-emerald-600"></i> 包卡堂票管理</span>
+          <span class="text-xs font-bold text-brand-900"><i class="fa-solid fa-ticket text-emerald-600"></i> 包卡堂票管理</span>
           <button onclick="openAddPackageModal()" class="px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold">+ 綁定包卡</button>
         </div>
         <input type="text" id="search-pkg-input" oninput="handlePkgSearch(this.value)" placeholder="🔍 快搜包卡顧客..." class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs">
@@ -420,7 +533,7 @@
           <table class="w-full text-left text-xs border-collapse">
             <thead>
               <tr class="border-b border-brand-200 text-brand-400">
-                <th class="py-2 px-2">顧客/毛孩</th>
+                <th class="py-2 px-2">顧客/電話</th>
                 <th class="py-2 px-2">服務項目</th>
                 <th class="py-2 px-2">總堂數</th>
                 <th class="py-2 px-2">剩餘</th>
@@ -432,176 +545,567 @@
         </div>
       </div>
 
-      <!-- 折扣碼管理 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5"><i class="fa-solid fa-tag text-rose-500"></i> 促銷折扣碼</span>
-          <button onclick="openAddCouponModal()" class="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold">+ 新增代碼</button>
+          <span class="text-xs font-bold text-brand-900"><i class="fa-solid fa-tag text-rose-500"></i> 促銷折扣碼</span>
+          <button onclick="openAddCouponModal()" class="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold">+ 新增折扣碼</button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="coupons-card-container"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="coupons-card-container"></div>
       </div>
     </div>
 
-    <!-- ✨ 分頁 10. 【外掛】寵物美容專屬分頁 (動態載入) -->
-    <div id="page-pet" class="page space-y-4" style="display: none;">
-      <!-- 毛孩檔案總覽卡片 -->
+    <!-- 分頁 11. 好評審核 -->
+    <div id="page-reviews" class="page space-y-4" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-paw text-amber-600"></i> 毛孩專屬檔案履歷 (Pet Profiles)
-          </span>
-          <button onclick="openAddNewPetModal()" class="px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold">+ 登記新毛孩</button>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-star text-amber-500"></i> 顧客好評審核牆
+          </h2>
+          <span id="review-count-badge" class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">載入中...</span>
         </div>
-        <div id="pet-profiles-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        <div id="admin-reviews-container" class="space-y-2.5 text-xs"></div>
       </div>
-
-      <!-- 寵物住宿排程看板 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-hotel text-brand-500"></i> 寵物住宿與供餐排程看板 (Boarding & Meals)
-          </span>
-          <button onclick="openNewBoardingModal()" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl text-xs font-bold">+ 建立住宿預約</button>
+        <div class="flex justify-between items-center">
+          <h2 class="text-xs font-bold text-brand-900">前台評價特色標籤自訂</h2>
+          <button onclick="addNewReviewTagPrompt()" class="px-3 py-1 bg-brand-100 text-brand-800 text-[11px] font-bold rounded-lg">+ 新增標籤</button>
         </div>
-        <div id="boarding-schedule-container" class="space-y-2"></div>
+        <div id="review-tags-manage-box" class="flex flex-wrap gap-2 pt-1"></div>
       </div>
     </div>
 
-    <!-- ✨ 分頁 11. 【外掛】進銷存與耗材扣除專頁 (動態載入) -->
-    <div id="page-inventory" class="page space-y-4" style="display: none;">
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-boxes-stacked text-blue-600"></i> 產品庫存與耗材管理
-          </span>
-          <div class="flex gap-1.5">
-            <button onclick="openQuickRestockModal()" class="px-3 py-1.5 bg-blue-600 text-white rounded-xl text-xs font-bold">+ 快速進貨</button>
-            <button onclick="openStockTakeModal()" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold">盤點調整</button>
+    <!-- 分頁 12. 空檔釋出與 9:16 限動單頁生成 -->
+    <div id="page-slots" class="page space-y-4" style="display: none;">
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> 發布本週空檔（截圖發限動或掛連結）
+            </h2>
+            <p class="text-[11px] text-brand-500 mt-0.5">勾選釋出時段，一鍵生成 9:16 單頁</p>
+          </div>
+          <button onclick="publishSlotsToPage()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold transition">發布空檔</button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-bold text-brand-800 mb-1">開始日期</label>
+            <input type="date" id="slot-start-date" onchange="handleSlotRangeChange()" class="p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50 w-full outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-brand-800 mb-1">結束日期</label>
+            <input type="date" id="slot-end-date" onchange="handleSlotRangeChange()" class="p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50 w-full outline-none">
           </div>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr class="border-b border-brand-200 text-brand-400">
-                <th class="py-2 px-2">品名/條碼</th>
-                <th class="py-2 px-2">類別</th>
-                <th class="py-2 px-2">現有庫存</th>
-                <th class="py-2 px-2">安全水位</th>
-                <th class="py-2 px-2 text-right">進銷存紀錄</th>
-              </tr>
-            </thead>
-            <tbody id="inventory-table-body"></tbody>
-          </table>
+        <div>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">勾選欲釋出時段：</label>
+          <div id="slot-picker-checkboxes" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
+        </div>
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1.5">
+          <label class="block text-xs font-bold text-brand-800">本次即將發布空檔：</label>
+          <div id="selected-slots-display" class="flex flex-wrap gap-1.5"></div>
+        </div>
+        <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 flex justify-between items-center text-xs">
+          <div class="space-y-0.5">
+            <div class="font-bold text-amber-900">🔗 專屬 9:16 限動網址：</div>
+            <a id="slots-live-url" href="#" target="_blank" class="text-blue-600 underline font-mono break-all">尚未生成</a>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="copySlotsLink()" class="px-3 py-1.5 bg-amber-200 text-amber-900 rounded-xl font-bold">複製連結</button>
+            <button onclick="previewSlotsPage()" class="px-3 py-1.5 bg-brand-500 text-white rounded-xl font-bold">預覽截圖</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- 分頁 12. 店家全域設定 (含 Feature Flags 模組開關) -->
+    <!-- 分頁 13. 設定分頁 (20 餘項完整功能模組開關) -->
     <div id="page-settings" class="page space-y-4" style="display: none;">
-      <!-- Feature Flags 總開關面板 -->
+      <!-- 預約審核與訂金 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="font-bold text-xs text-brand-900 border-b border-brand-100 pb-2 flex items-center gap-1.5">
-          <i class="fa-solid fa-sliders text-[#8C7355]"></i> 核心模組 Feature Flags 開關
-        </div>
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">預約審核與訂金規則</span>
         <div class="space-y-2 text-xs">
-          <label class="flex items-center justify-between p-2.5 rounded-xl bg-amber-50/60 border border-amber-200 cursor-pointer">
-            <div>
-              <span class="font-bold text-amber-950 block">🐾 啟用 寵物美容與住宿模組</span>
-              <span class="text-[10px] text-amber-800">開啟後自動展開毛孩檔案、住宿排程與寵物專屬包卡/儲值</span>
-            </div>
-            <input type="checkbox" id="cfg-module-pet" class="accent-brand-500 w-4 h-4 ml-2" onchange="toggleModuleStatus('pet', this.checked)">
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 cursor-pointer">
+            <span>啟用 預約先由店家審核接單</span>
+            <input type="checkbox" id="cfg-toggle-audit-booking" class="accent-brand-400" checked>
           </label>
-          <label class="flex items-center justify-between p-2.5 rounded-xl bg-blue-50/60 border border-blue-200 cursor-pointer">
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 cursor-pointer">
+            <span>啟用 線下預收訂金機制</span>
+            <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400" checked>
+          </label>
+        </div>
+        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <span class="font-bold text-blue-950 block">📦 啟用 進銷存與服務耗材連動扣除模組</span>
-              <span class="text-[10px] text-blue-800">開啟後啟用產品庫存表、服務 BOM 耗材配方與結單自動扣料</span>
+              <label class="block text-[11px] font-bold mb-1">訂金收取對象：</label>
+              <select id="cfg-deposit-mode" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-white">
+                <option value="new_only">僅新朋友</option>
+                <option value="all">全員收取</option>
+              </select>
             </div>
-            <input type="checkbox" id="cfg-module-inventory" class="accent-brand-500 w-4 h-4 ml-2" onchange="toggleModuleStatus('inventory', this.checked)">
+            <div>
+              <label class="block text-[11px] font-bold mb-1">訂金金額：</label>
+              <input type="number" id="cfg-deposit-amount" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-white">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold mb-1">匯款銀行帳號與說明：</label>
+            <textarea id="cfg-deposit-info" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-brand-800">預約緩衝禁約時間 (小時)：</label>
+          <input type="number" id="cfg-buffer" class="w-full p-2.5 mt-1 rounded-xl border border-brand-200 text-xs bg-brand-50/50">
+        </div>
+      </div>
+
+      <!-- 專員名冊與獨立排班 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <span class="text-xs font-bold text-brand-900">門市專員名冊與分權管理</span>
+          <span id="staff-count-badge" class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">0 位專員</span>
+        </div>
+        <div id="staff-manager-list" class="space-y-2"></div>
+        <div class="pt-2 border-t border-brand-100 space-y-2 text-xs">
+          <div class="grid grid-cols-3 gap-2">
+            <input type="text" id="new-staff-id" placeholder="編號 (如: S01)" class="p-2 border border-brand-200 rounded-xl">
+            <input type="text" id="new-staff-name" placeholder="姓名" class="p-2 border border-brand-200 rounded-xl">
+            <input type="password" id="new-staff-pin" placeholder="獨立密碼" maxlength="6" class="p-2 border border-brand-200 rounded-xl font-mono">
+          </div>
+          <button type="button" onclick="addStaffMember()" class="w-full py-2 bg-[#8C7355] text-white rounded-xl text-xs font-bold">建立專員資料</button>
+        </div>
+      </div>
+
+      <!-- 通報管道設定 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">通報管道設定 (LINE / Email)</span>
+        <div class="space-y-2 text-xs">
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 cursor-pointer">
+            <span>新預約主動推播至【業主個人 LINE】(含接單按鈕)</span>
+            <input type="checkbox" id="cfg-toggle-owner-line-push" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 cursor-pointer">
+            <span>啟用 官方 LINE 主動推播給【預約顧客】</span>
+            <input type="checkbox" id="cfg-toggle-line-auto-notify" class="accent-brand-400">
+          </label>
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 cursor-pointer">
+            <span>啟用 LINE 互動式價目表 (Flex Menu)</span>
+            <input type="checkbox" id="cfg-toggle-flex-menu" class="accent-brand-400" checked>
+          </label>
+          <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE Channel Access Token：</label>
+            <textarea id="cfg-line-token" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- 營業時間與排班 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">營業時間與公休日</span>
+        <div class="space-y-2 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-brand-800 mb-1">開始時間：</label>
+              <input type="time" id="cfg-shift-start" class="w-full p-2 rounded-xl border border-brand-200">
+            </div>
+            <div>
+              <label class="block font-bold text-brand-800 mb-1">最後接單時間：</label>
+              <input type="time" id="cfg-shift-end" class="w-full p-2 rounded-xl border border-brand-200">
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">時段切分間隔：</label>
+            <select id="cfg-shift-interval" class="w-full p-2 rounded-xl border border-brand-200">
+              <option value="30">每 30 分鐘一格</option>
+              <option value="60">每 60 分鐘一格</option>
+            </select>
+          </div>
+          <div class="p-3 bg-brand-50 rounded-xl space-y-1">
+            <div class="font-bold text-brand-900">每週固定公休日：</div>
+            <div class="grid grid-cols-7 gap-1 text-center" id="weekly-off-grid">
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="0"><br>日</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="1"><br>一</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="2"><br>二</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="3"><br>三</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="4"><br>四</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="5"><br>五</label>
+              <label class="p-1 bg-white rounded border"><input type="checkbox" value="6"><br>六</label>
+            </div>
+          </div>
+          <div class="p-3 bg-brand-50 rounded-xl space-y-1">
+            <div class="font-bold text-brand-900">特殊休假/店休日：</div>
+            <div class="flex gap-2">
+              <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 bg-white">
+              <button class="px-4 py-2 bg-brand-400 text-white rounded-xl font-bold" onclick="addCustomOffDate()">加入</button>
+            </div>
+            <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 品牌基本資料 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">品牌資料與前台外觀</span>
+        <div>
+          <label class="block font-bold mb-1">店名：</label>
+          <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">品牌副標題：</label>
+          <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+          <div class="flex justify-between items-center font-bold">
+            <span>LOGO 圖片展示</span>
+            <input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked>
+          </div>
+          <div class="flex gap-2 items-center">
+            <input type="file" id="logo-file-input" accept="image/*" class="text-xs">
+            <button type="button" onclick="uploadLogoImgBB()" class="px-3 py-1 bg-brand-800 text-white rounded-xl font-bold shrink-0">上傳轉網址</button>
+          </div>
+          <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 bg-white font-mono text-gray-500" readonly>
+        </div>
+        <div>
+          <label class="block font-bold mb-1">門市專線電話：</label>
+          <input type="tel" id="cfg-phone" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">門市地址：</label>
+          <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">營業時間文字：</label>
+          <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+      </div>
+
+      <!-- 進階 20+ 功能模組開關板 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">功能模組開關控制板</span>
+        <div class="space-y-1.5">
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 指定專員選取</span>
+            <input type="checkbox" id="cfg-toggle-staff-select" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 多位專員獨立排班</span>
+            <input type="checkbox" id="cfg-toggle-multi-staff-schedule" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 新朋友/舊朋友身份選取</span>
+            <input type="checkbox" id="cfg-toggle-custtype" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 前台顯示服務金額</span>
+            <input type="checkbox" id="cfg-toggle-show-price" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 顧客特殊需求與膚況/髮況備註</span>
+            <input type="checkbox" id="cfg-toggle-cust-notes" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 會員儲值金系統</span>
+            <input type="checkbox" id="cfg-toggle-wallet" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 包卡堂票核銷模組</span>
+            <input type="checkbox" id="cfg-toggle-packages" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 活動促銷折扣碼</span>
+            <input type="checkbox" id="cfg-toggle-coupons" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 顧客好評展示牆</span>
+            <input type="checkbox" id="cfg-toggle-reviews" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 作品集展示專區</span>
+            <input type="checkbox" id="cfg-toggle-portfolio" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 居家保養叮嚀內容展示</span>
+            <input type="checkbox" id="cfg-toggle-care" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 一鍵電話與通訊軟體快速聯繫</span>
+            <input type="checkbox" id="cfg-toggle-quick-contact" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 取消預約原因記錄</span>
+            <input type="checkbox" id="cfg-toggle-cancel-reason" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 自動寄送顧客預約確認副本 Email</span>
+            <input type="checkbox" id="cfg-toggle-email" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 說明圖輪播模組</span>
+            <input type="checkbox" id="cfg-toggle-carousel" class="accent-brand-400" checked>
+          </label>
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50/50 cursor-pointer">
+            <span>啟用 沙龍專屬選品專區</span>
+            <input type="checkbox" id="cfg-toggle-featured-shop" class="accent-brand-400">
           </label>
         </div>
       </div>
 
-      <!-- 基礎設定表單 -->
+      <!-- 專員抽成 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
-        <div class="font-bold text-xs text-brand-900 border-b border-brand-100 pb-2">門市基礎資料</div>
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
+          <span>專員業績抽成與算薪模組</span>
+          <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="font-bold">預設抽成比例 (%)：</label>
+          <input type="number" id="cfg-commission-rate" class="w-20 p-2 rounded-xl border border-brand-200 text-center font-bold" value="50">
+          <span>%</span>
+        </div>
+      </div>
+
+      <!-- 9:16 說明圖與前台公告 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">活動說明圖與滿版置頂公告</span>
         <div>
-          <label class="block font-bold mb-1">店名：</label>
-          <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white">
+          <label class="block font-bold mb-1">前台置頂公告：</label>
+          <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed"></textarea>
         </div>
         <div>
-          <label class="block font-bold mb-1">地址：</label>
-          <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white">
+          <label class="block font-bold mb-1">說明圖上傳 (最多 7 張)：</label>
+          <div class="grid grid-cols-4 gap-2 mb-2" id="promo-upload-grid"></div>
+          <textarea id="cfg-promo-imgs-text" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 font-mono" readonly></textarea>
+        </div>
+      </div>
+
+      <!-- 定型化契約 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
+          <span>定型化契約與親筆數位簽署存證</span>
+          <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355] w-4 h-4" checked>
         </div>
         <div>
-          <label class="block font-bold mb-1">營業時間：</label>
-          <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white">
+          <label class="block font-bold mb-1">契約書主標題：</label>
+          <input type="text" id="cfg-contract-title" class="w-full p-2.5 rounded-xl border border-brand-200" placeholder="美容定型化契約書">
         </div>
-        <button type="button" class="w-full py-3.5 bg-[#8C7355] text-white font-bold rounded-2xl shadow-md transition" onclick="saveStoreSettings()">儲存所有設定</button>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="font-bold">契約條款詳細內容：</label>
+            <button type="button" onclick="loadMohwContractTemplate()" class="text-[11px] text-[#8C7355] underline font-bold">＋ 載入衛福部官方標準範本</button>
+          </div>
+          <textarea id="cfg-contract-content" rows="6" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed font-sans"></textarea>
+        </div>
+      </div>
+
+      <!-- 居家保養 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">🌿 居家保養小叮嚀內容</span>
+        <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed"></textarea>
+      </div>
+
+      <!-- 社群連結 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">社群平台與 Google 地圖導航</span>
+        <div>
+          <label class="block font-bold mb-1">官方 LINE 連結：</label>
+          <input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">Instagram 網址：</label>
+          <input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">Google 地圖網址：</label>
+          <input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200">
+        </div>
+      </div>
+
+      <div class="pt-2">
+        <button type="button" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-2xl shadow-lg transition tracking-widest flex items-center justify-center gap-2" onclick="saveStoreSettings()">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span>儲存全部系統設定</span>
+        </button>
       </div>
     </div>
   </main>
 
-  <!-- 4. 底部導覽列 -->
+  <!-- 底部導覽列 -->
   <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white/95 backdrop-blur-md border-t border-brand-200/90 shadow-xl pb-[env(safe-area-inset-bottom,12px)]">
-    <nav class="max-w-2xl w-full px-2 pt-2 pb-1.5 flex items-center overflow-x-auto no-scrollbar gap-1 justify-around min-h-[68px]" id="bottom-nav" style="display: none;">
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
+    <nav class="max-w-2xl w-full px-2 pt-2.5 pb-2 flex items-center overflow-x-auto no-scrollbar gap-1 justify-around min-h-[76px]" id="bottom-nav" style="display: none;">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
         <i class="fa-solid fa-calendar-day text-base"></i>
-        <span class="text-[10px] mt-0.5">日曆</span>
+        <span class="text-[10px] mt-1">日曆</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('shift', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('shift', this)">
         <i class="fa-solid fa-clock text-base"></i>
-        <span class="text-[10px] mt-0.5">排班</span>
+        <span class="text-[10px] mt-1">排班</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('customer', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('customer', this)">
         <i class="fa-solid fa-list-check text-base"></i>
-        <span class="text-[10px] mt-0.5">名單</span>
+        <span class="text-[10px] mt-1">名單</span>
       </button>
-      <!-- ✨ 寵物模組外掛按鈕 (動態顯示/隱藏) -->
-      <button id="nav-btn-pet" class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-amber-600 font-medium hidden" onclick="switchPage('pet', this)">
-        <i class="fa-solid fa-paw text-base"></i>
-        <span class="text-[10px] mt-0.5">寵物</span>
-      </button>
-      <!-- ✨ 進銷存模組外掛按鈕 (動態顯示/隱藏) -->
-      <button id="nav-btn-inv" class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-blue-600 font-medium hidden" onclick="switchPage('inventory', this)">
-        <i class="fa-solid fa-boxes-stacked text-base"></i>
-        <span class="text-[10px] mt-0.5">庫存</span>
-      </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('marketing', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('marketing', this)">
         <i class="fa-solid fa-gift text-base"></i>
-        <span class="text-[10px] mt-0.5">行銷</span>
+        <span class="text-[10px] mt-1">行銷</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('revenue', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('reviews', this)">
+        <i class="fa-solid fa-star text-base"></i>
+        <span class="text-[10px] mt-1">好評</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('slots', this)">
+        <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+        <span class="text-[10px] mt-1">空檔</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('revenue', this)">
         <i class="fa-solid fa-chart-pie text-base"></i>
-        <span class="text-[10px] mt-0.5">業績</span>
+        <span class="text-[10px] mt-1">業績</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('care', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('care', this)">
         <i class="fa-solid fa-heart text-base"></i>
-        <span class="text-[10px] mt-0.5">回訪</span>
+        <span class="text-[10px] mt-1">回訪</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-12 py-1 text-brand-400 font-medium" onclick="switchPage('settings', this)">
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('services', this)">
+        <i class="fa-solid fa-scissors text-base"></i>
+        <span class="text-[10px] mt-1">服務</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('search', this)">
+        <i class="fa-solid fa-magnifying-glass text-base"></i>
+        <span class="text-[10px] mt-1">查詢</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('add', this)">
+        <i class="fa-solid fa-bolt text-base"></i>
+        <span class="text-[10px] mt-1">新增</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('subscription', this)">
+        <i class="fa-solid fa-credit-card text-base"></i>
+        <span class="text-[10px] mt-1">方案</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('settings', this)">
         <i class="fa-solid fa-gear text-base"></i>
-        <span class="text-[10px] mt-0.5">設定</span>
+        <span class="text-[10px] mt-1">設定</span>
       </button>
     </nav>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- 📌 模組化 JavaScript 引入清單 (乾淨獨立、依職責解耦) -->
-  <!-- ========================================================================= -->
-  <!-- 1. 核心底座與驗證 -->
+  <!-- 外部功能模組引入 -->
   <script src="./js/admin-core.js"></script>
-  <!-- 2. 日曆、名單與排程 -->
   <script src="./js/admin-calendar.js"></script>
   <script src="./js/admin-shift.js"></script>
-  <!-- 3. 結單對帳與行銷 -->
   <script src="./js/admin-checkout.js"></script>
   <script src="./js/admin-marketing.js"></script>
   <script src="./js/admin-revenue.js"></script>
-  <script src="./js/admin-care.js"></script>
-  <script src="./js/admin-services.js"></script>
   <script src="./js/admin-settings.js"></script>
-  <!-- 4. 業務外掛模組 (Feature Flags 動態掛載) -->
   <script src="./js/admin-pet.js"></script>
   <script src="./js/admin-inventory.js"></script>
+
+  <!-- 核心啟動與必備互動輔助邏輯 -->
+  <script>
+    // 專員莫蘭迪色彩表 (低飽和紅橙黃綠藍紫)
+    const STAFF_MORANDI_PALETTE = [
+      { dot: '#9E9E9E', bg: '#F5F5F5', text: '#616161', border: '#E0E0E0' },
+      { dot: '#E57373', bg: '#FFEBEE', text: '#C62828', border: '#FFCDD2' },
+      { dot: '#FFB74D', bg: '#FFF3E0', text: '#EF6C00', border: '#FFE0B2' },
+      { dot: '#DCE775', bg: '#F9FBE7', text: '#827717', border: '#F0F4C3' },
+      { dot: '#81C784', bg: '#E8F5E9', text: '#2E7D32', border: '#C8E6C9' },
+      { dot: '#64B5F6', bg: '#E3F2FD', text: '#1565C0', border: '#BBDEFB' },
+      { dot: '#BA68C8', bg: '#F3E5F5', text: '#6A1B9A', border: '#E1BEE7' }
+    ];
+
+    function getStaffColor(staffId, staffName = "") {
+      if (!staffId || staffId === 'all' || staffId === '不指定') return STAFF_MORANDI_PALETTE[0];
+      const list = (backendData.settings?.staffList || backendData.settings?.staff_list || []).filter(s => s.id !== 'all');
+      const idx = list.findIndex(s => s.id === staffId || s.name === staffName);
+      if (idx !== -1) return STAFF_MORANDI_PALETTE[(idx + 1) % STAFF_MORANDI_PALETTE.length];
+      return STAFF_MORANDI_PALETTE[1];
+    }
+
+    // 預約項目與改期操作
+    function openEditServiceModal(id) {
+      const svcs = backendData.services || [];
+      const appt = (backendData.appointments || []).find(a => String(a.id) === String(id));
+      const currentSvcs = appt ? appt.service.split(',').map(s => s.trim()) : [];
+
+      let checkboxHtml = svcs.map(s => {
+        const isChecked = currentSvcs.includes(s.name) ? 'checked' : '';
+        return `
+          <label class="flex items-center justify-between p-2 rounded-xl bg-brand-50 border border-brand-200 text-xs cursor-pointer">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" value="${s.name}" data-price="${s.price}" class="edit-svc-cb accent-[#8C7355]" ${isChecked}>
+              <span class="font-bold">${s.isAddon ? '✨ ' : ''}${s.name}</span>
+            </div>
+            <span class="text-brand-500 font-bold">$${s.price}</span>
+          </label>
+        `;
+      }).join('');
+
+      Swal.fire({
+        title: '變更/加購施作項目',
+        html: `<div class="text-left space-y-1.5 max-h-60 overflow-y-auto p-1">${checkboxHtml}</div>`,
+        showCancelButton: true,
+        confirmButtonText: '確定更新',
+        confirmButtonColor: '#8C7355',
+        preConfirm: () => {
+          const selected = Array.from(document.querySelectorAll('.edit-svc-cb:checked'));
+          if (selected.length === 0) return Swal.showValidationMessage('請至少勾選一項');
+          let total = 0;
+          selected.forEach(cb => { total += Number((cb.getAttribute('data-price') || '0').match(/\d+/)?.[0] || 0); });
+          return { names: selected.map(cb => cb.value).join(', '), totalPrice: total };
+        }
+      }).then(async r => {
+        if (r.isConfirmed) {
+          await directSupabasePatch('bookings', `id=eq.${id}`, { service_names: r.value.names, price: r.value.totalPrice });
+          Swal.fire('項目已更新！', `最新金額：NT$ ${r.value.totalPrice}`, 'success');
+          fetchDataAndRender();
+        }
+      });
+    }
+
+    function openRescheduleModal(id, name, oldDate, oldTime) {
+      Swal.fire({
+        title: `幫 ${name} 改期`,
+        html: `
+          <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${(oldDate||'').replace(/\//g, '-')}">
+          <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime||'10:00'}">
+        `,
+        showCancelButton: true,
+        confirmButtonText: '確定改期',
+        confirmButtonColor: '#8C7355',
+        preConfirm: () => ({
+          date: document.getElementById('resched-date').value.replace(/-/g, '/'),
+          time: document.getElementById('resched-time').value
+        })
+      }).then(async r => {
+        if (r.isConfirmed && r.value.date && r.value.time) {
+          const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
+          await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
+          Swal.fire('改期成功！', '', 'success');
+          fetchDataAndRender();
+        }
+      });
+    }
+
+    // 頁面初始化生命週期
+    window.addEventListener('DOMContentLoaded', () => {
+      const lockScreen = document.getElementById('lock-screen');
+      const mainContent = document.getElementById('main-content');
+      const bottomNav = document.getElementById('bottom-nav');
+
+      if (lockScreen) {
+        lockScreen.style.display = 'flex';
+        lockScreen.classList.remove('hidden');
+      }
+      if (mainContent) mainContent.style.display = 'none';
+      if (bottomNav) bottomNav.style.display = 'none';
+
+      sessionStorage.removeItem('admin_session_unlocked');
+      if (typeof checkLockoutStatus === 'function') checkLockoutStatus();
+
+      const pinInput = document.getElementById('pin-input');
+      if (pinInput) {
+        pinInput.value = '';
+        setTimeout(() => pinInput.focus(), 300);
+        pinInput.onkeydown = (e) => {
+          if (e.key === 'Enter') checkPin();
+        };
+      }
+    });
+  </script>
 </body>
 </html>
