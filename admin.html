@@ -494,12 +494,12 @@
       <div id="search-results-area" class="space-y-3"></div>
     </div>
 
-    <!-- 分頁 10. 手動代客新增排程 (page-add) - 支援美容＋住宿多段時段設定 -->
+    <!-- 分頁 10. 手動代客新增排程 (page-add) - 支援三種商業模式動態切換 -->
     <div id="page-add" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
         <div class="font-bold text-brand-900 text-sm border-b border-brand-100 pb-2 flex items-center justify-between">
           <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-amber-600"></i> 後台代客建檔與預約卡位</span>
-          <span class="text-[10px] text-brand-400">支援純美容 / 純住宿 / 美容＋住宿 綜合建檔</span>
+          <span class="text-[10px] text-brand-400 font-mono">Multi-Mode Booking</span>
         </div>
 
         <!-- 1. 顧客基本資料快查 -->
@@ -514,56 +514,64 @@
             <input type="text" id="quick-name" placeholder="請輸入姓名" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
           </div>
           <div>
-            <label class="block font-bold text-brand-800 mb-1">毛孩姓名 / 品種 *</label>
-            <input type="text" id="quick-pet-name" placeholder="例：波波 (貴賓)" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+            <label class="block font-bold text-brand-800 mb-1">LINE 顯示名稱</label>
+            <input type="text" id="quick-line" placeholder="例如：小美" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
           </div>
         </div>
-
-        <!-- 毛孩體型與飲食判斷 -->
-        <div class="grid grid-cols-2 gap-2 p-3 bg-brand-50 rounded-2xl border border-brand-200">
-          <div>
-            <label class="block font-bold text-brand-800 mb-1">體型級距：</label>
-            <select id="quick-pet-size" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs font-bold outline-none">
-              <option value="小型犬">小型犬 (9kg 以下)</option>
-              <option value="中型犬">中型犬 (10-20kg)</option>
-              <option value="大型犬">大型犬 (21kg 以上)</option>
-              <option value="貓咪">貓咪專屬房</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-brand-800 mb-1">供餐飲食自備：</label>
-            <select id="quick-pet-food" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs font-bold outline-none">
-              <option value="true">家長自備飼料罐頭</option>
-              <option value="false">由店內提供精緻鮮食</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- 3. 預約類型切換 -->
         <div>
-          <label class="block font-bold text-brand-800 mb-1">3. 預約模式切換：</label>
-          <div class="grid grid-cols-3 gap-2 font-bold">
-            <label class="p-2.5 rounded-xl border border-brand-200 bg-brand-50 text-center cursor-pointer">
-              <input type="radio" name="quick-booking-mode" value="grooming" checked onchange="toggleQuickBookingFields()"> 純洗護美容
+          <label class="block font-bold text-brand-800 mb-1">顧客電子信箱 (寄送證明與合約副本)：</label>
+          <input type="email" id="quick-email" placeholder="user@gmail.com" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+        </div>
+
+        <!-- 3. 三種模式動態切換器 -->
+        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2.5">
+          <label class="block font-bold text-brand-900 text-[11px]">3. 選擇門市營運模式：</label>
+          <div class="grid grid-cols-3 gap-1.5 font-bold text-center text-[11px]">
+            <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
+              <input type="radio" name="quick-industry-mode" value="beauty" checked onchange="toggleQuickIndustryMode()"> 純美業預約
             </label>
-            <label class="p-2.5 rounded-xl border border-brand-200 bg-brand-50 text-center cursor-pointer">
-              <input type="radio" name="quick-booking-mode" value="hotel" onchange="toggleQuickBookingFields()"> 純度假住宿
+            <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
+              <input type="radio" name="quick-industry-mode" value="pet_grooming" onchange="toggleQuickIndustryMode()"> 寵物純美容
             </label>
-            <label class="p-2.5 rounded-xl border border-brand-200 bg-brand-50 text-center cursor-pointer">
-              <input type="radio" name="quick-booking-mode" value="both" onchange="toggleQuickBookingFields()"> 美容＋住宿
+            <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
+              <input type="radio" name="quick-industry-mode" value="pet_hotel" onchange="toggleQuickIndustryMode()"> 寵物美容＋住宿
             </label>
           </div>
         </div>
 
-        <!-- 純美容排程時段 -->
-        <div id="quick-grooming-time-box" class="space-y-2">
+        <!-- 寵物專屬欄位 (僅在 2 或 3 模式下顯示) -->
+        <div id="quick-pet-fields-box" class="grid grid-cols-3 gap-2 p-3 bg-amber-50/70 rounded-2xl border border-amber-200 hidden">
+          <div>
+            <label class="block font-bold text-amber-950 mb-1">毛孩名稱/品種：</label>
+            <input type="text" id="quick-pet-name" placeholder="例：Q比 (貴賓)" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs outline-none">
+          </div>
+          <div>
+            <label class="block font-bold text-amber-950 mb-1">體型級距：</label>
+            <select id="quick-pet-size" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs font-bold outline-none">
+              <option value="小型犬">小型犬 (9kg以下)</option>
+              <option value="中型犬">中型犬 (10-20kg)</option>
+              <option value="大型犬">大型犬 (21kg以上)</option>
+              <option value="貓咪">貓咪專屬</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-amber-950 mb-1">供餐飲食：</label>
+            <select id="quick-pet-food" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs font-bold outline-none">
+              <option value="true">家長自備食料</option>
+              <option value="false">店內鮮食供餐</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 4. 時段選取區 (純美業 / 寵物美容用單日時段網格) -->
+        <div id="quick-single-time-box" class="space-y-2">
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block font-bold text-brand-800 mb-1">美容施作日期 *</label>
+              <label class="block font-bold text-brand-800 mb-1">4. 預約日期 *</label>
               <input type="date" id="quick-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white font-bold font-mono" onchange="calcAdminQuickSlots()">
             </div>
             <div>
-              <label class="block font-bold text-brand-800 mb-1">美容進場時段 (依排班) *</label>
+              <label class="block font-bold text-brand-800 mb-1">進場時段 (依排班) *</label>
               <div class="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto" id="admin-quick-slot-grid">
                 <div class="col-span-full text-center py-2 text-brand-400">請先挑選日期</div>
               </div>
@@ -572,31 +580,29 @@
           </div>
         </div>
 
-        <!-- 住宿與加購洗護多段時間設定 -->
-        <div id="quick-hotel-time-box" class="space-y-3 p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 hidden">
+        <!-- 4-2. 寵物住宿專屬多段時段區 (僅在 3 模式下顯示) -->
+        <div id="quick-hotel-range-box" class="space-y-3 p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 hidden">
           <div class="font-bold text-amber-950 flex items-center gap-1">
             <i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖與進退房時段設定：
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[11px] font-bold text-brand-800 mb-0.5">入住日期與抵達時間：</label>
+              <label class="block font-bold text-brand-800 mb-0.5 text-[11px]">入住日期與抵達時間：</label>
               <div class="flex gap-1">
                 <input type="date" id="quick-hotel-checkin-date" class="w-2/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
-                <input type="time" id="quick-hotel-checkin-time" value="10:30" class="w-1/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
+                <input type="time" id="quick-hotel-checkin-time" value="10:00" class="w-1/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
               </div>
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-brand-800 mb-0.5">退房日期與接回時間：</label>
+              <label class="block font-bold text-brand-800 mb-0.5 text-[11px]">退房日期與接回時間：</label>
               <div class="flex gap-1">
                 <input type="date" id="quick-hotel-checkout-date" class="w-2/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
-                <input type="time" id="quick-hotel-checkout-time" value="18:00" class="w-1/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
+                <input type="time" id="quick-hotel-checkout-time" value="19:00" class="w-1/3 p-2 bg-white rounded-xl border border-brand-200 font-mono text-xs">
               </div>
             </div>
           </div>
-
-          <!-- 住宿期間美容施作排程勾選 -->
-          <div class="pt-2 border-t border-amber-200/60 space-y-1.5" id="quick-hotel-grooming-options">
-            <label class="block font-bold text-amber-950 text-[11px]">住宿期間洗護施作排程點：</label>
+          <div class="pt-2 border-t border-amber-200/60 space-y-1.5">
+            <label class="block font-bold text-amber-950 text-[11px]">住宿期間是否附加美容洗護：</label>
             <div class="grid grid-cols-2 gap-2">
               <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" id="quick-bath-checkin" class="accent-[#8C7355]">
@@ -604,27 +610,27 @@
               </label>
               <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" id="quick-bath-checkout" checked class="accent-[#8C7355]">
-                <span>退房當天洗澡/美容 (返家前)</span>
+                <span>退房當天美容/洗澡 (返家前)</span>
               </label>
             </div>
           </div>
         </div>
 
         <div>
-          <label class="block font-bold text-brand-800 mb-1.5">指定服務專員：</label>
+          <label class="block font-bold text-brand-800 mb-1.5">5. 指定服務專員：</label>
           <div class="grid grid-cols-3 gap-2" id="admin-quick-staff-grid"></div>
           <input type="hidden" id="quick-staff-id" value="all">
           <input type="hidden" id="quick-staff-name" value="不指定">
         </div>
 
         <div>
-          <label class="block font-bold text-brand-800 mb-1">4. 選擇技術施作項目：</label>
+          <label class="block font-bold text-brand-800 mb-1">6. 選擇施作項目 (可複選)：</label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="admin-quick-service-grid"></div>
           <input type="hidden" id="quick-service-names">
         </div>
 
         <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-          <label class="block font-bold text-brand-900">5. 方案加購與扣抵：</label>
+          <label class="block font-bold text-brand-900">7. 本次方案加購與扣抵：</label>
           <select id="quick-addon-pkg" onchange="calcAdminQuickSummary()" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs"></select>
           <select id="quick-addon-wal" onchange="calcAdminQuickSummary()" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs"></select>
           <div class="flex gap-4 pt-1">
@@ -633,21 +639,21 @@
           </div>
         </div>
 
-        <div class="p-4 bg-brand-50 rounded-2xl border border-brand-200 space-y-1.5 font-mono">
-          <div class="flex justify-between text-brand-700"><span>主項目預估：</span><span id="quick-disp-base">$0</span></div>
-          <div class="flex justify-between text-rose-600"><span>折抵金額：</span><span id="quick-disp-deduct">-$0</span></div>
-          <div class="flex justify-between text-amber-800"><span>現場加購：</span><span id="quick-disp-addon">+$0</span></div>
+        <div class="p-4 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 font-mono">
+          <div class="flex justify-between text-brand-700"><span>主項目原價預估：</span><span id="quick-disp-base">$0</span></div>
+          <div class="flex justify-between text-rose-600"><span>方案與會員折抵：</span><span id="quick-disp-deduct">-$0</span></div>
+          <div class="flex justify-between text-amber-800"><span>現場加購金額：</span><span id="quick-disp-addon">+$0</span></div>
           <hr class="border-brand-200 my-1">
           <div class="flex justify-between items-center font-bold text-brand-900 text-sm">
-            <span>現場預估總應付：</span>
+            <span>現場預估應付金額：</span>
             <span class="text-xl font-black text-[#8C7355] font-serif">NT$ <span id="admin-quick-total-price">0</span></span>
           </div>
           <input type="hidden" id="quick-final-price" value="0">
         </div>
 
         <div>
-          <label class="block font-bold text-brand-800 mb-1">預約備註事項 (選填)</label>
-          <input type="text" id="quick-notes" placeholder="例如：過敏史、特殊習慣叮嚀..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+          <label class="block font-bold text-brand-800 mb-1">後台預約備註 (選填)</label>
+          <input type="text" id="quick-notes" placeholder="例如：口頭改期、特殊指名..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
         </div>
 
         <button type="button" onclick="submitAdminQuickBooking()" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl shadow-md transition text-xs tracking-widest">
@@ -655,7 +661,7 @@
         </button>
       </div>
     </div>
-
+    
     <!-- 分頁 11. 行銷中心 (page-marketing) -->
     <div id="page-marketing" class="page space-y-5 full-admin-only" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
@@ -2040,123 +2046,159 @@
     // ==========================================
     // 6. 預約卡片渲染引擎 (結構化資產拆解、現場手寫合約簽署)
     // ==========================================
-    function renderSingleCardHTML(a) {
-      const staffColor = getStaffColor(a.staffId, a.staffName);
-      let parsedEmail = '';
-      let cleanNotes = a.notes || '';
-      if (cleanNotes.includes('Email:')) {
-        const parts = cleanNotes.split('Email:');
-        cleanNotes = parts[0].trim();
-        parsedEmail = parts[1].trim().split(' ')[0].split('|')[0].trim();
-      }
+    // ==========================================
+  // 6. 預約卡片渲染引擎 (獨立條列財務與折抵明細)
+  // ==========================================
+  function renderSingleCardHTML(a) {
+    const staffColor = getStaffColor(a.staffId, a.staffName);
+    let parsedEmail = '';
+    let cleanNotes = a.notes || '';
+    if (cleanNotes.includes('Email:')) {
+      const parts = cleanNotes.split('Email:');
+      cleanNotes = parts[0].trim();
+      parsedEmail = parts[1].trim().split(' ')[0].split('|')[0].trim();
+    }
 
-      // 結構化獨立財務折抵色塊
-      let addonBadges = [];
-      let deductBadges = [];
-      if (cleanNotes.includes('加購包卡')) addonBadges.push('<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[10px]">+加購包卡方案</span>');
-      if (cleanNotes.includes('加購儲值')) addonBadges.push('<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">+加購儲值金</span>');
-      if (cleanNotes.includes('使用包卡') || cleanNotes.includes('包卡扣抵')) deductBadges.push('<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[10px]">-包卡扣抵 1 堂</span>');
-      if (cleanNotes.includes('使用儲值') || cleanNotes.includes('儲值扣抵')) deductBadges.push('<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-bold text-[10px]">-儲值抵扣(享折數)</span>');
-      if (cleanNotes.includes('折扣碼')) deductBadges.push('<span class="px-2 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[10px]">🏷️ 折扣碼已折抵</span>');
-      if (a.deposit_deducted > 0) deductBadges.push(`<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[10px]">已扣訂金 $${a.deposit_deducted}</span>`);
+    // 獨立條列解析：加購金額、包卡點數、儲值金折抵、折扣碼折抵、已付訂金
+    let financialRows = [];
+    
+    // 1. 加購金額
+    const addonMatch = cleanNotes.match(/加購[：:\s]*([^\s|]+)/);
+    if (addonMatch || cleanNotes.includes('加購包卡') || cleanNotes.includes('加購儲值')) {
+      const addonText = addonMatch ? addonMatch.get(1) : '現場加購方案';
+      financialRows.push(`<div class="flex justify-between text-amber-900 font-bold"><span>✨ 現場加購項目：</span><span>${addonText}</span></div>`);
+    }
 
-      const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
-      const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
-      const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
-      const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+    // 2. 包卡點數扣減
+    if (cleanNotes.includes('使用包卡') || cleanNotes.includes('包卡扣抵') || cleanNotes.includes('扣點')) {
+      financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點折抵：</span><span>當次扣減 1 點 (堂)</span></div>`);
+    }
 
-      // 現場簽約按鈕（未簽時點擊開啟 Canvas，已簽時點擊檢視正本）
-      const signBtnHtml = a.signature_url ? `
-        <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
-          ✓ 檢視親筆契約
-        </button>
-      ` : `
-        <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
-          <i class="fa-solid fa-pen-nib text-[10px]"></i> 現場簽約
-        </button>
-      `;
+    // 3. 儲值金扣抵 (含專屬折數)
+    if (cleanNotes.includes('使用儲值') || cleanNotes.includes('儲值抵扣') || cleanNotes.includes('儲值金')) {
+      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值金扣抵支付：</span><span>享會員專屬折數並即時扣款</span></div>`);
+    }
 
-      const auditActionHtml = (a.status === '待確認') ? `
-        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
-          <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-            <i class="fa-solid fa-bell text-amber-600"></i> 新預約待審核：
-          </span>
-          <div class="flex gap-1.5 shrink-0">
-            <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}')">核准接單</button>
-            <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}')">婉拒</button>
+    // 4. 折扣碼折抵
+    if (cleanNotes.includes('折扣碼')) {
+      const codeMatch = cleanNotes.match(/折扣碼[:\s]*([A-Za-z0-9]+)/);
+      const codeStr = codeMatch ? ` (${codeMatch[1]})` : '';
+      financialRows.push(`<div class="flex justify-between text-rose-600 font-bold"><span>🏷️ 促銷折扣碼折抵：</span><span>已套用代碼${codeStr}</span></div>`);
+    }
+
+    // 5. 已付訂金扣抵
+    if (a.deposit_deducted > 0) {
+      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 線下預收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
+    }
+
+    const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
+    const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
+    const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
+    const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+
+    const signBtnHtml = a.signature_url ? `
+      <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
+        ✓ 檢視親筆契約
+      </button>
+    ` : `
+      <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
+        <i class="fa-solid fa-pen-nib text-[10px]"></i> 現場簽約
+      </button>
+    `;
+
+    const auditActionHtml = (a.status === '待確認') ? `
+      <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
+        <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+          <i class="fa-solid fa-bell text-amber-600"></i> 新預約待審核：
+        </span>
+        <div class="flex gap-1.5 shrink-0">
+          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}')">核准接單</button>
+          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}')">婉拒</button>
+        </div>
+      </div>
+    ` : '';
+
+    return `
+      <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border border-brand-200 shadow-sm space-y-2.5 text-xs">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
+                <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
+              </span>
+              <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
+            </div>
+            <div class="font-bold text-brand-900 text-sm mt-1">
+              ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
+            </div>
+            ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單時間：${friendlyCreatedTime}</div>` : ''}
+          </div>
+          <div class="flex flex-col items-end gap-1">
+            <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
+              <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
+              <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
+              <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
+              <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
+              <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
+            </select>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
           </div>
         </div>
-      ` : '';
 
-      return `
-        <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border border-brand-200 shadow-sm space-y-2.5 text-xs">
-          <div class="flex justify-between items-start">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
-                  <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
-                </span>
-                <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
-              </div>
-              <div class="font-bold text-brand-900 text-sm mt-1">
-                ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
-              </div>
-              ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單時間：${friendlyCreatedTime}</div>` : ''}
+        <div class="flex items-center gap-1.5 pt-0.5">
+          <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+            <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
+          </a>
+          <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+            <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
+          </a>
+        </div>
+
+        ${auditActionHtml}
+
+        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
+          <div class="font-bold text-brand-900 font-sans">施作項目：${a.service || '無'}</div>
+          <div class="text-brand-600 font-bold">預估費用：${a.price} 元 ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
+        </div>
+
+        <!-- 獨立條列財務與折抵區塊 -->
+        <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1.5 text-[11px] border border-brand-100">
+          <div class="font-bold text-brand-800 border-b border-brand-200/60 pb-1">📊 當次方案與加購折抵明細：</div>
+          ${financialRows.length > 0 ? financialRows.join('') : '<div class="text-gray-400">無特殊加購或方案折抵紀錄</div>'}
+        </div>
+
+        <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
+          <div class="flex justify-between">
+            <span>LINE：<b>${a.lineName || '未填寫'}</b></span>
+            <span>信箱：<b>${parsedEmail || '未填寫'}</b></span>
+          </div>
+          ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客備註：${a.customer_notes}</div>` : ''}
+          ${a.signature_url ? `
+            <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
+              <span>✓ 已簽署定型化契約 ${friendlySignedTime ? `(${friendlySignedTime})` : ''}</span>
+              <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
             </div>
-            <div class="flex flex-col items-end gap-1">
-              <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
-                <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
-                <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
-                <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
-                <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
-                <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
-              </select>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
-            </div>
-          </div>
+          ` : ''}
+        </div>
 
-          <div class="flex items-center gap-1.5 pt-0.5">
-            <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-              <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
-            </a>
-            <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-              <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
-            </a>
-          </div>
+        <!-- 內部備註排版：彈性容器防破版 -->
+        <div class="w-full flex items-center gap-2 pt-1">
+          <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
+          <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
+            存備註
+          </button>
+        </div>
 
-          ${auditActionHtml}
-
-          <div class="p-2.5 bg-brand-50 rounded-xl space-y-1">
-            <div class="font-bold text-brand-900">施作項目：${a.service || '無'}</div>
-            <div class="text-brand-600 font-bold font-mono">預估應付：${a.price} 元 ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
+        <div class="flex justify-between items-center pt-2 border-t border-brand-100">
+          <div class="flex items-center gap-1.5">${signBtnHtml}</div>
+          <div class="flex items-center gap-1.5">
+            <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold text-[11px]" onclick="openEditServiceModal('${a.id}')">改項目</button>
+            <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold text-[11px]" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+            <button class="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
           </div>
-
-          <!-- 獨立資產明細色塊 (不擠在備註內) -->
-          <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] border border-brand-100">
-            <div class="font-bold text-brand-800">📊 方案明細：</div>
-            <div class="flex flex-wrap gap-1">${addonBadges.join('') || '<span class="text-gray-400">無現場加購方案</span>'}</div>
-            <div class="flex flex-wrap gap-1 mt-1">${deductBadges.join('') || '<span class="text-gray-400">無包卡儲值折抵</span>'}</div>
-          </div>
-
-          <!-- 內部備註排版：彈性容器防破版 -->
-          <div class="w-full flex items-center gap-2 pt-1">
-            <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
-            <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
-              存備註
-            </button>
-          </div>
-
-          <!-- 底部簽約與結單操作列 -->
-          <div class="flex justify-between items-center pt-2 border-t border-brand-100">
-            <div class="flex items-center gap-1.5">${signBtnHtml}</div>
-            <div class="flex items-center gap-1.5">
-              <button class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-slate-600 text-white rounded-lg font-bold text-[11px]" onclick="openEditServiceModal('${a.id}')">改項目</button>
-              <button class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold text-[11px]" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-              <button class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單對帳</button>
-            </div>
-          </div>
-        </div>`;
-    }
+        </div>
+      </div>`;
+  }
 
     function formatFriendlyTime(isoStr) {
       if (!isoStr) return '';
@@ -3495,152 +3537,166 @@
         (backendData.services || []).map(s => `<option value="${s.name}">${s.name}</option>`).join('');
     }
 
-    function renderRevenue() {
-      const selectedSvc = document.getElementById('rev-service-select')?.value || 'ALL';
-      const selectedMethod = document.getElementById('rev-method-filter')?.value || 'ALL';
-      const timeFilter = document.getElementById('rev-time-filter')?.value || 'THIS_MONTH';
-      const listArea = document.getElementById('rev-list-area');
-      const unpaidListArea = document.getElementById('rev-unpaid-list');
-      
-      const appts = backendData.appointments || [];
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+    // ==========================================
+  // 14. 業績統計與明細 (結構化條列抵扣與加購)
+  // ==========================================
+  function renderRevenue() {
+    const selectedSvc = document.getElementById('rev-service-select')?.value || 'ALL';
+    const selectedMethod = document.getElementById('rev-method-filter')?.value || 'ALL';
+    const timeFilter = document.getElementById('rev-time-filter')?.value || 'THIS_MONTH';
+    const listArea = document.getElementById('rev-list-area');
+    const unpaidListArea = document.getElementById('rev-unpaid-list');
+    
+    const appts = backendData.appointments || [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-      const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
-      const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
+    const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
+    const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
 
-      let filtered = appts;
-      if (sD && eD) {
-        filtered = filtered.filter(a => a.date >= sD && a.date <= eD);
-      } else if (timeFilter === 'THIS_MONTH') {
-        const ym = `${currentYear}/${currentMonth}`;
-        filtered = filtered.filter(a => a.date && a.date.startsWith(ym));
-      } else if (timeFilter === 'LAST_MONTH') {
-        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const prevYm = `${prevDate.getFullYear()}/${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-        filtered = filtered.filter(a => a.date && a.date.startsWith(prevYm));
+    let filtered = appts;
+    if (sD && eD) {
+      filtered = filtered.filter(a => a.date >= sD && a.date <= eD);
+    } else if (timeFilter === 'THIS_MONTH') {
+      const ym = `${currentYear}/${currentMonth}`;
+      filtered = filtered.filter(a => a.date && a.date.startsWith(ym));
+    } else if (timeFilter === 'LAST_MONTH') {
+      const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevYm = `${prevDate.getFullYear()}/${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+      filtered = filtered.filter(a => a.date && a.date.startsWith(prevYm));
+    }
+
+    if (selectedSvc !== 'ALL') {
+      filtered = filtered.filter(a => (a.service || '').includes(selectedSvc));
+    }
+
+    // 獨立篩選器
+    if (selectedMethod === 'PACKAGE') {
+      filtered = filtered.filter(a => (a.notes || '').includes('包卡') || (a.notes || '').includes('扣點'));
+    } else if (selectedMethod === 'WALLET') {
+      filtered = filtered.filter(a => (a.notes || '').includes('儲值'));
+    } else if (selectedMethod === 'COUPON') {
+      filtered = filtered.filter(a => (a.notes || '').includes('折扣碼'));
+    } else if (selectedMethod === 'ADDON') {
+      filtered = filtered.filter(a => (a.notes || '').includes('加購'));
+    }
+
+    let paidTotal = 0;
+    let completedCount = 0;
+    let returningRevenue = 0;
+    let paidListHtml = '';
+    let unpaidListHtml = '';
+
+    filtered.forEach(a => {
+      let detailRows = [];
+      const notes = a.notes || '';
+
+      if (notes.includes('加購包卡') || notes.includes('加購儲值')) {
+        detailRows.push(`<div class="text-amber-800">✨ 現場加購方案：已計入</div>`);
+      }
+      if (notes.includes('使用包卡') || notes.includes('包卡扣抵')) {
+        detailRows.push(`<div class="text-blue-700">🎟️ 當次包卡扣抵：1 點 (堂)</div>`);
+      }
+      if (notes.includes('使用儲值') || notes.includes('儲值抵扣')) {
+        detailRows.push(`<div class="text-purple-700">💰 儲值金扣抵支付：享專屬折數</div>`);
+      }
+      if (notes.includes('折扣碼')) {
+        detailRows.push(`<div class="text-rose-600">🏷️ 促銷折扣碼：已折抵</div>`);
+      }
+      if (a.deposit_deducted > 0) {
+        detailRows.push(`<div class="text-amber-700">💵 預收訂金扣抵：-$${a.deposit_deducted}</div>`);
       }
 
-      if (selectedSvc !== 'ALL') {
-        filtered = filtered.filter(a => (a.service || '').includes(selectedSvc));
+      const detailHtml = detailRows.length > 0 ? `<div class="mt-1 space-y-0.5 text-[10.5px] bg-brand-50/80 p-2 rounded-lg border border-brand-100">${detailRows.join('')}</div>` : '';
+
+      if (a.status === '已結單') {
+        const finalAmt = Number(a.finalPrice !== undefined ? a.finalPrice : (a.price || 0));
+        paidTotal += finalAmt;
+        completedCount++;
+        if (a.customer_type === 'old') returningRevenue += finalAmt;
+
+        paidListHtml += `
+          <div class="py-3 px-1 border-b border-brand-100 flex justify-between items-start">
+            <div class="space-y-1 max-w-[70%]">
+              <div class="font-bold text-brand-900 text-xs flex items-center gap-1.5">
+                <span>${a.date}</span>
+                <span class="text-brand-800 font-bold">${a.name}</span>
+                <span class="text-[10px] text-brand-400">(${a.customer_type === 'new' ? '新客' : '熟客'})</span>
+                <span class="text-[10px] px-1.5 py-0.2 bg-brand-100 rounded text-brand-700">${a.staffName || '不指定'}</span>
+              </div>
+              <div class="text-[11px] text-brand-600">施作項目：${a.service}</div>
+              ${detailHtml}
+            </div>
+            <div class="text-right">
+              <div class="font-black text-emerald-800 text-sm font-mono">實收 NT$ ${finalAmt.toLocaleString()}</div>
+              ${a.price && a.price !== finalAmt ? `<div class="text-[10px] text-gray-400 line-through font-mono">原價 $${a.price}</div>` : ''}
+            </div>
+          </div>`;
+      } else if (a.status === '已確認') {
+        unpaidListHtml += `
+          <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
+            <div>
+              <div class="font-bold text-amber-900">${a.date} - ${a.name} (${a.staffName || '不指定'})</div>
+              <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
+              ${detailHtml}
+            </div>
+            <button class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[11px]" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
+          </div>`;
       }
+    });
 
-      // 獨立篩選包卡、儲值、折扣碼、加購
-      if (selectedMethod === 'PACKAGE') {
-        filtered = filtered.filter(a => (a.notes || '').includes('包卡') || (a.notes || '').includes('扣點'));
-      } else if (selectedMethod === 'WALLET') {
-        filtered = filtered.filter(a => (a.notes || '').includes('儲值'));
-      } else if (selectedMethod === 'COUPON') {
-        filtered = filtered.filter(a => (a.notes || '').includes('折扣碼'));
-      } else if (selectedMethod === 'ADDON') {
-        filtered = filtered.filter(a => (a.notes || '').includes('加購'));
-      }
+    const avgTicket = completedCount > 0 ? Math.round(paidTotal / completedCount) : 0;
+    document.getElementById('metric-avg-ticket').innerText = `${avgTicket.toLocaleString()}元`;
+    const returningRatio = paidTotal > 0 ? Math.round((returningRevenue / paidTotal) * 100) : 0;
+    document.getElementById('metric-returning-ratio').innerText = `${returningRatio}%`;
+    const cancelRatio = appts.length > 0 ? Math.round((appts.filter(r => r.status === '已取消' || r.status === '婉拒').length / appts.length) * 100) : 0;
+    document.getElementById('metric-cancel-ratio').innerText = `${cancelRatio}%`;
+    document.getElementById('rev-total-amount').innerText = `${paidTotal.toLocaleString()}元`;
 
-      let paidTotal = 0;
-      let completedCount = 0;
-      let returningRevenue = 0;
-      let paidListHtml = '';
-      let unpaidListHtml = '';
+    if (listArea) listArea.innerHTML = paidListHtml || '<div class="text-center text-xs text-brand-400 py-4">查無符合條件之結單紀錄</div>';
+    if (unpaidListArea) unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
 
-      filtered.forEach(a => {
-        let badges = [];
-        if (a.notes.includes('加購包卡')) badges.push('<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold text-[9px]">加購包卡</span>');
-        if (a.notes.includes('加購儲值')) badges.push('<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[9px]">加購儲值</span>');
-        if (a.notes.includes('使用包卡') || a.notes.includes('包卡扣抵')) badges.push('<span class="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded font-bold text-[9px]">包卡抵扣</span>');
-        if (a.notes.includes('使用儲值') || a.notes.includes('儲值扣抵')) badges.push('<span class="px-1.5 py-0.5 bg-purple-100 text-purple-800 rounded font-bold text-[9px]">儲值抵扣</span>');
-        if (a.notes.includes('折扣碼')) badges.push('<span class="px-1.5 py-0.5 bg-rose-100 text-rose-800 rounded font-bold text-[9px]">活動折扣碼</span>');
-        if (a.deposit_deducted > 0) badges.push(`<span class="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded font-bold text-[9px]">扣訂金$${a.deposit_deducted}</span>`);
+    // 專員薪資計算
+    const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
+    const commSection = document.getElementById('staff-revenue-section');
+    if (commSection) commSection.style.display = isCalcEnabled ? 'block' : 'none';
 
-        const badgeStr = badges.length > 0 ? `<div class="flex flex-wrap gap-1 mt-1">${badges.join('')}</div>` : '';
-
-        if (a.status === '已結單') {
-          const finalAmt = Number(a.finalPrice !== undefined ? a.finalPrice : (a.price || 0));
-          paidTotal += finalAmt;
-          completedCount++;
-          if (a.customer_type === 'old') returningRevenue += finalAmt;
-
-          paidListHtml += `
-            <div class="py-3 px-1 border-b border-brand-100 flex justify-between items-start">
-              <div class="space-y-1">
-                <div class="font-bold text-brand-900 text-xs flex items-center gap-1.5">
-                  <span>${a.date}</span>
-                  <span class="text-brand-800 font-bold">${a.name}</span>
-                  <span class="text-[10px] text-brand-400">(${a.customer_type === 'new' ? '新客' : '熟客'})</span>
-                  <span class="text-[10px] px-1.5 py-0.2 bg-brand-100 rounded text-brand-700">${a.staffName || '不指定'}</span>
-                </div>
-                <div class="text-[11px] text-brand-600">施作項目：${a.service}</div>
-                ${badgeStr}
-              </div>
-              <div class="text-right">
-                <div class="font-black text-emerald-800 text-sm font-mono">實收 NT$ ${finalAmt.toLocaleString()}</div>
-                ${a.price && a.price !== finalAmt ? `<div class="text-[10px] text-gray-400 line-through font-mono">原價 $${a.price}</div>` : ''}
-              </div>
-            </div>`;
-        } else if (a.status === '已確認') {
-          unpaidListHtml += `
-            <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex justify-between items-center text-xs">
-              <div>
-                <div class="font-bold text-amber-900">${a.date} - ${a.name} (${a.staffName || '不指定'})</div>
-                <div class="text-[11px] text-amber-700">預估：${a.service} (${a.price}元)</div>
-                ${badgeStr}
-              </div>
-              <button class="px-3 py-1 bg-amber-600 text-white rounded-lg font-bold text-[11px]" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
-            </div>`;
-        }
+    if (isCalcEnabled) {
+      const staffStats = {};
+      filtered.filter(r => r.status === '已結單').forEach(a => {
+        const sName = a.staffName || '不指定';
+        if (!staffStats[sName]) staffStats[sName] = { count: 0, designatedCount: 0, hours: 0, revenue: 0 };
+        staffStats[sName].count++;
+        if (a.staffName && a.staffName !== '不指定') staffStats[sName].designatedCount++;
+        staffStats[sName].hours += 1;
+        staffStats[sName].revenue += Number(a.finalPrice || a.price || 0);
       });
 
-      const avgTicket = completedCount > 0 ? Math.round(paidTotal / completedCount) : 0;
-      document.getElementById('metric-avg-ticket').innerText = `${avgTicket.toLocaleString()}元`;
-      const returningRatio = paidTotal > 0 ? Math.round((returningRevenue / paidTotal) * 100) : 0;
-      document.getElementById('metric-returning-ratio').innerText = `${returningRatio}%`;
-      const cancelRatio = appts.length > 0 ? Math.round((appts.filter(r => r.status === '已取消' || r.status === '婉拒').length / appts.length) * 100) : 0;
-      document.getElementById('metric-cancel-ratio').innerText = `${cancelRatio}%`;
-      document.getElementById('rev-total-amount').innerText = `${paidTotal.toLocaleString()}元`;
-
-      if (listArea) listArea.innerHTML = paidListHtml || '<div class="text-center text-xs text-brand-400 py-4">查無符合條件之結單紀錄</div>';
-      if (unpaidListArea) unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
-
-      // 專員薪資計算公式：實做業績 × 抽成% + (人次 × 指定獎金)
-      const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
-      const commSection = document.getElementById('staff-revenue-section');
-      if (commSection) commSection.style.display = isCalcEnabled ? 'block' : 'none';
-
-      if (isCalcEnabled) {
-        const staffStats = {};
-        filtered.filter(r => r.status === '已結單').forEach(a => {
-          const sName = a.staffName || '不指定';
-          if (!staffStats[sName]) staffStats[sName] = { count: 0, designatedCount: 0, hours: 0, revenue: 0 };
-          staffStats[sName].count++;
-          if (a.staffName && a.staffName !== '不指定') staffStats[sName].designatedCount++;
-          staffStats[sName].hours += 1;
-          staffStats[sName].revenue += Number(a.finalPrice || a.price || 0);
-        });
-
-        const rate = Number(backendData.settings?.commissionRate ?? 50);
-        const designatedBonusPerCust = Number(backendData.settings?.designatedBonus ?? 50);
-        const tbody = document.getElementById('staff-commission-tbody');
-        if (tbody) {
-          tbody.innerHTML = Object.keys(staffStats).map(sName => {
-            const st = staffStats[sName];
-            const comm = Math.round(st.revenue * (rate / 100));
-            const designatedBonus = st.designatedCount * designatedBonusPerCust;
-            const totalSalary = comm + designatedBonus;
-            return `
-              <tr class="hover:bg-brand-50/50 border-b border-brand-100">
-                <td class="py-2.5 px-2 font-bold">${sName}</td>
-                <td class="py-2.5 px-2">${st.count} 人 (指定 ${st.designatedCount})</td>
-                <td class="py-2.5 px-2 font-mono">${st.hours} hr</td>
-                <td class="py-2.5 px-2 font-mono">NT$ ${st.revenue.toLocaleString()}</td>
-                <td class="py-2.5 px-2">${rate}%</td>
-                <td class="py-2.5 px-2 font-mono text-emerald-700">+NT$ ${designatedBonus}</td>
-                <td class="py-2.5 px-2 text-right font-black text-[#8C7355]">NT$ ${totalSalary.toLocaleString()}</td>
-              </tr>
-            `;
-          }).join('') || '<tr><td colspan="7" class="text-center py-4 text-brand-400">尚無專員結單數據</td></tr>';
-        }
+      const rate = Number(backendData.settings?.commissionRate ?? 50);
+      const designatedBonusPerCust = Number(backendData.settings?.designatedBonus ?? 50);
+      const tbody = document.getElementById('staff-commission-tbody');
+      if (tbody) {
+        tbody.innerHTML = Object.keys(staffStats).map(sName => {
+          const st = staffStats[sName];
+          const comm = Math.round(st.revenue * (rate / 100));
+          const designatedBonus = st.designatedCount * designatedBonusPerCust;
+          const totalSalary = comm + designatedBonus;
+          return `
+            <tr class="hover:bg-brand-50/50 border-b border-brand-100">
+              <td class="py-2.5 px-2 font-bold">${sName}</td>
+              <td class="py-2.5 px-2">${st.count} 人 (指定 ${st.designatedCount})</td>
+              <td class="py-2.5 px-2 font-mono">${st.hours} hr</td>
+              <td class="py-2.5 px-2 font-mono">NT$ ${st.revenue.toLocaleString()}</td>
+              <td class="py-2.5 px-2">${rate}%</td>
+              <td class="py-2.5 px-2 font-mono text-emerald-700">+NT$ ${designatedBonus}</td>
+              <td class="py-2.5 px-2 text-right font-black text-[#8C7355]">NT$ ${totalSalary.toLocaleString()}</td>
+            </tr>
+          `;
+        }).join('') || '<tr><td colspan="7" class="text-center py-4 text-brand-400">尚無專員結單數據</td></tr>';
       }
     }
+  }
 
     // ==========================================
     // 15. 回訪關懷文案渲染
@@ -4843,6 +4899,28 @@
         pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
       }
     });
+
+    // 三種商業模式動態切換排程欄位
+  function toggleQuickIndustryMode() {
+    const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
+    const petBox = document.getElementById('quick-pet-fields-box');
+    const singleTimeBox = document.getElementById('quick-single-time-box');
+    const hotelRangeBox = document.getElementById('quick-hotel-range-box');
+
+    if (mode === 'beauty') {
+      if (petBox) petBox.classList.add('hidden');
+      if (singleTimeBox) singleTimeBox.classList.remove('hidden');
+      if (hotelRangeBox) hotelRangeBox.classList.add('hidden');
+    } else if (mode === 'pet_grooming') {
+      if (petBox) petBox.classList.remove('hidden');
+      if (singleTimeBox) singleTimeBox.classList.remove('hidden');
+      if (hotelRangeBox) hotelRangeBox.classList.add('hidden');
+    } else if (mode === 'pet_hotel') {
+      if (petBox) petBox.classList.remove('hidden');
+      if (singleTimeBox) singleTimeBox.classList.add('hidden');
+      if (hotelRangeBox) hotelRangeBox.classList.remove('hidden');
+    }
+  }
   </script>
 </body>
 </html>
