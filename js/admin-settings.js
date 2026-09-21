@@ -22,6 +22,9 @@ const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字�
 // 回填設定表單 (安全賦值，絕不用空值覆蓋既有畫面)
 // 1. 設定表單資料回填
 function populateSettings() {
+  const themeColor = s.themeColor || 'latte';
+const themeSelect = document.getElementById('cfg-theme-color');
+if (themeSelect) themeSelect.value = themeColor;
   const s = backendData.settings || {};
   const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
   const setCheck = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.checked = Boolean(val); };
@@ -138,6 +141,7 @@ async function saveStoreSettings() {
   const selectedIndustry = document.querySelector('input[name="cfg-industry-type"]:checked')?.value || 'pet';
 
   const payload = {
+    theme_color: document.getElementById('cfg-theme-color')?.value || 'latte',
     store_id: CURRENT_STORE_ID,
     display_title: document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName,
     display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
