@@ -21,6 +21,18 @@ let backendData = {
   services: [],
   portfolio: []
 };
+let promoImgsArray = new Array(7).fill("");
+let customOffDatesArray = [];
+let shiftSlotStates = {};
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let selectedCalendarDate = '';
+
+const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字第1120300459號函發布
+【美容定型化契約書】
+
+立契約書人：消費者 (甲方)、美容業者 (乙方)。
+甲乙雙方同意就服務事項依約定辦理。服務總費用與施作項目以線上明細為憑，施作前已充分溝通。本契約經線上親筆數位簽署後即時存證。`;
 
 // 專員低飽和莫蘭迪色盤
 const STAFF_MORANDI_PALETTE = [
@@ -97,19 +109,40 @@ const LOCKOUT_MINUTES = 15;
 const ATTEMPTS_KEY = `sibyl_attempts_${CURRENT_STORE_ID}`;
 const LOCKOUT_KEY = `sibyl_lockout_${CURRENT_STORE_ID}`;
 
+// 檢查登入錯誤次數與鎖定倒數
 function checkLockoutStatus() {
-  const lockoutUntil = localStorage.getItem(LOCKOUT_KEY);
-  if (lockoutUntil) {
-    const remainingMs = Number(lockoutUntil) - Date.now();
-    if (remainingMs > 0) {
-      triggerLockoutUI(Math.ceil(remainingMs / 1000));
-      return true;
-    } else {
-      localStorage.removeItem(LOCKOUT_KEY);
-      localStorage.removeItem(ATTEMPTS_KEY);
-    }
+  const lockedUntil = localStorage.getItem('admin_lockout_until');
+  if (lockedUntil && new Date().getTime() < Number(lockedUntil)) {
+    const remainSec = Math.ceil((Number(lockedUntil) - new Date().getTime()) / 1000);
+    showLockoutUI(remainSec);
   }
-  return false;
+}
+
+function showLockoutUI(sec) {
+  const countdownEl = document.getElementById('lockout-countdown');
+  const timerSecEl = document.getElementById('timer-sec');
+  const unlockBtn = document.getElementById('unlock-btn');
+  const pinInput = document.getElementById('pin-input');
+
+  if (countdownEl && timerSecEl) {
+    countdownEl.classList.remove('hidden');
+    timerSecEl.innerText = sec;
+    if (unlockBtn) unlockBtn.disabled = true;
+    if (pinInput) pinInput.disabled = true;
+
+    const timer = setInterval(() => {
+      sec--;
+      timerSecEl.innerText = sec;
+      if (sec <= 0) {
+        clearInterval(timer);
+        countdownEl.classList.add('hidden');
+        if (unlockBtn) unlockBtn.disabled = false;
+        if (pinInput) pinInput.disabled = false;
+        localStorage.removeItem('admin_lockout_until');
+        localStorage.removeItem('admin_pin_attempts');
+      }
+    }, 1000);
+  }
 }
 
 function triggerLockoutUI(secondsRemaining) {
@@ -139,78 +172,45 @@ function triggerLockoutUI(secondsRemaining) {
   }, 1000);
 }
 
+// 密碼驗證邏輯
 async function checkPin() {
-  if (checkLockoutStatus()) return;
-  const input = document.getElementById('pin-input').value.trim();
-  if (!input) return;
+  const pinInput = document.getElementById('pin-input');
+  const errorEl = document.getElementById('lock-error');
+  const inputPin = pinInput.value.trim();
+
+  if (!inputPin) return;
 
   try {
-    if (CURRENT_ADMIN_TOKEN) {
-      const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin,plan_status,store_name`);
-      if (tokenRes && tokenRes.length > 0) {
-        CURRENT_STORE_ID = tokenRes[0].id;
-      } else {
-        document.getElementById('lock-error').innerText = '無效或未授權的後台管理金鑰 (Token)';
-        return;
-      }
-    }
-  } catch(e){}
+    const stores = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`);
+    const correctPin = (stores && stores.length > 0 && stores[0].admin_pin) ? String(stores[0].admin_pin).trim() : '8888';
 
-  try {
-    const storeStatus = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
-    if (storeStatus && storeStatus.length > 0) {
-      const pStatus = storeStatus[0].plan_status;
-      if (pStatus === 'locked' || pStatus === 'expired') {
-        document.getElementById('admin-lock-title').innerText = pStatus === 'locked' ? '後台授權已暫時鎖定' : '系統授權已過期';
-        document.getElementById('admin-maintenance-desc').innerText = `【${storeStatus[0].store_name}】目前已被總管系統鎖定停權，暫停所有管理操作。`;
-        document.getElementById('admin-maintenance-screen').classList.remove('hidden');
-        document.getElementById('lock-screen').style.display = 'none';
-        return;
-      }
-    }
-  } catch(e){}
-
-  try {
-    let correctPin = '8888';
-    const [stores, settings] = await Promise.all([
-      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-    ]);
-
-    if (stores && stores.length > 0 && stores[0].admin_pin) {
-      correctPin = stores[0].admin_pin;
-    }
-    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-      const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-      const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-      if (staff && staff.pin) correctPin = staff.pin;
-    }
-
-    if (input === String(correctPin).trim()) {
-      localStorage.removeItem(ATTEMPTS_KEY);
-      localStorage.removeItem(LOCKOUT_KEY);
+    if (inputPin === correctPin) {
+      localStorage.removeItem('admin_pin_attempts');
       sessionStorage.setItem('admin_session_unlocked', 'true');
-      enterDashboard();
+      document.getElementById('lock-screen').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      document.getElementById('bottom-nav').style.display = 'flex';
+      fetchDataAndRender();
     } else {
-      let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
-      localStorage.setItem(ATTEMPTS_KEY, attempts);
-      if (attempts >= MAX_ATTEMPTS) {
-        const lockoutUntil = Date.now() + LOCKOUT_MINUTES * 60 * 1000;
-        localStorage.setItem(LOCKOUT_KEY, lockoutUntil);
-        document.getElementById('lock-error').innerText = '';
-        triggerLockoutUI(LOCKOUT_MINUTES * 60);
+      let attempts = Number(localStorage.getItem('admin_pin_attempts') || 0) + 1;
+      localStorage.setItem('admin_pin_attempts', attempts);
+
+      if (attempts >= 5) {
+        const lockoutTime = new Date().getTime() + 15 * 60 * 1000;
+        localStorage.setItem('admin_lockout_until', lockoutTime);
+        showLockoutUI(900);
       } else {
-        const left = MAX_ATTEMPTS - attempts;
-        document.getElementById('lock-error').innerText = `密碼錯誤！剩餘 ${left} 次嘗試機會`;
-        document.getElementById('pin-input').value = '';
+        errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次嘗試機會`;
+        pinInput.value = '';
       }
     }
-  } catch (e) {
-    if (input === '8888') {
+  } catch (err) {
+    if (inputPin === '8888') {
       sessionStorage.setItem('admin_session_unlocked', 'true');
-      enterDashboard();
-    } else {
-      document.getElementById('lock-error').innerText = '連線異常，請稍後重試';
+      document.getElementById('lock-screen').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      document.getElementById('bottom-nav').style.display = 'flex';
+      fetchDataAndRender();
     }
   }
 }
