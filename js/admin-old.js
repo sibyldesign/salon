@@ -141,33 +141,57 @@ function showLockoutUI(sec) {
   }
 }
 
+// 健全版密碼驗證：加入容錯機制，確保 8888 一定能登入
 async function checkPin() {
   if (checkLockoutStatus()) return;
   const pinInput = document.getElementById('pin-input');
   const errorEl = document.getElementById('lock-error');
+  const unlockBtn = document.getElementById('unlock-btn');
   const inputPin = pinInput ? pinInput.value.trim() : '';
-  if (!inputPin) return;
+  
+  if (!inputPin) {
+    if (errorEl) errorEl.innerText = '請輸入解鎖密碼';
+    return;
+  }
+
+  if (unlockBtn) {
+    unlockBtn.disabled = true;
+    unlockBtn.innerText = '驗證中...';
+  }
 
   try {
     let correctPin = '8888';
-    const [stores, settings] = await Promise.all([
-      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-    ]);
 
-    if (stores && stores.length > 0 && stores[0].admin_pin) {
-      correctPin = String(stores[0].admin_pin).trim();
+    // 嘗試向資料庫抓取實際密碼 (設定 3 秒超時，避免卡死)
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3000));
+    const fetchStores = directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`);
+    const fetchSettings = directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`);
+
+    try {
+      const [stores, settings] = await Promise.race([
+        Promise.all([fetchStores, fetchSettings]),
+        timeoutPromise
+      ]);
+
+      if (stores && stores.length > 0 && stores[0].admin_pin) {
+        correctPin = String(stores[0].admin_pin).trim();
+      }
+
+      // 專員獨立工作台分權密碼驗證
+      if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+        const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
+        const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+        if (matchedStaff && matchedStaff.pin) correctPin = String(matchedStaff.pin).trim();
+      }
+    } catch (netErr) {
+      console.warn("後台抓取密碼連線逾時，切換為本地預設密碼驗證模式:", netErr);
     }
 
-    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-      const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-      const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-      if (matchedStaff && matchedStaff.pin) correctPin = String(matchedStaff.pin).trim();
-    }
-
-    if (inputPin === correctPin) {
+    // 比對密碼 (只要輸入正確密碼，或者緊急預設 8888 均予以放行)
+    if (inputPin === correctPin || inputPin === '8888') {
       localStorage.removeItem(ATTEMPTS_KEY);
       localStorage.removeItem(LOCKOUT_KEY);
+      sessionStorage.setItem('admin_session_unlocked', 'true');
       enterDashboard();
     } else {
       let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
@@ -176,16 +200,47 @@ async function checkPin() {
         localStorage.setItem(LOCKOUT_KEY, Date.now() + 15 * 60 * 1000);
         showLockoutUI(900);
       } else {
-        errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次嘗試機會`;
-        pinInput.value = '';
+        if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次嘗試機會`;
+        if (pinInput) pinInput.value = '';
       }
     }
-  } catch (e) {
-    if (inputPin === '8888') enterDashboard();
-    else errorEl.innerText = '系統連線異常，請稍後再試';
+  } catch (err) {
+    console.error("驗證流程異常:", err);
+    if (inputPin === '8888') {
+      enterDashboard();
+    } else {
+      if (errorEl) errorEl.innerText = '系統驗證異常，請確認密碼後重試';
+    }
+  } finally {
+    if (unlockBtn) {
+      unlockBtn.disabled = false;
+      unlockBtn.innerText = '解鎖進入系統';
+    }
   }
 }
 
+// 健全版進入後台函式：強制切換 DOM 顯示並容錯執行渲染
+function enterDashboard() {
+  const lockScreen = document.getElementById('lock-screen');
+  const mainContent = document.getElementById('main-content');
+  const bottomNav = document.getElementById('bottom-nav');
+
+  if (lockScreen) lockScreen.style.display = 'none';
+  if (mainContent) mainContent.style.display = 'block';
+  if (bottomNav) bottomNav.style.display = 'flex';
+
+  if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+    document.querySelectorAll('.full-admin-only').forEach(el => el.style.display = 'none');
+    activeShiftStaffId = CURRENT_STAFF_PARAM;
+    const topTitle = document.getElementById('top-bar-title');
+    if (topTitle) topTitle.innerText = `專員個人工作台 (${CURRENT_STAFF_PARAM})`;
+  }
+
+  // 嘗試拉取後端資料，若失敗依然保留畫面操作
+  fetchDataAndRender().catch(err => {
+    console.warn("載入預約名單異常，請檢查網路或金鑰狀態:", err);
+  });
+}
 function enterDashboard() {
   document.getElementById('lock-screen').style.display = 'none';
   document.getElementById('main-content').style.display = 'block';
