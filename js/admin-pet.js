@@ -313,3 +313,191 @@ async function checkoutBoardingOrder(boardingId, petName) {
     }
   });
 }
+
+// =========================================================================
+// 📌 寵物住宿房況甘特圖、每日放飯供餐核對與毛孩動態欄位 (js/admin-pet.js)
+// =========================================================================
+
+// 1. 即時渲染寵物住宿房況與格網看板
+function renderBoardingRoomStatus() {
+  const container = document.getElementById('boarding-room-grid');
+  const activeCountEl = document.getElementById('boarding-active-count');
+  const checkoutCountEl = document.getElementById('boarding-checkout-count');
+  const vacancyRateEl = document.getElementById('boarding-vacancy-rate');
+  const viewDateInput = document.getElementById('boarding-view-date');
+  
+  if (!container) return;
+
+  const todayStr = viewDateInput?.value ? viewDateInput.value.replace(/-/g, '/') : new Date().toISOString().split('T')[0].replace(/-/g, '/');
+  if (viewDateInput && !viewDateInput.value) {
+    viewDateInput.value = todayStr.replace(/\//g, '-');
+  }
+
+  const appts = backendData.appointments || [];
+  // 篩選出住宿型態訂單
+  const boardingAppts = appts.filter(a => (a.service || '').includes('住宿') && a.status !== '已取消' && a.status !== '婉拒');
+
+  // 定義 6 間標準門市房型 (可依需求擴充)
+  const defaultRooms = [
+    { id: 'R101', name: '溫馨小挑高房 A', type: '小型犬貓', maxWeight: 8 },
+    { id: 'R102', name: '陽光舒活房 B', type: '中小型犬', maxWeight: 15 },
+    { id: 'R103', name: '景觀獨立大房 C', type: '中大型犬', maxWeight: 25 },
+    { id: 'R104', name: '旗艦奢華套房 D', type: '大型犬', maxWeight: 40 },
+    { id: 'R105', name: '貓咪專屬垂直跳台房 E', type: '貓咪專用', maxWeight: 10 },
+    { id: 'R106', name: '友善靜音照護房 F', type: '老犬/特殊照護', maxWeight: 20 }
+  ];
+
+  let occupiedCount = 0;
+  let checkoutTodayCount = 0;
+
+  const roomCardsHtml = defaultRooms.map((room, idx) => {
+    // 檢查是否有毛孩正在此房位 (依序安排或指定)
+    const activeBooking = boardingAppts.find((b, bIdx) => (bIdx % defaultRooms.length) === idx && b.date <= todayStr);
+    const isOccupied = Boolean(activeBooking);
+
+    if (isOccupied) {
+      occupiedCount++;
+      if (activeBooking.notes && activeBooking.notes.includes('退房')) checkoutTodayCount++;
+    }
+
+    let petName = '無住宿客';
+    let petDetails = '空房清潔中，可隨時登記入住';
+    if (isOccupied) {
+      const petMatch = (activeBooking.notes || '').match(/【毛孩:\s*([^/]+)\s*\/\s*([^/]+)\s*\/\s*([^/]+)/);
+      petName = petMatch ? `${petMatch[1].trim()} (${petMatch[2].trim()})` : activeBooking.name;
+      petDetails = `飼主：${activeBooking.name} (${activeBooking.phone})<br>期間：${activeBooking.date} 入住`;
+    }
+
+    return `
+      <div class="p-3.5 rounded-2xl border transition shadow-2xs ${isOccupied ? 'bg-amber-50/70 border-amber-300' : 'bg-white border-brand-200'}">
+        <div class="flex justify-between items-center pb-1.5 border-b ${isOccupied ? 'border-amber-200' : 'border-brand-100'}">
+          <span class="font-bold text-xs ${isOccupied ? 'text-amber-950' : 'text-brand-900'} font-mono">${room.id} ${room.name}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isOccupied ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'}">
+            ${isOccupied ? '在宿中' : '空房'}
+          </span>
+        </div>
+        <div class="mt-2 space-y-1 text-xs">
+          <div class="font-black ${isOccupied ? 'text-amber-900' : 'text-brand-400'} text-sm">${petName}</div>
+          <div class="text-[11px] text-brand-500 leading-snug">${petDetails}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = roomCardsHtml;
+  if (activeCountEl) activeCountEl.innerText = `${occupiedCount} 隻`;
+  if (checkoutCountEl) checkoutCountEl.innerText = `${checkoutTodayCount} 隻`;
+  if (vacancyRateEl) {
+    const rate = Math.round(((defaultRooms.length - occupiedCount) / defaultRooms.length) * 100);
+    vacancyRateEl.innerText = `${rate}%`;
+  }
+
+  renderBoardingCareChecklist(boardingAppts, todayStr);
+}
+
+// 2. 每日早/中/晚放飯供餐核對表
+function renderBoardingCareChecklist(boardingAppts, todayStr) {
+  const container = document.getElementById('boarding-care-checklist');
+  if (!container) return;
+
+  const bSettings = backendData.settings?.boardingSettings || {};
+  const bTime = bSettings.breakfastTime || '09:00';
+  const lTime = bSettings.lunchTime || '12:30';
+  const dTime = bSettings.dinnerTime || '18:00';
+
+  if (!boardingAppts || boardingAppts.length === 0) {
+    container.innerHTML = '<div class="text-center py-4 text-brand-400 text-xs">今日無在宿毛孩供餐任務</div>';
+    return;
+  }
+
+  container.innerHTML = boardingAppts.map(b => {
+    const petMatch = (b.notes || '').match(/【毛孩:\s*([^/]+)\s*\/\s*([^/]+)/);
+    const petDisplayName = petMatch ? `${petMatch[1].trim()} (${petMatch[2].trim()})` : b.name;
+    const isSpecialFood = (b.notes || '').includes('鮮食');
+
+    return `
+      <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <div class="font-bold text-brand-900 text-xs">
+            🐾 ${petDisplayName} 
+            <span class="text-[10px] text-brand-500 font-mono">(${b.phone})</span>
+            ${isSpecialFood ? '<span class="ml-1.5 px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded text-[9px] font-bold">精緻鮮食</span>' : '<span class="ml-1.5 px-1.5 py-0.2 bg-stone-100 text-stone-700 rounded text-[9px] font-bold">自備乾糧</span>'}
+          </div>
+          <div class="text-[11px] text-brand-500 mt-0.5">${b.notes || '無特殊照護指示'}</div>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-bold">
+          <label class="flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded-lg border border-brand-200">
+            <input type="checkbox" class="accent-[#8C7355]"> 早 ${bTime}
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded-lg border border-brand-200">
+            <input type="checkbox" class="accent-[#8C7355]"> 午 ${lTime}
+          </label>
+          <label class="flex items-center gap-1 cursor-pointer bg-white px-2 py-1 rounded-lg border border-brand-200">
+            <input type="checkbox" class="accent-[#8C7355]"> 晚 ${dTime}
+          </label>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 3. 毛孩自訂收集欄位清單渲染與動態新增
+function renderCustomFieldsAdminList() {
+  const container = document.getElementById('custom-fields-list-box');
+  if (!container) return;
+
+  const extraFields = backendData.settings?.petCustomFields?.extraFields || [];
+  if (extraFields.length === 0) {
+    container.innerHTML = '<div class="text-center py-2 text-brand-400 text-xs">尚無自訂欄位，點選上方按鈕新增</div>';
+    return;
+  }
+
+  container.innerHTML = extraFields.map((f, idx) => `
+    <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 flex justify-between items-center text-xs">
+      <div>
+        <span class="font-bold text-brand-900">${f.name}</span>
+        <span class="text-[10px] text-brand-400 ml-1">(${f.type === 'text' ? '文字輸入' : '勾選框'})</span>
+      </div>
+      <button onclick="removeExtraCustomField(${idx})" class="text-rose-500 hover:text-rose-700 p-1">
+        <i class="fa-solid fa-trash-can text-[11px]"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function promptAddCustomField() {
+  Swal.fire({
+    title: '新增前台自訂收集欄位',
+    html: `
+      <div class="text-left text-xs space-y-2">
+        <div><label class="font-bold">欄位名稱：</label><input id="new-cf-name" class="swal2-input text-xs" placeholder="例如：防蚤項圈配戴紀錄"></div>
+        <div><label class="font-bold">填寫型態：</label>
+          <select id="new-cf-type" class="swal2-input text-xs">
+            <option value="text">文字單行輸入</option>
+            <option value="checkbox">是否核對勾選框</option>
+          </select>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定加入',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => ({
+      name: document.getElementById('new-cf-name').value.trim(),
+      type: document.getElementById('new-cf-type').value
+    })
+  }).then(r => {
+    if (r.isConfirmed && r.value.name) {
+      if (!backendData.settings.petCustomFields) backendData.settings.petCustomFields = {};
+      if (!backendData.settings.petCustomFields.extraFields) backendData.settings.petCustomFields.extraFields = [];
+      backendData.settings.petCustomFields.extraFields.push(r.value);
+      renderCustomFieldsAdminList();
+      Swal.fire({ title: '自訂欄位已加入！', icon: 'success', timer: 1000, showConfirmButton: false });
+    }
+  });
+}
+
+function removeExtraCustomField(idx) {
+  backendData.settings.petCustomFields.extraFields.splice(idx, 1);
+  renderCustomFieldsAdminList();
+}
