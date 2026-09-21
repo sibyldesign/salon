@@ -761,7 +761,40 @@
   let guestLineUid = "";
   let activeBookingSubMode = 'grooming'; // 'grooming' 或 'boarding'
 
-  async function resolveStoreIdAndInitLiff() {
+  // 6 款品牌主題色盤定義 (支援動態替換前台主題色)
+  const THEME_PALETTES = {
+    latte:  { primary: '#8C7355', primaryHover: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8' },
+    matcha: { primary: '#5C725E', primaryHover: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE' },
+    noir:   { primary: '#262626', primaryHover: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5' },
+    navy:   { primary: '#2B4C6F', primaryHover: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC' },
+    rose:   { primary: '#A26D74', primaryHover: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD' },
+    mist:   { primary: '#4A7C6D', primaryHover: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1' }
+  };
+
+  function applyThemeColor(themeKey) {
+    const t = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
+    document.body.style.backgroundColor = t.bg;
+    
+    // 動態修改主要按鈕與標籤背景顏色
+    document.querySelectorAll('#subBtn, .type-btn.bg-brand-400, .time-pill.bg-\\[\\#8C7355\\], #btnModeGrooming, #btnModeBoarding.bg-\\[\\#8C7355\\]').forEach(el => {
+      el.style.backgroundColor = t.primary;
+    });
+
+    // 動態注入全域 CSS 覆蓋常數
+    let styleTag = document.getElementById('dynamic-theme-style');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'dynamic-theme-style';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      .bg-\\[\\#8C7355\\], .swal2-confirm-brown, .swal2-confirm { background-color: ${t.primary} !important; }
+      .hover\\:bg-\\[\\#7A6246\\]:hover { background-color: ${t.primaryHover} !important; }
+      .text-\\[\\#8C7355\\] { color: ${t.primary} !important; }
+    `;
+  }
+    
+    async function resolveStoreIdAndInitLiff() {
     const pathParts = window.location.pathname.split('/').filter(Boolean);
     const storeSlug = pathParts.length > 0 && !pathParts[0].includes('.html') ? pathParts[0] : null;
     const urlParams = new URLSearchParams(window.location.search);
@@ -1163,6 +1196,7 @@
     setupPortfolio();
     renderServices();
     renderFrontCalendar();
+    applyThemeColor(db.themeColor || 'latte');
   }
 
   function setupPetExtendedFields() {
