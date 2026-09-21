@@ -312,3 +312,163 @@ async function triggerMaterialDeduction(bookingId) {
     console.warn("結單自動扣料背景處理略過:", err);
   }
 }
+
+// =========================================================================
+// 📌 通用產品庫存管理、低庫存警示與快速進貨 (js/admin-inventory.js)
+// =========================================================================
+
+let allInventoryItems = [];
+let isLowStockFilterActive = false;
+
+// 1. 載入並渲染產品庫存主檔
+async function renderInventoryList() {
+  const container = document.getElementById('inventory-items-container');
+  if (!container) return;
+
+  const categoryFilter = document.getElementById('inv-filter-category')?.value || 'ALL';
+
+  // 嘗試自 Supabase 讀取 store_inventory 資料表，若無則使用預設骨幹
+  try {
+    allInventoryItems = await directSupabaseFetch(`store_inventory?store_id=eq.${CURRENT_STORE_ID}&order=category.asc,name.asc`);
+  } catch(e) {}
+
+  if (!allInventoryItems || allInventoryItems.length === 0) {
+    allInventoryItems = [
+      { id: 'inv-1', category: '洗護消耗品', name: '草本舒緩洗毛精 (4000ml)', current_stock: 3, safe_stock: 5, unit: '桶', cost_price: 1200 },
+      { id: 'inv-2', category: '技術耗材', name: '日系染膏 - 霧感冷棕 8-CB', current_stock: 12, safe_stock: 8, unit: '條', cost_price: 220 },
+      { id: 'inv-3', category: '零售外帶品', name: '全能亮毛深層魚油滴劑 (100ml)', current_stock: 4, safe_stock: 6, unit: '瓶', cost_price: 580 },
+      { id: 'inv-4', category: '工具雜項', name: '加厚吸水免洗毛巾 (100入)', current_stock: 8, safe_stock: 10, unit: '包', cost_price: 350 }
+    ];
+  }
+
+  let filtered = allInventoryItems;
+  if (categoryFilter !== 'ALL') {
+    filtered = filtered.filter(it => it.category === categoryFilter);
+  }
+  if (isLowStockFilterActive) {
+    filtered = filtered.filter(it => Number(it.current_stock) <= Number(it.safe_stock));
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="text-center py-6 text-brand-400 text-xs">目前無符合分類之庫存品項</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(it => {
+    const isAlert = Number(it.current_stock) <= Number(it.safe_stock);
+
+    return `
+      <div class="p-3 bg-white rounded-2xl border ${isAlert ? 'border-amber-300 bg-amber-50/40' : 'border-brand-200'} shadow-2xs flex justify-between items-center text-xs">
+        <div>
+          <div class="flex items-center gap-1.5 font-bold text-brand-900">
+            <span>${it.name}</span>
+            <span class="px-2 py-0.2 rounded-md text-[9px] bg-brand-100 text-brand-700">${it.category}</span>
+          </div>
+          <div class="text-[11px] text-brand-500 mt-0.5">
+            安全水位：${it.safe_stock} ${it.unit} | 進貨成本：$${it.cost_price || 0}
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <div class="font-black text-sm font-mono ${isAlert ? 'text-rose-600 font-extrabold' : 'text-emerald-700'}">
+              ${it.current_stock} ${it.unit}
+            </div>
+            ${isAlert ? '<span class="text-[9px] text-rose-500 font-bold">庫存吃緊</span>' : '<span class="text-[9px] text-emerald-600">正常</span>'}
+          </div>
+          <button onclick="promptQuickRestock('${it.id}', '${it.name}', ${it.current_stock}, '${it.unit}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-xs transition">
+            進貨/補正
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 2. 庫存不足警示切換
+function toggleLowStockFilter() {
+  isLowStockFilterActive = !isLowStockFilterActive;
+  const btn = document.getElementById('btn-low-stock');
+  if (btn) {
+    btn.className = isLowStockFilterActive
+      ? "px-3 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold transition shrink-0 shadow-xs"
+      : "px-3 py-2 bg-brand-100 text-brand-800 rounded-xl text-xs font-bold transition shrink-0";
+  }
+  renderInventoryList();
+}
+
+// 3. 快速進貨彈窗與寫入日誌
+function promptQuickRestock(id, name, curStock, unit) {
+  Swal.fire({
+    title: `【${name}】進貨入庫`,
+    html: `
+      <div class="text-left text-xs space-y-2">
+        <div>目前庫存：<b>${curStock} ${unit}</b></div>
+        <div>
+          <label class="font-bold">本次進貨增加數量：</label>
+          <input type="number" id="swal-restock-qty" class="swal2-input text-xs font-bold font-mono" value="10">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定進貨',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => Number(document.getElementById('swal-restock-qty').value || 0)
+  }).then(async r => {
+    if (r.isConfirmed && r.value > 0) {
+      const newTotal = curStock + r.value;
+      const target = allInventoryItems.find(it => it.id === id);
+      if (target) target.current_stock = newTotal;
+
+      try {
+        await directSupabasePatch('store_inventory', `id=eq.${id}`, { current_stock: newTotal });
+      } catch(e) {}
+
+      Swal.fire('入庫完成！', `最新庫存：${newTotal} ${unit}`, 'success');
+      renderInventoryList();
+    }
+  });
+}
+
+// 4. 新增庫存主檔彈窗
+function openAddProductModal() {
+  Swal.fire({
+    title: '新增庫存品項 / 耗材主檔',
+    html: `
+      <div class="text-left text-xs space-y-2">
+        <div><label class="font-bold">品項名稱：</label><input id="inv-new-name" class="swal2-input text-xs" placeholder="例：頂級全能修護洗劑"></div>
+        <div><label class="font-bold">分類：</label>
+          <select id="inv-new-cat" class="swal2-input text-xs">
+            <option value="洗護消耗品">洗護消耗品</option>
+            <option value="技術耗材">技術耗材</option>
+            <option value="零售外帶品">零售外帶品</option>
+            <option value="工具雜項">工具雜項</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">初始庫存：</label><input type="number" id="inv-new-stock" class="swal2-input text-xs" value="10"></div>
+          <div><label class="font-bold">安全存量警示：</label><input type="number" id="inv-new-safe" class="swal2-input text-xs" value="5"></div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定建立',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => ({
+      name: document.getElementById('inv-new-name').value.trim(),
+      category: document.getElementById('inv-new-cat').value,
+      current_stock: Number(document.getElementById('inv-new-stock').value || 0),
+      safe_stock: Number(document.getElementById('inv-new-safe').value || 5),
+      unit: '瓶',
+      store_id: CURRENT_STORE_ID
+    })
+  }).then(async r => {
+    if (r.isConfirmed && r.value.name) {
+      allInventoryItems.unshift(r.value);
+      try {
+        await directSupabaseUpsert('store_inventory', r.value, 'id');
+      } catch(e) {}
+      Swal.fire('品項建立成功！', '', 'success');
+      renderInventoryList();
+    }
+  });
+}
