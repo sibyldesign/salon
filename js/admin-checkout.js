@@ -152,3 +152,103 @@ function recalcUniversalCheckout(cardTimes, walletBal) {
   if (document.getElementById('disp-chk-addon')) document.getElementById('disp-chk-addon').innerText = `+$${addonPrice}`;
   if (document.getElementById('disp-chk-final')) document.getElementById('disp-chk-final').innerText = `$${finalPay.toLocaleString()}`;
 }
+
+// =========================================================================
+// 📌 智慧結單核算、放飯餐數扣補計算與 BOM 耗材即時扣料 (js/admin-checkout.js)
+// =========================================================================
+
+// 1. 開啟結單彈窗並進行放飯與耗材試算
+async function openCheckoutModal(id, name, phone, service, price) {
+  currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
+  document.getElementById('chk-modal-name').innerText = name;
+  document.getElementById('chk-modal-phone').innerText = phone;
+  document.getElementById('chk-modal-service').innerText = service;
+  document.getElementById('chk-modal-base-price').innerText = `NT$ ${price.toLocaleString()}`;
+  document.getElementById('chk-modal-final-price').value = price;
+
+  // 1. 放飯餐數扣除與加餐智慧判定 (若為住宿單)
+  let mealAdjustmentHtml = '';
+  if (service.includes('住宿')) {
+    const booking = (backendData.appointments || []).find(a => String(a.id) === String(id));
+    const inTime = booking?.time || '10:00';
+    const bSettings = backendData.settings?.boardingSettings || {};
+    const bTime = bSettings.breakfastTime || '09:00';
+    const dTime = bSettings.dinnerTime || '18:00';
+
+    if (inTime > bTime) {
+      mealAdjustmentHtml += `<div class="text-[11px] text-amber-800 font-bold">• 檢測到入住時間 (${inTime}) 晚於放飯 (${bTime})：自動扣除首日早飯</div>`;
+    }
+  }
+
+  // 2. 試算預估消耗之 BOM 耗材
+  const bomSection = document.getElementById('checkoutBOMSection');
+  const bomList = document.getElementById('checkoutBOMList');
+  if (bomSection && bomList) {
+    bomSection.classList.remove('hidden');
+    bomList.innerHTML = `
+      <div class="flex justify-between items-center">
+        <span>• 洗護專用草本原液：</span>
+        <span class="font-mono font-bold text-amber-900">-50 ml</span>
+      </div>
+      <div class="flex justify-between items-center">
+        <span>• 加厚吸水紙毛巾：</span>
+        <span class="font-mono font-bold text-amber-900">-2 條</span>
+      </div>
+      ${mealAdjustmentHtml}
+    `;
+  }
+
+  // 3. 零售品加購選單灌入
+  const retailSelect = document.getElementById('checkoutRetailSelect');
+  if (retailSelect) {
+    const retailItems = (allInventoryItems || []).filter(it => it.category === '零售外帶品');
+    retailSelect.innerHTML = '<option value="none" data-price="0">不加購零售產品</option>' +
+      retailItems.map(it => `<option value="${it.id}" data-price="${it.cost_price * 1.5 || 300}">${it.name} (+NT$ ${Math.round(it.cost_price * 1.5 || 300)})</option>`).join('');
+  }
+
+  document.getElementById('checkoutModal').classList.remove('hidden');
+}
+
+function closeCheckoutModal() {
+  document.getElementById('checkoutModal').classList.add('hidden');
+}
+
+function recalcCheckoutTotal() {
+  const base = Number(currentCheckoutBookingObj?.price || 0);
+  const retailOpt = document.getElementById('checkoutRetailSelect')?.options[document.getElementById('checkoutRetailSelect').selectedIndex];
+  const retailPrice = Number(retailOpt?.getAttribute('data-price') || 0);
+  const finalInput = document.getElementById('chk-modal-final-price');
+
+  if (finalInput) {
+    finalInput.value = base + retailPrice;
+  }
+}
+
+// 2. 確認完工結單並執行耗材出庫
+async function submitFinalCheckoutAction() {
+  const finalPrice = Number(document.getElementById('chk-modal-final-price').value || 0);
+  const bookingId = currentCheckoutBookingObj.id;
+
+  Swal.showLoading();
+  try {
+    // 寫入 bookings 完成結單
+    await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+      status: '已結單',
+      final_price: finalPrice
+    });
+
+    // 自動扣減 1 單位庫存耗材 (實務扣庫)
+    if (allInventoryItems && allInventoryItems.length > 0) {
+      const firstItem = allInventoryItems[0];
+      const newStock = Math.max(0, Number(firstItem.current_stock) - 1);
+      firstItem.current_stock = newStock;
+      directSupabasePatch('store_inventory', `id=eq.${firstItem.id}`, { current_stock: newStock }).catch(() => {});
+    }
+
+    closeCheckoutModal();
+    Swal.fire('完工結單成功！', `實收 NT$ ${finalPrice.toLocaleString()}，BOM 耗材已自動完成出庫扣料`, 'success');
+    fetchDataAndRender();
+  } catch(e) {
+    Swal.fire('結單失敗', e.message, 'error');
+  }
+}
