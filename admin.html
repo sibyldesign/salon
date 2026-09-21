@@ -895,30 +895,6 @@
     <!-- 分頁 15. 設定分頁 (page-settings，20 餘項模組開關與完整說明) -->
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
 
-      <!-- 0. 門市商業引擎切換 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-layer-group text-brand-500"></i> 門市商業模式切換
-          </span>
-          <span class="text-[10px] text-brand-400">連動前台與後台專用分頁</span>
-        </div>
-        <div class="grid grid-cols-3 gap-2 text-xs font-bold">
-          <label class="flex flex-col items-center p-3 bg-brand-50 rounded-2xl border border-brand-200 cursor-pointer text-center">
-            <input type="radio" name="cfg-industry-mode" value="beauty" onchange="handleIndustryModeChange('beauty')">
-            <span class="mt-1">1. 純美業版</span>
-          </label>
-          <label class="flex flex-col items-center p-3 bg-brand-50 rounded-2xl border border-brand-200 cursor-pointer text-center">
-            <input type="radio" name="cfg-industry-mode" value="pet_grooming" onchange="handleIndustryModeChange('pet_grooming')">
-            <span class="mt-1">2. 寵物美容版</span>
-          </label>
-          <label class="flex flex-col items-center p-3 bg-brand-50 rounded-2xl border border-brand-200 cursor-pointer text-center">
-            <input type="radio" name="cfg-industry-mode" value="pet_hotel" checked onchange="handleIndustryModeChange('pet_hotel')">
-            <span class="mt-1">3. 寵物美容＋住宿</span>
-          </label>
-        </div>
-      </div>
-
       <!-- 前台品牌美學配色切換器 (6款主題色票) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -1061,15 +1037,12 @@
         </div>
       </div>
 
-      <!-- 3. LINE 推播與通報設定 -->
+      <!-- 3. LINE 推播與通報設定 (已修正 DOM 閉合結構) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-brands fa-line text-emerald-600 text-sm"></i> 預約通報與推播管道設定 (LINE / Email)
+            <i class="fa-brands fa-line text-emerald-600 text-sm"></i> 預約通報與推播管道設定 (LINE / Email) 『新功能即將上線』
           </span>
-          <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full">新功能即將上線</span>
-          </div>
-        </div>
           <div class="flex items-center gap-1.5">
             <button type="button" class="text-[11px] bg-[#06C755] hover:bg-[#05b34c] text-white px-2.5 py-1 rounded-lg font-bold shadow-xs transition flex items-center gap-1" onclick="openOwnerLineBindModal()">
               <i class="fa-brands fa-line"></i> 連動業主個人 LINE
@@ -1362,6 +1335,29 @@
           <span>儲存全部系統設定</span>
         </button>
       </div>
+      <!-- 門市商業模式切換（高安全規格、防誤觸、二次確認，移至設定頁最下方） -->
+      <div class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6">
+        <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+          <div>
+            <span class="text-xs font-bold text-amber-950 block flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> 門市核心營運模式切換 (重大設定)
+            </span>
+            <span class="text-[10px] text-amber-700">切換後將影響前台顯示版型及後台功能看板</span>
+          </div>
+          <span id="current-mode-display-badge" class="px-2.5 py-0.5 bg-amber-200 text-amber-900 rounded-full font-bold text-[10px]">當前：載入中</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="confirmSwitchIndustryMode('beauty')" class="p-3 bg-white hover:bg-amber-100 rounded-2xl border border-amber-200 font-bold text-xs text-brand-900 transition text-center shadow-xs">
+            1. 純美業版<br><span class="text-[9px] text-gray-500 font-normal">美容美髮美甲美體</span>
+          </button>
+          <button type="button" onclick="confirmSwitchIndustryMode('pet_grooming')" class="p-3 bg-white hover:bg-amber-100 rounded-2xl border border-amber-200 font-bold text-xs text-brand-900 transition text-center shadow-xs">
+            2. 寵物純美容<br><span class="text-[9px] text-gray-500 font-normal">洗澡剪毛無住宿</span>
+          </button>
+          <button type="button" onclick="confirmSwitchIndustryMode('pet_hotel')" class="p-3 bg-white hover:bg-amber-100 rounded-2xl border border-amber-200 font-bold text-xs text-brand-900 transition text-center shadow-xs">
+            3. 寵物美容＋住宿<br><span class="text-[9px] text-gray-500 font-normal">美容＋住宿與供餐</span>
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -1559,6 +1555,50 @@
       mist:   { name: '晨曦朝露霧綠', colors: ['#F4F7F6', '#DAE4E1', '#4A7C6D', '#1F3B33'] }
     };
 
+    // 商業模式二次確認防誤觸切換
+  function confirmSwitchIndustryMode(newMode) {
+    const modeNames = {
+      'beauty': '【1. 純美業版 (美容美髮美甲美體)】',
+      'pet_grooming': '【2. 寵物純美容版 (洗澡剪毛)】',
+      'pet_hotel': '【3. 寵物美容＋住宿旗艦版 (住宿甘特圖與供餐)】'
+    };
+
+    Swal.fire({
+      title: '確定要變更門市營運模式？',
+      html: `
+        <div class="text-left text-xs text-brand-700 space-y-2 leading-relaxed">
+          <p class="font-bold text-rose-600">⚠️ 這是核心營運架構變更：</p>
+          <p>即將切換為：<b>${modeNames[newMode]}</b></p>
+          <p>確認後系統將即時更新雲端資料庫，並同步切換前台預約版型與後台導覽看板。</p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '確定立即切換',
+      cancelButtonText: '取消保留原狀',
+      confirmButtonColor: '#8C7355',
+      cancelButtonColor: '#EBE5DF'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        Swal.showLoading();
+        try {
+          await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { industry_type: newMode });
+          await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { industry_mode: newMode });
+          
+          backendData.settings.industryMode = newMode;
+          handleIndustryModeChange(newMode);
+          
+          const badge = document.getElementById('current-mode-display-badge');
+          if (badge) badge.innerText = `當前：${modeNames[newMode].split(' ')[0]}】`;
+          
+          Swal.fire({ title: '模式已成功切換！', text: '前台與後台架構已同步更新', icon: 'success', timer: 1200, showConfirmButton: false });
+        } catch(e) {
+          Swal.fire('切換失敗', e.message, 'error');
+        }
+      }
+    });
+  }
+    
     function previewSelectedThemeColor(themeKey) {
       const t = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
       const nameEl = document.getElementById('theme-preview-name');
@@ -1814,6 +1854,8 @@
               signed_at: b.signed_at || '',
               created_at: b.created_at || '',
               pet_type: b.pet_type || '小型犬',
+  industryMode: sInfo.industry_type || sCfg.industry_mode || "pet_hotel",
+  themeColor: sInfo.theme_color || sCfg.theme_color || "latte",
               self_food: b.self_food !== false
             };
           }) : [],
@@ -2059,39 +2101,38 @@
     if (cleanNotes.includes('Email:')) {
       const parts = cleanNotes.split('Email:');
       cleanNotes = parts[0].trim();
-      parsedEmail = parts[1].trim().split(' ')[0].split('|')[0].trim();
+      parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
     }
 
-    // 獨立條列解析：加購金額、包卡點數、儲值金折抵、折扣碼折抵、已付訂金
     let financialRows = [];
     
-    // 1. 加購金額
-    const addonMatch = cleanNotes.match(/加購[：:\s]*([^\s|]+)/);
-    if (addonMatch || cleanNotes.includes('加購包卡') || cleanNotes.includes('加購儲值')) {
-      const addonText = addonMatch ? addonMatch.get(1) : '現場加購方案';
+    // 安全萃取加購
+    if (cleanNotes.includes('加購')) {
+      const addonMatch = cleanNotes.match(/加購[：:\s]*([^\s|]+)/);
+      const addonText = (addonMatch && addonMatch[1]) ? addonMatch[1] : '現場加購方案';
       financialRows.push(`<div class="flex justify-between text-amber-900 font-bold"><span>✨ 現場加購項目：</span><span>${addonText}</span></div>`);
     }
 
-    // 2. 包卡點數扣減
-    if (cleanNotes.includes('使用包卡') || cleanNotes.includes('包卡扣抵') || cleanNotes.includes('扣點')) {
+    // 包卡扣抵
+    if (cleanNotes.includes('包卡') || cleanNotes.includes('扣點')) {
       financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點折抵：</span><span>當次扣減 1 點 (堂)</span></div>`);
     }
 
-    // 3. 儲值金扣抵 (含專屬折數)
-    if (cleanNotes.includes('使用儲值') || cleanNotes.includes('儲值抵扣') || cleanNotes.includes('儲值金')) {
-      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值金扣抵支付：</span><span>享會員專屬折數並即時扣款</span></div>`);
+    // 儲值金折抵
+    if (cleanNotes.includes('儲值')) {
+      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值金扣抵支付：</span><span>享會員專屬折數扣抵</span></div>`);
     }
 
-    // 4. 折扣碼折抵
+    // 折扣碼
     if (cleanNotes.includes('折扣碼')) {
       const codeMatch = cleanNotes.match(/折扣碼[:\s]*([A-Za-z0-9]+)/);
-      const codeStr = codeMatch ? ` (${codeMatch[1]})` : '';
+      const codeStr = (codeMatch && codeMatch[1]) ? ` (${codeMatch[1]})` : '';
       financialRows.push(`<div class="flex justify-between text-rose-600 font-bold"><span>🏷️ 促銷折扣碼折抵：</span><span>已套用代碼${codeStr}</span></div>`);
     }
 
-    // 5. 已付訂金扣抵
-    if (a.deposit_deducted > 0) {
-      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 線下預收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
+    // 訂金
+    if (Number(a.deposit_deducted || 0) > 0) {
+      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 預收訂金抵扣：</span><span>-$${a.deposit_deducted}</span></div>`);
     }
 
     const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
@@ -2108,18 +2149,6 @@
         <i class="fa-solid fa-pen-nib text-[10px]"></i> 現場簽約
       </button>
     `;
-
-    const auditActionHtml = (a.status === '待確認') ? `
-      <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-2 mt-1">
-        <span class="text-[11px] font-bold text-amber-900 flex items-center gap-1">
-          <i class="fa-solid fa-bell text-amber-600"></i> 新預約待審核：
-        </span>
-        <div class="flex gap-1.5 shrink-0">
-          <button class="px-3 py-1 bg-[#7D8F7D] hover:bg-[#687968] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '已確認', '${a.name}')">核准接單</button>
-          <button class="px-2.5 py-1 bg-[#B57979] hover:bg-[#9E6363] text-white rounded-lg font-bold text-xs shadow-xs transition" onclick="auditOrder('${a.id}', '婉拒', '${a.name}')">婉拒</button>
-        </div>
-      </div>
-    ` : '';
 
     return `
       <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border border-brand-200 shadow-sm space-y-2.5 text-xs">
@@ -2149,22 +2178,19 @@
         </div>
 
         <div class="flex items-center gap-1.5 pt-0.5">
-          <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+          <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
             <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
           </a>
-          <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+          <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
             <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
           </a>
         </div>
-
-        ${auditActionHtml}
 
         <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
           <div class="font-bold text-brand-900 font-sans">施作項目：${a.service || '無'}</div>
           <div class="text-brand-600 font-bold">預估費用：${a.price} 元 ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
         </div>
 
-        <!-- 獨立條列財務與折抵區塊 -->
         <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1.5 text-[11px] border border-brand-100">
           <div class="font-bold text-brand-800 border-b border-brand-200/60 pb-1">📊 當次方案與加購折抵明細：</div>
           ${financialRows.length > 0 ? financialRows.join('') : '<div class="text-gray-400">無特殊加購或方案折抵紀錄</div>'}
@@ -2179,12 +2205,11 @@
           ${a.signature_url ? `
             <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
               <span>✓ 已簽署定型化契約 ${friendlySignedTime ? `(${friendlySignedTime})` : ''}</span>
-              <button onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
+              <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
             </div>
           ` : ''}
         </div>
 
-        <!-- 內部備註排版：彈性容器防破版 -->
         <div class="w-full flex items-center gap-2 pt-1">
           <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
           <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
@@ -2195,9 +2220,9 @@
         <div class="flex justify-between items-center pt-2 border-t border-brand-100">
           <div class="flex items-center gap-1.5">${signBtnHtml}</div>
           <div class="flex items-center gap-1.5">
-            <button class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold text-[11px]" onclick="openEditServiceModal('${a.id}')">改項目</button>
-            <button class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold text-[11px]" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-            <button class="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
+            <button type="button" class="px-2.5 py-1 bg-[#6D7E8C] text-white rounded-lg font-bold text-[11px]" onclick="openEditServiceModal('${a.id}')">改項目</button>
+            <button type="button" class="px-2.5 py-1 bg-brand-400 text-white rounded-lg font-bold text-[11px]" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+            <button type="button" class="px-3 py-1 bg-emerald-600 text-white rounded-lg font-bold text-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0})">結單</button>
           </div>
         </div>
       </div>`;
@@ -4386,10 +4411,17 @@
       setVal('cfg-commission-rate', s.commissionRate || 50);
       setVal('cfg-designated-bonus', s.designatedBonus || 50);
 
-      // 回填前台美學色系並即時預覽
-      const currentTheme = s.themeColor || 'latte';
-      setVal('cfg-theme-color', currentTheme);
-      previewSelectedThemeColor(currentTheme);
+      // 回填當前商業模式 Badge
+  const currentMode = s.industryMode || 'pet_hotel';
+  const modeNames = { 'beauty': '純美業版', 'pet_grooming': '寵物純美容', 'pet_hotel': '寵物美容＋住宿' };
+  const badge = document.getElementById('current-mode-display-badge');
+  if (badge) badge.innerText = `當前：【${modeNames[currentMode]}】`;
+  handleIndustryModeChange(currentMode);
+
+  // 回填色系並即時切換預覽色票
+  const currentTheme = s.themeColor || 'latte';
+  setVal('cfg-theme-color', currentTheme);
+  previewSelectedThemeColor(currentTheme);
 
       // 回填商業模式單選框
       const modeRadio = document.querySelector(`input[name="cfg-industry-mode"][value="${s.industryMode || 'pet_hotel'}"]`);
