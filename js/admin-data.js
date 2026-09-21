@@ -418,3 +418,384 @@ async function submitFinalCheckoutAction() {
   Swal.fire('完工結單成功！', `實收 NT$ ${finalPrice}，BOM 耗材已自動扣除`, 'success');
   fetchDataAndRender();
 }
+
+// =========================================================================
+// 📌 核心連線、安全驗證與資料庫存取引擎 (js/admin-data.js) - [第一段整理]
+// =========================================================================
+
+const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
+const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
+
+const urlParams = new URLSearchParams(window.location.search);
+const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
+let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
+
+let backendData = { appointments: [], scheduleDates: [], services: [], portfolio: [], settings: {} };
+let promoImgsArray = new Array(7).fill("");
+let customOffDatesArray = [];
+let shiftSlotStates = {};
+let allInventoryItems = [];
+let isLowStockFilterActive = false;
+let allWalletList = [];
+let filteredWalletList = [];
+let allPkgList = [];
+let filteredPkgList = [];
+let pendingSlotsList = [];
+let currentCheckoutBookingObj = null;
+let customInventoryCategories = ["洗護消耗品", "技術耗材", "零售外帶品", "毛孩零食玩具", "工具雜項"];
+
+const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字第1120300459號函發布
+【美容定型化契約書】
+
+立契約書人：
+消費者 (以下簡稱甲方)
+美容業者 (以下簡稱乙方)
+
+簽訂契約前，乙方已將本契約交付甲方審閱，並確認甲方已詳閱各條款。甲乙雙方同意就服務事項依約定辦理。服務總費用與施作項目以線上明細為憑，施作前已充分溝通。本契約經線上親筆數位簽署後即時存證。`;
+
+const STAFF_MORANDI_PALETTE = [
+  { dot: '#9E9E9E', bg: '#F5F5F5', text: '#616161', border: '#E0E0E0' },
+  { dot: '#E57373', bg: '#FFEBEE', text: '#C62828', border: '#FFCDD2' },
+  { dot: '#FFB74D', bg: '#FFF3E0', text: '#EF6C00', border: '#FFE0B2' },
+  { dot: '#DCE775', bg: '#F9FBE7', text: '#827717', border: '#F0F4C3' },
+  { dot: '#81C784', bg: '#E8F5E9', text: '#2E7D32', border: '#C8E6C9' },
+  { dot: '#64B5F6', bg: '#E3F2FD', text: '#1565C0', border: '#BBDEFB' }
+];
+
+function getStaffColor(staffId, staffName = "") {
+  if (!staffId || staffId === 'all' || staffId === '不指定') return STAFF_MORANDI_PALETTE[0];
+  const list = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  const idx = list.findIndex(s => s.id === staffId || s.name === staffName);
+  if (idx !== -1) return STAFF_MORANDI_PALETTE[(idx + 1) % STAFF_MORANDI_PALETTE.length];
+  return STAFF_MORANDI_PALETTE[1];
+}
+
+// 基礎 RESTful 通訊封裝
+async function directSupabaseFetch(endpoint) {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    return res.ok ? await res.json() : [];
+  } catch(e) { return []; }
+}
+
+async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+  return res.ok ? await res.json() : [];
+}
+
+async function directSupabasePatch(table, queryFilter, payload) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
+    method: "PATCH",
+    headers: {
+      "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json", "Prefer": "return=representation"
+    },
+    body: JSON.stringify(payload)
+  });
+  return res.ok ? await res.json() : [];
+}
+
+// 解鎖登入與安全機制
+const ATTEMPTS_KEY = `admin_attempts_${CURRENT_STORE_ID}`;
+const LOCKOUT_KEY = `admin_lockout_${CURRENT_STORE_ID}`;
+
+function checkLockoutStatus() {
+  const lockoutUntil = localStorage.getItem(LOCKOUT_KEY);
+  if (lockoutUntil) {
+    const remainingMs = Number(lockoutUntil) - Date.now();
+    if (remainingMs > 0) {
+      showLockoutUI(Math.ceil(remainingMs / 1000));
+      return true;
+    } else {
+      localStorage.removeItem(LOCKOUT_KEY);
+      localStorage.removeItem(ATTEMPTS_KEY);
+    }
+  }
+  return false;
+}
+
+function showLockoutUI(sec) {
+  const countdownEl = document.getElementById('lockout-countdown');
+  const timerSecEl = document.getElementById('timer-sec');
+  const unlockBtn = document.getElementById('unlock-btn');
+  const pinInput = document.getElementById('pin-input');
+
+  if (countdownEl && timerSecEl) {
+    countdownEl.classList.remove('hidden');
+    timerSecEl.innerText = sec;
+    if (unlockBtn) unlockBtn.disabled = true;
+    if (pinInput) pinInput.disabled = true;
+
+    const timer = setInterval(() => {
+      sec--;
+      timerSecEl.innerText = sec;
+      if (sec <= 0) {
+        clearInterval(timer);
+        countdownEl.classList.add('hidden');
+        if (unlockBtn) unlockBtn.disabled = false;
+        if (pinInput) pinInput.disabled = false;
+        localStorage.removeItem(LOCKOUT_KEY);
+        localStorage.removeItem(ATTEMPTS_KEY);
+      }
+    }, 1000);
+  }
+}
+
+async function checkPin() {
+  if (checkLockoutStatus()) return;
+  const pinInput = document.getElementById('pin-input');
+  const errorEl = document.getElementById('lock-error');
+  const inputPin = pinInput ? pinInput.value.trim() : '';
+  if (!inputPin) return;
+
+  try {
+    if (CURRENT_ADMIN_TOKEN) {
+      const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
+      if (tokenRes && tokenRes.length > 0) CURRENT_STORE_ID = tokenRes[0].id;
+    }
+
+    let correctPin = '8888';
+    const [stores, settings] = await Promise.all([
+      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
+      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
+    ]);
+
+    if (stores && stores.length > 0 && stores[0].admin_pin) {
+      correctPin = String(stores[0].admin_pin).trim();
+    }
+
+    // 專員個人登入密碼比對
+    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+      const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
+      const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+      if (matchedStaff && matchedStaff.pin) correctPin = String(matchedStaff.pin).trim();
+    }
+
+    if (inputPin === correctPin) {
+      localStorage.removeItem(ATTEMPTS_KEY);
+      localStorage.removeItem(LOCKOUT_KEY);
+      enterDashboard();
+    } else {
+      let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
+      localStorage.setItem(ATTEMPTS_KEY, attempts);
+      if (attempts >= 5) {
+        const lockoutTime = Date.now() + 15 * 60 * 1000;
+        localStorage.setItem(LOCKOUT_KEY, lockoutTime);
+        showLockoutUI(900);
+      } else {
+        errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次機會`;
+        pinInput.value = '';
+      }
+    }
+  } catch (e) {
+    if (inputPin === '8888') {
+      enterDashboard();
+    } else {
+      errorEl.innerText = '系統連線異常，請稍後重試';
+    }
+  }
+}
+
+function enterDashboard() {
+  document.getElementById('lock-screen').style.display = 'none';
+  document.getElementById('main-content').style.display = 'block';
+  document.getElementById('bottom-nav').style.display = 'flex';
+
+  if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+    document.querySelectorAll('.full-admin-only').forEach(el => el.style.display = 'none');
+    activeShiftStaffId = CURRENT_STAFF_PARAM;
+    const topTitle = document.getElementById('top-bar-title');
+    if (topTitle) topTitle.innerText = `專員個人工作台 (${CURRENT_STAFF_PARAM})`;
+  }
+
+  fetchDataAndRender();
+}
+
+// 全域資料載入
+async function fetchDataAndRender() {
+  try {
+    let [stores, settings, services, portfolios, bookings] = await Promise.all([
+      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
+      directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
+    ]);
+
+    const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+
+    const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
+    customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
+    
+    const availableDates = [];
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+      if (!weeklyOffDays.includes(target.getDay()) && !customOffDatesArray.includes(dStr)) {
+        availableDates.push(dStr);
+      }
+    }
+
+    promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
+    while (promoImgsArray.length < 7) promoImgsArray.push("");
+
+    backendData = {
+      appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
+        const d = new Date(b.appointment_time);
+        const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+        return {
+          id: b.id,
+          date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+          time: timeStr,
+          name: b.customer_name,
+          phone: b.customer_phone,
+          customer_type: b.customer_type || 'old',
+          customer_notes: b.customer_notes || '',
+          lineName: b.line_name || '',
+          service: b.service_names || '',
+          price: Number(b.price) || 0,
+          finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
+          notes: b.notes || '',
+          staffId: b.staff_id || 'all',
+          staffName: b.staff_name || '不指定',
+          status: b.status || '待確認',
+          deposit_confirmed: b.deposit_confirmed === true,
+          deposit_deducted: Number(b.deposit_deducted || 0),
+          depositLast5: b.deposit_last5 || '',
+          signature_url: b.signature_url || '',
+          signed_at: b.signed_at || '',
+          created_at: b.created_at || '',
+          pet_type: b.pet_type || '小型犬',
+          self_food: b.self_food !== false
+        };
+      }) : [],
+      scheduleDates: availableDates.map(dStr => ({ date: dStr })),
+      services: (services && services.length > 0) ? services.map(s => ({
+        id: s.id,
+        name: s.service_name || s.name,
+        duration: s.duration_minutes || s.duration || 60,
+        type: s.service_type || s.type || "Group_A",
+        price: s.price || 0,
+        isAddon: s.is_addon === true || s.isAddon === true,
+        sortOrder: s.sort_order || 0,
+        materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
+      })) : [
+        { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0, materials: [] },
+        { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1, materials: [{ name: "日系染膏/精油萃取原液", dosage: "50ml" }] }
+      ],
+      portfolio: (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
+        id: p.id,
+        cat: p.category || p.cat || '作品精選',
+        title: p.title || '',
+        link: p.link || '',
+        img: p.img_url || p.img,
+        sortOrder: p.sort_order || 0
+      })) : [
+        { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 }
+      ],
+      settings: {
+        storeName: sCfg.display_title || sInfo.store_name || "專業沙龍與寵物旗艦館",
+        subtitle: sCfg.display_subtitle || "",
+        logoUrl: sCfg.logo_url || "",
+        enableLogo: sCfg.enable_logo ?? true,
+        storePhone: sCfg.store_phone || "",
+        address: sCfg.address || "",
+        businessHours: sCfg.business_hours || "09:00 - 19:00",
+        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
+        careText: sCfg.care_text || "服務完成後請保持乾爽通風與定期保養。",
+        depositInfo: sCfg.deposit_info || "",
+        depositMode: sCfg.deposit_mode || "all",
+        depositAmount: Number(sCfg.deposit_amount || 0),
+        promoText: sCfg.promo_text || "",
+        promoRulesText: sCfg.promo_rules_text || '',
+        contractTitle: sCfg.contract_title || '美容定型化契約書',
+        contractContent: sCfg.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT,
+        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
+        walletRules: sCfg.wallet_rules || [{ name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 }],
+        packageRules: sCfg.package_rules || [{ name: "剪髮買5送1暢遊卡", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000, deduct_points: 1 }],
+        careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
+        reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
+        themeColor: sCfg.theme_color || 'latte',
+        industryMode: sCfg.industry_mode || sInfo.industry_type || "pet_hotel",
+        totalHotelRooms: Number(sCfg.total_hotel_rooms || 8),
+        hotelCheckinStart: sCfg.hotel_checkin_start || "10:00",
+        hotelCheckoutEnd: sCfg.hotel_checkout_end || "19:00",
+        mealTimeBreakfast: sCfg.meal_time_breakfast || "09:00",
+        mealTimeLunch: sCfg.meal_time_lunch || "12:30",
+        mealTimeDinner: sCfg.meal_time_dinner || "18:00",
+        line: sCfg.line_url || "",
+        ig: sCfg.ig_url || "",
+        map: sCfg.map_url || "",
+        lineChannelToken: sCfg.line_channel_token || "",
+        shiftStartTime: sCfg.shift_start_time || "09:00",
+        shiftEndTime: sCfg.shift_end_time || "19:00",
+        shiftInterval: Number(sCfg.shift_interval || 30),
+        commissionRate: Number(sCfg.commission_rate || 50),
+        designatedBonus: Number(sCfg.designated_bonus || 50),
+        publishedSlots: sCfg.published_slots || [],
+        enableAuditBooking: sCfg.enable_audit_booking ?? true,
+        enableDeposit: sCfg.enable_deposit ?? true,
+        enableStaffSelect: sCfg.enable_staff_select ?? true,
+        enableMultiStaffSchedule: sCfg.enable_multi_staff_schedule ?? true,
+        enableCustType: sCfg.enable_cust_type ?? true,
+        enableShowPrice: sCfg.enable_show_price ?? true,
+        enableCustNotes: sCfg.enable_cust_notes ?? true,
+        enableWallet: sCfg.enable_wallet ?? true,
+        enablePackages: sCfg.enable_packages ?? true,
+        enableCoupons: sCfg.enable_coupons ?? true,
+        enableReviews: sCfg.enable_reviews ?? true,
+        enablePortfolio: sCfg.enable_portfolio ?? true,
+        enableCare: sCfg.enable_care ?? true,
+        enableQuickContact: sCfg.enable_quick_contact ?? true,
+        enableCancelReason: sCfg.enable_cancel_reason ?? true,
+        enableEmailCopy: sCfg.enable_email_copy ?? true,
+        enableCarousel: sCfg.enable_carousel ?? true,
+        enableFeaturedShop: sCfg.enable_featured_shop === true,
+        enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
+        enableCommissionCalc: sCfg.enable_commission_calc ?? true,
+        enableContract: sCfg.enable_contract ?? true,
+        enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
+        enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
+        enableFlexMenu: sCfg.enable_flex_menu ?? true
+      }
+    };
+
+    handleIndustryModeChange(backendData.settings.industryMode);
+
+    // 呼叫第一段 UI 渲染
+    if (typeof renderCalendar === 'function') renderCalendar();
+    if (typeof renderCustomer === 'function') renderCustomer();
+    if (typeof renderShift === 'function') renderShift();
+    if (typeof renderBoardingRoomStatus === 'function') renderBoardingRoomStatus();
+    if (typeof renderBoardingCareChecklist === 'function') renderBoardingCareChecklist();
+
+    // 呼叫第二段函式 (第二段整合後生效)
+    if (typeof renderRevenueSelect === 'function') renderRevenueSelect();
+    if (typeof renderRevenue === 'function') renderRevenue();
+    if (typeof renderCare === 'function') renderCare();
+    if (typeof renderBOMCheckboxes === 'function') renderBOMCheckboxes();
+    if (typeof renderServiceList === 'function') renderServiceList();
+    if (typeof renderPortfolioList === 'function') renderPortfolioList();
+    if (typeof populateSettings === 'function') populateSettings();
+    if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+    if (typeof loadAdminReviews === 'function') loadAdminReviews();
+    if (typeof renderUploadSlots === 'function') renderUploadSlots();
+    if (typeof renderInventoryList === 'function') renderInventoryList();
+    if (typeof initSlotsLiveUrl === 'function') initSlotsLiveUrl();
+  } catch (err) {
+    console.error("同步失敗:", err);
+  }
+}
