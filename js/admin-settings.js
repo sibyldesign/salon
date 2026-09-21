@@ -20,27 +20,76 @@ const DEFAULT_MOHW_BEAUTY_CONTRACT = `衛生福利部112年6月8日衛授疾字�
 本契約經甲方於線上確認並完成親筆數位簽章後生效，系統自動寄發副本存證。`;
 
 // 回填設定表單 (安全賦值，絕不用空值覆蓋既有畫面)
+// 1. 設定表單資料回填
 function populateSettings() {
   const s = backendData.settings || {};
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; };
+  const setCheck = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.checked = Boolean(val); };
 
-  const safeSetVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val !== undefined && val !== null) el.value = val;
-  };
-  const safeSetCheck = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val !== undefined && val !== null) el.checked = Boolean(val);
-  };
+  // 基礎品牌資料
+  setVal('cfg-title', s.storeName);
+  setVal('cfg-subtitle', s.subtitle);
+  setVal('cfg-logo', s.logoUrl);
+  setVal('cfg-phone', s.storePhone || '');
+  setVal('cfg-address', s.address);
+  setVal('cfg-hours', s.businessHours);
+  setVal('cfg-buffer', s.bookingBufferHours || 1);
+  setVal('cfg-line', s.line);
+  setVal('cfg-ig', s.ig);
+  setVal('cfg-map', s.map);
+  setVal('cfg-line-token', s.lineChannelToken);
+  setVal('cfg-promo', s.promoText);
+  setVal('cfg-promo-rules-input', s.promoRulesText);
+  setVal('cfg-commission-rate', s.commissionRate || 50);
 
-  safeSetVal('cfg-title', s.storeName);
-  safeSetVal('cfg-address', s.address);
-  safeSetVal('cfg-hours', s.businessHours);
+  // 營運模式單選 (beauty / pet)
+  const industryRadios = document.querySelectorAll('input[name="cfg-industry-type"]');
+  industryRadios.forEach(r => { r.checked = (r.value === (s.industryType || 'pet')); });
 
-  // ✨ Feature Flags 模組開關回填
-  safeSetCheck('cfg-module-pet', s.module_pet_profile || s.module_pet_boarding);
-  safeSetCheck('cfg-module-inventory', s.module_inventory || s.module_service_materials);
+  // 寵物住宿進階營運規則
+  const bs = s.boardingSettings || {};
+  setVal('cfg-meal-time-breakfast', bs.breakfastTime || '09:00');
+  setVal('cfg-meal-time-lunch', bs.lunchTime || '12:30');
+  setVal('cfg-meal-time-dinner', bs.dinnerTime || '18:00');
+  setCheck('cfg-mandatory-checkin-bath', bs.mandatoryCheckinBath ?? false);
+  setCheck('cfg-allow-checkout-bath', bs.allowCheckoutBath ?? true);
+  setCheck('cfg-toggle-stay-notice', bs.toggleNotice ?? true);
+  setVal('cfg-stay-notice-content', bs.noticeContent || "1. 入住前請確保毛孩已施打核心疫苗並出示證明。\n2. 請自備毛孩習慣食用之飼料及睡墊。\n3. 若毛孩有護食或重大病史，敬請於預約時誠實告知。");
 
-  updateArchitectureStatus();
+  // 供餐加收單價
+  const mr = s.boardingMealRates || { one: 80, two: 150, three: 220 };
+  setVal('cfg-meal-price-1', mr.one);
+  setVal('cfg-meal-price-2', mr.two);
+  setVal('cfg-meal-price-3', mr.three);
+
+  // 毛孩履歷收集開關
+  const cf = s.petCustomFields || {};
+  setCheck('field-chip-id', cf.chipId ?? false);
+  setCheck('field-vaccine', cf.vaccine ?? true);
+  setCheck('field-deworm', cf.deworm ?? true);
+  setCheck('field-allergy', cf.allergy ?? true);
+  setCheck('field-intro', cf.intro ?? true);
+  setCheck('field-shuttle', cf.shuttle ?? true);
+
+  // 審核與訂金
+  setCheck('cfg-toggle-audit-booking', s.enableAuditBooking ?? true);
+  setCheck('cfg-toggle-deposit', s.enableDeposit ?? true);
+  setVal('cfg-deposit-mode', s.depositMode || 'all');
+  setVal('cfg-deposit-amount', s.depositAmount || 0);
+  setVal('cfg-deposit-info', s.depositInfo || '');
+
+  // 定型化契約
+  setCheck('cfg-toggle-contract', s.enableContract ?? true);
+  setVal('cfg-contract-title', s.contractTitle || '美容定型化契約書');
+  setVal('cfg-contract-content', s.contractContent || DEFAULT_MOHW_BEAUTY_CONTRACT);
+
+  // LINE 推播二合一開關
+  setCheck('cfg-toggle-owner-line-push', s.enableOwnerLinePush ?? true);
+  setCheck('cfg-toggle-line-auto-notify', s.enableLineAutoNotify ?? false);
+  setCheck('cfg-toggle-flex-menu', s.enableFlexMenu ?? true);
+
+  // 渲染自訂收集欄位
+  if (typeof renderCustomFieldsAdminList === 'function') renderCustomFieldsAdminList();
 }
 
 // ✨ 模組開關切換即時連動 (無需刷新頁面，秒級切換導覽列與外掛專頁)
@@ -85,28 +134,76 @@ async function saveStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false });
   Swal.showLoading();
 
-  const titleVal = document.getElementById('cfg-title')?.value.trim() || '專業美業沙龍';
-  const addressVal = document.getElementById('cfg-address')?.value.trim() || '';
-  const hoursVal = document.getElementById('cfg-hours')?.value.trim() || '';
+  const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
+  const selectedIndustry = document.querySelector('input[name="cfg-industry-type"]:checked')?.value || 'pet';
 
   const payload = {
     store_id: CURRENT_STORE_ID,
-    display_title: titleVal,
-    address: addressVal,
-    business_hours: hoursVal,
-    module_pet_profile: Boolean(document.getElementById('cfg-module-pet')?.checked),
-    module_pet_boarding: Boolean(document.getElementById('cfg-module-pet')?.checked),
-    module_inventory: Boolean(document.getElementById('cfg-module-inventory')?.checked),
-    module_service_materials: Boolean(document.getElementById('cfg-module-inventory')?.checked)
+    display_title: document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName,
+    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
+    logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
+    store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
+    address: document.getElementById('cfg-address')?.value.trim() || '',
+    business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
+    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
+    line_url: document.getElementById('cfg-line')?.value.trim() || '',
+    ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
+    map_url: document.getElementById('cfg-map')?.value.trim() || '',
+    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
+    promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
+    promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+    contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '美容定型化契約書',
+    contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
+    weekly_off_days: checkedWeekly,
+    custom_off_dates: customOffDatesArray,
+    shift_start_time: document.getElementById('cfg-shift-start')?.value || "09:00",
+    shift_end_time: document.getElementById('cfg-shift-end')?.value || "19:00",
+    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
+    commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
+    industry_type: selectedIndustry,
+
+    // 寵物住宿與放飯排程
+    boarding_settings: {
+      breakfastTime: document.getElementById('cfg-meal-time-breakfast')?.value || '09:00',
+      lunchTime: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
+      dinnerTime: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
+      mandatoryCheckinBath: Boolean(document.getElementById('cfg-mandatory-checkin-bath')?.checked),
+      allowCheckoutBath: Boolean(document.getElementById('cfg-allow-checkout-bath')?.checked),
+      toggleNotice: Boolean(document.getElementById('cfg-toggle-stay-notice')?.checked),
+      noticeContent: document.getElementById('cfg-stay-notice-content')?.value.trim() || ''
+    },
+    boarding_meal_rates: {
+      one: Number(document.getElementById('cfg-meal-price-1')?.value || 80),
+      two: Number(document.getElementById('cfg-meal-price-2')?.value || 150),
+      three: Number(document.getElementById('cfg-meal-price-3')?.value || 220)
+    },
+    pet_custom_fields: {
+      chipId: Boolean(document.getElementById('field-chip-id')?.checked),
+      vaccine: Boolean(document.getElementById('field-vaccine')?.checked),
+      deworm: Boolean(document.getElementById('field-deworm')?.checked),
+      allergy: Boolean(document.getElementById('field-allergy')?.checked),
+      intro: Boolean(document.getElementById('field-intro')?.checked),
+      shuttle: Boolean(document.getElementById('field-shuttle')?.checked),
+      extraFields: backendData.settings?.petCustomFields?.extraFields || []
+    },
+
+    // 模組開關
+    enable_audit_booking: Boolean(document.getElementById('cfg-toggle-audit-booking')?.checked),
+    enable_deposit: Boolean(document.getElementById('cfg-toggle-deposit')?.checked),
+    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
+    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
+    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
+    enable_contract: Boolean(document.getElementById('cfg-toggle-contract')?.checked),
+    enable_owner_line_push: Boolean(document.getElementById('cfg-toggle-owner-line-push')?.checked),
+    enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
+    enable_flex_menu: Boolean(document.getElementById('cfg-toggle-flex-menu')?.checked)
   };
 
   try {
-    await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: titleVal }, 'id');
+    await directSupabaseUpsert('stores', { id: CURRENT_STORE_ID, store_name: payload.display_title, industry_type: selectedIndustry }, 'id');
     await directSupabaseUpsert('store_settings', payload, 'store_id');
     backendData.settings = Object.assign({}, backendData.settings, payload);
-    document.getElementById('top-bar-title').innerText = `${titleVal} 管理後台`;
-    updateArchitectureStatus();
-    Swal.fire('設定已成功保存！', '', 'success');
+    Swal.fire({ title: '設定已完整儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
   }
