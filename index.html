@@ -114,9 +114,9 @@
   <span id="system-banner-text" class="truncate font-medium"></span>
 </div>
 
-<!-- 頂部 Header 與 Logo 區塊 -->
+<!-- 頂部 Header 與 Logo 區塊 (無 Logo 時徹底隱藏 wrapper) -->
 <header class="w-full bg-brand-50 pt-0">
-  <div id="store-logo-wrapper" class="w-full h-[150px] overflow-hidden relative bg-brand-50 flex items-center justify-center p-2">
+  <div id="store-logo-wrapper" class="w-full h-[150px] overflow-hidden relative bg-brand-50 flex items-center justify-center p-2 hidden">
     <img id="store-logo-img" loading="eager" decoding="async" class="max-h-full max-w-full object-contain object-center hidden" src="" alt="STORE LOGO">
     <div id="store-logo-placeholder" class="text-xs font-bold text-brand-400 flex flex-col items-center gap-1">
       <i class="fa-regular fa-image text-2xl text-brand-300"></i>
@@ -124,16 +124,16 @@
     </div>
   </div>
   
-  <div class="max-w-md mx-auto text-center pt-2 pb-4 px-4 relative bg-brand-50">
-    <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約</h1>
-    <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業美業沙龍</div>
+  <div class="max-w-md mx-auto text-center pt-3 pb-4 px-4 relative bg-brand-50">
+    <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約系統</h1>
+    <div id="brand-subtitle" class="text-xs text-brand-500 tracking-[0.25em] mt-1 font-medium">專業服務門市</div>
   </div>
 
   <div id="promo" class="w-full bg-[#BCA38F] text-white py-3.5 px-4 shadow-sm">
     <div class="max-w-md mx-auto text-center flex flex-col items-center justify-center">
       <div class="text-[13px] font-bold flex items-center justify-center gap-1.5 mb-1">
         <i class="fa-regular fa-bell text-xs"></i>
-        <span>店家最新公告</span>
+        <span>門市最新公告</span>
       </div>
       <div class="text-xs text-white/95 leading-relaxed tracking-wide whitespace-pre-line" id="promo-text">歡迎使用線上預約系統，請選取項目與合適時段。</div>
     </div>
@@ -141,13 +141,26 @@
 </header>
 
 <div id="booking-ui" class="max-w-md mx-auto flex flex-col">
+
+  <!-- 寵物店專屬：模式切換按鈕 (美容洗澡 vs 寵物住宿) -->
+  <div id="serviceModeSelector" class="px-4 mt-4 hidden">
+    <div class="grid grid-cols-2 gap-2 p-1.5 bg-brand-100/70 rounded-2xl border border-brand-200">
+      <button type="button" id="btnModeGrooming" class="py-2.5 rounded-xl text-xs font-bold transition bg-[#8C7355] text-white shadow-sm flex items-center justify-center gap-1.5" onclick="switchBookingSubMode('grooming')">
+        <i class="fa-solid fa-scissors"></i>
+        <span>精緻洗護美容</span>
+      </button>
+      <button type="button" id="btnModeBoarding" class="py-2.5 rounded-xl text-xs font-bold transition bg-white text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5" onclick="switchBookingSubMode('boarding')">
+        <i class="fa-solid fa-hotel"></i>
+        <span>安親度假住宿</span>
+      </button>
+    </div>
+  </div>
   
   <!-- 9:16 直式活動說明圖輪播 -->
   <div class="px-4 mt-4" id="bannerWrapper">
     <div class="bg-brand-100 p-3.5 rounded-3xl shadow-sm border border-brand-200/60">
       <div class="relative overflow-hidden rounded-2xl bg-white shadow-inner group">
         <div class="flex transition-transform duration-300 ease-in-out" id="carouselTrack"></div>
-        
         <button type="button" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 hover:bg-black/45 text-white/80 hover:text-white flex items-center justify-center backdrop-blur-xs transition z-20" onclick="moveSlide(-1)">
           <i class="fa-solid fa-chevron-left text-xs"></i>
         </button>
@@ -159,15 +172,23 @@
     </div>
   </div>
 
+  <!-- 前台住宿小提醒專區 (輪播圖下方，後台可開關與編輯) -->
+  <div class="px-4 mt-4 hidden" id="frontStayNoticeWrapper">
+    <div class="p-4 rounded-3xl bg-amber-50/90 border border-amber-200 shadow-xs space-y-2 text-xs">
+      <div class="font-bold flex items-center gap-1.5 text-amber-900 text-xs">
+        <i class="fa-solid fa-bullhorn text-amber-600"></i>
+        <span>住宿行前叮嚀與規範</span>
+      </div>
+      <div id="frontStayNoticeContent" class="text-[11.5px] leading-relaxed whitespace-pre-line text-amber-900/90 font-medium"></div>
+    </div>
+  </div>
+
   <!-- PORTFOLIO 作品展示專區 (單行滑動標籤 + 一行兩圖) -->
   <div class="px-4 mt-6" id="portfolioSection">
     <div class="text-center font-serif text-xl tracking-widest text-brand-900 mb-0.5">PORTFOLIO</div>
-    <div class="text-center text-[10px] text-brand-400 font-normal mb-3 tracking-wider" id="portfolio-hint-text">點選分類查看造型設計</div>
+    <div class="text-center text-[10px] text-brand-400 font-normal mb-3 tracking-wider" id="portfolio-hint-text">點選分類查看精選造型與作品</div>
     
-    <!-- 單行橫向滑動分類列表 -->
     <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-3 px-1" id="portfolio-tabs"></div>
-    
-    <!-- 一行兩圖網格展示 -->
     <div class="grid grid-cols-2 gap-3" id="portfolio-grid"></div>
     
     <div class="text-center mt-3.5" id="portfolio-more-wrapper">
@@ -196,9 +217,9 @@
         <div>
           <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-bag-shopping text-brand-500"></i>
-            <span>沙龍專屬選品</span>
+            <span>門市專屬選品</span>
           </div>
-          <div class="text-[10px] text-brand-500 mt-0.5">專業居家保養，線上挑選即刻帶走</div>
+          <div class="text-[10px] text-brand-500 mt-0.5">專業居家保養與良品，線上挑選即刻帶走</div>
         </div>
         <a href="shop.html" target="_blank" class="px-3 py-1.5 bg-brand-400 hover:bg-brand-500 text-white rounded-xl text-[11px] font-bold shadow-sm transition flex items-center gap-1">
           <span>前往選購</span>
@@ -212,10 +233,10 @@
     <div class="bg-white/95 rounded-3xl p-6 shadow-sm border border-white/80 backdrop-blur-md mb-6">
       <form id="bookForm" class="space-y-5">
         
-        <!-- 手機號碼與會員儲值/包卡即時資訊 -->
+        <!-- 顧客手機號碼與舊客/VIP資產卡 -->
         <div>
           <div class="flex justify-between items-center mb-1.5">
-            <label class="block text-xs font-bold text-brand-800">手機號碼</label>
+            <label class="block text-xs font-bold text-brand-800">聯絡手機號碼 *</label>
             <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
           </div>
           <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition" oninput="checkPhoneLength(this)">
@@ -232,20 +253,19 @@
 
           <div class="flex justify-between items-center mt-1">
             <div id="welcome-msg" class="text-xs font-bold text-brand-500 hidden"></div>
-            <button type="button" id="quick-report-deposit-btn" class="text-[11px] text-brand-500 underline ml-auto hidden" onclick="promptQuickReportDeposit()">若已付訂金，點此直接回報後五碼</button>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">您的姓名</label>
-          <input type="text" id="name" required placeholder="請輸入姓名" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">預約人姓名 *</label>
+          <input type="text" id="name" required placeholder="請輸入您的真實姓名" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
         <div>
           <label class="block text-xs font-bold text-brand-800 mb-1.5">LINE 顯示名稱</label>
           <input type="text" id="lineName" placeholder="例如：小美" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
         <div id="emailSection">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5" id="emailLabel">電子信箱 <span class="text-[10px] text-brand-400 font-normal">(寄送預約副本)</span></label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5" id="emailLabel">電子信箱 <span class="text-[10px] text-brand-400 font-normal">(寄送預約與憑證副本)</span></label>
           <input type="email" id="email" placeholder="例如：user@gmail.com" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition">
         </div>
 
@@ -258,35 +278,181 @@
           <input type="hidden" id="custType" value="old">
         </div>
 
-        <div id="referrerSection">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">推薦介紹人 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
-          <input type="text" id="referrerName" placeholder="請填寫介紹人姓名或手機" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:ring-2 focus:ring-brand-400 focus:bg-white outline-none transition">
+        <!-- 介紹人 / 推薦來源 (後台開關控制) -->
+        <div id="referrerSection" class="hidden">
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">介紹人 / 推薦來源 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
+          <input type="text" id="referrerName" placeholder="請填寫介紹人姓名、會員編號或社群" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs outline-none focus:bg-white transition">
         </div>
 
+        <!-- 毛孩詳細履歷 (若為寵物店型態則顯示) -->
+        <div id="petProfileSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3 text-xs hidden">
+          <div class="font-bold text-sm text-brand-900 flex items-center gap-1.5 border-b border-brand-200 pb-2">
+            <i class="fa-solid fa-paw text-brand-500"></i> 毛孩身分與照護履歷
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-bold text-brand-700 mb-1">毛孩姓名 *</label>
+              <input type="text" id="petName" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold" placeholder="例: 圓圓">
+            </div>
+            <div>
+              <label class="block font-bold text-brand-700 mb-1">品種 / 犬貓分類 *</label>
+              <input type="text" id="petBreed" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold" placeholder="例: 柴犬 / 美短">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block font-bold text-brand-700 mb-1">體重 (公斤) *</label>
+              <input type="number" step="0.1" id="petWeight" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold font-mono" placeholder="kg" oninput="calculateBoardingDaysAndPrice()">
+            </div>
+            <div>
+              <label class="block font-bold text-brand-700 mb-1">年齡 / 歲 *</label>
+              <input type="number" id="petAge" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold font-mono" placeholder="歲">
+            </div>
+            <div>
+              <label class="block font-bold text-brand-700 mb-1">性別 / 結紮 *</label>
+              <select id="petGender" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold">
+                <option value="公(已結紮)">公 (已結紮)</option>
+                <option value="公(未結紮)">公 (未結紮)</option>
+                <option value="母(已結紮)">母 (已結紮)</option>
+                <option value="母(未結紮)">母 (未結紮)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-brand-700 mb-1">毛孩性格與日常照護備註 *</label>
+            <textarea id="petPersonality" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none leading-relaxed" placeholder="例如：親人、緊張會護食、會怕吹風機等..."></textarea>
+          </div>
+
+          <!-- 後台勾選之延伸照護欄位 -->
+          <div class="space-y-2 pt-1 border-t border-brand-200/60" id="petExtendedFieldsBox">
+            <div id="box-chip-id" class="hidden">
+              <label class="block font-bold text-brand-700 mb-1">晶片號碼 (Microchip)</label>
+              <input type="text" id="petChipId" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="15 碼晶片號">
+            </div>
+            <div id="box-vaccine" class="hidden grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-brand-700 mb-1">核心疫苗施打年份</label>
+                <input type="text" id="petVaccineYear" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 2026/03">
+              </div>
+              <div>
+                <label class="block font-bold text-brand-700 mb-1">驅蟲日期與品牌</label>
+                <input type="text" id="petDewormDate" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 全能狗S (8月)">
+              </div>
+            </div>
+            <div id="box-allergy" class="hidden">
+              <label class="block font-bold text-brand-700 mb-1">重大病史與過敏體質</label>
+              <input type="text" id="petAllergy" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 雞肉過敏、心臟病史">
+            </div>
+          </div>
+        </div>
+
+        <!-- 門市專屬接送服務 (後台開關控制) -->
+        <div id="shuttleServiceSection" class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 text-xs hidden">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-van-shuttle text-brand-500"></i> 需要門市專屬接送服務
+            </span>
+            <input type="checkbox" id="chkNeedShuttle" class="accent-[#8C7355]" onchange="toggleShuttleAddressBox()">
+          </label>
+          <div id="shuttleDetailBox" class="hidden space-y-2 pt-2 border-t border-brand-200">
+            <input type="text" id="shuttleAddress" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none text-xs" placeholder="請填寫接送地址與樓層 (例: 竹東鎮光明路... 3樓有電梯)">
+            <div class="flex gap-4">
+              <label class="flex items-center gap-1.5 text-xs text-brand-800 cursor-pointer">
+                <input type="radio" name="shuttleTrip" value="round" checked class="accent-[#8C7355]"> 來回接送
+              </label>
+              <label class="flex items-center gap-1.5 text-xs text-brand-800 cursor-pointer">
+                <input type="radio" name="shuttleTrip" value="single" class="accent-[#8C7355]"> 僅單趟接送
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 指定服務專員 / 美容師 -->
         <div id="staffSection">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">指定服務專員</label>
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">指定服務專員 / 美容師</label>
           <div class="grid grid-cols-3 gap-2" id="staffGrid"></div>
           <input type="hidden" id="staffId" value="all">
           <input type="hidden" id="staffName" value="不指定">
         </div>
 
-        <!-- 選擇服務項目 -->
-        <div>
+        <!-- 美容洗澡模式：項目選擇區塊 -->
+        <div id="groomingServiceSection">
           <div class="flex justify-between items-center mb-1.5">
-            <label class="text-xs font-bold text-brand-800">選擇項目 (可複選)</label>
+            <label class="text-xs font-bold text-brand-800">選擇項目 (可複選，價格為預估區間)</label>
             <span class="text-[11px] text-brand-400 font-medium">※ 加購項目需先選主項目</span>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="service-grid"></div>
-          <input type="hidden" id="service" required>
-        </div>
-        
-        <div id="custNotesWrapper">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">特殊需求與備註 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
-          <textarea id="custNotes" rows="2" placeholder="如有特殊膚況、頭皮敏感或需求請在此填寫..." class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs focus:outline-none focus:ring-2 focus:ring-brand-400 focus:bg-white transition"></textarea>
+          <input type="hidden" id="service">
         </div>
 
-        <!-- 預約日期 -->
-        <div>
+        <!-- 寵物住宿模式：專屬雙月曆與住宿配置區塊 -->
+        <div id="boardingConfigSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-4 text-xs hidden">
+          <div class="font-bold text-brand-900 flex items-center justify-between text-sm border-b border-brand-200 pb-2">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-brand-500"></i> 寵物住宿日期與排程</span>
+            <span id="displayStayNightsBadge" class="text-xs px-2.5 py-0.5 bg-[#8C7355] text-white rounded-full font-mono font-bold">共 1 晚</span>
+          </div>
+
+          <!-- 入住退房日期與時間選擇 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-1.5">
+              <label class="block font-bold text-brand-800 text-[11px]">入住日期與預估時間 *</label>
+              <input type="date" id="hotelCheckInDate" class="w-full p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+              <input type="time" id="hotelCheckInTime" value="10:00" class="w-full p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+            </div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-1.5">
+              <label class="block font-bold text-brand-800 text-[11px]">退房日期與預估時間 *</label>
+              <input type="date" id="hotelCheckOutDate" class="w-full p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+              <input type="time" id="hotelCheckOutTime" value="17:00" class="w-full p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+            </div>
+          </div>
+
+          <!-- 每日供餐選項 (支援一餐/兩餐/三餐與智慧扣餐計算) -->
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <div class="flex justify-between items-center font-bold text-brand-900">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-brand-500"></i> 每日供餐方案</span>
+              <span class="text-[10px] text-amber-700">門市固定放飯時間早09:00/晚18:00</span>
+            </div>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
+                <input type="radio" name="mealPlan" value="none" data-price="0" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <span>家長自備飼料罐頭 (+NT$ 0)</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
+                <input type="radio" name="mealPlan" value="one_meal" id="radio-meal-1" data-price="80" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <span id="label-meal-1">精緻鮮食 / 一日一餐 (+NT$ 80 / 晚)</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
+                <input type="radio" name="mealPlan" value="two_meals" id="radio-meal-2" data-price="150" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <span id="label-meal-2">精緻鮮食 / 一日兩餐 (+NT$ 150 / 晚)</span>
+              </label>
+              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
+                <input type="radio" name="mealPlan" value="three_meals" id="radio-meal-3" data-price="220" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <span id="label-meal-3">精緻鮮食 / 一日三餐 (+NT$ 220 / 晚)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 入住規定洗澡與退宿洗澡規範 -->
+          <div class="space-y-2">
+            <div id="mandatoryInBathNotice" class="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between text-amber-950 font-bold hidden">
+              <span>✓ 門市規定：入住前需完成基礎清潔洗澡</span>
+              <span class="text-xs text-amber-700 font-mono">預估 +NT$ 600~900</span>
+            </div>
+            <div id="optionalOutBathBox" class="p-3 bg-white rounded-2xl border border-brand-200">
+              <label class="flex items-center justify-between cursor-pointer font-bold text-brand-900">
+                <span>退宿當天加做香香深層洗澡美容</span>
+                <input type="checkbox" id="chkHotelAddBath" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+              </label>
+              <div class="text-[10px] text-brand-400 mt-0.5">※ 金額依體型毛量預估 NT$ 700 - 1,200，退房前洗好香香回家</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 美容預約日曆 (美容洗澡模式下使用) -->
+        <div id="calendarPickerSection">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約日期</label>
           <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-sm">
             <div class="flex justify-between items-center px-4 py-2.5 bg-brand-50 border-b border-brand-200">
@@ -300,16 +466,21 @@
             </div>
             <div class="grid grid-cols-7 gap-px bg-brand-200 text-center" id="cal-grid"></div>
           </div>
-          <input type="hidden" id="date" required>
+          <input type="hidden" id="date">
         </div>
 
-        <!-- 預約時段 -->
-        <div>
+        <!-- 美容預約時段 -->
+        <div id="timePickerSection">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">預約時段</label>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2" id="timePillGrid">
             <div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>
           </div>
-          <input type="hidden" id="time" required>
+          <input type="hidden" id="time">
+        </div>
+
+        <div id="custNotesWrapper">
+          <label class="block text-xs font-bold text-brand-800 mb-1.5">特殊需求與備註 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
+          <textarea id="custNotes" rows="2" placeholder="如有任何特殊需求請在此填寫..." class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs outline-none focus:bg-white transition"></textarea>
         </div>
 
         <!-- 本月活動方案與折抵/加購選擇 -->
@@ -372,7 +543,7 @@
           <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold"></div>
         </div>
 
-        <!-- 預算計價即時試算 -->
+        <!-- 預算計價即時試算 (包含價格區間預估與供餐小計) -->
         <div id="checkoutSummaryBox" class="p-5 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3.5 text-xs shadow-xs">
           <div class="flex justify-between items-center border-b border-brand-200 pb-2">
             <span class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
@@ -383,12 +554,21 @@
 
           <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-1.5 text-amber-950">
             <div class="flex justify-between items-center font-bold text-amber-900 text-xs">
-              <span>1. 施作主項目原價預估：</span>
-              <span class="font-mono text-sm" id="summary-service-range">$0</span>
+              <span>1. 項目費用預估：</span>
+              <span class="font-mono text-xs" id="summary-service-range">NT$ 0</span>
             </div>
             <div class="space-y-1 text-[11px] text-amber-800/90 pl-1" id="summary-items-breakdown">
-              <div>(尚未選擇服務項目)</div>
+              <div>(尚未選擇項目)</div>
             </div>
+          </div>
+
+          <!-- 寵物住宿供餐小計獨立行 -->
+          <div id="row-boarding-meal-fee" class="hidden p-3 bg-amber-50/60 rounded-2xl border border-amber-200/80 flex justify-between items-center font-bold text-brand-900 text-xs">
+            <div>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-brand-500"></i> 住宿供餐小計：</span>
+              <div class="text-[10px] text-amber-700 font-normal" id="summary-meal-explain"></div>
+            </div>
+            <span class="font-mono text-brand-600">+NT$ <span id="summary-meal-total">0</span></span>
           </div>
 
           <div class="flex justify-between items-center text-rose-700 font-bold pl-1" id="row-deduct-detail">
@@ -411,8 +591,11 @@
           </div>
 
           <div class="flex justify-between items-baseline pt-2 border-t border-brand-200 font-bold text-brand-900">
-            <span class="text-sm">現場預估應付金額：</span>
-            <span class="text-2xl font-black text-[#8C7355] font-serif">NT$ <span id="summary-final-total">0</span></span>
+            <div>
+              <span class="text-sm">現場預估應付金額：</span>
+              <div class="text-[10px] text-brand-400 font-normal">※ 實際金額以現場美容師評估毛量體態為準</div>
+            </div>
+            <span class="text-lg font-black text-[#8C7355] font-serif" id="summary-final-total">NT$ 0</span>
           </div>
         </div>
 
@@ -420,11 +603,11 @@
         <div id="digitalContractSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 shadow-xs space-y-3 text-xs">
           <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
             <i class="fa-solid fa-file-contract text-[#8C7355]"></i>
-            <span id="display-contract-title">美業服務定型化契約書</span>
+            <span id="display-contract-title">線上定型化服務契約書</span>
           </div>
           <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center">
             <div>
-              <div class="font-bold text-brand-900">預約定型化服務條款</div>
+              <div class="font-bold text-brand-900">定型化服務條款</div>
               <div class="text-[10px] text-brand-400" id="contract-read-status">尚未閱讀條款 (需閱讀完畢方可簽署)</div>
             </div>
             <button type="button" onclick="openContractReadModal()" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-xl text-xs shadow-xs transition">
@@ -455,11 +638,11 @@
           <div class="text-[11px] text-amber-800/90 whitespace-pre-wrap leading-relaxed" id="depositInfoText"></div>
         </div>
 
-        <!-- 居家保養小叮嚀 -->
+        <!-- 居家保養 / 照護小叮嚀 -->
         <details id="careSection" class="group bg-brand-50/80 rounded-2xl border border-brand-200 overflow-hidden outline-none mt-3" open>
           <summary class="flex justify-between items-center p-3.5 cursor-pointer font-bold text-xs text-brand-800 select-none hover:bg-brand-100 transition outline-none">
             <span class="flex items-center gap-1.5">
-              <i class="fa-solid fa-leaf text-brand-500"></i> 居家保養小叮嚀
+              <i class="fa-solid fa-leaf text-brand-500"></i> 日常照護小叮嚀
             </span>
             <span class="text-brand-400 group-open:rotate-180 transition transform duration-300">
               <i class="fa-solid fa-chevron-down text-[10px]"></i>
@@ -468,7 +651,7 @@
           <div class="p-4 text-xs text-brand-800/90 leading-relaxed bg-white border-t border-brand-100 whitespace-pre-wrap" id="care-content"></div>
         </details>
 
-        <!-- 聯絡與社群據點 -->
+        <!-- 聯絡與社群據點 (絕不調用私人電話) -->
         <div class="pt-3 border-t border-brand-100">
           <div class="flex justify-center gap-6 my-4">
             <a id="nav-line" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-brand-500 transition group" title="官方 LINE">
@@ -482,6 +665,9 @@
             </a>
           </div>
           <div class="text-center text-xs text-brand-800 space-y-1.5 mb-5 font-medium">
+            <div id="store-phone-display" class="hidden flex items-center justify-center gap-1.5 font-bold">
+              <i class="fa-solid fa-phone text-brand-400"></i> <span id="store-phone-val"></span>
+            </div>
             <div id="store-address" class="flex items-center justify-center gap-1.5">
               <i class="fa-solid fa-map-pin text-brand-400"></i> 門市服務據點
             </div>
@@ -496,13 +682,6 @@
       </form>
     </div>
   </main>
-  <!-- ✨ 現場數位契約補簽系統快捷入口 (米棕色優雅按鈕) -->
-<div class="pt-2 pb-1">
-  <a href="live_sign.html" id="live-sign-link" target="_blank" class="w-full py-2.5 px-4 rounded-2xl border border-brand-300 bg-[#FAF6F0] hover:bg-brand-100 text-[#8C7355] text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs">
-    <i class="fa-solid fa-signature text-sm"></i>
-    <span>現場到店顧客・數位定型化契約即時補簽系統 ➔</span>
-  </a>
-</div>
   <footer class="text-center py-6 text-[11px] text-brand-400">
     Designed by <a href="https://heysibyl.com" target="_blank" class="text-brand-500 font-bold hover:underline">Sibyl | 數位管家</a>
   </footer>
@@ -514,7 +693,7 @@
     <div class="flex justify-between items-center border-b border-brand-100 pb-2">
       <h3 class="font-bold text-sm text-brand-900 flex items-center gap-1.5">
         <i class="fa-solid fa-scroll text-[#8C7355]"></i>
-        <span id="modal-contract-title">美業服務定型化服務契約書</span>
+        <span id="modal-contract-title">線上定型化服務契約書</span>
       </h3>
       <button type="button" onclick="closeContractModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
     </div>
@@ -563,6 +742,7 @@
   </div>
 </div>
 
+<!-- 成功完成預約遮罩 -->
 <div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center hidden">
   <div class="w-16 h-16 bg-brand-100 text-brand-500 rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -579,6 +759,7 @@
   const urlParams = new URLSearchParams(window.location.search);
   let CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
   let guestLineUid = "";
+  let activeBookingSubMode = 'grooming'; // 'grooming' 或 'boarding'
 
   async function resolveStoreIdAndInitLiff() {
     const pathParts = window.location.pathname.split('/').filter(Boolean);
@@ -590,12 +771,11 @@
     const targetSlug = storeSlug || legacySlug;
 
     if (targetSlug) {
-  const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id,slug`);
-  if (stores && stores.length > 0) {
-    CURRENT_STORE_ID = stores[0].id;
-    // 標籤：保留短網址在瀏覽器列，不被 query string 覆蓋
-    if (window.location.pathname !== `/${stores[0].slug}`) {
-      window.history.replaceState({}, '', `/${stores[0].slug}`);
+      const stores = await directSupabaseFetch(`stores?slug=eq.${encodeURIComponent(targetSlug)}&select=id`);
+      if (stores && stores.length > 0) {
+        CURRENT_STORE_ID = stores[0].id;
+        if (legacySlug && window.location.hostname !== 'localhost') {
+          window.history.replaceState({}, '', `/${targetSlug}`);
         }
       }
     } else if (paramStoreId) {
@@ -615,54 +795,60 @@
         }
       }
     } catch (e) {
-      console.warn("LIFF 啟用略過或失敗:", e);
+      console.warn("LIFF 啟用略過:", e);
     }
   }
 
   const DEFAULT_SERVICES = [
-    { id: "s1", name: "洗髮造型設計", duration: 30, type: "Group_B", price: "350", isAddon: false, sortOrder: 0 },
-    { id: "s2", name: "客製剪髮造型 (含洗)", duration: 45, type: "Group_B", price: "800", isAddon: false, sortOrder: 1 },
-    { id: "s3", name: "日系質感染髮", duration: 120, type: "Group_A", price: "2200-3600", isAddon: false, sortOrder: 2 },
-    { id: "s4", name: "溫塑客製燙髮", duration: 150, type: "Group_A", price: "3200-4800", isAddon: false, sortOrder: 3 },
-    { id: "s5", name: "深層黑曜光結構護髮", duration: 40, type: "Group_A", price: "1200", isAddon: true, sortOrder: 4 }
+    { id: "s1", name: "精緻深層洗澡護理", duration: 60, type: "Group_A", price: "700-1000", isAddon: false, sortOrder: 0 },
+    { id: "s2", name: "全身客製造型剪毛", duration: 90, type: "Group_A", price: "1200-1800", isAddon: false, sortOrder: 1 },
+    { id: "s3", name: "碳酸微氣泡SPA浴", duration: 30, type: "Group_B", price: "350", isAddon: true, sortOrder: 2 },
+    { id: "s4", name: "草本泥深層敷體", duration: 30, type: "Group_B", price: "400", isAddon: true, sortOrder: 3 }
   ];
 
-  const DEFAULT_PORTFOLIO = [
-    { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80" },
-    { id: "def-port-2", cat: "質感染燙", title: "低調霧感拿鐵冷棕", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80" },
-    { id: "def-port-3", cat: "美甲光療", title: "法式裸透晶石貓眼", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=600&q=80" },
-    { id: "def-port-4", cat: "頭皮護理", title: "深層水光頭皮修護SPA", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&w=600&q=80" }
-  ];
-
-  const DEFAULT_PROMO_IMGS = [
-    "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=600&q=80",
-    "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=600&q=80"
-  ];
-
-  const DEFAULT_REVIEWS = [
-    { customer_name: "張小姐", rating: 5, tags: ["手法專業", "細心溫柔"], comment: "設計師非常懂我的需求，染出來的顏色超有質感！大推！" },
-    { customer_name: "林小姐", rating: 5, tags: ["環境極放鬆", "完全不推銷"], comment: "洗髮跟頭皮SPA真的太舒服了，完全放鬆到睡著～" }
-  ];
-
-  let db = { 
-    availableDates: [], services: DEFAULT_SERVICES, portfolio: DEFAULT_PORTFOLIO, promoImgs: DEFAULT_PROMO_IMGS, 
-    weeklyOffDays: [], customOffDates: [], futureBookings: [], staffSchedules: {},
-    enableDeposit: false, depositMode: 'all', depositAmount: 0, depositInfo: '',
-    enableStaffSelect: true, enableFeaturedShop: false,
-    enableShowPrice: true, enableCustNotes: true, enableContract: true,
-    contractTitle: '美業服務定型化契約書',
-    contractContent: '一、本沙龍服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知過敏史或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。\n四、服務確認滿意後於現場完成尾款結算。'
+  let db = {
+    storeName: "線上預約系統", subtitle: "專業服務沙龍",
+    enableLogo: true, logoUrl: "", storePhone: "",
+    promoText: "歡迎使用線上預約系統，請選取項目與合適時段。",
+    promoImgs: [
+      "https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?auto=format&fit=crop&w=600&q=80"
+    ],
+    address: "門市服務據點", businessHours: "營業時間：09:00 - 19:00",
+    bookingBufferHours: 1,
+    careText: "1. 服務完成後請保持清潔與通風乾燥。\n2. 若有任何照護疑問歡迎隨時洽詢門市人員。",
+    ig: "#", line: "#", map: "#",
+    enableEmailCopy: true, enableDeposit: false, depositMode: 'all', depositAmount: 0, depositInfo: '',
+    enableStaffSelect: true, enableFeaturedShop: false, enableShowPrice: true,
+    enableCustNotes: true, enableContract: true,
+    contractTitle: '定型化服務契約書',
+    contractContent: '一、本沙龍/寵物服務均由專業技術人員施作，施作前已完成溝通。\n二、顧客應誠實告知過敏史或特殊體質。\n三、若需改期請於 24 小時前告知。',
+    promoRulesText: '• 預約請準時抵達，為您保留 10 分鐘。\n• 如需改期請提前 24 小時告知店家。\n• 現場方案均可即時折抵與加購使用。',
+    walletRules: [], packageRules: [],
+    staffList: [{ id: "all", name: "不指定" }],
+    staffSchedules: {},
+    shiftStartTime: "09:00", shiftEndTime: "19:00", shiftInterval: 30,
+    services: DEFAULT_SERVICES, portfolio: [], availableDates: [], futureBookings: [],
+    industryType: 'beauty', // 'pet' 或 'beauty'
+    boardingSettings: {
+      breakfastTime: '09:00', lunchTime: '12:30', dinnerTime: '18:00',
+      mandatoryCheckinBath: false, allowCheckoutBath: true,
+      toggleNotice: true,
+      noticeContent: "1. 入住前請確保毛孩已施打核心疫苗並出示證明。\n2. 請自備毛孩習慣食用之飼料、罐頭及習慣睡墊，避免腸胃不適。\n3. 若毛孩有護食、分離焦慮或重大病史，敬請於預約時誠實告知。"
+    },
+    boardingMealRates: { one: 80, two: 150, three: 220 },
+    petCustomFields: {
+      chipId: false, vaccine: true, deworm: true, allergy: true, intro: true, shuttle: true
+    }
   };
 
   let memberData = { walletBalance: 0, discountPercent: 1, packages: [] };
   let activeCoupon = null;
-
   let currentSlide = 0;
   let currentYear = new Date().getFullYear();
   let currentMonth = new Date().getMonth();
   let currentPortfolioList = [];
   let isPortfolioExpanded = false;
-
   let sigCanvas, sigCtx, isSigDrawing = false;
 
   async function directSupabaseFetch(endpoint) {
@@ -766,21 +952,18 @@
         sortOrder: s.sort_order || 0
       })) : DEFAULT_SERVICES;
 
-      let formattedPortfolios = (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
-        id: p.id, cat: p.category || p.cat || '精選', title: p.title || '沙龍造型', link: p.link || '', img: p.img_url || p.img
-      })) : DEFAULT_PORTFOLIO;
-
       db = {
         storeName: sCfg.display_title || sInfo.store_name || "線上預約",
-        subtitle: sCfg.display_subtitle || "專業美業沙龍",
+        subtitle: sCfg.display_subtitle || "專業服務門市",
         enableLogo: sCfg.enable_logo !== false,
         logoUrl: sCfg.logo_url || "",
+        storePhone: sCfg.store_phone || "",
         promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : DEFAULT_PROMO_IMGS,
+        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : db.promoImgs,
         address: sCfg.address || "門市服務據點",
         businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
         bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-        careText: sCfg.care_text || "1. 服務完成後 48 小時內避免高溫沖洗與劇烈磨擦。\n2. 保持操作部位乾燥並適度補水保濕。\n3. 若有任何照護疑問歡迎隨時洽詢店家。",
+        careText: sCfg.care_text || "1. 服務完成後請保持清潔與通風乾燥。\n2. 若有任何照護疑問歡迎隨時洽詢門市人員。",
         ig: sCfg.ig_url || "#",
         line: sCfg.line_url || "#",
         map: sCfg.map_url || "#",
@@ -794,31 +977,30 @@
         enableShowPrice: sCfg.enable_show_price !== false,
         enableCustNotes: sCfg.enable_cust_notes !== false,
         enableContract: sCfg.enable_contract !== false,
-        contractTitle: sCfg.contract_title || '美業服務定型化契約書',
-        contractContent: sCfg.contract_content || '一、本沙龍服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知過敏史或特殊體質。\n三、訂金支付後若需改期，請於預約日前 24 小時提出。\n四、服務確認滿意後於現場完成尾款結算。',
+        contractTitle: sCfg.contract_title || '線上定型化服務契約書',
+        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知特殊體質與過敏史。\n三、若需改期請於預約日前 24 小時提出。',
         promoRulesText: sCfg.promo_rules_text || '• 預約請準時抵達，為您保留 10 分鐘。\n• 如需改期請提前 24 小時告知店家。\n• 現場方案均可即時折抵與加購使用。',
-        walletRules: sCfg.wallet_rules || [
-          { name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 },
-          { name: "儲值 $5,000", price: 5000, bonus: 600, discount: 0.85 }
-        ],
-        packageRules: sCfg.package_rules || [
-          { name: "剪髮買5送1方案", service_name: "剪髮造型設計", times: 6, price: 4000 }
-        ],
+        walletRules: sCfg.wallet_rules || [],
+        packageRules: sCfg.package_rules || [],
         staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
         staffSchedules: sCfg.staff_schedules || {},
         shiftStartTime: sCfg.shift_start_time || "09:00",
         shiftEndTime: sCfg.shift_end_time || "19:00",
         shiftInterval: Number(sCfg.shift_interval || 30),
         services: formattedServices,
-        portfolio: formattedPortfolios,
+        portfolio: portfolios || [],
         availableDates: availableDates,
-        futureBookings: bookings || []
+        futureBookings: bookings || [],
+        industryType: sInfo.industry_type || 'pet',
+        boardingSettings: sCfg.boarding_settings || db.boardingSettings,
+        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
+        petCustomFields: sCfg.pet_custom_fields || db.petCustomFields
       };
 
+      window.backendSettings = db;
       renderStoreUI();
       loadApprovedReviews();
 
-      // 監聽手機輸入欄位：失焦時自動帶入歷史資料
       const phoneEl = document.getElementById('phone');
       if (phoneEl) {
         phoneEl.addEventListener('blur', function() {
@@ -833,28 +1015,31 @@
   function renderStoreUI() {
     document.getElementById('brand-title').innerText = db.storeName;
     document.getElementById('brand-subtitle').innerText = db.subtitle;
-    document.getElementById('live-sign-link').href = 'live_sign.html?store_id=' + CURRENT_STORE_ID;
     
-    // 控制前台價目表/服務列表區塊顯示
-  const serviceSection = document.getElementById('serviceSection') || document.getElementById('service-grid')?.closest('div');
-  if (serviceSection && db.enableFlexMenu !== undefined) {
-    serviceSection.style.display = (db.enableFlexMenu !== false) ? 'block' : 'none';
-  }
+    // Logo 顯示與隱藏：若無 Logo 則整塊隱藏，不留多餘高度
     const logoWrapper = document.getElementById('store-logo-wrapper');
-  const logoImg = document.getElementById('store-logo-img');
-  const logoPlaceholder = document.getElementById('store-logo-placeholder');
-
-  if (db.enableLogo && db.logoUrl) {
-    if (logoWrapper) logoWrapper.style.display = 'flex';
-    if (logoImg) {
-      logoImg.src = db.logoUrl;
-      logoImg.classList.remove('hidden');
+    const logoImg = document.getElementById('store-logo-img');
+    const logoPlaceholder = document.getElementById('store-logo-placeholder');
+    if (db.enableLogo && db.logoUrl) {
+      if (logoWrapper) logoWrapper.style.display = 'flex';
+      if (logoImg) {
+        logoImg.src = db.logoUrl;
+        logoImg.classList.remove('hidden');
+      }
+      if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
+    } else {
+      if (logoWrapper) logoWrapper.style.display = 'none';
     }
-    if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
-  } else {
-    // 業主若關閉 LOGO，徹底將整區隱藏，不留空白高度！
-    if (logoWrapper) logoWrapper.style.display = 'none';
-  }
+
+    // 門市電話 (嚴格僅顯示門市設定電話，不調用私人電話)
+    const storePhoneBox = document.getElementById('store-phone-display');
+    const storePhoneVal = document.getElementById('store-phone-val');
+    if (db.storePhone && db.storePhone.trim() !== '') {
+      storePhoneVal.innerText = `門市預約專線：${db.storePhone}`;
+      storePhoneBox.classList.remove('hidden');
+    } else {
+      storePhoneBox.classList.add('hidden');
+    }
 
     document.getElementById('promo-text').innerText = db.promoText;
     document.getElementById('nav-ig').href = db.ig || '#';
@@ -863,6 +1048,50 @@
     document.getElementById('store-address').innerHTML = `<i class="fa-solid fa-map-pin text-brand-400 mr-1"></i> ${db.address || '門市服務據點'}`;
     document.getElementById('store-hours').innerHTML = `<i class="fa-regular fa-clock text-brand-400 mr-1"></i> ${db.businessHours || '營業時間：09:00 - 19:00'}`;
 
+    // 寵物模式判定
+    const isPetStore = (db.industryType === 'pet');
+    const modeSelector = document.getElementById('serviceModeSelector');
+    const petProfileSec = document.getElementById('petProfileSection');
+    if (isPetStore) {
+      if (modeSelector) modeSelector.classList.remove('hidden');
+      if (petProfileSec) petProfileSec.classList.remove('hidden');
+      setupPetExtendedFields();
+    } else {
+      if (modeSelector) modeSelector.classList.add('hidden');
+      if (petProfileSec) petProfileSec.classList.add('hidden');
+    }
+
+    // 住宿小提醒
+    const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
+    const stayNoticeContent = document.getElementById('frontStayNoticeContent');
+    const bSettings = db.boardingSettings || {};
+    if (isPetStore && bSettings.toggleNotice !== false && bSettings.noticeContent) {
+      stayNoticeContent.innerText = bSettings.noticeContent;
+      stayNoticeWrapper.classList.remove('hidden');
+    } else {
+      stayNoticeWrapper.classList.add('hidden');
+    }
+
+    // 供餐單價標籤動態更新
+    const mealRates = db.boardingMealRates || { one: 80, two: 150, three: 220 };
+    const r1 = document.getElementById('radio-meal-1');
+    const r2 = document.getElementById('radio-meal-2');
+    const r3 = document.getElementById('radio-meal-3');
+    if (r1) { r1.setAttribute('data-price', mealRates.one); document.getElementById('label-meal-1').innerText = `精緻鮮食 / 一日一餐 (+NT$ ${mealRates.one} / 晚)`; }
+    if (r2) { r2.setAttribute('data-price', mealRates.two); document.getElementById('label-meal-2').innerText = `精緻鮮食 / 一日兩餐 (+NT$ ${mealRates.two} / 晚)`; }
+    if (r3) { r3.setAttribute('data-price', mealRates.three); document.getElementById('label-meal-3').innerText = `精緻鮮食 / 一日三餐 (+NT$ ${mealRates.three} / 晚)`; }
+
+    // 強制洗澡規範
+    const mandatoryNotice = document.getElementById('mandatoryInBathNotice');
+    if (mandatoryNotice) {
+      mandatoryNotice.classList.toggle('hidden', bSettings.mandatoryCheckinBath !== true);
+    }
+    const optOutBath = document.getElementById('optionalOutBathBox');
+    if (optOutBath) {
+      optOutBath.classList.toggle('hidden', bSettings.allowCheckoutBath === false);
+    }
+
+    // 定型化契約
     const contractSec = document.getElementById('digitalContractSection');
     if (contractSec) {
       if (db.enableContract === true) {
@@ -883,6 +1112,7 @@
     const custNotesBox = document.getElementById('custNotesWrapper');
     if (custNotesBox) custNotesBox.style.display = (db.enableCustNotes !== false) ? 'block' : 'none';
 
+    // 專員選單
     const staffSection = document.getElementById('staffSection');
     if (staffSection) {
       staffSection.style.display = (db.enableStaffSelect !== false) ? 'block' : 'none';
@@ -901,10 +1131,10 @@
     const showPrice = (db.enableShowPrice !== false);
     const checkoutBox = document.getElementById('checkoutSummaryBox');
     const addonSection = document.getElementById('addon-package-select')?.closest('.p-4');
-
     if (checkoutBox) checkoutBox.style.display = showPrice ? 'block' : 'none';
     if (addonSection) addonSection.style.display = showPrice ? 'block' : 'none';
 
+    // 說明圖輪播
     const track = document.getElementById('carouselTrack');
     const dots = document.getElementById('carouselDots');
     track.innerHTML = ''; dots.innerHTML = '';
@@ -918,11 +1148,9 @@
     });
 
     document.getElementById('care-content').innerText = db.careText;
+    if (db.promoRulesText) document.getElementById('promo-rule-content').innerText = db.promoRulesText;
 
-    if (db.promoRulesText) {
-      document.getElementById('promo-rule-content').innerText = db.promoRulesText;
-    }
-
+    // 現場加購方案
     if (db.packageRules && db.packageRules.length > 0) {
       document.getElementById('addon-package-select').innerHTML = '<option value="none" data-price="0" data-times="0">不加購包卡</option>' +
         db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">${p.name} (+NT$ ${p.price})</option>`).join('');
@@ -932,31 +1160,184 @@
         db.walletRules.map(w => `<option value="${w.name}" data-price="${w.price}" data-discount="${w.discount}">${w.name} (整單享 ${w.discount*10} 折 + 贈 $${w.bonus})</option>`).join('');
     }
 
-    // 獨立控制加購包卡選單
-  const pkgSelect = document.getElementById('addon-package-select');
-  if (pkgSelect) {
-    pkgSelect.style.display = (db.enablePackages !== false) ? 'block' : 'none';
-  }
-
-  // 獨立控制加購儲值金選單
-  const walSelect = document.getElementById('addon-wallet-select');
-  if (walSelect) {
-    walSelect.style.display = (db.enableWallet !== false) ? 'block' : 'none';
-  }
-
-  // 獨立控制折抵勾選區
-  const chkPkgLabel = document.getElementById('chk-use-package')?.closest('label');
-  if (chkPkgLabel) {
-    chkPkgLabel.style.display = (db.enablePackages !== false) ? 'flex' : 'none';
-  }
-  const chkWalLabel = document.getElementById('chk-use-wallet')?.closest('label');
-  if (chkWalLabel) {
-    chkWalLabel.style.display = (db.enableWallet !== false) ? 'flex' : 'none';
-  }
-
     setupPortfolio();
     renderServices();
     renderFrontCalendar();
+  }
+
+  function setupPetExtendedFields() {
+    const cf = db.petCustomFields || {};
+    document.getElementById('box-chip-id')?.classList.toggle('hidden', !cf.chipId);
+    document.getElementById('box-vaccine')?.classList.toggle('hidden', cf.vaccine === false && cf.deworm === false);
+    document.getElementById('box-allergy')?.classList.toggle('hidden', cf.allergy === false);
+    document.getElementById('referrerSection')?.classList.toggle('hidden', cf.intro === false);
+    document.getElementById('shuttleServiceSection')?.classList.toggle('hidden', cf.shuttle === false);
+  }
+
+  function toggleShuttleAddressBox() {
+    const isNeed = document.getElementById('chkNeedShuttle')?.checked;
+    const box = document.getElementById('shuttleDetailBox');
+    if (box) box.classList.toggle('hidden', !isNeed);
+  }
+
+  function switchBookingSubMode(mode) {
+    activeBookingSubMode = mode;
+    const btnGrooming = document.getElementById('btnModeGrooming');
+    const btnBoarding = document.getElementById('btnModeBoarding');
+    const groomingSec = document.getElementById('groomingServiceSection');
+    const boardingSec = document.getElementById('boardingConfigSection');
+    const calPickerSec = document.getElementById('calendarPickerSection');
+    const timePickerSec = document.getElementById('timePickerSection');
+
+    if (mode === 'boarding') {
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition bg-[#8C7355] text-white shadow-sm flex items-center justify-center gap-1.5";
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition bg-white text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+      groomingSec.classList.add('hidden');
+      boardingSec.classList.remove('hidden');
+      calPickerSec.classList.add('hidden');
+      timePickerSec.classList.add('hidden');
+
+      // 預設今日入住、明日退房
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const d1Str = today.toISOString().split('T')[0];
+      const d2Str = tomorrow.toISOString().split('T')[0];
+      if (!document.getElementById('hotelCheckInDate').value) document.getElementById('hotelCheckInDate').value = d1Str;
+      if (!document.getElementById('hotelCheckOutDate').value) document.getElementById('hotelCheckOutDate').value = d2Str;
+      calculateBoardingDaysAndPrice();
+    } else {
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition bg-[#8C7355] text-white shadow-sm flex items-center justify-center gap-1.5";
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition bg-white text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+      groomingSec.classList.remove('hidden');
+      boardingSec.classList.add('hidden');
+      calPickerSec.classList.remove('hidden');
+      timePickerSec.classList.remove('hidden');
+      updateCheckoutSummary();
+    }
+  }
+
+  // 智慧放飯演算法與價格區間試算器
+  function calculateBoardingDaysAndPrice() {
+    if (activeBookingSubMode !== 'boarding') return;
+
+    const inDateVal = document.getElementById('hotelCheckInDate')?.value;
+    const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
+    const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
+    const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '17:00';
+    const weightVal = Number(document.getElementById('petWeight')?.value || 5);
+
+    if (!inDateVal || !outDateVal) return;
+
+    const d1 = new Date(inDateVal);
+    const d2 = new Date(outDateVal);
+    const diffTime = d2.getTime() - d1.getTime();
+    const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
+    document.getElementById('displayStayNightsBadge').innerText = `共 ${nights} 晚`;
+
+    // 1. 體型判定 (小型 <8kg, 中型 8-18kg, 大型 18-35kg, 特大 >35kg)
+    let baseRoomMin = 700, baseRoomMax = 900;
+    if (weightVal >= 35) { baseRoomMin = 1300; baseRoomMax = 1600; }
+    else if (weightVal >= 18) { baseRoomMin = 1000; baseRoomMax = 1300; }
+    else if (weightVal >= 8) { baseRoomMin = 850; baseRoomMax = 1100; }
+
+    const roomMinTotal = baseRoomMin * nights;
+    const roomMaxTotal = baseRoomMax * nights;
+
+    // 2. 智慧放飯餐數演算法 (依入住/退房時間比對放飯時間)
+    const bSettings = db.boardingSettings || {};
+    const bTime = bSettings.breakfastTime || '09:00';
+    const dTime = bSettings.dinnerTime || '18:00';
+
+    const mealRadio = document.querySelector('input[name="mealPlan"]:checked');
+    const mealType = mealRadio ? mealRadio.value : 'none';
+    const mealPricePerDay = Number(mealRadio?.getAttribute('data-price') || 0);
+
+    let actualMealCount = 0;
+    let totalMealFee = 0;
+    let mealExplain = "";
+
+    if (mealType !== 'none') {
+      let plannedPerDay = (mealType === 'one_meal') ? 1 : (mealType === 'two_meals' ? 2 : 3);
+      let totalPlannedMeals = plannedPerDay * nights;
+
+      let deductCount = 0;
+      if (inTimeVal > bTime && (mealType === 'two_meals' || mealType === 'three_meals')) {
+        deductCount++;
+      }
+
+      let addCount = 0;
+      if (outTimeVal >= dTime) {
+        addCount++;
+      }
+
+      actualMealCount = Math.max(0, totalPlannedMeals - deductCount + addCount);
+      const unitMealCost = Math.round(mealPricePerDay / plannedPerDay);
+      totalMealFee = actualMealCount * unitMealCost;
+
+      mealExplain = `(共 ${actualMealCount} 餐；因 ${inTimeVal} 入住少 1 早飯，${outTimeVal} 退房計入晚飯)`;
+      
+      const mealRow = document.getElementById('row-boarding-meal-fee');
+      if (mealRow) {
+        mealRow.classList.remove('hidden');
+        document.getElementById('summary-meal-total').innerText = totalMealFee.toLocaleString();
+        document.getElementById('summary-meal-explain').innerText = mealExplain;
+      }
+    } else {
+      document.getElementById('row-boarding-meal-fee')?.classList.add('hidden');
+    }
+
+    // 3. 入住前強制洗澡 vs 退宿前自選洗澡
+    const isMandatoryInBath = bSettings.mandatoryCheckinBath === true;
+    const isChkOutBath = document.getElementById('chkHotelAddBath')?.checked;
+    
+    let bathMin = 500, bathMax = 700;
+    if (weightVal >= 18) { bathMin = 900; bathMax = 1400; }
+    else if (weightVal >= 8) { bathMin = 700; bathMax = 1000; }
+
+    let totalBathFeeMin = 0, totalBathFeeMax = 0;
+    let bathBreakdownHtml = "";
+
+    if (isMandatoryInBath) {
+      totalBathFeeMin += bathMin;
+      totalBathFeeMax += bathMax;
+      bathBreakdownHtml += `<div>• 入住規定基礎清潔洗澡 (預估)：NT$ ${bathMin} - ${bathMax}</div>`;
+    }
+    if (isChkOutBath) {
+      totalBathFeeMin += bathMin;
+      totalBathFeeMax += bathMax;
+      bathBreakdownHtml += `<div>• 退宿香香深層洗澡 (預估)：NT$ ${bathMin} - ${bathMax}</div>`;
+    }
+
+    // 加購方案計算
+    const pkgSel = document.getElementById('addon-package-select');
+    const walSel = document.getElementById('addon-wallet-select');
+    const addonPkg = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
+    const addonWal = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
+    const totalAddon = addonPkg + addonWal;
+    document.getElementById('summary-addon-total').innerText = totalAddon.toLocaleString();
+
+    // 4. 小計框「預估金額區間」渲染
+    const totalEstMin = roomMinTotal + totalBathFeeMin + totalMealFee + totalAddon;
+    const totalEstMax = roomMaxTotal + totalBathFeeMax + totalMealFee + totalAddon;
+
+    const breakdownBox = document.getElementById('summary-items-breakdown');
+    if (breakdownBox) {
+      breakdownBox.innerHTML = `
+        <div>• 寵物住宿房型 (${nights} 晚，預估)：NT$ ${roomMinTotal.toLocaleString()} - ${roomMaxTotal.toLocaleString()}</div>
+        ${mealExplain ? `<div class="text-amber-700">• 鮮食供餐：${mealExplain} (+NT$ ${totalMealFee})</div>` : ''}
+        ${bathBreakdownHtml}
+      `;
+    }
+
+    const rangeDisplay = document.getElementById('summary-service-range');
+    if (rangeDisplay) {
+      rangeDisplay.innerHTML = `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}`;
+    }
+    const finalDisplay = document.getElementById('summary-final-total');
+    if (finalDisplay) {
+      finalDisplay.innerHTML = `NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()} (現場確認)`;
+    }
   }
 
   function setupPortfolio() {
@@ -965,7 +1346,7 @@
     if (!sec || !tabs) return;
 
     sec.style.display = 'block';
-    const rawCats = db.portfolio.map(p => p.cat).filter(Boolean);
+    const rawCats = db.portfolio.map(p => p.category || p.cat).filter(Boolean);
     const categories = ['全部', ...new Set(rawCats)];
 
     tabs.innerHTML = categories.map((cat, idx) => `
@@ -983,7 +1364,7 @@
       });
       el.className = "shrink-0 px-4 py-1.5 rounded-full text-xs font-bold border transition bg-brand-400 text-white border-brand-400 shadow-sm";
     }
-    currentPortfolioList = (cat === '全部') ? (db.portfolio || []) : (db.portfolio || []).filter(w => w.cat === cat);
+    currentPortfolioList = (cat === '全部') ? (db.portfolio || []) : (db.portfolio || []).filter(w => (w.category || w.cat) === cat);
     renderPortfolioGrid();
   }
 
@@ -1035,13 +1416,16 @@
       ]);
 
       const container = document.getElementById('reviewList');
-      const list = (res && res.length > 0) ? res : DEFAULT_REVIEWS;
+      const list = (res && res.length > 0) ? res : [
+        { customer_name: "張小姐", rating: 5, tags: ["手法專業", "細心溫柔"], comment: "美容師對毛孩超級有愛心，剪得超可愛！大推！" },
+        { customer_name: "林先生", rating: 5, tags: ["環境極放鬆", "完全不推銷"], comment: "住宿期間每天都有回報照片跟影片，讓人非常放心！" }
+      ];
 
       if (container) {
         container.innerHTML = list.map(r => `
           <div class="w-60 shrink-0 p-3.5 rounded-2xl bg-white border border-brand-200 shadow-xs space-y-1.5 text-xs">
             <div class="flex justify-between items-center font-bold text-brand-900">
-              <span>${r.customer_name || '沙龍顧客'}</span>
+              <span>${r.customer_name || '門市顧客'}</span>
               <span class="text-amber-500">${'★'.repeat(r.rating || 5)}</span>
             </div>
             <div class="flex flex-wrap gap-1">
@@ -1083,7 +1467,7 @@
   }
 
   async function submitCustomerReview() {
-    const name = document.getElementById('name').value.trim() || '沙龍顧客';
+    const name = document.getElementById('name').value.trim() || '門市顧客';
     const rating = Number(document.getElementById('reviewRatingVal').value || 5);
     const comment = document.getElementById('reviewContentInput').value.trim();
     const tags = [];
@@ -1112,19 +1496,20 @@
 
   function renderServices() {
     const svcGrid = document.getElementById('service-grid');
+    if (!svcGrid) return;
     svcGrid.innerHTML = '';
     const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
     db.services.forEach(s => {
       const isAddon = s.isAddon === true;
       const disabledClass = isAddon && !hasMainSelected ? 'opacity-40 pointer-events-none' : '';
-      const priceText = (db.enableShowPrice !== false) ? `${s.price}元` : '';
+      const priceText = (db.enableShowPrice !== false) ? `預估 ${s.price}元` : '';
       svcGrid.innerHTML += `
         <label class="service-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-brand-50/50 cursor-pointer transition text-xs ${disabledClass}">
           <div class="flex items-center gap-2 truncate">
             <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="accent-[#8C7355] rounded">
             <span class="truncate font-medium">${isAddon ? '✨ ' : ''}${s.name}</span>
           </div>
-          ${priceText ? `<span class="text-brand-500 font-bold ml-1 shrink-0">${priceText}</span>` : ''}
+          ${priceText ? `<span class="text-brand-500 font-bold ml-1 shrink-0 font-mono">${priceText}</span>` : ''}
         </label>`;
     });
   }
@@ -1280,7 +1665,13 @@
     document.getElementById('time').value = timeStr;
   }
 
+  // 美容洗澡模式之試算框更新器
   function updateCheckoutSummary() {
+    if (activeBookingSubMode === 'boarding') {
+      calculateBoardingDaysAndPrice();
+      return;
+    }
+
     let mainTotal = 0;
     let breakdownHtml = '';
     const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
@@ -1290,22 +1681,23 @@
     if (!summaryItems || !summaryRange) return;
 
     if (checkedBoxes.length === 0) {
-      summaryItems.innerHTML = '<div>(尚未選擇服務項目)</div>';
-      summaryRange.innerText = '$0';
+      summaryItems.innerHTML = '<div>(尚未選擇項目)</div>';
+      summaryRange.innerText = 'NT$ 0';
     } else {
       checkedBoxes.forEach(cb => {
-        const num = (cb.getAttribute('data-price') || '0').match(/\d+/);
+        const rawPriceStr = cb.getAttribute('data-price') || '0';
+        const num = rawPriceStr.match(/\d+/);
         const itemPrice = num ? Number(num[0]) : 0;
         mainTotal += itemPrice;
         const isAddon = cb.getAttribute('data-isaddon') === 'true';
         breakdownHtml += `
           <div class="flex justify-between items-center">
-            <span>(${isAddon ? '加購' : '主項目'}：${cb.value})</span>
-            <span class="font-mono">${isAddon ? '+' : ''}$${itemPrice}</span>
+            <span>(${isAddon ? '加購' : '項目'}：${cb.value})</span>
+            <span class="font-mono">${isAddon ? '+' : ''}預估 NT$ ${rawPriceStr}</span>
           </div>`;
       });
       summaryItems.innerHTML = breakdownHtml;
-      summaryRange.innerText = `$${mainTotal}`;
+      summaryRange.innerText = `預估 NT$ ${mainTotal}`;
     }
 
     const pkgSel = document.getElementById('addon-package-select');
@@ -1386,7 +1778,7 @@
     }
 
     let finalTotal = Math.max(0, (mainTotal - deductAmount) + totalAddon - depositDeduct);
-    document.getElementById('summary-final-total').innerText = finalTotal.toLocaleString();
+    document.getElementById('summary-final-total').innerText = `預估 NT$ ${finalTotal.toLocaleString()}`;
   }
 
   function handleDeductMethodChange(type) {
@@ -1567,7 +1959,7 @@
           lineInput.value = lastBooking.line_name;
         }
 
-        const emailInput = document.getElementById('custEmail') || document.getElementById('email');
+        const emailInput = document.getElementById('email');
         if (emailInput && lastBooking.notes && lastBooking.notes.includes('Email:')) {
           const parts = lastBooking.notes.split('Email:');
           if (parts.length > 1) {
@@ -1636,24 +2028,41 @@
     }
   }
 
+  // 核心預約送出表單監聽
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
-    const sVal = document.getElementById('service').value;
-    const dValRaw = document.getElementById('date').value;
-    const tVal = document.getElementById('time').value;
+
+    let sVal = "";
+    let dValRaw = "";
+    let tVal = "";
     const emailVal = document.getElementById('email')?.value.trim() || '';
 
-    if (!sVal) return Swal.fire('請至少選擇一項施作項目', '', 'warning');
-    if (!dValRaw || !tVal) return Swal.fire('請點選預約日期與時段', '', 'warning');
+    // 依據模式萃取預約日期與項目
+    if (activeBookingSubMode === 'boarding') {
+      const inDate = document.getElementById('hotelCheckInDate')?.value;
+      const inTime = document.getElementById('hotelCheckInTime')?.value;
+      const outDate = document.getElementById('hotelCheckOutDate')?.value;
+      const outTime = document.getElementById('hotelCheckOutTime')?.value;
+      if (!inDate || !outDate) return Swal.fire('請選擇住宿入住與退房日期', '', 'warning');
+      dValRaw = inDate;
+      tVal = inTime;
+      sVal = `寵物度假住宿 (${inDate} ${inTime} ~ ${outDate} ${outTime})`;
+    } else {
+      sVal = document.getElementById('service').value;
+      dValRaw = document.getElementById('date').value;
+      tVal = document.getElementById('time').value;
+      if (!sVal) return Swal.fire('請至少選擇一項服務項目', '', 'warning');
+      if (!dValRaw || !tVal) return Swal.fire('請點選預約日期與時段', '', 'warning');
+    }
 
     if (db.enableContract === true) {
       const hasAgreed = document.getElementById('hasAgreedContract')?.value === 'true';
-      if (!hasAgreed) return Swal.fire('尚未閱讀契約', '請點擊【閱讀服務條款】滑動至底部閱讀並確認條款', 'warning');
+      if (!hasAgreed) return Swal.fire('尚未閱讀服務條款', '請點擊【閱讀服務條款】滑動至底部閱讀並完成手寫簽名', 'warning');
     }
 
     const btn = document.getElementById('subBtn');
     btn.disabled = true;
-    btn.innerText = "正在送出預約...";
+    btn.innerText = "正在送出預約申請...";
 
     const dVal = dValRaw.replace(/\//g, '-');
     const appointmentIso = `${dVal}T${tVal}:00+08:00`;
@@ -1662,32 +2071,62 @@
     const phoneVal = document.getElementById('phone').value.trim();
     const staffIdVal = document.getElementById('staffId').value || 'all';
     const staffNameVal = document.getElementById('staffName').value || '不指定';
-    const finalPrice = Number(document.getElementById('summary-final-total')?.innerText.replace(/,/g, '') || 0);
 
     let signatureBase64 = "";
     if (sigCanvas && db.enableContract) {
       signatureBase64 = sigCanvas.toDataURL("image/png");
     }
 
-    // 取得加購方案與折抵勾選狀態
+    // 行銷加購、毛孩檔案與接送備註組裝
+    let notesArray = [];
+    if (custNotesVal) notesArray.push(`備註: ${custNotesVal}`);
+
+    if (db.industryType === 'pet') {
+      const petName = document.getElementById('petName')?.value.trim();
+      const petBreed = document.getElementById('petBreed')?.value.trim();
+      const petWeight = document.getElementById('petWeight')?.value.trim();
+      const petAge = document.getElementById('petAge')?.value.trim();
+      const petGender = document.getElementById('petGender')?.value;
+      const petPersonality = document.getElementById('petPersonality')?.value.trim();
+      if (petName) {
+        notesArray.push(`【毛孩: ${petName} / ${petBreed} / ${petWeight}kg / ${petAge}歲 / ${petGender} / 性格: ${petPersonality}】`);
+      }
+
+      // 接送資訊
+      if (document.getElementById('chkNeedShuttle')?.checked) {
+        const sAddr = document.getElementById('shuttleAddress')?.value.trim();
+        const sTrip = document.querySelector('input[name="shuttleTrip"]:checked')?.value === 'round' ? '來回接送' : '單趟接送';
+        notesArray.push(`【需要接送: ${sAddr} (${sTrip})】`);
+      }
+
+      // 介紹人
+      const refName = document.getElementById('referrerName')?.value.trim();
+      if (refName) notesArray.push(`【介紹人: ${refName}】`);
+    }
+
+    // 住宿供餐備註
+    if (activeBookingSubMode === 'boarding') {
+      const mealRadio = document.querySelector('input[name="mealPlan"]:checked');
+      if (mealRadio && mealRadio.value !== 'none') {
+        notesArray.push(`【供餐: ${mealRadio.parentElement.innerText.trim()}】`);
+      }
+      if (document.getElementById('chkHotelAddBath')?.checked) {
+        notesArray.push(`【退宿加做深層洗澡】`);
+      }
+    }
+
+    // 加購與折抵
     const pkgSel = document.getElementById('addon-package-select');
     const walSel = document.getElementById('addon-wallet-select');
-    const addonPkgName = pkgSel?.value !== 'none' ? pkgSel?.options[pkgSel.selectedIndex]?.text : '';
-    const addonWalName = walSel?.value !== 'none' ? walSel?.options[walSel.selectedIndex]?.text : '';
-    const usePkg = document.getElementById('chk-use-package')?.checked;
-    const useWal = document.getElementById('chk-use-wallet')?.checked;
-    const couponCodeVal = activeCoupon ? activeCoupon.code : '';
+    if (pkgSel && pkgSel.value !== 'none') notesArray.push(`【現場加購: ${pkgSel.options[pkgSel.selectedIndex]?.text}】`);
+    if (walSel && walSel.value !== 'none') notesArray.push(`【現場儲值: ${walSel.options[walSel.selectedIndex]?.text}】`);
+    if (document.getElementById('chk-use-package')?.checked) notesArray.push(`【使用包卡扣抵】`);
+    if (document.getElementById('chk-use-wallet')?.checked) notesArray.push(`【使用儲值扣抵】`);
+    if (activeCoupon) notesArray.push(`【折扣碼: ${activeCoupon.code}】`);
+    if (emailVal) notesArray.push(`Email: ${emailVal}`);
 
-    let marketingNotes = [];
-    if (addonPkgName) marketingNotes.push(`【加購包卡: ${addonPkgName}】`);
-    if (addonWalName) marketingNotes.push(`【加購儲值: ${addonWalName}】`);
-    if (usePkg) marketingNotes.push(`【使用包卡扣抵】`);
-    if (useWal) marketingNotes.push(`【使用儲值金扣抵】`);
-    if (couponCodeVal) marketingNotes.push(`【使用折扣碼: ${couponCodeVal}】`);
-
-    let finalNotesArray = [];
-    if (marketingNotes.length > 0) finalNotesArray.push(marketingNotes.join(' '));
-    if (emailVal) finalNotesArray.push(`Email: ${emailVal}`);
+    const finalRawPriceStr = document.getElementById('summary-final-total')?.innerText.replace(/[^\d]/g, '') || '0';
+    const finalPrice = Number(finalRawPriceStr);
 
     const dbPayload = {
       store_id: CURRENT_STORE_ID,
@@ -1696,7 +2135,7 @@
       customer_type: document.getElementById('custType')?.value || 'old',
       customer_notes: custNotesVal,
       line_name: guestLineUid || document.getElementById('lineName').value.trim(),
-      notes: finalNotesArray.join(' | '),
+      notes: notesArray.join(' | '),
       service_names: sVal,
       price: finalPrice,
       appointment_time: appointmentIso,
@@ -1707,7 +2146,6 @@
     };
 
     try {
-      // ✅ 唯一一次寫入資料庫：取得建立的單筆 ID，絕不重複發起第二次寫入！
       const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
         method: "POST",
         headers: {
@@ -1720,23 +2158,18 @@
       });
       
       if (!res.ok) throw new Error(await res.text());
-      const insertedRows = await res.json();
-      const newBookingId = (insertedRows && insertedRows.length > 0) ? insertedRows[0].id : '';
 
-      // 呼叫 GAS：僅負責推播給業主個人與寄發信件
+      // 觸發後端寄送憑證信件與推播
       fetch(API_URL, {
         method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: "submitBooking",
           store_id: CURRENT_STORE_ID,
           data: Object.assign({}, dbPayload, { 
-            id: newBookingId,
             date: dValRaw, 
             time: tVal, 
             service: sVal,
-            signature_url: signatureBase64 
+            signature_url: signatureBase64
           })
         })
       }).catch(() => {});
