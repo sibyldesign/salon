@@ -674,64 +674,136 @@
 
     <!-- 分頁 13. 空檔釋出 (page-slots) -->
     <div id="page-slots" class="page space-y-4 full-admin-only" style="display: none;">
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
-        <div class="flex justify-between items-center">
-          <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> 發布本週空檔 (9:16 限動單頁)</h2>
-          <button onclick="publishSlotsToPage()" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold">發布空檔</button>
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+    <div class="flex justify-between items-center">
+      <div>
+        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+          <span>發布本週空檔（截圖發限動或掛連結）</span>
+        </h2>
+        <p class="text-[11px] text-brand-500 mt-0.5">勾選釋出時段，一鍵生成 9:16 單頁</p>
+      </div>
+      <button onclick="publishSlotsToPage()" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1">
+        <i class="fa-solid fa-cloud-arrow-up text-[11px]"></i> 發布空檔
+      </button>
+    </div>
+
+    <div class="space-y-3 pt-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-bold text-brand-800 mb-1">開始日期</label>
+          <input type="date" id="slot-start-date" onchange="handleSlotRangeChange()" class="p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50 w-full outline-none font-mono">
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="date" id="slot-start-date" onchange="handleSlotRangeChange()" class="p-2 text-xs rounded-xl border bg-brand-50 w-full outline-none font-mono">
-          <input type="date" id="slot-end-date" onchange="handleSlotRangeChange()" class="p-2 text-xs rounded-xl border bg-brand-50 w-full outline-none font-mono">
+        <div>
+          <label class="block text-xs font-bold text-brand-800 mb-1">結束日期</label>
+          <input type="date" id="slot-end-date" onchange="handleSlotRangeChange()" class="p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50 w-full outline-none font-mono">
         </div>
-        <div id="slot-picker-checkboxes" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>
-        <div class="p-3 bg-brand-50 rounded-2xl border flex justify-between items-center text-xs">
-          <a id="slots-live-url" href="#" target="_blank" class="text-blue-600 underline font-mono truncate mr-2">尚未生成</a>
-          <button onclick="copySlotsLink()" class="px-3 py-1 bg-amber-200 text-amber-900 rounded-xl font-bold shrink-0">複製連結</button>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-brand-800 mb-1.5">勾選欲釋出時段：</label>
+        <div id="slot-picker-checkboxes" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          <div class="col-span-full text-center py-4 text-brand-400 text-xs bg-brand-50 rounded-2xl">請先選取開始與結束日期以載入時段網格</div>
+        </div>
+      </div>
+
+      <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-1.5">
+        <label class="block text-xs font-bold text-brand-800">本次即將發布空檔：</label>
+        <div id="selected-slots-display" class="flex flex-wrap gap-1.5">
+          <span class="text-xs text-brand-400">尚未挑選時段</span>
         </div>
       </div>
     </div>
 
-    <!-- 分頁 14. 方案與訂閱 (page-subscription) -->
-    <div id="page-subscription" class="page space-y-4 full-admin-only" style="display: none;">
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-          <i class="fa-solid fa-credit-card text-[#8C7355]"></i> 目前系統訂閱狀態
-        </div>
-        <div class="p-4 bg-brand-50 rounded-2xl space-y-2 text-xs border border-brand-100">
-          <div class="flex justify-between"><span class="text-brand-500">系統版本</span><span class="font-bold text-brand-900" id="sub-plan-name">旗艦雙模標準版</span></div>
-          <div class="flex justify-between"><span class="text-brand-500">終止訂閱日</span><span class="font-bold text-brand-900 font-mono" id="sub-expire-date">2027-08-21</span></div>
-          <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-emerald-600" id="sub-status-badge">正常運行中</span></div>
-        </div>
+    <div class="p-4 bg-amber-50/80 rounded-2xl border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+      <div class="space-y-0.5">
+        <div class="font-bold text-amber-900">專屬 9:16 限動網址：</div>
+        <a id="slots-live-url" href="#" target="_blank" class="text-blue-600 underline font-mono break-all text-[11px]">尚未生成</a>
       </div>
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-          <i class="fa-solid fa-wand-magic-sparkles text-[#8C7355]"></i> 功能許願池 (直通核心研發)
-        </div>
-        <textarea id="wish-input" rows="3" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none" placeholder="告訴我們您希望增加什麼功能？"></textarea>
-        <button type="button" onclick="submitWish()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs shadow-md transition">送出功能願望</button>
-      </div>
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-          <i class="fa-solid fa-bolt text-amber-600"></i> 選擇方案線上續費
-        </div>
-        <div class="space-y-2" id="plan-options-container">
-          <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-            <div>
-              <div class="font-bold text-brand-900">預約專案【月繳方案】</div>
-              <div class="text-brand-500 font-bold text-sm mt-0.5 font-mono">NT$ 680 元</div>
-            </div>
-            <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold shadow-sm transition" onclick="openPayUniLink('https://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ','月繳方案')">立即付款續約</button>
-          </div>
-          <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-            <div>
-              <div class="font-bold text-brand-900">預約專案【年度旗艦方案 (最推薦)】</div>
-              <div class="text-brand-500 font-bold text-sm mt-0.5 font-mono">NT$ 6,600 元</div>
-            </div>
-            <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold shadow-sm transition" onclick="openPayUniLink('https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/9fMi15VUxEnLZDsKltvkC','年度旗艦方案')">立即付款續約</button>
-          </div>
-        </div>
+      <div class="flex gap-2">
+        <button onclick="copySlotsLink()" class="px-3.5 py-1.5 bg-amber-200 hover:bg-amber-300 text-amber-900 rounded-xl font-bold transition">複製連結</button>
+        <button onclick="previewSlotsPage()" class="px-3.5 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold transition">預覽截圖</button>
       </div>
     </div>
+  </div>
+</div>
+
+    <!-- 分頁 14. 方案與訂閱 (page-subscription) -->
+    <div id="page-subscription" class="page space-y-4 full-admin-only" style="display: none;">
+  <!-- 目前系統訂閱狀態 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-credit-card text-[#8C7355]"></i> 目前系統訂閱狀態
+    </div>
+    <div class="p-4 bg-brand-50 rounded-2xl space-y-2 text-xs border border-brand-100">
+      <div class="flex justify-between"><span class="text-brand-500">系統版本</span><span class="font-bold text-brand-900" id="sub-plan-name">美業與寵物雙模旗艦版</span></div>
+      <div class="flex justify-between"><span class="text-brand-500">終止訂閱日</span><span class="font-bold text-brand-900 font-mono" id="sub-expire-date">2027-08-21</span></div>
+      <div class="flex justify-between"><span class="text-brand-500">帳號狀態</span><span class="font-bold text-emerald-600" id="sub-status-badge">正常運行中</span></div>
+    </div>
+  </div>
+      <!-- 方案扣款與續約規則說明 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-circle-question text-brand-500"></i>
+      <span>方案扣款與續約規則說明</span>
+    </div>
+    <div class="space-y-2.5 text-xs leading-relaxed">
+      <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200/70 space-y-1">
+        <div class="font-bold text-brand-900">年繳老闆：</div>
+        <p class="text-brand-700 leading-relaxed">使用滿一年、系統即將到期時，登入此分頁點擊下方按鈕完成下年度續約即可。</p>
+      </div>
+      <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200/70 space-y-1">
+        <div class="font-bold text-brand-900">月繳老闆（換卡／扣款失敗備援）：</div>
+        <p class="text-brand-700 leading-relaxed">一般正常運行的月繳老闆，平時完全不用理會下方的續約按鈕！系統會透過 PAYUNi 固定於每月 10 號自動扣款並自動順延 30 天。</p>
+        <p class="text-brand-600 text-[11px] pt-1 leading-relaxed">※ 若信用卡過期、遺失換卡，或額度不足導致扣款失敗，PAYUNi 會發信通知。系統到期轉為「過期」時，才需要來此處重新點擊連結換卡付款。</p>
+      </div>
+      <div class="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 space-y-1 text-[11px]">
+        <div class="font-bold text-xs flex items-center gap-1 text-amber-800">
+          <i class="fa-solid fa-ban text-[10px]"></i>
+          <span>月繳方案如何取消？</span>
+        </div>
+        <p class="leading-relaxed">
+          <b>客服協助終止：</b>請直接加入官方 LINE（<a href="https://line.me/R/ti/p/@480kqjoj" target="_blank" class="underline font-bold text-brand-700">@480kqjoj</a>）告知店名，技術人員將於後台協助停止下期定期定額扣款。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 功能許願池 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-wand-magic-sparkles text-[#8C7355]"></i> 功能許願池 (直通 Sibyl 開發核心)
+    </div>
+    <textarea id="wish-input" rows="3" class="w-full p-3 text-xs rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed" placeholder="告訴我們您希望增加什麼功能？"></textarea>
+    <button type="button" onclick="submitWish()" class="w-full py-3 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl text-xs shadow-md transition">送出功能願望</button>
+  </div>
+
+  <!-- 選擇方案線上續費 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-bolt text-amber-600"></i> 選擇方案線上續費 (支援信用卡/超商)
+    </div>
+    <div class="space-y-2.5" id="plan-options-container">
+      <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+        <div>
+          <div class="font-bold text-brand-900">美業預約專案【月繳方案】</div>
+          <div class="text-brand-600 font-black text-sm mt-0.5 font-mono">NT$ 680 元</div>
+        </div>
+        <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold shadow-xs transition" onclick="openPayUniLink('https://api.payuni.com.tw/api/period/U072882813/T0xg8NuIJJZ','月繳方案')">立即付款續約</button>
+      </div>
+      <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+        <div>
+          <div class="font-bold text-brand-900">美業預約專案【年度旗艦方案 (最推薦)】</div>
+          <div class="text-brand-600 font-black text-sm mt-0.5 font-mono">NT$ 6,600 元</div>
+        </div>
+        <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold shadow-xs transition" onclick="openPayUniLink('https://api.payuni.com.tw/api/uop/receive_info/2/1/U072882813/9fMi15VUxEnLZDsKltvkC','年度旗艦方案')">立即付款續約</button>
+      </div>
+    </div>
+    <div class="text-[11px] text-brand-400 leading-relaxed pt-2 border-t border-brand-100 space-y-1">
+      <div>※ 系統採統一金流 (PAYUNi) 官方加密付款，付款完成後系統將自動延長使用權限。</div>
+    </div>
+  </div>
+</div>
 
     <!-- 分頁 15. 設定分頁 (page-settings，20 餘項模組開關與完整說明) -->
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
@@ -1283,6 +1355,7 @@
     let calMonth = new Date().getMonth();
     let selectedCalendarDate = '';
     let promoImgsArray = new Array(7).fill("");
+    let staffPinVisibilityMap = {};
 
     let allInventoryItems = [];
     let isLowStockFilterActive = false;
@@ -1405,61 +1478,61 @@
       }
     }
 
-    async function checkPin() {
-      if (checkLockoutStatus()) return;
-      const pinInput = document.getElementById('pin-input');
-      const errorEl = document.getElementById('lock-error');
-      const inputPin = pinInput.value.trim();
-      if (!inputPin) return;
+    // --- 替換 checkPin 函式 ---
+  async function checkPin() {
+    if (checkLockoutStatus()) return;
+    const pinInput = document.getElementById('pin-input');
+    const errorEl = document.getElementById('lock-error');
+    const inputPin = pinInput.value.trim();
+    if (!inputPin) return;
 
-      try {
-        if (CURRENT_ADMIN_TOKEN) {
-          const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
-          if (tokenRes && tokenRes.length > 0) CURRENT_STORE_ID = tokenRes[0].id;
-        }
+    try {
+      if (CURRENT_ADMIN_TOKEN) {
+        const tokenRes = await directSupabaseFetch(`stores?admin_token=eq.${CURRENT_ADMIN_TOKEN}&select=id,admin_pin`);
+        if (tokenRes && tokenRes.length > 0) CURRENT_STORE_ID = tokenRes[0].id;
+      }
 
-        let correctPin = '8888';
-        const [stores, settings] = await Promise.all([
-          directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-          directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-        ]);
+      let correctPin = '8888';
+      const [stores, settings] = await Promise.all([
+        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
+        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
+      ]);
 
-        if (stores && stores.length > 0 && stores[0].admin_pin) {
-          correctPin = stores[0].admin_pin;
-        }
+      if (stores && stores.length > 0 && stores[0].admin_pin) {
+        correctPin = stores[0].admin_pin;
+      }
 
-        if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-          const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-          const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-          if (matchedStaff && matchedStaff.pin) correctPin = matchedStaff.pin;
-        }
+      // 專員個人登入密碼比對
+      if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+        const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
+        const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+        if (matchedStaff && matchedStaff.pin) correctPin = matchedStaff.pin;
+      }
 
-        if (inputPin === String(correctPin).trim()) {
-          localStorage.removeItem(ATTEMPTS_KEY);
-          localStorage.removeItem(LOCKOUT_KEY);
-          sessionStorage.setItem('admin_session_unlocked', 'true');
-          enterDashboard();
+      if (inputPin === String(correctPin).trim()) {
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCKOUT_KEY);
+        enterDashboard();
+      } else {
+        let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
+        localStorage.setItem(ATTEMPTS_KEY, attempts);
+        if (attempts >= 5) {
+          const lockoutTime = Date.now() + 15 * 60 * 1000;
+          localStorage.setItem(LOCKOUT_KEY, lockoutTime);
+          showLockoutUI(900);
         } else {
-          let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
-          localStorage.setItem(ATTEMPTS_KEY, attempts);
-          if (attempts >= 5) {
-            const lockoutTime = Date.now() + 15 * 60 * 1000;
-            localStorage.setItem(LOCKOUT_KEY, lockoutTime);
-            showLockoutUI(900);
-          } else {
-            errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次機會`;
-            pinInput.value = '';
-          }
-        }
-      } catch (e) {
-        if (inputPin === '8888') {
-          sessionStorage.setItem('admin_session_unlocked', 'true');
-          enterDashboard();
-        } else {
-          errorEl.innerText = '系統連線異常，請稍後再試';
+          errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次機會`;
+          pinInput.value = '';
         }
       }
+    } catch (e) {
+      if (inputPin === '8888') {
+        enterDashboard();
+      } else {
+        errorEl.innerText = '系統連線異常，請稍後重試';
+      }
     }
+  }
 
     function enterDashboard() {
       document.getElementById('lock-screen').style.display = 'none';
@@ -3838,36 +3911,50 @@
 
     // 專員名冊維護
     function renderStaffManager() {
-      const container = document.getElementById('staff-manager-list');
-      const countBadge = document.getElementById('staff-count-badge');
-      if (!container) return;
+    const container = document.getElementById('staff-manager-list');
+    const countBadge = document.getElementById('staff-count-badge');
+    if (!container) return;
 
-      const rawList = backendData.settings?.staffList || [];
-      const staffs = rawList.filter(s => s.id !== 'all');
-      if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
+    const rawList = backendData.settings?.staffList || [];
+    const staffs = rawList.filter(s => s.id !== 'all');
+    if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
 
-      if (staffs.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
-        return;
-      }
+    if (staffs.length === 0) {
+      container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
+      return;
+    }
 
-      container.innerHTML = staffs.map(s => `
-        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-brand-900 text-sm">${s.name} <span class="text-[10px] text-brand-400 font-mono font-normal">(${s.id})</span></div>
-            <div class="text-[11px] text-brand-500 font-mono mt-0.5">專屬密碼：•••• <button onclick="promptEditStaffPin('${s.id}', '${s.name}')" class="text-blue-600 underline font-sans text-[10px] ml-1">改密碼</button></div>
+    container.innerHTML = staffs.map(s => {
+      const isVisible = staffPinVisibilityMap[s.id] === true;
+      const displayPin = isVisible ? (s.pin || '8888') : '••••';
+
+      return `
+        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+          <div class="space-y-1">
+            <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
+              <span>${s.name}</span>
+              <span class="text-[10px] text-brand-400 font-mono font-normal">(${s.id})</span>
+            </div>
+            <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
+              <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
+              <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5" title="${isVisible ? '隱藏密碼' : '顯示密碼'}">
+                <i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i>
+              </button>
+              <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
+            </div>
           </div>
           <div class="flex gap-1.5 items-center">
-            <button onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] transition">
-              複製工作台連結
+            <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
+              <i class="fa-solid fa-link text-[10px]"></i> 複製工作台連結
             </button>
-            <button onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-lg font-bold text-[11px] transition">
+            <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">
               刪除
             </button>
           </div>
         </div>
-      `).join('');
-    }
+      `;
+    }).join('');
+  }
 
     function copyStaffWorkplaceUrl(staffId, staffName) {
       const cleanUrl = `${window.location.origin}${window.location.pathname}?store_id=${CURRENT_STORE_ID}&staff=${encodeURIComponent(staffId)}`;
@@ -4108,6 +4195,41 @@
       window.location.reload();
     }
 
+    function toggleStaffPinVisibility(staffId) {
+    staffPinVisibilityMap[staffId] = !staffPinVisibilityMap[staffId];
+    renderStaffManager();
+  }
+
+  function promptEditStaffPin(staffId, staffName, currentPin) {
+    Swal.fire({
+      title: `修改 ${staffName} 的專屬密碼`,
+      input: 'text',
+      inputValue: currentPin,
+      inputPlaceholder: '請輸入 4-6 碼密碼',
+      showCancelButton: true,
+      confirmButtonText: '確定更新',
+      confirmButtonColor: '#8C7355',
+      preConfirm: (val) => {
+        if (!val || val.trim().length < 4) {
+          Swal.showValidationMessage('密碼長度至少需 4 碼');
+          return false;
+        }
+        return val.trim();
+      }
+    }).then(async r => {
+      if (r.isConfirmed && r.value) {
+        const list = backendData.settings?.staffList || [];
+        const staff = list.find(s => s.id === staffId);
+        if (staff) {
+          staff.pin = r.value;
+          await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+          renderStaffManager();
+          Swal.fire({ title: '專員密碼已更新！', icon: 'success', timer: 1000, showConfirmButton: false });
+        }
+      }
+    });
+  }
+    
     function refreshPushPermission() {
       if (!('Notification' in window)) return Swal.fire('不支援', '此裝置不支援推播', 'warning');
       Notification.requestPermission().then(permission => {
@@ -4118,21 +4240,27 @@
 
     // 22. 頁面啟動生命週期 (預設彈出密碼輸入框)
     window.addEventListener('DOMContentLoaded', () => {
-      checkLockoutStatus();
-      if (sessionStorage.getItem('admin_session_unlocked') === 'true') {
-        enterDashboard();
-      } else {
-        document.getElementById('lock-screen').style.display = 'flex';
-        document.getElementById('main-content').style.display = 'none';
-        document.getElementById('bottom-nav').style.display = 'none';
-      }
+    // 移除略過邏輯，每次重新整理皆強制清除狀態並鎖定
+    sessionStorage.removeItem('admin_session_unlocked');
 
-      const pinInput = document.getElementById('pin-input');
-      if (pinInput) {
-        pinInput.focus();
-        pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
-      }
-    });
+    const lockScreen = document.getElementById('lock-screen');
+    const mainContent = document.getElementById('main-content');
+    const bottomNav = document.getElementById('bottom-nav');
+
+    if (lockScreen) lockScreen.style.display = 'flex';
+    if (mainContent) mainContent.style.display = 'none';
+    if (bottomNav) bottomNav.style.display = 'none';
+
+    checkLockoutStatus();
+
+    const pinInput = document.getElementById('pin-input');
+    if (pinInput) {
+      pinInput.value = '';
+      setTimeout(() => pinInput.focus(), 300);
+      pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
+    }
+  });
   </script>
 </body>
 </html>
+
