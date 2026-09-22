@@ -29,16 +29,17 @@
     }
   </script>
   <style>
-    /* 1. 動態主題色變數（預設為大地燕麥暖棕，後台切換色系時會被 JS 動態覆蓋） */
+    /* 1. 動態主題色彩變數（後台切換色系時由 JS 即時覆蓋） */
     :root {
       --theme-primary: #8C7355;
       --theme-primary-hover: #7A6246;
       --theme-bg: #FDFBF7;
       --theme-light: #F7EDE8;
+      --theme-text: #3D3126;
     }
-    body { background-color: var(--theme-bg); color: #3D3126; }
+    body { background-color: var(--theme-bg); color: var(--theme-text); }
 
-    /* 2. 輔助類別 */
+    /* 2. 動態主題輔助類別 */
     .bg-theme-primary { background-color: var(--theme-primary) !important; }
     .text-theme-primary { color: var(--theme-primary) !important; }
     .border-theme-primary { border-color: var(--theme-primary) !important; }
@@ -47,61 +48,40 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* 4. 9:16 活動輪播樣式 */
+    /* 4. 9:16 輪播圖樣式 */
     .carousel-slide-916 {
-      min-width: 100%;
-      aspect-ratio: 9 / 16;
-      position: relative;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      min-width: 100%; aspect-ratio: 9 / 16; position: relative;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
     }
     .carousel-bg-blur {
-      position: absolute;
-      inset: 0;
-      background-size: cover;
-      background-position: center;
-      filter: blur(16px) brightness(0.8);
-      transform: scale(1.15);
+      position: absolute; inset: 0; background-size: cover; background-position: center;
+      filter: blur(16px) brightness(0.8); transform: scale(1.15);
     }
     .carousel-main-img {
-      position: relative;
-      max-height: 100%;
-      max-width: 100%;
-      object-fit: contain;
-      z-index: 10;
+      position: relative; max-height: 100%; max-width: 100%; object-fit: contain; z-index: 10;
     }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
 
-    /* 5. SweetAlert2 彈窗主題色綁定 */
+    /* 5. 彈窗主題色綁定 */
     .swal2-popup {
       border-radius: 1.5rem !important;
       font-family: 'Noto Sans TC', sans-serif !important;
       padding: 1.75rem !important;
       border: 1px solid #EBE5DF !important;
     }
-    .swal2-title {
-      color: #3D3126 !important;
-      font-size: 1.15rem !important;
-      font-weight: 700 !important;
-    }
+    .swal2-title { color: #3D3126 !important; font-size: 1.15rem !important; font-weight: 700 !important; }
     .swal2-html-container { color: #5C4B3C !important; }
-    
-    /* 確認按鈕改吃主題色變數，不再寫死固定的 #8C7355 */
     .swal2-confirm, .swal2-styled.swal2-confirm, .swal2-confirm-brown {
       background-color: var(--theme-primary) !important;
       color: #FFFFFF !important;
       border-radius: 0.85rem !important;
       font-weight: 700 !important;
       padding: 0.6rem 1.6rem !important;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
       border: none !important;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
     }
-    .swal2-confirm:hover, .swal2-confirm-brown:hover { 
-      background-color: var(--theme-primary-hover) !important; 
-    }
+    .swal2-confirm:hover, .swal2-confirm-brown:hover { background-color: var(--theme-primary-hover) !important; }
     .swal2-cancel, .swal2-styled.swal2-cancel {
       background-color: #EBE5DF !important;
       color: #5C4B3C !important;
@@ -110,7 +90,6 @@
       padding: 0.6rem 1.4rem !important;
       border: none !important;
     }
-    .swal2-cancel:hover { background-color: #DFD1C0 !important; }
   </style>
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
@@ -411,68 +390,196 @@
         </div>
 
         <!-- 寵物住宿模式：專屬雙月曆與住宿配置區塊 -->
+        <!-- 寵物住宿模式：完整旗艦版專屬排程與規格配置 (受模式 3 驅動) -->
         <div id="boardingConfigSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-4 text-xs hidden">
           <div class="font-bold text-brand-900 flex items-center justify-between text-sm border-b border-brand-200 pb-2">
-            <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-brand-500"></i> 寵物住宿日期與排程</span>
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-amber-600"></i> 寵物度假住宿排程與客製照護</span>
             <span id="displayStayNightsBadge" class="text-xs px-2.5 py-0.5 bg-[#8C7355] text-white rounded-full font-mono font-bold">共 1 晚</span>
           </div>
 
-          <!-- 入住退房日期與時間選擇 (已優化換行避免手機版擠壓) -->
-        <div class="grid grid-cols-1 gap-2.5">
-          <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-1.5">
-            <label class="block font-bold text-brand-800 text-[11px]">入住日期與抵達時間 *</label>
-            <div class="flex gap-1.5">
-              <input type="date" id="hotelCheckInDate" class="w-2/3 p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
-              <input type="time" id="hotelCheckInTime" value="10:00" class="w-1/3 p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+          <!-- 1. 入住與退房日期時段 (雙折疊式/獨立排版，手機不擠壓) -->
+          <div class="space-y-2.5">
+            <!-- 入住排程卡片 -->
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2 shadow-2xs">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-brand-900 flex items-center gap-1">
+                  <i class="fa-solid fa-arrow-right-to-bracket text-emerald-600"></i> 1. 入住進場日期與時段 *
+                </span>
+                <span id="badge-checkin-summary" class="text-[10px] text-emerald-700 font-mono font-bold"></span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">入住日期</label>
+                  <input type="date" id="hotelCheckInDate" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="onHotelDateChange()">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">預計抵達進房時段</label>
+                  <select id="hotelCheckInTime" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+                    <option value="10:00">10:00 (上午開放入住)</option>
+                    <option value="11:00">11:00</option>
+                    <option value="12:00">12:00</option>
+                    <option value="13:30">13:30</option>
+                    <option value="15:00">15:00</option>
+                    <option value="17:00">17:00</option>
+                    <option value="18:30">18:30 (最晚進房)</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-1.5">
-            <label class="block font-bold text-brand-800 text-[11px]">退房日期與接回時間 *</label>
-            <div class="flex gap-1.5">
-              <input type="date" id="hotelCheckOutDate" class="w-2/3 p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
-              <input type="time" id="hotelCheckOutTime" value="17:00" class="w-1/3 p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
-            </div>
-          </div>
-        </div>
 
-          <!-- 每日供餐選項 (支援一餐/兩餐/三餐與智慧扣餐計算) -->
+            <!-- 退房排程卡片 -->
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2 shadow-2xs">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-brand-900 flex items-center gap-1">
+                  <i class="fa-solid fa-arrow-right-from-bracket text-amber-700"></i> 2. 退房接回日期與時段 *
+                </span>
+                <span id="badge-checkout-summary" class="text-[10px] text-amber-800 font-mono font-bold"></span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">退房日期</label>
+                  <input type="date" id="hotelCheckOutDate" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="onHotelDateChange()">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">預計接回退宿時段</label>
+                  <select id="hotelCheckOutTime" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
+                    <option value="10:00">10:00 (上午接回)</option>
+                    <option value="12:00">12:00</option>
+                    <option value="14:00">14:00</option>
+                    <option value="16:00">16:00</option>
+                    <option value="18:00" selected>18:00</option>
+                    <option value="19:30">19:30 (最晚接回)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. 小／中／大型犬與貓咪專屬房型房價選擇 -->
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-brand-900 flex items-center gap-1">
+                <i class="fa-solid fa-dog text-amber-700"></i> 3. 房型等級與毛孩體型級距
+              </span>
+              <span class="text-[10px] text-brand-400">依體型自動適配專屬獨立套房</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2" id="hotelRoomTypeGrid">
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 cursor-pointer flex flex-col justify-between hover:bg-brand-100 transition">
+                <div class="flex items-center gap-1.5 font-bold text-brand-900">
+                  <input type="radio" name="hotelRoomTier" value="small" data-min="700" data-max="900" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                  <span>小型犬獨立房</span>
+                </div>
+                <div class="text-[10px] text-brand-500 font-mono mt-1">9kg以下 (NT$ 700-900/晚)</div>
+              </label>
+
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 cursor-pointer flex flex-col justify-between hover:bg-brand-100 transition">
+                <div class="flex items-center gap-1.5 font-bold text-brand-900">
+                  <input type="radio" name="hotelRoomTier" value="medium" data-min="900" data-max="1200" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                  <span>中型犬舒適房</span>
+                </div>
+                <div class="text-[10px] text-brand-500 font-mono mt-1">10-20kg (NT$ 900-1200/晚)</div>
+              </label>
+
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 cursor-pointer flex flex-col justify-between hover:bg-brand-100 transition">
+                <div class="flex items-center gap-1.5 font-bold text-brand-900">
+                  <input type="radio" name="hotelRoomTier" value="large" data-min="1300" data-max="1600" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                  <span>大型犬旗艦房</span>
+                </div>
+                <div class="text-[10px] text-brand-500 font-mono mt-1">21kg以上 (NT$ 1300-1600/晚)</div>
+              </label>
+
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 cursor-pointer flex flex-col justify-between hover:bg-brand-100 transition">
+                <div class="flex items-center gap-1.5 font-bold text-brand-900">
+                  <input type="radio" name="hotelRoomTier" value="cat" data-min="700" data-max="850" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                  <span>貓咪獨立跳台房</span>
+                </div>
+                <div class="text-[10px] text-brand-500 font-mono mt-1">垂直跳台 (NT$ 700-850/晚)</div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 3. 放飯時間與鮮食供餐方案 (依體型計價與智慧餐數核算) -->
           <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
             <div class="flex justify-between items-center font-bold text-brand-900">
-              <span class="flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-brand-500"></i> 每日供餐方案</span>
-              <span class="text-[10px] text-amber-700">門市固定放飯時間早09:00/晚18:00</span>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-amber-600"></i> 4. 每日供餐照護方案</span>
+              <span class="text-[10px] text-amber-800">放飯時間：早 09:00 / 晚 18:00</span>
             </div>
             <div class="space-y-1.5">
-              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
-                <input type="radio" name="mealPlan" value="none" data-price="0" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
-                <span>家長自備飼料罐頭 (+NT$ 0)</span>
+              <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/60 border border-brand-200 cursor-pointer">
+                <input type="radio" name="mealPlanOption" value="SELF" data-rate="0" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <div>
+                  <span class="font-bold text-brand-900">家長自備食料罐頭 (+NT$ 0)</span>
+                  <span class="text-[10px] text-brand-400 block">入住時請攜帶毛孩習慣食用之乾糧飼料或罐頭分裝包</span>
+                </div>
               </label>
-              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
-                <input type="radio" name="mealPlan" value="one_meal" id="radio-meal-1" data-price="80" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
-                <span id="label-meal-1">精緻鮮食 / 一日一餐 (+NT$ 80 / 晚)</span>
+
+              <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/60 border border-brand-200 cursor-pointer">
+                <input type="radio" name="mealPlanOption" value="ONE" data-rate="1" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <div>
+                  <span class="font-bold text-brand-900">店內鮮食供餐 / 一日一餐 (依體型單餐計費)</span>
+                  <span class="text-[10px] text-brand-500 block">小犬/貓 $80 / 中犬 $120 / 大犬 $160 (每餐)</span>
+                </div>
               </label>
-              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
-                <input type="radio" name="mealPlan" value="two_meals" id="radio-meal-2" data-price="150" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
-                <span id="label-meal-2">精緻鮮食 / 一日兩餐 (+NT$ 150 / 晚)</span>
+
+              <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/60 border border-brand-200 cursor-pointer">
+                <input type="radio" name="mealPlanOption" value="TWO" data-rate="2" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
+                <div>
+                  <span class="font-bold text-brand-900">店內鮮食供餐 / 一日兩餐 (早晚固定放飯)</span>
+                  <span class="text-[10px] text-brand-500 block">小犬/貓 $150 / 中犬 $220 / 大犬 $300 (每日)</span>
+                </div>
               </label>
-              <label class="flex items-center gap-2 p-2 rounded-xl bg-brand-50/50 border border-brand-100 cursor-pointer">
-                <input type="radio" name="mealPlan" value="three_meals" id="radio-meal-3" data-price="220" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
-                <span id="label-meal-3">精緻鮮食 / 一日三餐 (+NT$ 220 / 晚)</span>
+            </div>
+            <div id="hotelMealCountExplain" class="hidden text-[10.5px] p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 font-bold font-mono"></div>
+          </div>
+
+          <!-- 4. 入住前美容洗澡 ＆ 退房前美容洗澡 (雙向自由勾選) -->
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <span class="font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-shower text-blue-600"></i> 5. 住宿期間附加洗澡與美容保養
+            </span>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 flex items-start gap-2 cursor-pointer hover:bg-brand-100 transition">
+                <input type="checkbox" id="chkHotelBathCheckin" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355] mt-0.5">
+                <div>
+                  <span class="font-bold text-brand-900 block">入住當天先洗澡清潔</span>
+                  <span class="text-[10px] text-brand-400">進房前先洗香香，維持套房清潔 (依體型 $500-900)</span>
+                </div>
+              </label>
+
+              <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 flex items-start gap-2 cursor-pointer hover:bg-brand-100 transition">
+                <input type="checkbox" id="chkHotelBathCheckout" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355] mt-0.5">
+                <div>
+                  <span class="font-bold text-brand-900 block">退房前深層美容洗澡</span>
+                  <span class="text-[10px] text-brand-400">返家前洗香噴噴或大美容造型修剪 (依體型 $600-1200)</span>
+                </div>
               </label>
             </div>
           </div>
 
-          <!-- 入住規定洗澡與退宿洗澡規範 -->
-          <div class="space-y-2">
-            <div id="mandatoryInBathNotice" class="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-center justify-between text-amber-950 font-bold hidden">
-              <span>✓ 門市規定：入住前需完成基礎清潔洗澡</span>
-              <span class="text-xs text-amber-700 font-mono">預估 +NT$ 600~900</span>
-            </div>
-            <div id="optionalOutBathBox" class="p-3 bg-white rounded-2xl border border-brand-200">
-              <label class="flex items-center justify-between cursor-pointer font-bold text-brand-900">
-                <span>退宿當天加做香香深層洗澡美容</span>
-                <input type="checkbox" id="chkHotelAddBath" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]">
-              </label>
-              <div class="text-[10px] text-brand-400 mt-0.5">※ 金額依體型毛量預估 NT$ 700 - 1,200，退房前洗好香香回家</div>
+          <!-- 5. 專屬到府接送服務 (勾選後動態展開詳細地址與趟次) -->
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="font-bold text-brand-900 flex items-center gap-1.5">
+                <i class="fa-solid fa-van-shuttle text-[#8C7355]"></i> 6. 需要門市專車到府接送服務
+              </span>
+              <input type="checkbox" id="chkNeedShuttle" onchange="toggleShuttleAddressBox()" class="accent-[#8C7355] w-4 h-4">
+            </label>
+            <div id="shuttleDetailBox" class="hidden space-y-2 pt-2 border-t border-brand-100">
+              <div>
+                <label class="block text-[11px] font-bold text-brand-700 mb-1">接送地址與樓層詳細資訊 (必填) *</label>
+                <input type="text" id="shuttleAddress" placeholder="例如：新竹縣竹北市光明六路... 5樓有電梯" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs outline-none">
+              </div>
+              <div class="flex gap-4 pt-0.5">
+                <label class="flex items-center gap-1.5 text-xs text-brand-800 font-bold cursor-pointer">
+                  <input type="radio" name="shuttleTrip" value="round" checked onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]"> 來回接送 (住宿接來 + 退房送回)
+                </label>
+                <label class="flex items-center gap-1.5 text-xs text-brand-800 font-bold cursor-pointer">
+                  <input type="radio" name="shuttleTrip" value="single" onchange="calculateBoardingDaysAndPrice()" class="accent-[#8C7355]"> 僅單趟接送
+                </label>
+              </div>
+              <p class="text-[10px] text-amber-800 leading-relaxed">
+                ※ 接送車資依門市至家長住址公里數計算，費用將於結單時一併結算或現場實收。
+              </p>
             </div>
           </div>
         </div>
@@ -787,30 +894,173 @@
   let guestLineUid = "";
   let activeBookingSubMode = 'grooming'; // 'grooming' 或 'boarding'
 
-  // 6 款品牌主題色盤定義 (支援動態替換前台主題色)
+  // 6 款美學色票庫
   const THEME_PALETTES = {
-    latte:  { primary: '#8C7355', primaryHover: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8' },
-    matcha: { primary: '#5C725E', primaryHover: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE' },
-    noir:   { primary: '#262626', primaryHover: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5' },
-    navy:   { primary: '#2B4C6F', primaryHover: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC' },
-    rose:   { primary: '#A26D74', primaryHover: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD' },
-    mist:   { primary: '#4A7C6D', primaryHover: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1' }
+    latte:  { primary: '#8C7355', primaryHover: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8', text: '#3D3126' },
+    matcha: { primary: '#5C725E', primaryHover: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE', text: '#2B382D' },
+    noir:   { primary: '#262626', primaryHover: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5', text: '#0A0A0A' },
+    navy:   { primary: '#2B4C6F', primaryHover: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC', text: '#102A43' },
+    rose:   { primary: '#A26D74', primaryHover: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD', text: '#4E2C32' },
+    mist:   { primary: '#4A7C6D', primaryHover: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1', text: '#1F3B33' }
   };
 
-  // 即時注入色彩至根節點與按鈕樣式
-  function applyThemeColors(themeKey) {
+  let cachedPetList = [];
+  let currentSelectedPet = null;
+
+  // 1. 動態套用主題色與版型
+  function applyThemeAndIndustryMode(themeKey, modeKey) {
     const t = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
     document.documentElement.style.setProperty('--theme-primary', t.primary);
     document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
     document.documentElement.style.setProperty('--theme-bg', t.bg);
     document.documentElement.style.setProperty('--theme-light', t.light);
+    document.documentElement.style.setProperty('--theme-text', t.text);
     document.body.style.backgroundColor = t.bg;
 
-    // 動態更新重要按鈕
+    const promo = document.getElementById('promo');
+    if (promo) promo.style.backgroundColor = t.primary;
     const subBtn = document.getElementById('subBtn');
     if (subBtn) subBtn.style.backgroundColor = t.primary;
-    const promoBox = document.getElementById('promo');
-    if (promoBox) promoBox.style.backgroundColor = t.primary;
+
+    // 版型切換：beauty (美業), pet_grooming (寵美), pet_hotel (寵美+住宿)
+    const modeSelector = document.getElementById('serviceModeSelector');
+    const petBox = document.getElementById('petProfileSection');
+    const hotelBox = document.getElementById('boardingConfigSection');
+    const groomingSec = document.getElementById('groomingServiceSection');
+    const singleTimeSec = document.getElementById('singleTimeSection');
+
+    if (modeKey === 'beauty') {
+      if (modeSelector) modeSelector.classList.add('hidden');
+      if (petBox) petBox.classList.add('hidden');
+      if (hotelBox) hotelBox.classList.add('hidden');
+      if (groomingSec) groomingSec.classList.remove('hidden');
+      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
+    } else if (modeKey === 'pet_grooming') {
+      if (modeSelector) modeSelector.classList.add('hidden');
+      if (petBox) petBox.classList.remove('hidden');
+      if (hotelBox) hotelBox.classList.add('hidden');
+      if (groomingSec) groomingSec.classList.remove('hidden');
+      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
+    } else { // pet_hotel
+      if (modeSelector) modeSelector.classList.remove('hidden');
+      if (petBox) petBox.classList.remove('hidden');
+      switchBookingSubMode(activeBookingSubMode || 'grooming');
+    }
+  }
+
+  // 2. window.onload 優先順序修復 (解決重新整理還原預設問題)
+  window.onload = async function() {
+    try {
+      await resolveStoreIdAndInitLiff();
+      await checkMaintenanceAndAnnouncement();
+
+      const [stores, settings, services, bookings] = await Promise.all([
+        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
+        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+        directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
+        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
+      ]);
+
+      const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+      const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+
+      // 雙向相容讀取
+      const theme = sCfg.theme_color || sInfo.theme_color || 'latte';
+      const mode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
+
+      db = {
+        storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
+        subtitle: sCfg.display_subtitle || "專業門市服務",
+        themeColor: theme,
+        industryType: mode,
+        services: services || [],
+        futureBookings: bookings || [],
+        staffList: sCfg.staff_list || [{ id: "all", name: "不指定" }],
+        staffSchedules: sCfg.staff_schedules || {},
+        boardingSettings: sCfg.boarding_settings || {},
+        totalHotelRooms: Number(sCfg.total_hotel_rooms || 8)
+      };
+
+      document.getElementById('brand-title').innerText = db.storeName;
+      document.getElementById('brand-subtitle').innerText = db.subtitle;
+
+      // 立即執行主題與版型覆蓋
+      applyThemeAndIndustryMode(db.themeColor, db.industryType);
+
+      renderServices();
+      renderFrontCalendar();
+    } catch(e) {
+      console.error("載入失敗:", e);
+    }
+  };
+
+  // 3. 輸入電話帶入多毛孩選取與個別資產顯示
+  async function checkPhoneAndLoadBenefits(el) {
+    const phone = el.value.trim();
+    if (phone.length < 8) return;
+
+    const [pets, custs] = await Promise.all([
+      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+    ]);
+
+    cachedPetList = pets || [];
+    const multiPetBlock = document.getElementById('multiPetSelectBlock');
+    const multiPetDropdown = document.getElementById('multiPetDropdown');
+    const balanceBlock = document.getElementById('customerBalanceBadgeBlock');
+
+    if (custs && custs.length > 0) {
+      document.getElementById('name').value = custs[0].name || '';
+    }
+
+    if (cachedPetList.length > 0) {
+      if (multiPetBlock && multiPetDropdown) {
+        let optHtml = `<option value="" disabled selected>--- 選擇歷史毛孩 (可自動帶入) ---</option>`;
+        cachedPetList.forEach((p, idx) => {
+          optHtml += `<option value="${idx}">🐾 ${p.name} (${p.breed || '未填品種'}) - 包卡: ${p.package_balance || 0}次 / 儲值: $${p.wallet_balance || 0}</option>`;
+        });
+        optHtml += `<option value="_NEW_">＋ 填寫新毛孩資料</option>`;
+        multiPetDropdown.innerHTML = optHtml;
+        multiPetBlock.classList.remove('hidden');
+      }
+
+      // 預設帶入第一隻毛孩
+      selectPetByIndex(0);
+    } else {
+      if (multiPetBlock) multiPetBlock.classList.add('hidden');
+      if (balanceBlock) balanceBlock.classList.add('hidden');
+    }
+  }
+
+  function selectPetByIndex(idx) {
+    if (idx === '_NEW_' || !cachedPetList[idx]) {
+      currentSelectedPet = null;
+      document.getElementById('petName').value = '';
+      document.getElementById('petBreed').value = '';
+      document.getElementById('customerBalanceBadgeBlock').classList.add('hidden');
+      return;
+    }
+
+    currentSelectedPet = cachedPetList[idx];
+    document.getElementById('petName').value = currentSelectedPet.name || '';
+    document.getElementById('petBreed').value = currentSelectedPet.breed || '';
+    if (document.getElementById('petWeight')) document.getElementById('petWeight').value = currentSelectedPet.weight_kg || '';
+
+    // 顯示該毛孩個別資產
+    const balanceBlock = document.getElementById('customerBalanceBadgeBlock');
+    if (balanceBlock) {
+      balanceBlock.classList.remove('hidden');
+      document.getElementById('displayCardRemain').innerText = `${currentSelectedPet.package_balance || 0} 次`;
+      document.getElementById('displayDepositRemain').innerText = `$${Number(currentSelectedPet.wallet_balance || 0).toLocaleString()}`;
+    }
+
+    // 勾選框狀態更新
+    const chkCard = document.getElementById('chk-use-package');
+    if (chkCard) {
+      chkCard.disabled = (Number(currentSelectedPet.package_balance || 0) <= 0);
+      if (chkCard.disabled) chkCard.checked = false;
+    }
+    updateCheckoutSummary();
   }
 
   // 3 種前台商業模式版型切換核心：1. 純美業 (beauty)、2. 寵物美容 (pet_grooming)、3. 寵物美容＋住宿 (pet_hotel)
@@ -1274,6 +1524,7 @@
     const isNeed = document.getElementById('chkNeedShuttle')?.checked;
     const box = document.getElementById('shuttleDetailBox');
     if (box) box.classList.toggle('hidden', !isNeed);
+    calculateBoardingDaysAndPrice();
   }
 
   function switchBookingSubMode(mode) {
@@ -1319,126 +1570,113 @@
   }
   // 智慧放飯演算法與價格區間試算器
   function calculateBoardingDaysAndPrice() {
-    if (activeBookingSubMode !== 'boarding') return;
+  if (activeBookingSubMode !== 'boarding') return;
 
-    const inDateVal = document.getElementById('hotelCheckInDate')?.value;
-    const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
-    const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
-    const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '17:00';
-    const weightVal = Number(document.getElementById('petWeight')?.value || 5);
+  const inDateVal = document.getElementById('hotelCheckInDate')?.value;
+  const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
+  const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
+  const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '18:00';
+  const weightVal = Number(document.getElementById('petWeight')?.value || 5);
 
-    if (!inDateVal || !outDateVal) return;
+  if (!inDateVal || !outDateVal) return;
 
-    const d1 = new Date(inDateVal);
-    const d2 = new Date(outDateVal);
-    const diffTime = d2.getTime() - d1.getTime();
-    const nights = Math.max(1, Math.round(diffTime / (1000 * 3600 * 24)));
-    document.getElementById('displayStayNightsBadge').innerText = `共 ${nights} 晚`;
+  // 1. 計算住宿晚數
+  const diffMs = new Date(outDateVal) - new Date(inDateVal);
+  const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  const nightsBadge = document.getElementById('displayStayNightsBadge');
+  if (nightsBadge) nightsBadge.innerText = `共 ${nights} 晚`;
 
-    // 1. 體型判定 (小型 <8kg, 中型 8-18kg, 大型 18-35kg, 特大 >35kg)
-    let baseRoomMin = 700, baseRoomMax = 900;
-    if (weightVal >= 35) { baseRoomMin = 1300; baseRoomMax = 1600; }
-    else if (weightVal >= 18) { baseRoomMin = 1000; baseRoomMax = 1300; }
-    else if (weightVal >= 8) { baseRoomMin = 850; baseRoomMax = 1100; }
-
-    const roomMinTotal = baseRoomMin * nights;
-    const roomMaxTotal = baseRoomMax * nights;
-
-    // 2. 智慧放飯餐數演算法 (依入住/退房時間比對放飯時間)
-    const bSettings = db.boardingSettings || {};
-    const bTime = bSettings.breakfastTime || '09:00';
-    const dTime = bSettings.dinnerTime || '18:00';
-
-    const mealRadio = document.querySelector('input[name="mealPlan"]:checked');
-    const mealType = mealRadio ? mealRadio.value : 'none';
-    const mealPricePerDay = Number(mealRadio?.getAttribute('data-price') || 0);
-
-    let actualMealCount = 0;
-    let totalMealFee = 0;
-    let mealExplain = "";
-
-    if (mealType !== 'none') {
-      let plannedPerDay = (mealType === 'one_meal') ? 1 : (mealType === 'two_meals' ? 2 : 3);
-      let totalPlannedMeals = plannedPerDay * nights;
-
-      let deductCount = 0;
-      if (inTimeVal > bTime && (mealType === 'two_meals' || mealType === 'three_meals')) {
-        deductCount++;
-      }
-
-      let addCount = 0;
-      if (outTimeVal >= dTime) {
-        addCount++;
-      }
-
-      actualMealCount = Math.max(0, totalPlannedMeals - deductCount + addCount);
-      const unitMealCost = Math.round(mealPricePerDay / plannedPerDay);
-      totalMealFee = actualMealCount * unitMealCost;
-
-      mealExplain = `(共 ${actualMealCount} 餐；因 ${inTimeVal} 入住少 1 早飯，${outTimeVal} 退房計入晚飯)`;
-      
-      const mealRow = document.getElementById('row-boarding-meal-fee');
-      if (mealRow) {
-        mealRow.classList.remove('hidden');
-        document.getElementById('summary-meal-total').innerText = totalMealFee.toLocaleString();
-        document.getElementById('summary-meal-explain').innerText = mealExplain;
-      }
-    } else {
-      document.getElementById('row-boarding-meal-fee')?.classList.add('hidden');
-    }
-
-    // 3. 入住前強制洗澡 vs 退宿前自選洗澡
-    const isMandatoryInBath = bSettings.mandatoryCheckinBath === true;
-    const isChkOutBath = document.getElementById('chkHotelAddBath')?.checked;
-    
-    let bathMin = 500, bathMax = 700;
-    if (weightVal >= 18) { bathMin = 900; bathMax = 1400; }
-    else if (weightVal >= 8) { bathMin = 700; bathMax = 1000; }
-
-    let totalBathFeeMin = 0, totalBathFeeMax = 0;
-    let bathBreakdownHtml = "";
-
-    if (isMandatoryInBath) {
-      totalBathFeeMin += bathMin;
-      totalBathFeeMax += bathMax;
-      bathBreakdownHtml += `<div>• 入住規定基礎清潔洗澡 (預估)：NT$ ${bathMin} - ${bathMax}</div>`;
-    }
-    if (isChkOutBath) {
-      totalBathFeeMin += bathMin;
-      totalBathFeeMax += bathMax;
-      bathBreakdownHtml += `<div>• 退宿香香深層洗澡 (預估)：NT$ ${bathMin} - ${bathMax}</div>`;
-    }
-
-    // 加購方案計算
-    const pkgSel = document.getElementById('addon-package-select');
-    const walSel = document.getElementById('addon-wallet-select');
-    const addonPkg = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
-    const addonWal = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
-    const totalAddon = addonPkg + addonWal;
-    document.getElementById('summary-addon-total').innerText = totalAddon.toLocaleString();
-
-    // 4. 小計框「預估金額區間」渲染
-    const totalEstMin = roomMinTotal + totalBathFeeMin + totalMealFee + totalAddon;
-    const totalEstMax = roomMaxTotal + totalBathFeeMax + totalMealFee + totalAddon;
-
-    const breakdownBox = document.getElementById('summary-items-breakdown');
-    if (breakdownBox) {
-      breakdownBox.innerHTML = `
-        <div>• 寵物住宿房型 (${nights} 晚，預估)：NT$ ${roomMinTotal.toLocaleString()} - ${roomMaxTotal.toLocaleString()}</div>
-        ${mealExplain ? `<div class="text-amber-700">• 鮮食供餐：${mealExplain} (+NT$ ${totalMealFee})</div>` : ''}
-        ${bathBreakdownHtml}
-      `;
-    }
-
-    const rangeDisplay = document.getElementById('summary-service-range');
-    if (rangeDisplay) {
-      rangeDisplay.innerHTML = `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}`;
-    }
-    const finalDisplay = document.getElementById('summary-final-total');
-    if (finalDisplay) {
-      finalDisplay.innerHTML = `NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()} (現場確認)`;
-    }
+  // 2. 依毛孩體重判定房型等級與基準房價
+  let baseRoomMin = 700, baseRoomMax = 900;
+  let tierName = "小型犬獨立房";
+  if (weightVal >= 21) {
+    baseRoomMin = 1300; baseRoomMax = 1600; tierName = "大型犬旗艦房";
+  } else if (weightVal >= 10) {
+    baseRoomMin = 900; baseRoomMax = 1200; tierName = "中型犬舒適房";
   }
+  const roomMinTotal = baseRoomMin * nights;
+  const roomMaxTotal = baseRoomMax * nights;
+
+  // 3. 智慧放飯餐食計算 (早飯 09:00, 晚飯 18:00)
+  const mealRadio = document.querySelector('input[name="mealPlan"]:checked') || document.querySelector('input[name="mealPlanOption"]:checked');
+  const mealType = mealRadio ? mealRadio.value : 'none';
+  let mealUnitCost = 80;
+  if (weightVal >= 21) mealUnitCost = 150;
+  else if (weightVal >= 10) mealUnitCost = 120;
+
+  let actualMealCount = 0;
+  let totalMealFee = 0;
+  let mealExplain = "";
+
+  if (mealType !== 'none' && mealType !== 'SELF') {
+    const plannedPerDay = (mealType === 'one_meal' || mealType === 'ONE') ? 1 : 2;
+    let plannedTotal = plannedPerDay * nights;
+
+    // 早晚時間自動增扣餐數
+    if (inTimeVal > "09:30" && plannedPerDay === 2) plannedTotal = Math.max(1, plannedTotal - 1);
+    if (outTimeVal >= "18:00" && plannedPerDay === 2) plannedTotal += 1;
+
+    actualMealCount = plannedTotal;
+    totalMealFee = actualMealCount * mealUnitCost;
+    mealExplain = `店內鮮食共 ${actualMealCount} 餐 (+NT$ ${totalMealFee})`;
+
+    const mealRow = document.getElementById('row-boarding-meal-fee');
+    if (mealRow) {
+      mealRow.classList.remove('hidden');
+      document.getElementById('summary-meal-total').innerText = totalMealFee.toLocaleString();
+      document.getElementById('summary-meal-explain').innerText = `(${mealExplain}，每餐 $${mealUnitCost})`;
+    }
+  } else {
+    document.getElementById('row-boarding-meal-fee')?.classList.add('hidden');
+  }
+
+  // 4. 入住前洗澡 與 退宿前洗澡美容加購
+  const hasInBath = document.getElementById('chkHotelBathCheckin')?.checked;
+  const hasOutBath = document.getElementById('chkHotelAddBath')?.checked || document.getElementById('chkHotelBathCheckout')?.checked;
+
+  let bathInMin = 0, bathInMax = 0;
+  let bathOutMin = 0, bathOutMax = 0;
+
+  if (hasInBath) {
+    bathInMin = weightVal >= 21 ? 900 : (weightVal >= 10 ? 700 : 500);
+    bathInMax = weightVal >= 21 ? 1200 : (weightVal >= 10 ? 900 : 700);
+  }
+  if (hasOutBath) {
+    bathOutMin = weightVal >= 21 ? 1000 : (weightVal >= 10 ? 800 : 600);
+    bathOutMax = weightVal >= 21 ? 1500 : (weightVal >= 10 ? 1100 : 900);
+  }
+
+  const totalBathMin = bathInMin + bathOutMin;
+  const totalBathMax = bathInMax + bathOutMax;
+
+  // 5. 專車接送標記
+  const isShuttle = document.getElementById('chkNeedShuttle')?.checked;
+
+  // 6. 匯總小計明細與預估總額
+  const totalEstMin = roomMinTotal + totalMealFee + totalBathMin;
+  const totalEstMax = roomMaxTotal + totalMealFee + totalBathMax;
+
+  const breakdownBox = document.getElementById('summary-items-breakdown');
+  if (breakdownBox) {
+    breakdownBox.innerHTML = `
+      <div class="flex justify-between"><span>• ${tierName} (${nights} 晚)：</span><span class="font-mono">NT$ ${roomMinTotal.toLocaleString()} ~ ${roomMaxTotal.toLocaleString()}</span></div>
+      ${mealExplain ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplain}</span><span class="font-mono">+NT$ ${totalMealFee}</span></div>` : ''}
+      ${hasInBath ? `<div class="flex justify-between text-blue-700"><span>• 入住前清潔洗澡：</span><span class="font-mono">+NT$ ${bathInMin} ~${bathInMax}</span></div>` : ''}
+      ${hasOutBath ? `<div class="flex justify-between text-purple-700"><span>• 退宿前美容洗澡：</span><span class="font-mono">+NT$ ${bathOutMin} ~${bathOutMax}</span></div>` : ''}
+      ${isShuttle ? `<div class="text-emerald-800 font-bold">• 專車到府接送：車資現場依里程實收</div>` : ''}
+    `;
+  }
+
+  const rangeDisplay = document.getElementById('summary-service-range');
+  if (rangeDisplay) {
+    rangeDisplay.innerText = (totalEstMax > totalEstMin) ? `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
+  }
+
+  const finalDisplay = document.getElementById('summary-final-total');
+  if (finalDisplay) {
+    finalDisplay.innerText = (totalEstMax > totalEstMin) ? `NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
+  }
+}
 
   function setupPortfolio() {
     const sec = document.getElementById('portfolioSection');
@@ -1594,7 +1832,27 @@
     }
   }
 
-  function renderServices() {
+  // 2. 住宿日期變動處理器
+  function onHotelDateChange() {
+    const inDateVal = document.getElementById('hotelCheckInDate')?.value;
+    const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
+    
+    // 若退房日早於入住日，自動順延退房日為次日
+    if (inDateVal && outDateVal && outDateVal <= inDateVal) {
+      const nextDay = new Date(inDateVal);
+      nextDay.setDate(nextDay.getDate() + 1);
+      document.getElementById('hotelCheckOutDate').value = nextDay.toISOString().split('T')[0];
+    }
+    
+    const badgeIn = document.getElementById('badge-checkin-summary');
+    const badgeOut = document.getElementById('badge-checkout-summary');
+    if (badgeIn && inDateVal) badgeIn.innerText = `✓ ${inDateVal}`;
+    if (badgeOut && outDateVal) badgeOut.innerText = `✓ ${document.getElementById('hotelCheckOutDate').value}`;
+
+    calculateBoardingDaysAndPrice();
+  }
+    
+    function renderServices() {
     const svcGrid = document.getElementById('service-grid');
     if (!svcGrid) return;
     svcGrid.innerHTML = '';
@@ -2205,14 +2463,29 @@
       if (refName) notesArray.push(`【介紹人: ${refName}】`);
     }
 
-    // 住宿供餐備註
+    // 住宿模式專屬數據打包
     if (activeBookingSubMode === 'boarding') {
-      const mealRadio = document.querySelector('input[name="mealPlan"]:checked');
-      if (mealRadio && mealRadio.value !== 'none') {
-        notesArray.push(`【供餐: ${mealRadio.parentElement.innerText.trim()}】`);
-      }
-      if (document.getElementById('chkHotelAddBath')?.checked) {
-        notesArray.push(`【退宿加做深層洗澡】`);
+      const inD = document.getElementById('hotelCheckInDate')?.value;
+      const inT = document.getElementById('hotelCheckInTime')?.value;
+      const outD = document.getElementById('hotelCheckOutDate')?.value;
+      const outT = document.getElementById('hotelCheckOutTime')?.value;
+      const roomTier = document.querySelector('input[name="hotelRoomTier"]:checked')?.parentElement?.innerText?.trim() || '小型犬房';
+      const mealOpt = document.querySelector('input[name="mealPlanOption"]:checked')?.parentElement?.innerText?.trim() || '自備飼料';
+
+      notesArray.push(`【住宿排程: ${inD} ${inT} 入住 至 ${outD} ${outT} 退房】`);
+      notesArray.push(`【房型: ${roomTier}】`);
+      notesArray.push(`【供餐: ${mealOpt}】`);
+
+      const bathIn = document.getElementById('chkHotelBathCheckin')?.checked;
+      const bathOut = document.getElementById('chkHotelBathCheckout')?.checked;
+      if (bathIn) notesArray.push('【加購: 入住清潔洗澡】');
+      if (bathOut) notesArray.push('【加購: 退房深層美容】');
+
+      const needShuttle = document.getElementById('chkNeedShuttle')?.checked;
+      if (needShuttle) {
+        const sAddr = document.getElementById('shuttleAddress')?.value.trim() || '未填寫地址';
+        const sTrip = document.querySelector('input[name="shuttleTrip"]:checked')?.value === 'round' ? '來回接送' : '單趟接送';
+        notesArray.push(`【專車接送: ${sAddr} (${sTrip})】`);
       }
     }
 
