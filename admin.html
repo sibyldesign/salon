@@ -963,106 +963,72 @@
     <!-- 分頁 15. 設定分頁 (page-settings，已徹底修復 DOM 結構閉合與排版) -->
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
 
-      <!-- 前台品牌美學配色切換器 (6款主題色票) -->
+      <!-- 4. 門市營業時間與公休排班 (排版自適應不重疊) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-palette text-brand-500"></i>
-            <span>前台品牌風格色系自訂 (6款主題)</span>
+            <i class="fa-solid fa-clock text-brand-500"></i> 門市營業時段、排班間隔與公休日
           </span>
-          <span class="text-[10px] text-brand-400 font-mono">Theme Palette</span>
+          <span class="text-[10px] text-brand-400">時段網格排程</span>
         </div>
-
         <div class="space-y-2 text-xs">
-          <label class="block font-bold text-brand-800 text-[11px]">選擇前台展示色調：</label>
-          <select id="cfg-theme-color" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold text-brand-900 outline-none cursor-pointer" onchange="previewSelectedThemeColor(this.value)">
-            <option value="latte">1. 大地燕麥暖棕 (Latte Warm Brown) - 經典沙龍／舒活</option>
-            <option value="matcha">2. 日系抹茶茶木 (Matcha Earth Wood) - 植萃純淨／舒壓</option>
-            <option value="noir">3. 經典極簡黑白 (Noir Minimalist) - 時尚俐落／潮流</option>
-            <option value="navy">4. 奢華午夜黛藍 (Midnight Luxury Navy) - 頂級名媛／奢華</option>
-            <option value="rose">5. 法式暮粉煙燻 (Rose Dust Pink) - 柔美質感／女性美甲美睫</option>
-            <option value="mist">6. 晨曦朝露霧綠 (Morning Mist Green) - 森林清新／寵物度假友善</option>
-          </select>
-
-          <!-- 色票即時預覽列 -->
-          <div class="p-3 bg-brand-50/80 rounded-2xl border border-brand-200/60 flex items-center justify-between">
-            <span class="text-[11px] font-bold text-brand-700" id="theme-preview-name">當前色票預覽：</span>
-            <div class="flex items-center gap-1.5" id="theme-color-chips"></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-gray-700 mb-1 text-[11px]">每日營業開始時間：</label>
+              <input type="time" id="cfg-shift-start" class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50/50 outline-none font-mono text-xs" value="09:00">
+            </div>
+            <div>
+              <label class="block font-bold text-gray-700 mb-1 text-[11px]">每日最後接單時間：</label>
+              <input type="time" id="cfg-shift-end" class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50/50 outline-none font-mono text-xs" value="19:00">
+            </div>
           </div>
+          <div>
+            <label class="block font-bold text-brand-800 mb-1 text-[11px]">前台可約時段切分間隔：</label>
+            <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-bold">
+              <option value="30">每 30 分鐘為一格時段</option>
+              <option value="60">每 60 分鐘為一格時段</option>
+            </select>
+          </div>
+        </div>
+        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
+          <div class="font-bold text-brand-900">每週固定公休日：</div>
+          <div class="grid grid-cols-7 gap-1.5 text-center" id="weekly-off-grid">
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="0" class="accent-brand-400"><span class="mt-1 font-bold">日</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="1" class="accent-brand-400"><span class="mt-1 font-bold">一</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="2" class="accent-brand-400"><span class="mt-1 font-bold">二</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="3" class="accent-brand-400"><span class="mt-1 font-bold">三</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="4" class="accent-brand-400"><span class="mt-1 font-bold">四</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="5" class="accent-brand-400"><span class="mt-1 font-bold">五</span></label>
+            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="6" class="accent-brand-400"><span class="mt-1 font-bold">六</span></label>
+          </div>
+        </div>
+        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
+          <div class="font-bold text-brand-900">指定特殊休假／國定店休日：</div>
+          <div class="flex gap-2">
+            <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white outline-none font-mono">
+            <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition" onclick="addCustomOffDate()">+ 加入休假</button>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
         </div>
       </div>
-
-      <!-- 寵物住宿進階營運規格設定 (房間數配置與供餐，受模式連動自動顯隱) -->
-      <div id="section-pet-hotel-settings" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs" style="display: none;">
-        <div class="font-bold text-brand-900 border-b pb-2 flex items-center justify-between">
-          <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-amber-600"></i> 寵物住宿與房數配置</span>
-          <span class="text-[10px] text-brand-400">即時設定門市總房數</span>
+      
+      <!-- 8. 活動說明圖與公告 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">活動說明圖 (9:16 直式最多 7 張，含獨立刪除鈕) 與滿版公告</span>
+        <div>
+          <label class="block font-bold mb-1">前台置頂公告：</label>
+          <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div>
-            <label class="block font-bold text-brand-800 mb-1">門市住宿總房間數：</label>
-            <input type="number" id="cfg-hotel-total-rooms" class="w-full p-2.5 border rounded-xl font-bold font-mono text-xs" value="8" min="1" max="50">
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="font-bold text-brand-800">活動說明圖九宮格：</label>
+            <span class="text-[10px] text-brand-400">點擊上傳，右上角紅叉可直接移除</span>
           </div>
-          <div>
-            <label class="block font-bold text-brand-800 mb-1">每日最早入住／最晚退宿：</label>
-            <div class="flex gap-1">
-              <input type="time" id="cfg-hotel-checkin-start" class="w-1/2 p-2.5 border rounded-xl font-mono text-xs" value="10:00">
-              <input type="time" id="cfg-hotel-checkout-end" class="w-1/2 p-2.5 border rounded-xl font-mono text-xs" value="19:00">
-            </div>
-          </div>
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs">
-          <div>
-            <label class="font-bold text-gray-700 block mb-1">早飯時間</label>
-            <input type="time" id="cfg-meal-time-breakfast" class="w-full p-2.5 border border-gray-200 rounded-xl font-mono bg-white text-xs" value="09:00">
-          </div>
-          <div>
-            <label class="font-bold text-gray-700 block mb-1">午飯時間</label>
-            <input type="time" id="cfg-meal-time-lunch" class="w-full p-2.5 border border-gray-200 rounded-xl font-mono bg-white text-xs" value="12:30">
-          </div>
-          <div>
-            <label class="font-bold text-gray-700 block mb-1">晚飯時間</label>
-            <input type="time" id="cfg-meal-time-dinner" class="w-full p-2.5 border border-gray-200 rounded-xl font-mono bg-white text-xs" value="18:00">
-          </div>
+          <div class="grid grid-cols-4 gap-2 mb-2" id="promo-upload-grid"></div>
+          <textarea id="cfg-promo-imgs-text" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 font-mono text-gray-400" readonly placeholder="上傳後自動產生圖片網址清單..."></textarea>
         </div>
       </div>
-
-      <!-- 寵物住宿供餐收費矩陣設定 (小中大型犬 x 1/2/3餐) -->
-        <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2.5 pt-2">
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-amber-950 block text-[11px]">
-              <i class="fa-solid fa-bowl-food text-amber-600 mr-1"></i> 寵物住宿鮮食供餐費率設定 (元/晚)：
-            </span>
-            <span class="text-[10px] text-amber-800">支援一日一餐、兩餐、三餐</span>
-          </div>
-          
-          <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <!-- 小型犬/貓 -->
-            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
-              <span class="font-bold text-brand-900 block text-[11px]">小型犬/貓咪</span>
-              <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="80" placeholder="1餐">
-              <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="150" placeholder="2餐">
-              <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="220" placeholder="3餐">
-            </div>
-
-            <!-- 中型犬 -->
-            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
-              <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
-              <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="100" placeholder="1餐">
-              <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="180" placeholder="2餐">
-              <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="260" placeholder="3餐">
-            </div>
-
-            <!-- 大型犬 -->
-            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
-              <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
-              <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="120" placeholder="1餐">
-              <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="220" placeholder="2餐">
-              <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="320" placeholder="3餐">
-            </div>
-          </div>
-        </div>
-
+      
       <!-- 1. 預約審核機制與訂金收取規則 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -1150,6 +1116,31 @@
         </div>
       </div>
 
+      <!-- 7. 專員抽成、指定獎金與算薪 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
+          <span>專員業績抽成與顧客指定獎金模組</span>
+          <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold block mb-1">預設抽成比例 (%)：</label>
+            <div class="flex items-center gap-1.5">
+              <input type="number" id="cfg-commission-rate" class="w-full p-2 rounded-xl border border-brand-200 text-center font-bold font-mono" value="50">
+              <span>%</span>
+            </div>
+          </div>
+          <div>
+            <label class="font-bold block mb-1">每客指定專員獎金 (NT$)：</label>
+            <div class="flex items-center gap-1.5">
+              <input type="number" id="cfg-designated-bonus" class="w-full p-2 rounded-xl border border-brand-200 text-center font-bold font-mono" value="50">
+              <span>元</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
       <!-- 3. LINE 推播與通報設定 (已徹底修正巢狀閉合) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -1190,96 +1181,6 @@
             <label class="block text-[11px] font-bold text-brand-800 mb-1">LINE 官方帳號 Channel Access Token：</label>
             <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-white outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上 LINE Developers 發行的長期 Channel Access Token"></textarea>
           </div>
-        </div>
-      </div>
-
-      <!-- 4. 門市營業時間與公休排班 (排版自適應不重疊) -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-clock text-brand-500"></i> 門市營業時段、排班間隔與公休日
-          </span>
-          <span class="text-[10px] text-brand-400">時段網格排程</span>
-        </div>
-        <div class="space-y-2 text-xs">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div>
-              <label class="block font-bold text-gray-700 mb-1 text-[11px]">每日營業開始時間：</label>
-              <input type="time" id="cfg-shift-start" class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50/50 outline-none font-mono text-xs" value="09:00">
-            </div>
-            <div>
-              <label class="block font-bold text-gray-700 mb-1 text-[11px]">每日最後接單時間：</label>
-              <input type="time" id="cfg-shift-end" class="w-full p-2.5 rounded-xl border border-gray-200 bg-gray-50/50 outline-none font-mono text-xs" value="19:00">
-            </div>
-          </div>
-          <div>
-            <label class="block font-bold text-brand-800 mb-1 text-[11px]">前台可約時段切分間隔：</label>
-            <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-bold">
-              <option value="30">每 30 分鐘為一格時段</option>
-              <option value="60">每 60 分鐘為一格時段</option>
-            </select>
-          </div>
-        </div>
-        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
-          <div class="font-bold text-brand-900">每週固定公休日：</div>
-          <div class="grid grid-cols-7 gap-1.5 text-center" id="weekly-off-grid">
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="0" class="accent-brand-400"><span class="mt-1 font-bold">日</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="1" class="accent-brand-400"><span class="mt-1 font-bold">一</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="2" class="accent-brand-400"><span class="mt-1 font-bold">二</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="3" class="accent-brand-400"><span class="mt-1 font-bold">三</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="4" class="accent-brand-400"><span class="mt-1 font-bold">四</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="5" class="accent-brand-400"><span class="mt-1 font-bold">五</span></label>
-            <label class="flex flex-col items-center p-2 bg-white rounded-xl border border-brand-200 cursor-pointer"><input type="checkbox" value="6" class="accent-brand-400"><span class="mt-1 font-bold">六</span></label>
-          </div>
-        </div>
-        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/60 space-y-2 text-xs">
-          <div class="font-bold text-brand-900">指定特殊休假／國定店休日：</div>
-          <div class="flex gap-2">
-            <input type="date" id="new-custom-off-date" class="flex-1 p-2 rounded-xl border border-brand-200 text-xs bg-white outline-none font-mono">
-            <button type="button" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition" onclick="addCustomOffDate()">+ 加入休假</button>
-          </div>
-          <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
-        </div>
-      </div>
-
-      <!-- 5. 品牌外觀與 LOGO 上傳 (按鈕防跑版) -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
-        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">品牌資料與前台外觀</span>
-        <div>
-          <label class="block font-bold mb-1">沙龍門市名稱：</label>
-          <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
-        </div>
-        <div>
-          <label class="block font-bold mb-1">副標題 / 品牌理念標語：</label>
-          <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
-        </div>
-        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
-          <div class="flex justify-between items-center font-bold">
-            <span>前台頂部 LOGO 圖片展示</span>
-            <input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked>
-          </div>
-          <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
-            <input type="file" id="logo-file-input" accept="image/*" class="text-xs flex-1 min-w-0">
-            <button type="button" onclick="uploadLogoImgBB()" class="px-3.5 py-2 bg-gray-800 hover:bg-black text-white rounded-xl font-bold shrink-0 text-xs shadow-xs transition">
-              上傳轉網址
-            </button>
-          </div>
-          <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 bg-white font-mono text-gray-500" readonly>
-          <div id="logo-preview-box" class="w-full h-[100px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2 hidden">
-            <img id="logo-preview-img" class="max-h-full max-w-full object-contain" src="">
-          </div>
-        </div>
-        <div>
-          <label class="block font-bold mb-1">門市預約專線電話：</label>
-          <input type="tel" id="cfg-phone" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
-        </div>
-        <div>
-          <label class="block font-bold mb-1">店面地址：</label>
-          <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
-        </div>
-        <div>
-          <label class="block font-bold mb-1">營業時間文字：</label>
-          <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
         </div>
       </div>
 
@@ -1371,47 +1272,6 @@
         </div>
       </div>
 
-      <!-- 7. 專員抽成、指定獎金與算薪 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
-        <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
-          <span>專員業績抽成與顧客指定獎金模組</span>
-          <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="font-bold block mb-1">預設抽成比例 (%)：</label>
-            <div class="flex items-center gap-1.5">
-              <input type="number" id="cfg-commission-rate" class="w-full p-2 rounded-xl border border-brand-200 text-center font-bold font-mono" value="50">
-              <span>%</span>
-            </div>
-          </div>
-          <div>
-            <label class="font-bold block mb-1">每客指定專員獎金 (NT$)：</label>
-            <div class="flex items-center gap-1.5">
-              <input type="number" id="cfg-designated-bonus" class="w-full p-2 rounded-xl border border-brand-200 text-center font-bold font-mono" value="50">
-              <span>元</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8. 活動說明圖與公告 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
-        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">活動說明圖 (9:16 直式最多 7 張，含獨立刪除鈕) 與滿版公告</span>
-        <div>
-          <label class="block font-bold mb-1">前台置頂公告：</label>
-          <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
-        </div>
-        <div>
-          <div class="flex justify-between items-center mb-1">
-            <label class="font-bold text-brand-800">活動說明圖九宮格：</label>
-            <span class="text-[10px] text-brand-400">點擊上傳，右上角紅叉可直接移除</span>
-          </div>
-          <div class="grid grid-cols-4 gap-2 mb-2" id="promo-upload-grid"></div>
-          <textarea id="cfg-promo-imgs-text" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 font-mono text-gray-400" readonly placeholder="上傳後自動產生圖片網址清單..."></textarea>
-        </div>
-      </div>
-
       <!-- 9. 定型化契約與手寫電子簽章 (依指示優化載入按鈕文字) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
@@ -1439,6 +1299,262 @@
         <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
       </div>
 
+      <!-- 毛孩履歷問題管理（預設問題開關 ＋ 老闆自訂動態題庫） -->
+      <div id="section-pet-questions-manager" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-clipboard-question text-amber-600"></i> 毛孩照護履歷問卷管理 (前台題庫控制)
+          </span>
+          <span class="text-[10px] text-brand-400">寵物美容與住宿模式專用</span>
+        </div>
+
+        <!-- 預設常用問題開關 -->
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+          <div class="font-bold text-brand-800 text-[11px]">1. 系統預設照護欄位開關：</div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-chip-id" class="accent-[#8C7355]"> 晶片號碼</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-vaccine" checked class="accent-[#8C7355]"> 疫苗施打年份</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-deworm" checked class="accent-[#8C7355]"> 定期驅蟲品牌</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-allergy" checked class="accent-[#8C7355]"> 過敏與重大病史</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-intro" checked class="accent-[#8C7355]"> 介紹人與來源</label>
+            <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" id="field-shuttle" checked class="accent-[#8C7355]"> 專車到府接送</label>
+          </div>
+        </div>
+
+        <!-- 自訂動態問答題清單 -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-800 text-[11px]">2. 店家自訂問卷題目：</span>
+            <button type="button" onclick="openAddCustomQuestionModal()" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">
+              + 新增自訂問題
+            </button>
+          </div>
+          <div id="admin-custom-questions-list" class="space-y-1.5"></div>
+        </div>
+      </div>
+
+      
+      <!-- 寵物住宿進階營運規格設定 (房間數配置與供餐，受模式連動自動顯隱) -->
+      <!-- 寵物住宿進階營運規格設定 (完全自訂房型名稱、金額與供餐) -->
+      <div id="section-pet-hotel-settings" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs" style="display: none;">
+        <div class="font-bold text-brand-900 border-b pb-2 flex items-center justify-between">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-amber-600"></i> 寵物住宿房型等級、餐食與時段動態配置</span>
+          <span class="text-[10px] text-brand-400">所有前台名稱與金額皆可修改</span>
+        </div>
+
+        <!-- 基礎時間與房數 -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">門市住宿總房間數：</label>
+            <input type="number" id="cfg-hotel-total-rooms" class="w-full p-2.5 border rounded-xl font-bold font-mono text-xs" value="8" min="1" max="50">
+          </div>
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">最早入住時間：</label>
+            <input type="time" id="cfg-hotel-checkin-start" class="w-full p-2.5 border rounded-xl font-mono text-xs" value="10:00">
+          </div>
+          <div>
+            <label class="block font-bold text-brand-800 mb-1">最晚退宿時間：</label>
+            <input type="time" id="cfg-hotel-checkout-end" class="w-full p-2.5 border rounded-xl font-mono text-xs" value="19:00">
+          </div>
+        </div>
+
+        <!-- 早晚放飯時間 -->
+        <div class="grid grid-cols-2 gap-2 p-3 bg-amber-50/60 rounded-2xl border border-amber-200">
+          <div>
+            <label class="font-bold text-amber-950 block mb-1">門市早飯放飯時間 (連動扣餐判斷)：</label>
+            <input type="time" id="cfg-meal-time-breakfast" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs font-bold" value="09:00">
+          </div>
+          <div>
+            <label class="font-bold text-amber-950 block mb-1">門市晚飯放飯時間 (連動增餐判斷)：</label>
+            <input type="time" id="cfg-meal-time-dinner" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs font-bold" value="18:00">
+          </div>
+        </div>
+
+        <!-- 1. 房型等級與體型級距設定 (動態增減) -->
+        <div class="space-y-2 pt-1 border-t border-brand-100">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
+              <i class="fa-solid fa-bed text-amber-600"></i> 1. 住宿房型名稱、體型級距與收費區間：
+            </span>
+            <button type="button" onclick="openAddRoomTierModal()" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">
+              + 新增房型等級
+            </button>
+          </div>
+          <div id="admin-room-tiers-list" class="space-y-2"></div>
+        </div>
+
+        <!-- 2. 供餐方案與收費設定 (動態增減) -->
+        <div class="space-y-2 pt-2 border-t border-brand-100">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
+              <i class="fa-solid fa-bowl-food text-amber-600"></i> 2. 每日供餐照護選項與單價：
+            </span>
+            <button type="button" onclick="openAddMealOptionModal()" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">
+              + 新增供餐方案
+            </button>
+          </div>
+          <div id="admin-meal-options-list" class="space-y-1.5"></div>
+        </div>
+
+        <!-- 3. 前台顯示自訂文案自訂區 -->
+        <div class="space-y-2 pt-2 border-t border-brand-100">
+          <span class="font-bold text-brand-900 text-[11px] block">3. 前台按鈕與附加服務顯示文字自訂：</span>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-500 text-[10px] mb-0.5">美容按鈕文字：</label>
+              <input type="text" id="cfg-label-mode-grooming" class="w-full p-2 border rounded-xl text-xs font-bold" value="精緻洗護美容">
+            </div>
+            <div>
+              <label class="block text-gray-500 text-[10px] mb-0.5">住宿按鈕文字：</label>
+              <input type="text" id="cfg-label-mode-boarding" class="w-full p-2 border rounded-xl text-xs font-bold" value="安親度假住宿">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-gray-500 text-[10px] mb-0.5">入住當天洗澡標題：</label>
+              <input type="text" id="cfg-label-hotel-bath-in" class="w-full p-2 border rounded-xl text-xs" value="【入住當天】進房前基礎清潔洗護">
+            </div>
+            <div>
+              <label class="block text-gray-500 text-[10px] mb-0.5">退房前美容標題：</label>
+              <input type="text" id="cfg-label-hotel-bath-out" class="w-full p-2 border rounded-xl text-xs" value="【退房當天】返家前深層造型美容／洗澡">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 寵物住宿鮮食餐費率設定 (小中大型犬 x 1/2/3餐矩陣) -->
+        <div class="space-y-3 pt-2 border-t border-brand-100">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
+              <i class="fa-solid fa-bowl-food text-amber-600"></i> 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價)：
+            </span>
+            <span class="text-[10px] text-amber-800 font-medium">支援小/中/大型犬 x 1/2/3餐差異價格</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
+            <!-- 小型犬/貓 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">小型犬 / 貓咪 (&lt;10kg)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="80">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="150">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="220">
+              </div>
+            </div>
+
+            <!-- 中型犬 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="100">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="180">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="260">
+              </div>
+            </div>
+
+            <!-- 大型犬 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="120">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="220">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (元/晚)</label>
+                <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="320">
+              </div>
+            </div>
+          </div>
+        </div>
+      
+      <!-- 5. 品牌外觀與 LOGO 上傳 (按鈕防跑版) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">品牌資料與前台外觀</span>
+        <div>
+          <label class="block font-bold mb-1">沙龍門市名稱：</label>
+          <input type="text" id="cfg-title" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">副標題 / 品牌理念標語：</label>
+          <input type="text" id="cfg-subtitle" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+        </div>
+        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+          <div class="flex justify-between items-center font-bold">
+            <span>前台頂部 LOGO 圖片展示</span>
+            <input type="checkbox" id="cfg-toggle-logo" class="accent-brand-400" checked>
+          </div>
+          <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+            <input type="file" id="logo-file-input" accept="image/*" class="text-xs flex-1 min-w-0">
+            <button type="button" onclick="uploadLogoImgBB()" class="px-3.5 py-2 bg-gray-800 hover:bg-black text-white rounded-xl font-bold shrink-0 text-xs shadow-xs transition">
+              上傳轉網址
+            </button>
+          </div>
+          <input type="text" id="cfg-logo" class="w-full p-2 rounded-xl border border-brand-200 bg-white font-mono text-gray-500" readonly>
+          <div id="logo-preview-box" class="w-full h-[100px] rounded-xl overflow-hidden border border-brand-200 bg-white flex items-center justify-center p-2 hidden">
+            <img id="logo-preview-img" class="max-h-full max-w-full object-contain" src="">
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold mb-1">門市預約專線電話：</label>
+          <input type="tel" id="cfg-phone" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">店面地址：</label>
+          <input type="text" id="cfg-address" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">營業時間文字：</label>
+          <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
+        </div>
+      </div>
+      
+      <!-- 前台品牌美學配色切換器 (6款主題色票) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-palette text-brand-500"></i>
+            <span>前台品牌風格色系自訂 (6款主題)</span>
+          </span>
+          <span class="text-[10px] text-brand-400 font-mono">Theme Palette</span>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <label class="block font-bold text-brand-800 text-[11px]">選擇前台展示色調：</label>
+          <select id="cfg-theme-color" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold text-brand-900 outline-none cursor-pointer" onchange="previewSelectedThemeColor(this.value)">
+            <option value="latte">1. 大地燕麥暖棕 (Latte Warm Brown) - 經典沙龍／舒活</option>
+            <option value="matcha">2. 日系抹茶茶木 (Matcha Earth Wood) - 植萃純淨／舒壓</option>
+            <option value="noir">3. 經典極簡黑白 (Noir Minimalist) - 時尚俐落／潮流</option>
+            <option value="navy">4. 奢華午夜黛藍 (Midnight Luxury Navy) - 頂級名媛／奢華</option>
+            <option value="rose">5. 法式暮粉煙燻 (Rose Dust Pink) - 柔美質感／女性美甲美睫</option>
+            <option value="mist">6. 晨曦朝露霧綠 (Morning Mist Green) - 森林清新／寵物度假友善</option>
+          </select>
+
+          <!-- 色票即時預覽列 -->
+          <div class="p-3 bg-brand-50/80 rounded-2xl border border-brand-200/60 flex items-center justify-between">
+            <span class="text-[11px] font-bold text-brand-700" id="theme-preview-name">當前色票預覽：</span>
+            <div class="flex items-center gap-1.5" id="theme-color-chips"></div>
+          </div>
+        </div>
+      </div>
+      
       <!-- 11. 社群導航 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">社群平台與 Google 地圖導航</span>
@@ -1742,7 +1858,56 @@
     }
   }
 
-  // 後台住宿費用即時計算
+  let customQuestionsList = [];
+
+  function renderAdminCustomQuestions() {
+    const box = document.getElementById('admin-custom-questions-list');
+    if (!box) return;
+    if (customQuestionsList.length === 0) {
+      box.innerHTML = '<div class="text-gray-400 text-center py-2 text-[11px]">目前尚無自訂問答，點擊上方按鈕新增</div>';
+      return;
+    }
+    box.innerHTML = customQuestionsList.map((q, idx) => `
+      <div class="flex justify-between items-center p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs">
+        <div>
+          <span class="font-bold text-brand-900">${q.title}</span>
+          ${q.required ? '<span class="text-rose-600 font-bold ml-1 text-[10px]">*必填</span>' : ''}
+          <div class="text-[10px] text-gray-400">提示文字: ${q.placeholder || '無'}</div>
+        </div>
+        <button type="button" onclick="customQuestionsList.splice(${idx}, 1); renderAdminCustomQuestions();" class="text-rose-500 hover:text-rose-700 font-bold p-1">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function openAddCustomQuestionModal() {
+    Swal.fire({
+      title: '新增毛孩問卷問題',
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">題目名稱：</label><input id="new-q-title" class="swal2-input text-xs" placeholder="例: 平時散步習慣或特定零食偏好？"></div>
+          <div><label class="font-bold">提示說明 (Placeholder)：</label><input id="new-q-placeholder" class="swal2-input text-xs" placeholder="例: 早晚各散步一次，不吃牛"></div>
+          <label class="flex items-center gap-1.5 pt-1 cursor-pointer font-bold"><input type="checkbox" id="new-q-required"> 設為顧客必填題</label>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確定建立',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        title: document.getElementById('new-q-title').value.trim(),
+        placeholder: document.getElementById('new-q-placeholder').value.trim(),
+        required: document.getElementById('new-q-required').checked
+      })
+    }).then(r => {
+      if (r.isConfirmed && r.value.title) {
+        customQuestionsList.push(r.value);
+        renderAdminCustomQuestions();
+      }
+    });
+  }
+    
+    // 後台住宿費用即時計算
   function calcAdminQuickHotelFees() {
     const inDate = document.getElementById('quick-hotel-checkin-date')?.value;
     const outDate = document.getElementById('quick-hotel-checkout-date')?.value;
@@ -2265,7 +2430,181 @@
         ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
     }
 
-  // ==========================================
+  // 房型等級與供餐方案陣列狀態
+  let adminRoomTiers = [
+    { id: "tier_1", name: "小型犬獨立套房", desc: "9kg以下", price_min: 700, price_max: 900 },
+    { id: "tier_2", name: "中型犬舒適套房", desc: "10-20kg", price_min: 900, price_max: 1200 },
+    { id: "tier_3", name: "大型犬旗艦套房", desc: "21kg以上", price_min: 1300, price_max: 1600 },
+    { id: "tier_4", name: "貓咪獨立跳台套房", desc: "垂直跳台/限貓", price_min: 700, price_max: 850 }
+  ];
+
+  let adminMealOptions = [
+    { id: "meal_none", name: "自備飼料 / 不需要供餐", desc: "自備習慣食用之飼料或罐頭", price: 0, type: "SELF" },
+    { id: "meal_one", name: "精緻鮮食供餐 / 一日一餐", desc: "每日固定安排一餐營養鮮食", price: 80, type: "ONE" },
+    { id: "meal_two", name: "精緻鮮食供餐 / 一日兩餐", desc: "早晚放飯時間各安排一餐", price: 150, type: "TWO" }
+  ];
+
+  function renderAdminRoomTiers() {
+    const container = document.getElementById('admin-room-tiers-list');
+    if (!container) return;
+    container.innerHTML = adminRoomTiers.map((t, idx) => `
+      <div class="flex justify-between items-center p-3 bg-brand-50 rounded-2xl border border-brand-200 text-xs">
+        <div>
+          <div class="font-bold text-brand-900">${t.name} <span class="text-brand-400 font-normal">(${t.desc})</span></div>
+          <div class="text-[11px] text-[#8C7355] font-mono font-bold mt-0.5">收費區間：NT$ ${t.price_min} ~ ${t.price_max} / 晚</div>
+        </div>
+        <div class="flex gap-1.5 items-center">
+          <button type="button" onclick="editRoomTierModal(${idx})" class="px-2.5 py-1 bg-white border border-brand-200 text-brand-800 rounded-lg font-bold text-[11px]">編輯</button>
+          <button type="button" onclick="adminRoomTiers.splice(${idx}, 1); renderAdminRoomTiers();" class="px-2 py-1 bg-rose-50 text-rose-700 rounded-lg font-bold text-[11px]">刪除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openAddRoomTierModal() {
+    Swal.fire({
+      title: '新增住宿房型等級',
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">房型名稱：</label><input id="swal-tier-name" class="swal2-input text-xs" placeholder="例: 特大巨型犬VIP套房"></div>
+          <div><label class="font-bold">體型/體重說明：</label><input id="swal-tier-desc" class="swal2-input text-xs" placeholder="例: 35kg以上 或 雙貓同住"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="font-bold">每晚最低預估 (NT$)：</label><input id="swal-tier-min" type="number" class="swal2-input text-xs" value="1000"></div>
+            <div><label class="font-bold">每晚最高預估 (NT$)：</label><input id="swal-tier-max" type="number" class="swal2-input text-xs" value="1400"></div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確定新增',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        id: 'tier_' + Date.now(),
+        name: document.getElementById('swal-tier-name').value.trim(),
+        desc: document.getElementById('swal-tier-desc').value.trim(),
+        price_min: Number(document.getElementById('swal-tier-min').value || 800),
+        price_max: Number(document.getElementById('swal-tier-max').value || 1000)
+      })
+    }).then(r => {
+      if (r.isConfirmed && r.value.name) {
+        adminRoomTiers.push(r.value);
+        renderAdminRoomTiers();
+      }
+    });
+  }
+
+  function editRoomTierModal(idx) {
+    const t = adminRoomTiers[idx];
+    Swal.fire({
+      title: `修改【${t.name}】資料`,
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">房型名稱：</label><input id="swal-tier-name" class="swal2-input text-xs" value="${t.name}"></div>
+          <div><label class="font-bold">體型/體重說明：</label><input id="swal-tier-desc" class="swal2-input text-xs" value="${t.desc}"></div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><label class="font-bold">每晚最低預估 (NT$)：</label><input id="swal-tier-min" type="number" class="swal2-input text-xs" value="${t.price_min}"></div>
+            <div><label class="font-bold">每晚最高預估 (NT$)：</label><input id="swal-tier-max" type="number" class="swal2-input text-xs" value="${t.price_max}"></div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '保存修改',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        name: document.getElementById('swal-tier-name').value.trim(),
+        desc: document.getElementById('swal-tier-desc').value.trim(),
+        price_min: Number(document.getElementById('swal-tier-min').value || t.price_min),
+        price_max: Number(document.getElementById('swal-tier-max').value || t.price_max)
+      })
+    }).then(r => {
+      if (r.isConfirmed && r.value.name) {
+        Object.assign(adminRoomTiers[idx], r.value);
+        renderAdminRoomTiers();
+      }
+    });
+  }
+
+  function renderAdminMealOptions() {
+    const container = document.getElementById('admin-meal-options-list');
+    if (!container) return;
+    container.innerHTML = adminMealOptions.map((m, idx) => `
+      <div class="flex justify-between items-center p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs">
+        <div>
+          <div class="font-bold text-brand-900">${m.name} (+NT$ ${m.price})</div>
+          <div class="text-[10.5px] text-brand-400">${m.desc}</div>
+        </div>
+        <div class="flex gap-1.5 items-center">
+          <button type="button" onclick="editMealOptionModal(${idx})" class="px-2 py-0.5 bg-white border border-brand-200 text-brand-800 rounded font-bold text-[11px]">改</button>
+          <button type="button" onclick="adminMealOptions.splice(${idx}, 1); renderAdminMealOptions();" class="px-2 py-0.5 bg-rose-50 text-rose-700 rounded font-bold text-[11px]">刪</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openAddMealOptionModal() {
+    Swal.fire({
+      title: '新增供餐照護選項',
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">方案名稱：</label><input id="swal-meal-name" class="swal2-input text-xs" placeholder="例: 頂級鮮食/一日三餐"></div>
+          <div><label class="font-bold">說明文字：</label><input id="swal-meal-desc" class="swal2-input text-xs" placeholder="例: 早午晚三餐放飯"></div>
+          <div><label class="font-bold">每晚加價金額 (NT$)：</label><input id="swal-meal-price" type="number" class="swal2-input text-xs" value="220"></div>
+          <div>
+            <label class="font-bold">餐飲屬性：</label>
+            <select id="swal-meal-type" class="swal2-input text-xs font-bold">
+              <option value="SELF">自備飼料 (不計餐費)</option>
+              <option value="ONE">一日一餐</option>
+              <option value="TWO" selected>一日兩餐</option>
+              <option value="THREE">一日三餐</option>
+            </select>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '確定建立',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        id: 'meal_' + Date.now(),
+        name: document.getElementById('swal-meal-name').value.trim(),
+        desc: document.getElementById('swal-meal-desc').value.trim(),
+        price: Number(document.getElementById('swal-meal-price').value || 0),
+        type: document.getElementById('swal-meal-type').value
+      })
+    }).then(r => {
+      if (r.isConfirmed && r.value.name) {
+        adminMealOptions.push(r.value);
+        renderAdminMealOptions();
+      }
+    });
+  }
+
+  function editMealOptionModal(idx) {
+    const m = adminMealOptions[idx];
+    Swal.fire({
+      title: `修改【${m.name}】方案`,
+      html: `
+        <div class="text-left text-xs space-y-2">
+          <div><label class="font-bold">方案名稱：</label><input id="swal-meal-name" class="swal2-input text-xs" value="${m.name}"></div>
+          <div><label class="font-bold">說明文字：</label><input id="swal-meal-desc" class="swal2-input text-xs" value="${m.desc}"></div>
+          <div><label class="font-bold">每晚加價金額 (NT$)：</label><input id="swal-meal-price" type="number" class="swal2-input text-xs" value="${m.price}"></div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '保存修改',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => ({
+        name: document.getElementById('swal-meal-name').value.trim(),
+        desc: document.getElementById('swal-meal-desc').value.trim(),
+        price: Number(document.getElementById('swal-meal-price').value || 0)
+      })
+    }).then(r => {
+      if (r.isConfirmed && r.value.name) {
+        Object.assign(adminMealOptions[idx], r.value);
+        renderAdminMealOptions();
+      }
+    });
+  }
+    
+    // ==========================================
   // 6. 預約卡片渲染引擎 (結構化解析住宿、放飯、美容洗護與接送地址)
   function renderSingleCardHTML(a) {
     const staffColor = getStaffColor(a.staffId, a.staffName);
@@ -4996,6 +5335,25 @@
       setVal('cfg-commission-rate', s.commissionRate || 50);
       setVal('cfg-designated-bonus', s.designatedBonus || 50);
 
+      adminRoomTiers = (s.hotelRoomTiers && s.hotelRoomTiers.length > 0) ? s.hotelRoomTiers : adminRoomTiers;
+  adminMealOptions = (s.hotelMealOptions && s.hotelMealOptions.length > 0) ? s.hotelMealOptions : adminMealOptions;
+  renderAdminRoomTiers();
+  renderAdminMealOptions();
+  setVal('cfg-label-mode-grooming', s.labelModeGrooming || '精緻洗護美容');
+  setVal('cfg-label-mode-boarding', s.labelModeBoarding || '安親度假住宿');
+  setVal('cfg-label-hotel-bath-in', s.labelHotelBathIn || '【入住當天】進房前基礎清潔洗護');
+  setVal('cfg-label-hotel-bath-out', s.labelHotelBathOut || '【退房當天】返家前深層造型美容／洗澡');
+      
+      // 供餐矩陣回填
+  const bm = s.boardingMealRates || {};
+  const smallArr = bm.small || [80, 150, 220];
+  const medArr = bm.medium || [100, 180, 260];
+  const largeArr = bm.large || [120, 220, 320];
+
+  setVal('cfg-meal-small-1', smallArr[0]); setVal('cfg-meal-small-2', smallArr[1]); setVal('cfg-meal-small-3', smallArr[2]);
+  setVal('cfg-meal-med-1', medArr[0]); setVal('cfg-meal-med-2', medArr[1]); setVal('cfg-meal-med-3', medArr[2]);
+  setVal('cfg-meal-large-1', largeArr[0]); setVal('cfg-meal-large-2', largeArr[1]); setVal('cfg-meal-large-3', largeArr[2]);
+      
       // 回填當前商業模式 Badge
   const currentMode = s.industryMode || 'pet_hotel';
   const modeNames = { 'beauty': '純美業版', 'pet_grooming': '寵物純美容', 'pet_hotel': '寵物美容＋住宿' };
@@ -5098,16 +5456,44 @@
     contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '美容定型化契約書',
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+    pet_profile_questions: customQuestionsList,
+    pet_custom_fields: {
+      chipId: Boolean(document.getElementById('field-chip-id')?.checked),
+      vaccine: Boolean(document.getElementById('field-vaccine')?.checked),
+      deworm: Boolean(document.getElementById('field-deworm')?.checked),
+      allergy: Boolean(document.getElementById('field-allergy')?.checked),
+      intro: Boolean(document.getElementById('field-intro')?.checked),
+      shuttle: Boolean(document.getElementById('field-shuttle')?.checked)
+    },
 
     // 關鍵修復：雙向相容命名
     theme_color: selectedTheme,
     industry_mode: selectedMode,
 
     boarding_meal_rates: {
-      small: [Number(document.getElementById('cfg-meal-small-1')?.value||80), Number(document.getElementById('cfg-meal-small-2')?.value||150), Number(document.getElementById('cfg-meal-small-3')?.value||220)],
-      medium: [Number(document.getElementById('cfg-meal-med-1')?.value||100), Number(document.getElementById('cfg-meal-med-2')?.value||180), Number(document.getElementById('cfg-meal-med-3')?.value||260)],
-      large: [Number(document.getElementById('cfg-meal-large-1')?.value||120), Number(document.getElementById('cfg-meal-large-2')?.value||220), Number(document.getElementById('cfg-meal-large-3')?.value||320)]
+    small: [
+      Number(document.getElementById('cfg-meal-small-1')?.value || 80),
+      Number(document.getElementById('cfg-meal-small-2')?.value || 150),
+      Number(document.getElementById('cfg-meal-small-3')?.value || 220)
+    ],
+    medium: [
+      Number(document.getElementById('cfg-meal-med-1')?.value || 100),
+      Number(document.getElementById('cfg-meal-med-2')?.value || 180),
+      Number(document.getElementById('cfg-meal-med-3')?.value || 260)
+    ],
+    large: [
+      Number(document.getElementById('cfg-meal-large-1')?.value || 120),
+      Number(document.getElementById('cfg-meal-large-2')?.value || 220),
+      Number(document.getElementById('cfg-meal-large-3')?.value || 320)
+    ]    
     },
+    
+    hotel_room_tiers: adminRoomTiers,
+  hotel_meal_options: adminMealOptions,
+  label_mode_grooming: document.getElementById('cfg-label-mode-grooming')?.value.trim() || '精緻洗護美容',
+  label_mode_boarding: document.getElementById('cfg-label-mode-boarding')?.value.trim() || '安親度假住宿',
+  label_hotel_bath_in: document.getElementById('cfg-label-hotel-bath-in')?.value.trim() || '【入住當天】進房前基礎清潔洗護',
+  label_hotel_bath_out: document.getElementById('cfg-label-hotel-bath-out')?.value.trim() || '【退房當天】返家前深層造型美容／洗澡',
     
     // 寵物住宿與供餐欄位
     total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
