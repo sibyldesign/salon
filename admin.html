@@ -1027,23 +1027,38 @@
         </div>
       </div>
 
-      <!-- 餐食單價設定 -->
-        <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2 pt-2">
-          <span class="font-bold text-amber-950 block text-[11px]">
-            <i class="fa-solid fa-coins text-amber-600 mr-1"></i> 住宿每日供餐單價收費設定 (元/餐/天)：
-          </span>
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="font-bold text-amber-900 block text-[10px]">自備飼料費</label>
-              <input type="number" id="cfg-meal-price-self" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="0">
+      <!-- 寵物住宿供餐收費矩陣設定 (小中大型犬 x 1/2/3餐) -->
+        <div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2.5 pt-2">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-amber-950 block text-[11px]">
+              <i class="fa-solid fa-bowl-food text-amber-600 mr-1"></i> 寵物住宿鮮食供餐費率設定 (元/晚)：
+            </span>
+            <span class="text-[10px] text-amber-800">支援一日一餐、兩餐、三餐</span>
+          </div>
+          
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <!-- 小型犬/貓 -->
+            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
+              <span class="font-bold text-brand-900 block text-[11px]">小型犬/貓咪</span>
+              <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="80" placeholder="1餐">
+              <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="150" placeholder="2餐">
+              <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="220" placeholder="3餐">
             </div>
-            <div>
-              <label class="font-bold text-amber-900 block text-[10px]">一日一餐單價</label>
-              <input type="number" id="cfg-meal-price-1" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="80">
+
+            <!-- 中型犬 -->
+            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
+              <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
+              <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="100" placeholder="1餐">
+              <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="180" placeholder="2餐">
+              <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="260" placeholder="3餐">
             </div>
-            <div>
-              <label class="font-bold text-amber-900 block text-[10px]">一日兩餐單價</label>
-              <input type="number" id="cfg-meal-price-2" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="150">
+
+            <!-- 大型犬 -->
+            <div class="p-2 bg-white rounded-xl border border-amber-200 space-y-1">
+              <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
+              <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="120" placeholder="1餐">
+              <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="220" placeholder="2餐">
+              <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border border-brand-200 rounded font-mono text-center text-xs" value="320" placeholder="3餐">
             </div>
           </div>
         </div>
@@ -2595,55 +2610,61 @@
       if (signCtx && signCanvas) signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height);
     }
 
-    function renderCustomer() {
+    // 4. 名單總覽 (嚴格過濾：過期預約任何狀態皆自動消失)
+  function renderCustomer() {
     const appts = backendData.appointments || [];
     const filter = document.getElementById('filter-status')?.value || 'ALL';
     const container = document.getElementById('cust-content-area');
     if (!container) return;
 
-    const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+    // 取得今日字串 (YYYY/MM/DD)
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
 
-    let filtered = appts;
+    // 任何狀態的預約，只要日期早於今日 (a.date < todayStr) 一律視為歷史過期單，自動消失
+    const activeAppts = appts.filter(a => a.date >= todayStr);
+
+    let filtered = activeAppts;
     if (filter !== 'ALL') {
-      filtered = appts.filter(a => a.status === filter);
+      filtered = activeAppts.filter(a => a.status === filter);
     } else {
-      // 依需求優化：過期的預約 (a.date < 今日) 自動不顯示於即將到來名單，保持清爽
-      filtered = appts.filter(a => a.status !== '已取消' && a.status !== '婉拒' && a.date >= todayStr);
+      filtered = activeAppts.filter(a => a.status !== '已取消' && a.status !== '婉拒');
     }
 
     if (filtered.length === 0) {
-      container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs">目前無即將到來的排程名單</div>`;
+      container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs">目前無即將到來的排程名單 (過期單已自動歸檔)</div>`;
     } else {
       container.innerHTML = filtered.map(a => renderSingleCardHTML(a)).join('');
     }
-      
-      // 更新審核角標與訂金提醒
-      const pendingAudit = appts.filter(a => a.status === '待確認');
-      const pendingBadge = document.getElementById('pending-audit-badge');
-      const pendingBox = document.getElementById('pending-audit-container');
-      if (pendingBadge) pendingBadge.innerText = `${pendingAudit.length} 筆待處理`;
-      if (pendingBox) {
-        pendingBox.innerHTML = pendingAudit.length > 0 
-          ? pendingAudit.map(a => renderSingleCardHTML(a)).join('') 
-          : '<div class="text-center text-xs text-amber-800/70 py-3 font-medium">目前無待審核預約</div>';
-      }
 
-      const unpaidDep = appts.filter(a => a.status !== '已取消' && a.status !== '已結單' && !a.deposit_confirmed && !(a.notes || '').includes('訂金已核對'));
-      const unpaidBadge = document.getElementById('unpaid-deposit-badge');
-      const unpaidBox = document.getElementById('unpaid-deposit-container');
-      if (unpaidBadge) unpaidBadge.innerText = `${unpaidDep.length} 筆`;
-      if (unpaidBox) {
-        unpaidBox.innerHTML = unpaidDep.length > 0 ? unpaidDep.map(a => `
-          <div class="p-3 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs shadow-2xs">
-            <div>
-              <b class="text-rose-950 font-bold">${a.name}</b> <span class="font-mono text-gray-500">(${a.phone})</span>
-              <div class="text-[11px] text-rose-700 mt-0.5">${a.service} - 預約時間：${a.date} ${a.time}</div>
-            </div>
-            <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">未付訂金</span>
-          </div>
-        `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已核對訂金</div>';
-      }
+    // 頂部新進審核專區 (過期自動消失)
+    const pendingAudit = activeAppts.filter(a => a.status === '待確認');
+    const pendingBadge = document.getElementById('pending-audit-badge');
+    const pendingBox = document.getElementById('pending-audit-container');
+    if (pendingBadge) pendingBadge.innerText = `${pendingAudit.length} 筆待處理`;
+    if (pendingBox) {
+      pendingBox.innerHTML = pendingAudit.length > 0 
+        ? pendingAudit.map(a => renderSingleCardHTML(a)).join('') 
+        : '<div class="text-center text-xs text-amber-800/70 py-3 font-medium">目前無待審核預約</div>';
     }
+
+    // 訂金警戒專區 (過期自動消失)
+    const unpaidDep = activeAppts.filter(a => a.status !== '已取消' && a.status !== '已結單' && !a.deposit_confirmed && !(a.notes || '').includes('訂金已核對'));
+    const unpaidBadge = document.getElementById('unpaid-deposit-badge');
+    const unpaidBox = document.getElementById('unpaid-deposit-container');
+    if (unpaidBadge) unpaidBadge.innerText = `${unpaidDep.length} 筆`;
+    if (unpaidBox) {
+      unpaidBox.innerHTML = unpaidDep.length > 0 ? unpaidDep.map(a => `
+        <div class="p-3 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs shadow-2xs">
+          <div>
+            <b class="text-rose-950 font-bold">${a.name}</b> <span class="font-mono text-gray-500">(${a.phone})</span>
+            <div class="text-[11px] text-rose-700 mt-0.5">${a.service} - 預約時間：${a.date} ${a.time}</div>
+          </div>
+          <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">未付訂金</span>
+        </div>
+      `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已核對訂金</div>';
+    }
+  }
 
     async function quickUpdateStatus(id, newStatus) {
       if (newStatus === '已取消') {
@@ -2887,45 +2908,46 @@
     // 8. 專員排班調度 (高對比色切換)
     // ==========================================
     function renderShift() {
-      let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-      const staffBtns = document.getElementById('staff-shift-buttons');
+    let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+    const staffBtns = document.getElementById('staff-shift-buttons');
 
-      if (staffBtns) {
-        if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-          activeShiftStaffId = CURRENT_STAFF_PARAM;
-          const matched = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-          staffBtns.innerHTML = `
-            <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#8C7355] text-white">
-              <i class="fa-solid fa-user-lock mr-1"></i> 我的班表 (${matched ? matched.name : CURRENT_STAFF_PARAM})
-            </div>
-          `;
-        } else {
-          // 門市若有專員，全店不指定按鈕鎖定為唯讀提示，強制點專員排班
-          const hasStaff = staffList.length > 0;
-          let allStoreBtn = '';
+    if (staffBtns) {
+      if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+        activeShiftStaffId = CURRENT_STAFF_PARAM;
+        const matched = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+        staffBtns.innerHTML = `
+          <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#8C7355] text-white">
+            <i class="fa-solid fa-user-lock mr-1"></i> 我的班表 (${matched ? matched.name : CURRENT_STAFF_PARAM})
+          </div>
+        `;
+      } else {
+        const hasStaff = staffList.length > 0;
+        let allStoreBtn = '';
 
-          if (hasStaff) {
-            allStoreBtn = `
-              <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" onclick="Swal.fire('排班提醒', '門市已建立專員名冊，請直接點選下方個別專員編輯專屬班表！', 'info')">
-                全店不指定 (已分權鎖定)
-              </button>
-            `;
-            if (activeShiftStaffId === 'all') activeShiftStaffId = staffList[0].id;
-          } else {
-            allStoreBtn = `
-              <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === 'all' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-gray-800'}" onclick="switchShiftStaff('all')">
-                全店不指定
-              </button>
-            `;
-          }
-
-          staffBtns.innerHTML = allStoreBtn + staffList.map(s => `
-            <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === s.id ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="switchShiftStaff('${s.id}')">
-              ${s.name}
+        if (hasStaff) {
+          // 有專員時鎖定全店不指定按鈕，防止誤按覆蓋
+          allStoreBtn = `
+            <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" onclick="Swal.fire('排班提醒', '門市已建立專員名冊，請直接點選下方專員個別編輯排班！', 'info')">
+              🔒 全店不指定 (已鎖定)
             </button>
-          `).join('');
+          `;
+          if (activeShiftStaffId === 'all') activeShiftStaffId = staffList[0].id;
+        } else {
+          // 無專員時才開放全店不指定排班
+          allStoreBtn = `
+            <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === 'all' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-gray-800'}" onclick="switchShiftStaff('all')">
+              全店不指定
+            </button>
+          `;
         }
+
+        staffBtns.innerHTML = allStoreBtn + staffList.map(s => `
+          <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === s.id ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="switchShiftStaff('${s.id}')">
+            ${s.name}
+          </button>
+        `).join('');
       }
+    }
 
       // 日期導航按鈕列
       const dates = backendData.scheduleDates || [];
@@ -4692,34 +4714,36 @@
     // 17. 顧客好評審核牆與特色標籤管理
     // ==========================================
     let allReviewsCache = [];
-    let reviewCurrentPage = 1;
-    const reviewPageSize = 5;
+  let reviewCurrentPage = 1;
+  const reviewPageSize = 5;
 
-    async function loadAdminReviews() {
-      allReviewsCache = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`);
-      renderReviewPagedList();
-      renderReviewTagsManager();
+  async function loadAdminReviews() {
+    allReviewsCache = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`);
+    renderReviewPagedList();
+    renderReviewTagsManager();
+  }
+
+  function renderReviewPagedList() {
+    const total = allReviewsCache.length;
+    document.getElementById('review-count-badge').innerText = `共 ${total} 則評價`;
+    const container = document.getElementById('admin-reviews-container');
+    if (!container) return;
+
+    if (total === 0) {
+      container.innerHTML = '<div class="text-center py-6 text-brand-400">目前尚無評論紀錄</div>';
+      return;
     }
 
-    function renderReviewPagedList() {
-      const total = allReviewsCache.length;
-      document.getElementById('review-count-badge').innerText = `共 ${total} 則評價`;
-      const container = document.getElementById('admin-reviews-container');
-      if (!container) return;
+    const totalPages = Math.ceil(total / reviewPageSize);
+    if (reviewCurrentPage > totalPages) reviewCurrentPage = totalPages;
+    if (reviewCurrentPage < 1) reviewCurrentPage = 1;
 
-      if (total === 0) {
-        container.innerHTML = '<div class="text-center py-6 text-brand-400">目前尚無評論紀錄</div>';
-        return;
-      }
+    const startIndex = (reviewCurrentPage - 1) * reviewPageSize;
+    const pageItems = allReviewsCache.slice(startIndex, startIndex + reviewPageSize);
 
-      const totalPages = Math.ceil(total / reviewPageSize);
-      if (reviewCurrentPage > totalPages) reviewCurrentPage = totalPages;
-      if (reviewCurrentPage < 1) reviewCurrentPage = 1;
-
-      const startIndex = (reviewCurrentPage - 1) * reviewPageSize;
-      const pageItems = allReviewsCache.slice(startIndex, startIndex + reviewPageSize);
-
-      let html = pageItems.map(r => `
+    let html = pageItems.map((r, pIdx) => {
+      const globalIdx = startIndex + pIdx;
+      return `
         <div class="p-3.5 bg-white rounded-2xl border border-brand-200 shadow-xs flex justify-between items-start gap-3">
           <div class="space-y-1">
             <div class="flex items-center gap-2 font-bold text-brand-900">
@@ -4732,29 +4756,62 @@
             </div>
             <p class="text-brand-600 font-sans">${r.comment || '滿意推薦！'}</p>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <button onclick="toggleReviewApproval('${r.id}', ${!r.is_approved})" class="px-3 py-1.5 rounded-xl font-bold transition text-xs ${r.is_approved ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'}">
+          <div class="flex flex-col items-end gap-1.5 shrink-0">
+            <div class="flex gap-1">
+              <button type="button" class="w-6 h-6 flex items-center justify-center bg-brand-50 border border-brand-200 rounded font-bold text-xs" onclick="moveReviewOrder(${globalIdx}, -1)">▲</button>
+              <button type="button" class="w-6 h-6 flex items-center justify-center bg-brand-50 border border-brand-200 rounded font-bold text-xs" onclick="moveReviewOrder(${globalIdx}, 1)">▼</button>
+              <button type="button" onclick="deleteCustomerReview('${r.id}')" class="w-6 h-6 flex items-center justify-center bg-rose-50 border border-rose-200 text-rose-700 rounded font-bold text-xs">✕</button>
+            </div>
+            <button onclick="toggleReviewApproval('${r.id}', ${!r.is_approved})" class="px-3 py-1 rounded-xl font-bold transition text-[11px] ${r.is_approved ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'}">
               ${r.is_approved ? '✓ 已上架' : '下架中'}
             </button>
-            <button onclick="deleteCustomerReview('${r.id}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs transition">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-
-      // 分頁切換器
-      html += `
-        <div class="flex justify-between items-center pt-2 px-1 text-xs">
-          <span class="text-gray-400">第 ${reviewCurrentPage} / ${totalPages} 頁 (共 ${total} 筆)</span>
-          <div class="flex gap-1.5">
-            <button class="px-3 py-1 bg-white border border-gray-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage <= 1 ? 'disabled' : ''} onclick="changeReviewPage(-1)">上一頁</button>
-            <button class="px-3 py-1 bg-white border border-gray-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage >= totalPages ? 'disabled' : ''} onclick="changeReviewPage(1)">下一頁</button>
           </div>
         </div>
       `;
-      container.innerHTML = html;
-    }
+    }).join('');
+
+    // 下方分頁按鈕導航
+    html += `
+      <div class="flex justify-between items-center pt-2 px-1 text-xs">
+        <span class="text-gray-400">第 ${reviewCurrentPage} / ${totalPages} 頁 (共 ${total} 則)</span>
+        <div class="flex gap-1.5">
+          <button class="px-3 py-1 bg-white border border-brand-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage <= 1 ? 'disabled' : ''} onclick="reviewCurrentPage--; renderReviewPagedList();">上一頁</button>
+          <button class="px-3 py-1 bg-white border border-brand-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage >= totalPages ? 'disabled' : ''} onclick="reviewCurrentPage++; renderReviewPagedList();">下一頁</button>
+        </div>
+      </div>
+    `;
+    container.innerHTML = html;
+  }
+
+  // 上下移動評論順序
+  async function moveReviewOrder(idx, dir) {
+    const targetIdx = idx + dir;
+    if (targetIdx < 0 || targetIdx >= allReviewsCache.length) return;
+    const temp = allReviewsCache[idx];
+    allReviewsCache[idx] = allReviewsCache[targetIdx];
+    allReviewsCache[targetIdx] = temp;
+    renderReviewPagedList();
+  }
+
+  // 刪除評論
+  async function deleteCustomerReview(id) {
+    Swal.fire({
+      title: '確定刪除此則評價？',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: '確定刪除'
+    }).then(async r => {
+      if (r.isConfirmed) {
+        await fetch(`${SUPABASE_URL}/rest/v1/customer_reviews?id=eq.${id}`, {
+          method: "DELETE",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        loadAdminReviews();
+        Swal.fire('評價已刪除', '', 'success');
+      }
+    });
+  }
 
     function changeReviewPage(dir) {
       reviewCurrentPage += dir;
@@ -5046,6 +5103,12 @@
     theme_color: selectedTheme,
     industry_mode: selectedMode,
 
+    boarding_meal_rates: {
+      small: [Number(document.getElementById('cfg-meal-small-1')?.value||80), Number(document.getElementById('cfg-meal-small-2')?.value||150), Number(document.getElementById('cfg-meal-small-3')?.value||220)],
+      medium: [Number(document.getElementById('cfg-meal-med-1')?.value||100), Number(document.getElementById('cfg-meal-med-2')?.value||180), Number(document.getElementById('cfg-meal-med-3')?.value||260)],
+      large: [Number(document.getElementById('cfg-meal-large-1')?.value||120), Number(document.getElementById('cfg-meal-large-2')?.value||220), Number(document.getElementById('cfg-meal-large-3')?.value||320)]
+    },
+    
     // 寵物住宿與供餐欄位
     total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
     hotel_checkin_start: document.getElementById('cfg-hotel-checkin-start')?.value || '10:00',
@@ -5428,28 +5491,30 @@
       } catch(e) { Swal.fire('搜尋失敗', e.message, 'error'); }
     }
 
-    async function executeDateRangeSearch() {
-      const sD = document.getElementById('search-start-date')?.value;
-      const eD = document.getElementById('search-end-date')?.value;
-      const kw = document.getElementById('search-keyword')?.value.trim();
+    // 20. 查詢分頁：日期區間多狀態全檢索 (未輸入客人資料直接查出該區間全部卡片)
+  async function executeDateRangeSearch() {
+    const sD = document.getElementById('search-start-date')?.value;
+    const eD = document.getElementById('search-end-date')?.value;
+    const kw = document.getElementById('search-keyword')?.value.trim();
 
-      if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
-      Swal.showLoading();
+    if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
+    Swal.showLoading();
 
-      try {
-        let endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.asc&select=*`;
-        
-        // 若有填寫關鍵字才附加關鍵字查詢，未填寫時查出該區間所有狀態訂單
-        if (kw) {
-          endpoint += `&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)`;
-        }
-
-        const records = await directSupabaseFetch(endpoint);
-        renderSearchResults(records, kw ? `關鍵字「${kw}」且區間【${sD} ~ ${eD}】` : `區間【${sD} ~ ${eD}】全部狀態`);
-      } catch(e) {
-        Swal.fire('搜尋失敗', e.message, 'error');
+    try {
+      // 日期區間為必備條件
+      let endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.asc&select=*`;
+      
+      // 關鍵優化：未輸入關鍵字時直接略過 or 條件，查出該區間所有狀態訂單
+      if (kw) {
+        endpoint += `&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)`;
       }
+
+      const records = await directSupabaseFetch(endpoint);
+      renderSearchResults(records, kw ? `關鍵字「${kw}」且區間【${sD} ~ ${eD}】` : `區間【${sD} ~ ${eD}】全狀態`);
+    } catch(e) {
+      Swal.fire('搜尋失敗', e.message, 'error');
     }
+  }
     function searchTodayAppts() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('search-start-date').value = today;
