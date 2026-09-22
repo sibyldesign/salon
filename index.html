@@ -91,6 +91,16 @@
       border: none !important;
     }
   </style>
+  <script>
+  (function(){
+    const cached = localStorage.getItem('zy_cached_theme') || 'latte';
+    const colors = {
+      latte: '#FDFBF7', matcha: '#F7F8F5', noir: '#FAFAFA',
+      navy: '#F4F6F9', rose: '#FCF8F8', mist: '#F4F7F6'
+    };
+    document.documentElement.style.backgroundColor = colors[cached] || '#FDFBF7';
+  })();
+</script>
 </head>
 <body class="text-brand-800 antialiased selection:bg-brand-400 selection:text-white pb-20">
 
@@ -1172,36 +1182,34 @@
   function applyThemeColors(themeKey) {
     const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : 'latte';
     const t = THEME_PALETTES[safeKey];
-    localStorage.setItem('zy_theme_cache', safeKey); // 本地極速快取
+    localStorage.setItem('zy_cached_theme', safeKey);
 
     document.documentElement.style.setProperty('--theme-primary', t.primary);
     document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
     document.documentElement.style.setProperty('--theme-bg', t.bg);
-    document.documentElement.style.setProperty('--theme-light', t.light);
     document.documentElement.style.setProperty('--theme-text', t.text);
     document.body.style.backgroundColor = t.bg;
     document.body.style.color = t.text;
 
-    let styleTag = document.getElementById('dynamic-theme-override');
+    let styleTag = document.getElementById('theme-runtime-css');
     if (!styleTag) {
       styleTag = document.createElement('style');
-      styleTag.id = 'dynamic-theme-override';
+      styleTag.id = 'theme-runtime-css';
       document.head.appendChild(styleTag);
     }
     styleTag.innerHTML = `
       body, .bg-brand-50 { background-color: ${t.bg} !important; }
-      #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
-      #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm, .swal2-confirm-brown {
+      #promo { background-color: ${t.primary} !important; color: #fff !important; }
+      #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm {
         background-color: ${t.primary} !important;
-        color: #FFFFFF !important;
+        color: #fff !important;
       }
       #subBtn:hover, .swal2-confirm:hover { background-color: ${t.primaryHover} !important; }
-      .text-\\[\\#8C7355\\], .text-brand-500, #display-contract-title, #brand-subtitle { color: ${t.primary} !important; }
-      .border-\\[\\#8C7355\\], .border-brand-400 { border-color: ${t.primary} !important; }
-      .bg-\\[\\#8C7355\\] { background-color: ${t.primary} !important; color: #FFFFFF !important; }
-      .time-btn.active, .hotel-pill-in.active, .hotel-pill-out.active {
+      .text-brand-500, .text-[#8C7355], #brand-subtitle { color: ${t.primary} !important; }
+      .border-brand-400, .border-[#8C7355] { border-color: ${t.primary} !important; }
+      .tab-btn.active, .time-pill.selected, .hotel-pill-in.selected, .hotel-pill-out.selected {
         background-color: ${t.primary} !important;
-        color: #FFFFFF !important;
+        color: #fff !important;
         border-color: ${t.primary} !important;
       }
     `;
