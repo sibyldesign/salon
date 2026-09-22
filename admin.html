@@ -1027,6 +1027,27 @@
         </div>
       </div>
 
+      <!-- 餐食單價設定 -->
+        <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2 pt-2">
+          <span class="font-bold text-amber-950 block text-[11px]">
+            <i class="fa-solid fa-coins text-amber-600 mr-1"></i> 住宿每日供餐單價收費設定 (元/餐/天)：
+          </span>
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="font-bold text-amber-900 block text-[10px]">自備飼料費</label>
+              <input type="number" id="cfg-meal-price-self" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="0">
+            </div>
+            <div>
+              <label class="font-bold text-amber-900 block text-[10px]">一日一餐單價</label>
+              <input type="number" id="cfg-meal-price-1" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="80">
+            </div>
+            <div>
+              <label class="font-bold text-amber-900 block text-[10px]">一日兩餐單價</label>
+              <input type="number" id="cfg-meal-price-2" class="w-full p-2 border border-amber-200 rounded-xl font-mono bg-white text-xs text-center font-bold" value="150">
+            </div>
+          </div>
+        </div>
+
       <!-- 1. 預約審核機制與訂金收取規則 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -1927,6 +1948,12 @@
         if (topTitle) topTitle.innerText = `專員個人工作台 (${CURRENT_STAFF_PARAM})`;
       }
 
+      // 預設今日為日曆選取日並立即繪製日曆
+      const now = new Date();
+      selectedCalendarDate = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+      renderCalendar();
+      showApptsInCalendar(selectedCalendarDate);
+
       fetchDataAndRender();
     }
 
@@ -2160,11 +2187,6 @@
         if (navBoarding) navBoarding.style.display = 'none';
         if (hotelSettings) hotelSettings.style.display = 'none';
       }
-      if (pageId === 'boarding-schedule') { 
-    renderBoardingRoomStatus(); 
-    renderBoardingCareChecklist(); 
-    renderBoardingShuttleChecklist(); 
-  }
     }
 
     // ==========================================
@@ -2865,44 +2887,61 @@
     // 8. 專員排班調度 (高對比色切換)
     // ==========================================
     function renderShift() {
-    let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-    const staffBtns = document.getElementById('staff-shift-buttons');
+      let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      const staffBtns = document.getElementById('staff-shift-buttons');
 
-    // 專員分權防護：如果是專員獨立連結登入，隱藏全店按鈕並鎖定在該專員
-    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-      activeShiftStaffId = CURRENT_STAFF_PARAM;
-      const matched = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
       if (staffBtns) {
-        staffBtns.innerHTML = `
-          <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#8C7355] text-white">
-            <i class="fa-solid fa-user-lock mr-1"></i> 我的班表 (${matched ? matched.name : CURRENT_STAFF_PARAM})
-          </div>
-        `;
-      }
-    } else {
-      if (staffBtns) {
-        staffBtns.innerHTML = `<button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === 'all' ? 'bg-[#8C7355] text-white' : 'bg-white text-gray-800'}" onclick="switchShiftStaff('all')">全店不指定</button>` + 
-        staffList.map(s => `
-          <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === s.id ? 'bg-[#8C7355] text-white' : 'bg-white text-gray-800'}" onclick="switchShiftStaff('${s.id}')">${s.name}</button>
-        `).join('');
-      }
-    }
+        if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+          activeShiftStaffId = CURRENT_STAFF_PARAM;
+          const matched = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
+          staffBtns.innerHTML = `
+            <div class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#8C7355] text-white">
+              <i class="fa-solid fa-user-lock mr-1"></i> 我的班表 (${matched ? matched.name : CURRENT_STAFF_PARAM})
+            </div>
+          `;
+        } else {
+          // 門市若有專員，全店不指定按鈕鎖定為唯讀提示，強制點專員排班
+          const hasStaff = staffList.length > 0;
+          let allStoreBtn = '';
 
-    // 日期導航按鈕 (滑動膠囊列)
-    const dates = backendData.scheduleDates || [];
-    const scrollArea = document.getElementById('shift-scroll-area');
-    if (scrollArea) {
-      let html = `<div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white' : 'bg-white text-gray-700'}" onclick="selectShiftDate('ALL')">全部日期</div>`;
-      dates.forEach(d => {
-        let dParts = d.date.split('/');
-        html += `
-          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white' : 'bg-white text-gray-800'}" onclick="selectShiftDate('${d.date}')">
-            <div class="text-[9px] opacity-70">${dParts[1]}月</div>
-            <div class="font-bold text-xs">${dParts[2]}日</div>
-          </div>`;
-      });
-      scrollArea.innerHTML = html;
-    }
+          if (hasStaff) {
+            allStoreBtn = `
+              <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" onclick="Swal.fire('排班提醒', '門市已建立專員名冊，請直接點選下方個別專員編輯專屬班表！', 'info')">
+                全店不指定 (已分權鎖定)
+              </button>
+            `;
+            if (activeShiftStaffId === 'all') activeShiftStaffId = staffList[0].id;
+          } else {
+            allStoreBtn = `
+              <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === 'all' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white text-gray-800'}" onclick="switchShiftStaff('all')">
+                全店不指定
+              </button>
+            `;
+          }
+
+          staffBtns.innerHTML = allStoreBtn + staffList.map(s => `
+            <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border transition ${activeShiftStaffId === s.id ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="switchShiftStaff('${s.id}')">
+              ${s.name}
+            </button>
+          `).join('');
+        }
+      }
+
+      // 日期導航按鈕列
+      const dates = backendData.scheduleDates || [];
+      const scrollArea = document.getElementById('shift-scroll-area');
+      if (scrollArea) {
+        let html = `<div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-700'}" onclick="selectShiftDate('ALL')">全部日期</div>`;
+        dates.forEach(d => {
+          let dParts = d.date.split('/');
+          html += `
+            <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectShiftDate('${d.date}')">
+              <div class="text-[9px] opacity-70">${dParts[1]}月</div>
+              <div class="font-bold text-xs">${dParts[2]}日</div>
+            </div>`;
+        });
+        scrollArea.innerHTML = html;
+      }
 
       const content = document.getElementById('shift-content-area');
       if (!content) return;
@@ -2939,12 +2978,8 @@
           <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
             <div><div class="font-bold text-brand-900 text-sm">${currentShiftDate} 班表設定</div><div class="text-[10px] text-brand-400">鮮綠為開放預約，亮紅為休息關閉</div></div>
             <div class="flex gap-2">
-              <button type="button" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', false)">
-                <i class="fa-solid fa-ban mr-1"></i>全休
-              </button>
-              <button type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', true)">
-                <i class="fa-solid fa-circle-check mr-1"></i>全開
-              </button>
+              <button type="button" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', false)">全休</button>
+              <button type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', true)">全開</button>
             </div>
           </div>
           <div class="divide-y divide-brand-100 max-h-[60vh] overflow-y-auto">${slots.map(t => {
@@ -2953,9 +2988,7 @@
               <div class="p-3 flex justify-between items-center">
                 <span class="font-bold text-brand-900 font-mono text-sm">${t}</span>
                 <button type="button" class="px-4 py-1.5 rounded-full font-black text-xs transition border ${
-                  isOpen 
-                    ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' 
-                    : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                  isOpen ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
                 }" onclick="toggleSlotState('${staffKey}', '${t}', this)">
                   ${isOpen ? '✓ 上班中 (開放預約)' : '✕ 已關閉 (休息)'}
                 </button>
@@ -2963,7 +2996,6 @@
           }).join('')}</div>
         </div>`;
     }
-
     function switchShiftStaff(id) { activeShiftStaffId = id; renderShift(); }
     function selectShiftDate(dStr) { currentShiftDate = dStr; renderShift(); }
     function toggleSlotState(staffKey, timeStr, btn) {
@@ -3404,40 +3436,52 @@
       if (!it) return;
 
       Swal.fire({
-        title: `【${it.name}】庫存異動操作`,
+        title: `【${it.name}】庫存異動作業`,
         html: `
           <div class="text-left text-xs space-y-2.5">
-            <div class="p-2 bg-brand-50 rounded-xl border border-brand-200">
-              <b>目前存量：</b><span class="font-mono text-sm font-bold text-emerald-800">${it.current_stock} ${it.unit}</span>
+            <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+              <b>目前現存存量：</b><span class="font-mono text-sm font-black text-emerald-800">${it.current_stock} ${it.unit}</span>
             </div>
             <div>
-              <label class="font-bold">異動模式：</label>
+              <label class="font-bold">選擇異動項目：</label>
               <select id="adj-mode" class="swal2-input text-xs font-bold">
-                <option value="retail_out">🛒 現場客人購買帶走 (-扣除)</option>
-                <option value="restock_in">📦 進貨入庫 (+增加)</option>
+                <option value="retail_out">🛒 顧客零售購買帶走 (-扣除存量並計入營收)</option>
+                <option value="internal_use">🧴 店內大容量開瓶用畢扣除 (-扣除業務耗損)</option>
+                <option value="restock_in">📦 進貨入庫 (+增加存量)</option>
               </select>
             </div>
             <div>
               <label class="font-bold">異動數量：</label>
               <input type="number" id="adj-qty" class="swal2-input text-xs font-bold font-mono" value="1" min="1">
             </div>
+            <div>
+              <label class="font-bold">備註說明 (選填)：</label>
+              <input type="text" id="adj-note" class="swal2-input text-xs" placeholder="例：洗水台開新一桶、客人加購帶走">
+            </div>
           </div>
         `,
         showCancelButton: true,
-        confirmButtonText: '確定異動',
+        confirmButtonText: '確認執行異動',
         confirmButtonColor: '#8C7355',
         preConfirm: () => ({
           mode: document.getElementById('adj-mode').value,
-          qty: Number(document.getElementById('adj-qty').value || 1)
+          qty: Number(document.getElementById('adj-qty').value || 1),
+          note: document.getElementById('adj-note').value.trim()
         })
-      }).then(r => {
+      }).then(async r => {
         if (r.isConfirmed) {
-          if (r.value.mode === 'retail_out') {
-            it.current_stock = Math.max(0, it.current_stock - r.value.qty);
-            Swal.fire('已完成零售扣庫！', `現存 ${it.current_stock} ${it.unit}`, 'success');
+          const mode = r.value.mode;
+          const qty = r.value.qty;
+
+          if (mode === 'retail_out') {
+            it.current_stock = Math.max(0, it.current_stock - qty);
+            Swal.fire('已完成現場零售出庫！', `扣除 ${qty} ${it.unit}，現存 ${it.current_stock} ${it.unit}`, 'success');
+          } else if (mode === 'internal_use') {
+            it.current_stock = Math.max(0, it.current_stock - qty);
+            Swal.fire('店內耗損已紀錄！', `扣除 ${qty} ${it.unit}，現存 ${it.current_stock} ${it.unit}`, 'info');
           } else {
-            it.current_stock += r.value.qty;
-            Swal.fire('進貨入庫成功！', `現存 ${it.current_stock} ${it.unit}`, 'success');
+            it.current_stock += qty;
+            Swal.fire('進貨入庫成功！', `增加 ${qty} ${it.unit}，現存 ${it.current_stock} ${it.unit}`, 'success');
           }
           renderInventoryList();
         }
@@ -4348,10 +4392,27 @@
       renderWalletTable();
     }
 
+    let walletCurrentPage = 1;
+    let pkgCurrentPage = 1;
+    const marketingPageSize = 8;
+
     function renderWalletTable() {
       const tbody = document.getElementById('wallet-table-body');
       if (!tbody) return;
-      tbody.innerHTML = filteredWalletList.map(c => `
+
+      const total = filteredWalletList.length;
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-brand-400">尚無儲值會員紀錄</td></tr>';
+        return;
+      }
+
+      const totalPages = Math.ceil(total / marketingPageSize);
+      if (walletCurrentPage > totalPages) walletCurrentPage = totalPages;
+      if (walletCurrentPage < 1) walletCurrentPage = 1;
+
+      const items = filteredWalletList.slice((walletCurrentPage - 1) * marketingPageSize, walletCurrentPage * marketingPageSize);
+
+      tbody.innerHTML = items.map(c => `
         <tr class="border-b border-brand-100 hover:bg-brand-50/50">
           <td class="py-2.5 px-2 font-bold">${c.name || '熟客'}</td>
           <td class="py-2.5 px-2 font-mono">${c.phone}</td>
@@ -4361,9 +4422,20 @@
             <button onclick="quickTopUp('${c.id}', '${c.name}', ${c.wallet_balance})" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold">充值</button>
           </td>
         </tr>
-      `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">尚無儲值會員紀錄</td></tr>';
+      `).join('') + `
+        <tr>
+          <td colspan="5" class="py-2 px-1">
+            <div class="flex justify-between items-center text-[11px] text-gray-500">
+              <span>第 ${walletCurrentPage} / ${totalPages} 頁 (共 ${total} 位會員)</span>
+              <div class="flex gap-1">
+                <button type="button" class="px-2 py-0.5 bg-white border border-gray-200 rounded font-bold disabled:opacity-40" ${walletCurrentPage <= 1 ? 'disabled' : ''} onclick="walletCurrentPage--; renderWalletTable();">上一頁</button>
+                <button type="button" class="px-2 py-0.5 bg-white border border-gray-200 rounded font-bold disabled:opacity-40" ${walletCurrentPage >= totalPages ? 'disabled' : ''} onclick="walletCurrentPage++; renderWalletTable();">下一頁</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
     }
-
     function openRechargeModal() {
       Swal.fire({
         title: '手動為顧客儲值充值',
@@ -4432,7 +4504,20 @@
     function renderPkgTable() {
       const tbody = document.getElementById('packages-table-body');
       if (!tbody) return;
-      tbody.innerHTML = filteredPkgList.map(p => `
+
+      const total = filteredPkgList.length;
+      if (total === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-brand-400">尚無包卡點數紀錄</td></tr>';
+        return;
+      }
+
+      const totalPages = Math.ceil(total / marketingPageSize);
+      if (pkgCurrentPage > totalPages) pkgCurrentPage = totalPages;
+      if (pkgCurrentPage < 1) pkgCurrentPage = 1;
+
+      const items = filteredPkgList.slice((pkgCurrentPage - 1) * marketingPageSize, pkgCurrentPage * marketingPageSize);
+
+      tbody.innerHTML = items.map(p => `
         <tr class="border-b border-brand-100 hover:bg-brand-50/50">
           <td class="py-2.5 px-2 font-bold">${p.customer_name || '熟客'} (${p.phone})</td>
           <td class="py-2.5 px-2">${p.service_name}</td>
@@ -4442,7 +4527,19 @@
             <button onclick="deductPackageManual('${p.id}', ${p.remaining_times})" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold">- 扣 1 點</button>
           </td>
         </tr>
-      `).join('') || '<tr><td colspan="5" class="text-center py-6 text-brand-400">尚無包卡點數紀錄</td></tr>';
+      `).join('') + `
+        <tr>
+          <td colspan="5" class="py-2 px-1">
+            <div class="flex justify-between items-center text-[11px] text-gray-500">
+              <span>第 ${pkgCurrentPage} / ${totalPages} 頁 (共 ${total} 筆包卡)</span>
+              <div class="flex gap-1">
+                <button type="button" class="px-2 py-0.5 bg-white border border-gray-200 rounded font-bold disabled:opacity-40" ${pkgCurrentPage <= 1 ? 'disabled' : ''} onclick="pkgCurrentPage--; renderPkgTable();">上一頁</button>
+                <button type="button" class="px-2 py-0.5 bg-white border border-gray-200 rounded font-bold disabled:opacity-40" ${pkgCurrentPage >= totalPages ? 'disabled' : ''} onclick="pkgCurrentPage++; renderPkgTable();">下一頁</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
     }
 
     function openAddPackageModal() {
@@ -4594,19 +4691,39 @@
     // ==========================================
     // 17. 顧客好評審核牆與特色標籤管理
     // ==========================================
+    let allReviewsCache = [];
+    let reviewCurrentPage = 1;
+    const reviewPageSize = 5;
+
     async function loadAdminReviews() {
-      const reviews = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`);
-      document.getElementById('review-count-badge').innerText = `共 ${reviews.length} 則評價`;
+      allReviewsCache = await directSupabaseFetch(`customer_reviews?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`);
+      renderReviewPagedList();
+      renderReviewTagsManager();
+    }
+
+    function renderReviewPagedList() {
+      const total = allReviewsCache.length;
+      document.getElementById('review-count-badge').innerText = `共 ${total} 則評價`;
       const container = document.getElementById('admin-reviews-container');
-      if (!reviews || reviews.length === 0) {
+      if (!container) return;
+
+      if (total === 0) {
         container.innerHTML = '<div class="text-center py-6 text-brand-400">目前尚無評論紀錄</div>';
         return;
       }
-      container.innerHTML = reviews.map(r => `
+
+      const totalPages = Math.ceil(total / reviewPageSize);
+      if (reviewCurrentPage > totalPages) reviewCurrentPage = totalPages;
+      if (reviewCurrentPage < 1) reviewCurrentPage = 1;
+
+      const startIndex = (reviewCurrentPage - 1) * reviewPageSize;
+      const pageItems = allReviewsCache.slice(startIndex, startIndex + reviewPageSize);
+
+      let html = pageItems.map(r => `
         <div class="p-3.5 bg-white rounded-2xl border border-brand-200 shadow-xs flex justify-between items-start gap-3">
           <div class="space-y-1">
             <div class="flex items-center gap-2 font-bold text-brand-900">
-              <span>${r.customer_name}</span>
+              <span>${r.customer_name || '顧客'}</span>
               <span class="text-amber-500">${'★'.repeat(r.rating || 5)}</span>
               <span class="text-[10px] text-gray-400 font-mono">${r.created_at ? r.created_at.split('T')[0] : ''}</span>
             </div>
@@ -4615,13 +4732,33 @@
             </div>
             <p class="text-brand-600 font-sans">${r.comment || '滿意推薦！'}</p>
           </div>
-          <button onclick="toggleReviewApproval('${r.id}', ${!r.is_approved})" class="px-3 py-1.5 rounded-xl font-bold transition text-xs shrink-0 ${r.is_approved ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'}">
-            ${r.is_approved ? '✓ 已上架' : '下架中 (點擊上架)'}
-          </button>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="toggleReviewApproval('${r.id}', ${!r.is_approved})" class="px-3 py-1.5 rounded-xl font-bold transition text-xs ${r.is_approved ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-700'}">
+              ${r.is_approved ? '✓ 已上架' : '下架中'}
+            </button>
+            <button onclick="deleteCustomerReview('${r.id}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-xs transition">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
         </div>
       `).join('');
 
-      renderReviewTagsManager();
+      // 分頁切換器
+      html += `
+        <div class="flex justify-between items-center pt-2 px-1 text-xs">
+          <span class="text-gray-400">第 ${reviewCurrentPage} / ${totalPages} 頁 (共 ${total} 筆)</span>
+          <div class="flex gap-1.5">
+            <button class="px-3 py-1 bg-white border border-gray-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage <= 1 ? 'disabled' : ''} onclick="changeReviewPage(-1)">上一頁</button>
+            <button class="px-3 py-1 bg-white border border-gray-200 rounded-lg font-bold disabled:opacity-40" ${reviewCurrentPage >= totalPages ? 'disabled' : ''} onclick="changeReviewPage(1)">下一頁</button>
+          </div>
+        </div>
+      `;
+      container.innerHTML = html;
+    }
+
+    function changeReviewPage(dir) {
+      reviewCurrentPage += dir;
+      renderReviewPagedList();
     }
 
     async function toggleReviewApproval(id, toApprove) {
@@ -5294,14 +5431,25 @@
     async function executeDateRangeSearch() {
       const sD = document.getElementById('search-start-date')?.value;
       const eD = document.getElementById('search-end-date')?.value;
+      const kw = document.getElementById('search-keyword')?.value.trim();
+
       if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
       Swal.showLoading();
-      try {
-        const records = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.asc&select=*`);
-        renderSearchResults(records, `區間【${sD} ~ ${eD}】`);
-      } catch(e) { Swal.fire('搜尋失敗', e.message, 'error'); }
-    }
 
+      try {
+        let endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.asc&select=*`;
+        
+        // 若有填寫關鍵字才附加關鍵字查詢，未填寫時查出該區間所有狀態訂單
+        if (kw) {
+          endpoint += `&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)`;
+        }
+
+        const records = await directSupabaseFetch(endpoint);
+        renderSearchResults(records, kw ? `關鍵字「${kw}」且區間【${sD} ~ ${eD}】` : `區間【${sD} ~ ${eD}】全部狀態`);
+      } catch(e) {
+        Swal.fire('搜尋失敗', e.message, 'error');
+      }
+    }
     function searchTodayAppts() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('search-start-date').value = today;
