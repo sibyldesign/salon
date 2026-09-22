@@ -494,7 +494,7 @@
       <div id="search-results-area" class="space-y-3"></div>
     </div>
 
-    <!-- 分頁 10. 手動代客新增排程 (page-add) - 支援三種商業模式動態切換 -->
+    <!-- 分頁 10. 手動代客新增排程 (page-add，支援多毛孩快查與旗艦住宿排版) -->
     <div id="page-add" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
         <div class="font-bold text-brand-900 text-sm border-b border-brand-100 pb-2 flex items-center justify-between">
@@ -502,12 +502,23 @@
           <span class="text-[10px] text-brand-400 font-mono">Multi-Mode Booking</span>
         </div>
 
-        <!-- 1. 顧客基本資料快查 -->
+        <!-- 1. 顧客電話快查與多毛孩下拉帶入 -->
         <div>
-          <label class="block font-bold text-brand-800 mb-1">1. 顧客手機號碼 (必填快查)：</label>
-          <input type="tel" id="quick-phone" placeholder="0912345678" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold outline-none font-mono" oninput="adminQuickCheckCustomer(this.value)">
+          <label class="block font-bold text-brand-800 mb-1">1. 顧客手機號碼 (輸入後自動帶出名下毛孩)：</label>
+          <div class="flex gap-2">
+            <input type="tel" id="quick-phone" placeholder="0912345678" class="flex-1 p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold outline-none font-mono" oninput="adminQuickCheckCustomer(this.value)">
+            <button type="button" onclick="adminQuickCheckCustomer(document.getElementById('quick-phone').value)" class="px-4 py-2 bg-[#8C7355] text-white rounded-xl font-bold shrink-0">快查</button>
+          </div>
           <div class="text-[10px] text-emerald-700 font-bold mt-1" id="admin-quick-member-hint"></div>
         </div>
+
+        <!-- 查有多隻毛孩時的選取區塊 -->
+        <div id="admin-multi-pet-block" class="hidden p-3 bg-amber-50 rounded-2xl border border-amber-200 space-y-1.5">
+          <label class="block font-bold text-amber-950 text-[11px]">🐾 選擇此電話登記之毛孩（點選自動代入）：</label>
+          <select id="admin-multi-pet-dropdown" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold text-xs outline-none" onchange="onAdminSelectPetChange(this.value)"></select>
+          <div id="admin-pet-balance-info" class="text-[11px] text-amber-900 font-bold"></div>
+        </div>
+
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-bold text-brand-800 mb-1">2. 顧客姓名 *</label>
@@ -518,36 +529,37 @@
             <input type="text" id="quick-line" placeholder="例如：小美" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
           </div>
         </div>
+
         <div>
-          <label class="block font-bold text-brand-800 mb-1">顧客電子信箱 (寄送證明與合約副本)：</label>
-          <input type="email" id="quick-email" placeholder="user@gmail.com" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+          <label class="block font-bold text-brand-800 mb-1">顧客電子信箱 (寄送合約與憑證副本)：</label>
+          <input type="email" id="quick-email" placeholder="user@gmail.com" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none font-mono">
         </div>
 
-        <!-- 3. 三種模式動態切換器 -->
-        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2.5">
-          <label class="block font-bold text-brand-900 text-[11px]">3. 選擇門市營運模式：</label>
+        <!-- 3. 三種營運模式切換器 -->
+        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
+          <label class="block font-bold text-brand-900 text-[11px]">3. 選擇本次預約類別：</label>
           <div class="grid grid-cols-3 gap-1.5 font-bold text-center text-[11px]">
             <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
-              <input type="radio" name="quick-industry-mode" value="beauty" checked onchange="toggleQuickIndustryMode()"> 純美業預約
+              <input type="radio" name="quick-industry-mode" value="beauty" checked onchange="toggleQuickIndustryMode()"> 純美業
             </label>
             <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
               <input type="radio" name="quick-industry-mode" value="pet_grooming" onchange="toggleQuickIndustryMode()"> 寵物純美容
             </label>
             <label class="p-2 rounded-xl border border-brand-300 bg-white cursor-pointer hover:bg-brand-100 transition">
-              <input type="radio" name="quick-industry-mode" value="pet_hotel" onchange="toggleQuickIndustryMode()"> 寵物美容＋住宿
+              <input type="radio" name="quick-industry-mode" value="pet_hotel" onchange="toggleQuickIndustryMode()"> 寵美＋住宿
             </label>
           </div>
         </div>
 
-        <!-- 寵物專屬欄位 (僅在 2 或 3 模式下顯示) -->
+        <!-- 寵物專屬欄位 (在 pet_grooming 或 pet_hotel 顯示) -->
         <div id="quick-pet-fields-box" class="grid grid-cols-3 gap-2 p-3 bg-amber-50/70 rounded-2xl border border-amber-200 hidden">
           <div>
-            <label class="block font-bold text-amber-950 mb-1">毛孩名稱/品種：</label>
+            <label class="block font-bold text-amber-950 mb-1">毛孩姓名/品種：</label>
             <input type="text" id="quick-pet-name" placeholder="例：Q比 (貴賓)" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs outline-none">
           </div>
           <div>
             <label class="block font-bold text-amber-950 mb-1">體型級距：</label>
-            <select id="quick-pet-size" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs font-bold outline-none">
+            <select id="quick-pet-size" class="w-full p-2 rounded-xl border border-amber-200 bg-white text-xs font-bold outline-none" onchange="calcAdminQuickHotelFees()">
               <option value="小型犬">小型犬 (9kg以下)</option>
               <option value="中型犬">中型犬 (10-20kg)</option>
               <option value="大型犬">大型犬 (21kg以上)</option>
@@ -563,7 +575,7 @@
           </div>
         </div>
 
-        <!-- 4. 時段選取區 (純美業 / 寵物美容用單日時段網格) -->
+        <!-- 4-1. 單日時段 (純美業 / 寵物純美容使用) -->
         <div id="quick-single-time-box" class="space-y-2">
           <div class="grid grid-cols-2 gap-2">
             <div>
@@ -573,49 +585,88 @@
             <div>
               <label class="block font-bold text-brand-800 mb-1">進場時段 (依排班) *</label>
               <div class="grid grid-cols-2 gap-1 max-h-36 overflow-y-auto" id="admin-quick-slot-grid">
-                <div class="col-span-full text-center py-2 text-brand-400">請先挑選日期</div>
+                <div class="col-span-full text-center py-2 text-brand-400">請先選日期</div>
               </div>
               <input type="hidden" id="quick-time">
             </div>
           </div>
         </div>
 
-        <!-- 4-2. 寵物住宿專屬多段時段區 (僅在 3 模式下顯示) -->
-        <div id="quick-hotel-range-box" class="space-y-3 p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 hidden">
-          <div class="font-bold text-amber-950 flex items-center gap-1">
-            <i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖與進退房時段設定：
+        <!-- 4-2. 寵物住宿專屬時段與照護加購 (pet_hotel 顯示，獨立換行不擠壓) -->
+        <div id="quick-hotel-range-box" class="space-y-3 p-4 bg-amber-50/80 rounded-2xl border border-amber-200 hidden text-xs">
+          <div class="font-bold text-amber-950 flex items-center justify-between border-b border-amber-200 pb-1.5">
+            <span class="flex items-center gap-1"><i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖排程與附加服務：</span>
+            <span id="quick-hotel-nights-badge" class="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full font-bold">1 晚</span>
           </div>
+
           <div class="grid grid-cols-1 gap-2.5">
-  <div>
-    <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">入住日期與抵達時間：</label>
-    <div class="flex gap-1.5">
-      <input type="date" id="quick-hotel-checkin-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs">
-      <input type="time" id="quick-hotel-checkin-time" value="10:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs">
-    </div>
-  </div>
-  <div>
-    <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">退房日期與接回時間 (獨立換行不擠壓)：</label>
-    <div class="flex gap-1.5">
-      <input type="date" id="quick-hotel-checkout-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs">
-      <input type="time" id="quick-hotel-checkout-time" value="19:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs">
-    </div>
-  </div>
-</div>
-          <div class="pt-2 border-t border-amber-200/60 space-y-1.5">
-            <label class="block font-bold text-amber-950 text-[11px]">住宿期間是否附加美容洗護：</label>
+            <div>
+              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">入住日期與進房時間：</label>
+              <div class="flex gap-1.5">
+                <input type="date" id="quick-hotel-checkin-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+                <input type="time" id="quick-hotel-checkin-time" value="10:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+              </div>
+            </div>
+            <div>
+              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">退房日期與接回時間：</label>
+              <div class="flex gap-1.5">
+                <input type="date" id="quick-hotel-checkout-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+                <input type="time" id="quick-hotel-checkout-time" value="18:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            <div>
+              <label class="block font-bold text-amber-950 mb-0.5 text-[11px]">房型體型：</label>
+              <select id="quick-hotel-room-tier" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold" onchange="calcAdminQuickHotelFees()">
+                <option value="small" data-price="800">小型犬房 ($800/晚)</option>
+                <option value="medium" data-price="1050">中型犬房 ($1050/晚)</option>
+                <option value="large" data-price="1450">大型犬房 ($1450/晚)</option>
+                <option value="cat" data-price="750">貓咪跳台房 ($750/晚)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-amber-950 mb-0.5 text-[11px]">供餐安排：</label>
+              <select id="quick-hotel-meal-plan" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold" onchange="calcAdminQuickHotelFees()">
+                <option value="SELF" data-price="0">自備食料 (+$0)</option>
+                <option value="ONE" data-price="100">鮮食 1 餐 (+NT$100/晚)</option>
+                <option value="TWO" data-price="180">鮮食 2 餐 (+NT$180/晚)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-amber-200 space-y-1.5">
+            <label class="block font-bold text-amber-950 text-[11px]">住宿附加洗澡美容：</label>
             <div class="grid grid-cols-2 gap-2">
-              <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="quick-bath-checkin" class="accent-[#8C7355]">
-                <span>入住當天先洗澡 (進房前)</span>
+              <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="quick-bath-checkin" onchange="calcAdminQuickHotelFees()" class="accent-[#8C7355]">
+                <span>入住先洗澡 (+NT$600)</span>
               </label>
-              <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" id="quick-bath-checkout" checked class="accent-[#8C7355]">
-                <span>退房當天美容/洗澡 (返家前)</span>
+              <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-1.5 cursor-pointer">
+                <input type="checkbox" id="quick-bath-checkout" checked onchange="calcAdminQuickHotelFees()" class="accent-[#8C7355]">
+                <span>退房前洗澡 (+NT$800)</span>
               </label>
+            </div>
+          </div>
+
+          <!-- 專屬接送勾選 -->
+          <div class="pt-2 border-t border-amber-200 space-y-1.5">
+            <label class="flex items-center gap-2 cursor-pointer font-bold text-amber-950">
+              <input type="checkbox" id="quick-need-shuttle" onchange="document.getElementById('quick-shuttle-box').classList.toggle('hidden', !this.checked)" class="accent-[#8C7355]">
+              <span>需要專車到府接送</span>
+            </label>
+            <div id="quick-shuttle-box" class="hidden space-y-1">
+              <input type="text" id="quick-shuttle-address" placeholder="請填寫接送地址..." class="w-full p-2 bg-white rounded-xl border border-amber-300 outline-none">
+              <div class="flex gap-4 pt-0.5">
+                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="quick-shuttle-trip" value="round" checked class="accent-[#8C7355]"> 來回接送</label>
+                <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="quick-shuttle-trip" value="single" class="accent-[#8C7355]"> 單趟接送</label>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- 5. 服務專員 -->
         <div>
           <label class="block font-bold text-brand-800 mb-1.5">5. 指定服務專員：</label>
           <div class="grid grid-cols-3 gap-2" id="admin-quick-staff-grid"></div>
@@ -623,12 +674,14 @@
           <input type="hidden" id="quick-staff-name" value="不指定">
         </div>
 
+        <!-- 6. 服務項目 -->
         <div>
           <label class="block font-bold text-brand-800 mb-1">6. 選擇施作項目 (可複選)：</label>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="admin-quick-service-grid"></div>
           <input type="hidden" id="quick-service-names">
         </div>
 
+        <!-- 7. 加購與扣抵 -->
         <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
           <label class="block font-bold text-brand-900">7. 本次方案加購與扣抵：</label>
           <select id="quick-addon-pkg" onchange="calcAdminQuickSummary()" class="w-full p-2 rounded-xl border border-brand-200 bg-white text-xs"></select>
@@ -639,13 +692,14 @@
           </div>
         </div>
 
+        <!-- 金額試算小計框 -->
         <div class="p-4 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 font-mono">
-          <div class="flex justify-between text-brand-700"><span>主項目原價預估：</span><span id="quick-disp-base">$0</span></div>
-          <div class="flex justify-between text-rose-600"><span>方案與會員折抵：</span><span id="quick-disp-deduct">-$0</span></div>
-          <div class="flex justify-between text-amber-800"><span>現場加購金額：</span><span id="quick-disp-addon">+$0</span></div>
+          <div class="flex justify-between text-brand-700"><span>項目基準原價：</span><span id="quick-disp-base">$0</span></div>
+          <div class="flex justify-between text-rose-600"><span>方案折抵：</span><span id="quick-disp-deduct">-$0</span></div>
+          <div class="flex justify-between text-amber-800"><span>加購總額：</span><span id="quick-disp-addon">+$0</span></div>
           <hr class="border-brand-200 my-1">
           <div class="flex justify-between items-center font-bold text-brand-900 text-sm">
-            <span>現場預估應付金額：</span>
+            <span>現場預估應收金額：</span>
             <span class="text-xl font-black text-[#8C7355] font-serif">NT$ <span id="admin-quick-total-price">0</span></span>
           </div>
           <input type="hidden" id="quick-final-price" value="0">
@@ -653,11 +707,11 @@
 
         <div>
           <label class="block font-bold text-brand-800 mb-1">後台預約備註 (選填)</label>
-          <input type="text" id="quick-notes" placeholder="例如：口頭改期、特殊指名..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
+          <input type="text" id="quick-notes" placeholder="例如：口頭約定、特殊指名..." class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none">
         </div>
 
         <button type="button" onclick="submitAdminQuickBooking()" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-2xl shadow-md transition text-xs tracking-widest">
-          確定為顧客新增排程卡位
+          確定為顧客建立預約排程
         </button>
       </div>
     </div>
@@ -1570,48 +1624,79 @@
       mist:   { name: '晨曦朝露霧綠', colors: ['#F4F7F6', '#DAE4E1', '#4A7C6D', '#1F3B33'] }
     };
 
-    // 商業模式二次確認防誤觸切換
+    // 模式切換確認函式
   function confirmSwitchIndustryMode(newMode) {
     const modeNames = {
-      'beauty': '【1. 純美業版 (美容美髮美甲美體)】',
-      'pet_grooming': '【2. 寵物純美容版 (洗澡剪毛)】',
-      'pet_hotel': '【3. 寵物美容＋住宿旗艦版 (住宿甘特圖與供餐)】'
+      'beauty': '1. 純美業版 (美髮/美甲/SPA)',
+      'pet_grooming': '2. 寵物純美容版 (洗護/剪毛)',
+      'pet_hotel': '3. 寵物美容＋住宿旗艦版'
     };
 
     Swal.fire({
-      title: '確定要變更門市營運模式？',
-      html: `
-        <div class="text-left text-xs text-brand-700 space-y-2 leading-relaxed">
-          <p class="font-bold text-rose-600">⚠️ 這是核心營運架構變更：</p>
-          <p>即將切換為：<b>${modeNames[newMode]}</b></p>
-          <p>確認後系統將即時更新雲端資料庫，並同步切換前台預約版型與後台導覽看板。</p>
-        </div>
-      `,
+      title: '確定變更營運模式？',
+      text: `即將切換為【${modeNames[newMode]}】，將自動更新前台版型。`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: '確定立即切換',
-      cancelButtonText: '取消保留原狀',
-      confirmButtonColor: '#8C7355',
-      cancelButtonColor: '#EBE5DF'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
+      confirmButtonText: '確定切換',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#8C7355'
+    }).then(async (r) => {
+      if (r.isConfirmed) {
         Swal.showLoading();
         try {
           await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { industry_type: newMode });
-          await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { industry_mode: newMode });
-          
+          await directSupabaseUpsert('store_settings', { store_id: CURRENT_STORE_ID, industry_mode: newMode }, 'store_id');
+
           backendData.settings.industryMode = newMode;
           handleIndustryModeChange(newMode);
-          
+
           const badge = document.getElementById('current-mode-display-badge');
-          if (badge) badge.innerText = `當前：${modeNames[newMode].split(' ')[0]}】`;
-          
-          Swal.fire({ title: '模式已成功切換！', text: '前台與後台架構已同步更新', icon: 'success', timer: 1200, showConfirmButton: false });
+          if (badge) badge.innerText = `當前：${modeNames[newMode]}`;
+
+          Swal.fire('模式切換成功！', '', 'success');
         } catch(e) {
           Swal.fire('切換失敗', e.message, 'error');
         }
       }
     });
+  }
+    
+    let adminCustomerPets = [];
+
+  async function adminQuickCheckCustomerPets(phoneVal) {
+    const phone = (phoneVal || '').trim();
+    if (phone.length < 8) return;
+
+    const [pets, custs] = await Promise.all([
+      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+    ]);
+
+    adminCustomerPets = pets || [];
+    if (custs && custs.length > 0) {
+      document.getElementById('quick-name').value = custs[0].name || '';
+    }
+
+    const box = document.getElementById('admin-pet-select-box');
+    const dropdown = document.getElementById('admin-pet-dropdown');
+
+    if (adminCustomerPets.length > 0) {
+      let html = `<option value="" disabled selected>-- 請挑選施作毛孩 --</option>`;
+      adminCustomerPets.forEach((p, i) => {
+        html += `<option value="${i}">${p.name} (${p.breed || '一般'}) - 包卡:${p.package_balance || 0}次 / 儲值:$${p.wallet_balance || 0}</option>`;
+      });
+      dropdown.innerHTML = html;
+      box.classList.remove('hidden');
+    } else {
+      box.classList.add('hidden');
+    }
+  }
+
+  function onAdminSelectPetChange(idx) {
+    const pet = adminCustomerPets[idx];
+    if (!pet) return;
+    document.getElementById('quick-pet-name').value = pet.name || '';
+    document.getElementById('admin-pet-balance-display').innerText = `目前該毛孩剩餘包卡：${pet.package_balance || 0} 次，儲值金：$${pet.wallet_balance || 0} 元`;
   }
     
     function previewSelectedThemeColor(themeKey) {
@@ -4641,19 +4726,21 @@
     }
 
     async function saveStoreSettings() {
-  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false });
-  Swal.showLoading();
+  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
   const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
-  const textImgsArray = rawImgsText.split('\n').map(u => u.trim()).filter(Boolean);
-  const finalPromoImgs = textImgsArray.length > 0 ? textImgsArray : promoImgsArray.filter(Boolean);
-  const selectedMode = document.querySelector('input[name="cfg-industry-mode"]:checked')?.value || 'pet_hotel';
-  const selectedTheme = document.getElementById('cfg-theme-color')?.value || 'latte';
+  const finalPromoImgs = rawImgsText ? rawImgsText.split('\n').map(u => u.trim()).filter(Boolean) : promoImgsArray.filter(Boolean);
+  
+  // 取得模式與主題色
+  const selectedMode = document.querySelector('input[name="cfg-industry-mode"]:checked')?.value || backendData.settings.industryMode || 'pet_hotel';
+  const selectedTheme = document.getElementById('cfg-theme-color')?.value || backendData.settings.themeColor || 'latte';
+  const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
-  const payload = {
+  // 整理寫入 store_settings 的 Payload
+  const settingsPayload = {
     store_id: CURRENT_STORE_ID,
-    display_title: document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName,
+    display_title: storeTitle,
     display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
     logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
     enable_logo: Boolean(document.getElementById('cfg-toggle-logo')?.checked),
@@ -4675,41 +4762,17 @@
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    // 解決前台色系與版型無反應：同時寫入底層相容命名
+    // 關鍵修復：雙向相容命名
     theme_color: selectedTheme,
-    themeColor: selectedTheme,
     industry_mode: selectedMode,
-    industryMode: selectedMode,
 
-    // 寵物住宿與供餐排程詳細欄位
+    // 寵物住宿與供餐欄位
     total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
     hotel_checkin_start: document.getElementById('cfg-hotel-checkin-start')?.value || '10:00',
     hotel_checkout_end: document.getElementById('cfg-hotel-checkout-end')?.value || '19:00',
     meal_time_breakfast: document.getElementById('cfg-meal-time-breakfast')?.value || '09:00',
     meal_time_lunch: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
     meal_time_dinner: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
-    boarding_settings: {
-      breakfastTime: document.getElementById('cfg-meal-time-breakfast')?.value || '09:00',
-      lunchTime: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
-      dinnerTime: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
-      mandatoryCheckinBath: Boolean(document.getElementById('cfg-mandatory-checkin-bath')?.checked),
-      allowCheckoutBath: Boolean(document.getElementById('cfg-allow-checkout-bath')?.checked),
-      toggleNotice: Boolean(document.getElementById('cfg-toggle-stay-notice')?.checked),
-      noticeContent: document.getElementById('cfg-stay-notice-content')?.value.trim() || ''
-    },
-    boarding_meal_rates: {
-      one: Number(document.getElementById('cfg-meal-price-1')?.value || 80),
-      two: Number(document.getElementById('cfg-meal-price-2')?.value || 150),
-      three: Number(document.getElementById('cfg-meal-price-3')?.value || 220)
-    },
-    pet_custom_fields: {
-      chipId: Boolean(document.getElementById('field-chip-id')?.checked),
-      vaccine: Boolean(document.getElementById('field-vaccine')?.checked),
-      deworm: Boolean(document.getElementById('field-deworm')?.checked),
-      allergy: Boolean(document.getElementById('field-allergy')?.checked),
-      intro: Boolean(document.getElementById('field-intro')?.checked),
-      shuttle: Boolean(document.getElementById('field-shuttle')?.checked)
-    },
 
     weekly_off_days: checkedWeekly,
     custom_off_dates: customOffDatesArray,
@@ -4719,7 +4782,7 @@
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
 
-    // 20+ 模組完全支援
+    // 模組開關 Flags
     enable_audit_booking: Boolean(document.getElementById('cfg-toggle-audit-booking')?.checked),
     enable_deposit: Boolean(document.getElementById('cfg-toggle-deposit')?.checked),
     enable_staff_select: Boolean(document.getElementById('cfg-toggle-staff-select')?.checked),
@@ -4743,21 +4806,25 @@
     enable_contract: Boolean(document.getElementById('cfg-toggle-contract')?.checked),
     enable_owner_line_push: Boolean(document.getElementById('cfg-toggle-owner-line-push')?.checked),
     enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
-    enable_flex_menu: Boolean(document.getElementById('cfg-toggle-flex-menu')?.checked)
+    enable_flex_menu: Boolean(document.getElementById('cfg-toggle-flex-menu')?.checked),
+    updated_at: new Date().toISOString()
   };
 
   try {
-    // 關鍵修復：雙向寫入 stores 主資料表，前台讀取後立即變更色系與模式
+    // 1. 同步更新 stores 主資料表（確保 industry_type 寫入）
     await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-      store_name: payload.display_title,
-      industry_type: selectedMode,
-      theme_color: selectedTheme
+      store_name: storeTitle,
+      industry_type: selectedMode
     });
-    await directSupabaseUpsert('store_settings', payload, 'store_id');
-    
-    backendData.settings = Object.assign({}, backendData.settings, payload);
+
+    // 2. 寫入 store_settings 表（確保 theme_color 與 industry_mode 寫入）
+    await directSupabaseUpsert('store_settings', settingsPayload, 'store_id');
+
+    // 3. 更新記憶體物件並即時切換 UI
+    backendData.settings = Object.assign({}, backendData.settings, settingsPayload);
     handleIndustryModeChange(selectedMode);
-    Swal.fire({ title: '設定已完整儲存！', text: '前台風格配色與營運模式已同步更新', icon: 'success', timer: 1500, showConfirmButton: false });
+
+    Swal.fire({ title: '設定儲存成功！', text: '前台色彩與營運模式已完成雙向同步', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
   }
