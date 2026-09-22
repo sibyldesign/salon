@@ -167,12 +167,12 @@
     </div>
   </div>
   
-  <!-- 前台住宿小提醒專區 (輪播圖下方，後台可開關與編輯) -->
+  <!-- 前台小提醒專區 (輪播圖下方，後台可開關與編輯) -->
   <div class="px-4 mt-4 hidden" id="frontStayNoticeWrapper">
     <div class="p-4 rounded-3xl bg-amber-50/90 border border-amber-200 shadow-xs space-y-2 text-xs">
       <div class="font-bold flex items-center gap-1.5 text-amber-900 text-xs">
         <i class="fa-solid fa-bullhorn text-amber-600"></i>
-        <span>住宿行前叮嚀與規範</span>
+        <span>行前叮嚀與規範</span>
       </div>
       <div id="frontStayNoticeContent" class="text-[11.5px] leading-relaxed whitespace-pre-line text-amber-900/90 font-medium"></div>
     </div>
@@ -366,12 +366,12 @@
           </div>
         </div>
 
-        <!-- 1. 門市專屬接送服務 (已優化獨立卡片樣式與上下外邊距) -->
-        <div id="shuttleServiceSection" class="p-4 bg-white/90 rounded-2xl border border-brand-200 shadow-2xs space-y-2.5 text-xs my-2.5">
+        <!-- 1. 門市專屬接送服務 (獨立卡片樣式、拉大邊距 my-3.5、提示費用另計) -->
+        <div id="shuttleServiceSection" class="my-3.5 p-4 bg-white rounded-2xl border border-brand-200 shadow-2xs space-y-2.5 text-xs hidden">
           <label class="flex items-center justify-between cursor-pointer">
             <div>
               <span class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
-                <i class="fa-solid fa-van-shuttle text-[#8C7355]"></i> 需要門市專屬接送服務
+                <i class="fa-solid fa-van-shuttle text-brand-500"></i> 需要門市專屬接送服務
               </span>
               <span class="text-[10.5px] text-amber-800 font-bold block mt-1">※ 車資費用另計，將由門市於結單時依里程公里數另行核算</span>
             </div>
@@ -390,7 +390,7 @@
           </div>
         </div>
 
-        <!-- 2. 指定服務專員 / 美容師 (拉開頂部間距 pt-2) -->
+        <!-- 2. 指定服務專員 / 美容師 (加大頂部呼吸感 pt-2) -->
         <div id="staffSection" class="pt-2">
           <label class="block text-xs font-bold text-brand-800 mb-2">指定服務專員 / 美容師</label>
           <div class="grid grid-cols-3 gap-2.5" id="staffGrid"></div>
@@ -398,7 +398,7 @@
           <input type="hidden" id="staffName" value="不指定">
         </div>
 
-        <!-- 3. 選擇項目區塊 (拉開頂部間距 pt-2) -->
+        <!-- 3. 美容洗澡模式：項目選擇區塊 (加大頂部間距 pt-2) -->
         <div id="groomingServiceSection" class="pt-2">
           <div class="flex justify-between items-center mb-2">
             <label class="text-xs font-bold text-brand-800">選擇項目 (可複選，價格為預估區間)</label>
@@ -408,7 +408,153 @@
           <input type="hidden" id="service">
         </div>
 
-        <!-- 4. 預約日期日曆 (拉開頂部間距 pt-2) -->
+        <!-- 4. 寵物住宿模式：完整旗艦版專屬排程與規格配置 (受模式 3 驅動) -->
+        <div id="boardingConfigSection" class="my-3.5 p-5 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-4 text-xs hidden">
+          <div class="font-bold text-brand-900 flex items-center justify-between text-sm border-b border-brand-200 pb-2.5">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-amber-600"></i> 寵物度假住宿排程與客製照護</span>
+            <span id="displayStayNightsBadge" class="text-xs px-2.5 py-0.5 bg-[#8C7355] text-white rounded-full font-mono font-bold">共 1 晚</span>
+          </div>
+
+          <!-- 4-1. 入住與退房行事曆時段手風琴 (琢悅同款高質感雙月曆) -->
+          <div class="space-y-3.5">
+            <div class="font-extrabold text-brand-900 flex items-center gap-2 text-[14px]">
+              <i class="fa-solid fa-calendar-days text-[#B2977D]"></i> 選擇住宿入住與退房行事曆時段
+            </div>
+
+            <!-- 手風琴 1: 入住日期與進場時段 -->
+            <div class="border border-[#EFE8DE] rounded-2xl overflow-hidden bg-white shadow-xs">
+              <button type="button" onclick="toggleHotelAccordion('checkInAccordion')" class="w-full p-4 bg-[#FAF7F2] flex justify-between items-center text-xs font-black text-brand-900 border-b border-[#EFE8DE] transition hover:bg-[#F5EFE6]">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-arrow-right-to-bracket text-[#B2977D]"></i> 1. 選擇【入住日期與進場時段】*
+                </span>
+                <span id="badge-checkin-summary" class="text-[#B2977D] font-bold flex items-center gap-1">
+                  尚未選擇 <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                </span>
+              </button>
+              
+              <div id="checkInAccordion" class="p-4 space-y-3 bg-white">
+                <div class="flex justify-between items-center mb-1 px-2">
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(-1, 'in')">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                  </button>
+                  <span class="font-black text-brand-900 text-sm tracking-wide font-mono" id="hotel_in_month_title">讀取中...</span>
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(1, 'in')">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] text-gray-400 font-bold pb-1 border-b border-gray-100">
+                  <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-y-2 gap-x-1.5 text-center text-[12px] font-bold" id="hotelInCalendarGrid"></div>
+                <input type="hidden" id="hotelCheckInDate">
+
+                <div class="pt-2">
+                  <div class="font-bold text-brand-900 text-[12px] mb-2">入住進場時段：</div>
+                  <div class="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFE8DE] transition min-h-[50px] flex items-center justify-center" id="hotelInTimeSlotContainer">
+                    <div class="text-xs text-gray-400 font-bold py-1">請先點選上方入住日期</div>
+                  </div>
+                  <input type="hidden" id="hotelCheckInTime" value="10:00">
+                </div>
+              </div>
+            </div>
+
+            <!-- 手風琴 2: 退房日期與接回時段 -->
+            <div class="border border-[#EFE8DE] rounded-2xl overflow-hidden bg-white shadow-xs">
+              <button type="button" onclick="toggleHotelAccordion('checkOutAccordion')" class="w-full p-4 bg-[#FAF7F2] flex justify-between items-center text-xs font-black text-brand-900 border-b border-[#EFE8DE] transition hover:bg-[#F5EFE6]">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-arrow-right-from-bracket text-[#B2977D]"></i> 2. 選擇【退房日期與接回時段】*
+                </span>
+                <span id="badge-checkout-summary" class="text-[#B2977D] font-bold flex items-center gap-1">
+                  尚未選擇 <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                </span>
+              </button>
+
+              <div id="checkOutAccordion" class="p-4 space-y-3 bg-white hidden">
+                <div class="flex justify-between items-center mb-1 px-2">
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(-1, 'out')">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                  </button>
+                  <span class="font-black text-brand-900 text-sm tracking-wide font-mono" id="hotel_out_month_title">讀取中...</span>
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(1, 'out')">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] text-gray-400 font-bold pb-1 border-b border-gray-100">
+                  <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+
+                <div class="grid grid-cols-7 gap-y-2 gap-x-1.5 text-center text-[12px] font-bold" id="hotelOutCalendarGrid"></div>
+                <input type="hidden" id="hotelCheckOutDate">
+
+                <div class="pt-2">
+                  <div class="font-bold text-brand-900 text-[12px] mb-2">退房接回時段：</div>
+                  <div class="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFE8DE] transition min-h-[50px] flex items-center justify-center" id="hotelOutTimeSlotContainer">
+                    <div class="text-xs text-gray-400 font-bold py-1">請先點選上方退房日期</div>
+                  </div>
+                  <input type="hidden" id="hotelCheckOutTime" value="18:00">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4-2. 房型等級與體型級距 (由後台動態渲染生成) -->
+          <div class="p-4 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-brand-900 flex items-center gap-1">
+                <i class="fa-solid fa-dog text-amber-700"></i> 3. 房型等級與毛孩體型級距
+              </span>
+              <span class="text-[10px] text-brand-400">依門市最新房型標準配置</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2" id="hotelRoomTypeDynamicGrid"></div>
+          </div>
+
+          <!-- 4-3. 每日供餐照護選項 (由後台動態生成) -->
+          <div class="p-4 bg-white rounded-2xl border border-brand-200 space-y-2">
+            <div class="flex justify-between items-center font-bold text-brand-900">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-bowl-food text-amber-600"></i> 4. 每日供餐照護方案</span>
+              <span class="text-[10px] text-amber-800" id="display-meal-times-badge">放飯時間：早 09:00 / 晚 18:00</span>
+            </div>
+            <div class="space-y-1.5" id="hotelMealOptionsDynamicList"></div>
+            <div id="hotelMealCountExplain" class="hidden text-[10.5px] p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 font-bold font-mono"></div>
+          </div>
+
+          <!-- 4-4. 入住前美容洗澡 ＆ 退房前美容洗澡 (旗艦規格：支援項目自選與加購) -->
+          <div class="p-4 bg-white rounded-2xl border border-brand-200 space-y-3">
+            <span class="font-bold text-brand-900 flex items-center justify-between">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-shower text-blue-600"></i> 5. 住宿附加洗澡與美容保養</span>
+              <span class="text-[10px] text-brand-400">可使用包卡/儲值抵扣</span>
+            </span>
+
+            <!-- 入住前清潔洗護模組 -->
+            <div class="p-3 bg-brand-50/60 rounded-xl border border-brand-200/80 space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-brand-900">
+                <input type="checkbox" id="chkHotelBathCheckin" onchange="toggleHotelBathSubSelect('in'); calculateBoardingDaysAndPrice();" class="accent-[#8C7355]">
+                <span>【入住當天】進房前基礎清潔洗護</span>
+              </label>
+              <div id="hotelBathInSubPanel" class="hidden pl-6 space-y-2 pt-1 border-t border-brand-200/50">
+                <select id="hotelBathInServiceSelect" onchange="calculateBoardingDaysAndPrice()" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs font-bold"></select>
+                <div class="flex flex-wrap gap-2 text-[11px]" id="hotelBathInAddonGrid"></div>
+              </div>
+            </div>
+
+            <!-- 退房前深層美容模組 -->
+            <div class="p-3 bg-brand-50/60 rounded-xl border border-brand-200/80 space-y-2">
+              <label class="flex items-center gap-2 cursor-pointer font-bold text-brand-900">
+                <input type="checkbox" id="chkHotelBathCheckout" checked onchange="toggleHotelBathSubSelect('out'); calculateBoardingDaysAndPrice();" class="accent-[#8C7355]">
+                <span>【退房當天】返家前深層造型美容／洗澡</span>
+              </label>
+              <div id="hotelBathOutSubPanel" class="pl-6 space-y-2 pt-1 border-t border-brand-200/50">
+                <select id="hotelBathOutServiceSelect" onchange="calculateBoardingDaysAndPrice()" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs font-bold"></select>
+                <div class="flex flex-wrap gap-2 text-[11px]" id="hotelBathOutAddonGrid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. 美容預約單日日曆 (單日美容/美業模式下使用) -->
         <div id="calendarPickerSection" class="pt-2">
           <label class="block text-xs font-bold text-brand-800 mb-2">預約日期</label>
           <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-sm">
@@ -426,7 +572,7 @@
           <input type="hidden" id="date">
         </div>
 
-        <!-- 5. 預約時段 (拉開頂部間距 pt-2) -->
+        <!-- 6. 美容預約時段 (加大頂部間距 pt-2) -->
         <div id="timePickerSection" class="pt-2">
           <label class="block text-xs font-bold text-brand-800 mb-2">預約時段</label>
           <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5" id="timePillGrid">
@@ -435,13 +581,13 @@
           <input type="hidden" id="time">
         </div>
 
-        <!-- 6. 特殊需求與備註 (加大上下外邊距 my-3.5) -->
-        <div id="custNotesWrapper" class="my-3.5">
+        <!-- 7. 特殊需求與備註 (加大上下外邊距 my-4) -->
+        <div id="custNotesWrapper" class="my-4">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">特殊需求與備註 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
           <textarea id="custNotes" rows="2" placeholder="如有任何特殊需求請在此填寫..." class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/50 text-xs outline-none focus:bg-white transition"></textarea>
         </div>
 
-        <!-- 7. 本月活動方案與折抵/加購選擇 (卡片加上外距 my-4、增加內距 p-5) -->
+        <!-- 8. 本月活動方案與折抵/加購選擇 (卡片加上外距 my-4、增加內距 p-5) -->
         <div class="my-4 p-5 rounded-3xl bg-brand-50/90 border border-brand-200 shadow-xs space-y-4 text-xs">
           <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
             <i class="fa-solid fa-tags text-brand-500"></i> 本月活動方案與折抵/加購選擇
@@ -491,7 +637,7 @@
           </div>
         </div>
 
-        <!-- 8. 活動折扣碼輸入框 (加入外邊距 my-4) -->
+        <!-- 9. 活動折扣碼輸入框 (加入外邊距 my-4) -->
         <div class="my-4 space-y-1.5">
           <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
           <div class="flex gap-2">
@@ -501,7 +647,7 @@
           <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-1"></div>
         </div>
 
-        <!-- 9. 預算計價即時試算 (加大外距 my-4、加大內距 p-5) -->
+        <!-- 10. 預算計價即時試算 (加大外距 my-4、加大內距 p-5) -->
         <div id="checkoutSummaryBox" class="my-4 p-5 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3.5 text-xs shadow-xs">
           <div class="flex justify-between items-center border-b border-brand-200 pb-2.5">
             <span class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
@@ -557,7 +703,7 @@
           </div>
         </div>
 
-        <!-- 10. 定型化契約與數位簽署專區 (加大外邊距 my-4) -->
+        <!-- 11. 定型化契約與數位簽署專區 (加大外邊距 my-4) -->
         <div id="digitalContractSection" class="my-4 p-5 rounded-3xl bg-brand-50/90 border border-brand-200 shadow-xs space-y-3.5 text-xs">
           <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
             <i class="fa-solid fa-file-contract text-[#8C7355]"></i>
@@ -585,7 +731,7 @@
           </div>
         </div>
 
-        <!-- 11. 線下收取訂金說明卡片 (增加垂直外邊距 my-4) -->
+        <!-- 12. 線下收取訂金說明卡片 (增加垂直外邊距 my-4) -->
         <div id="frontDepositSection" class="my-4 p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs space-y-2 hidden">
           <div class="flex items-center justify-between font-bold text-amber-900">
             <span class="flex items-center gap-1.5">
@@ -596,7 +742,7 @@
           <div class="text-[11px] text-amber-800/90 whitespace-pre-wrap leading-relaxed" id="depositInfoText"></div>
         </div>
 
-        <!-- 12. 居家保養 / 照護小叮嚀 (獨立卡片樣式、加大上下外邊距 my-4、增加內距 p-4) -->
+        <!-- 13. 居家保養 / 照護小叮嚀 (獨立卡片樣式、加大上下外邊距 my-4、增加內距 p-4) -->
         <details id="careSection" class="group bg-white rounded-3xl border border-brand-200 shadow-xs overflow-hidden outline-none my-4" open>
           <summary class="flex justify-between items-center p-4 cursor-pointer font-bold text-xs text-brand-800 select-none hover:bg-brand-50/60 transition outline-none">
             <span class="flex items-center gap-2">
@@ -608,7 +754,7 @@
           </summary>
           <div class="p-4 pt-2 text-xs text-brand-800/90 leading-relaxed bg-white border-t border-brand-100 whitespace-pre-wrap" id="care-content"></div>
         </details>
-
+    
         <!-- 聯絡與社群據點 (絕不調用私人電話) -->
         <div class="pt-3 border-t border-brand-100">
           <div class="flex justify-center gap-6 my-4">
