@@ -397,59 +397,94 @@
             <span id="displayStayNightsBadge" class="text-xs px-2.5 py-0.5 bg-[#8C7355] text-white rounded-full font-mono font-bold">共 1 晚</span>
           </div>
 
-          <!-- 1. 入住與退房日期時段 (雙折疊式/獨立排版，手機不擠壓) -->
-          <div class="space-y-2.5">
-            <!-- 入住排程卡片 -->
-            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2 shadow-2xs">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-brand-900 flex items-center gap-1">
-                  <i class="fa-solid fa-arrow-right-to-bracket text-emerald-600"></i> 1. 入住進場日期與時段 *
+          <!-- 1. 入住與退房行事曆時段手風琴 (截圖高質感版型) -->
+          <div class="space-y-3.5">
+            <div class="font-extrabold text-brand-900 flex items-center gap-2 text-[14px]">
+              <i class="fa-solid fa-calendar-days text-[#B2977D]"></i> 選擇住宿入住與退房行事曆時段
+            </div>
+
+            <!-- 手風琴 1: 入住日期與進場時段 -->
+            <div class="border border-[#EFE8DE] rounded-2xl overflow-hidden bg-white shadow-xs">
+              <button type="button" onclick="toggleHotelAccordion('checkInAccordion')" class="w-full p-4 bg-[#FAF7F2] flex justify-between items-center text-xs font-black text-brand-900 border-b border-[#EFE8DE] transition hover:bg-[#F5EFE6]">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-arrow-right-to-bracket text-[#B2977D]"></i> 1. 選擇【入住日期與進場時段】*
                 </span>
-                <span id="badge-checkin-summary" class="text-[10px] text-emerald-700 font-mono font-bold"></span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">入住日期</label>
-                  <input type="date" id="hotelCheckInDate" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="onHotelDateChange()">
+                <span id="badge-checkin-summary" class="text-[#B2977D] font-bold flex items-center gap-1">
+                  尚未選擇 <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                </span>
+              </button>
+              
+              <div id="checkInAccordion" class="p-4 space-y-3 bg-white">
+                <!-- 日曆年月切換 -->
+                <div class="flex justify-between items-center mb-1 px-2">
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(-1, 'in')">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                  </button>
+                  <span class="font-black text-brand-900 text-sm tracking-wide font-mono" id="hotel_in_month_title">讀取中...</span>
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(1, 'in')">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                  </button>
                 </div>
-                <div>
-                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">預計抵達進房時段</label>
-                  <select id="hotelCheckInTime" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
-                    <option value="10:00">10:00 (上午開放入住)</option>
-                    <option value="11:00">11:00</option>
-                    <option value="12:00">12:00</option>
-                    <option value="13:30">13:30</option>
-                    <option value="15:00">15:00</option>
-                    <option value="17:00">17:00</option>
-                    <option value="18:30">18:30 (最晚進房)</option>
-                  </select>
+
+                <!-- 星期表頭 -->
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] text-gray-400 font-bold pb-1 border-b border-gray-100">
+                  <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+
+                <!-- 入住日曆格 -->
+                <div class="grid grid-cols-7 gap-y-2 gap-x-1.5 text-center text-[12px] font-bold" id="hotelInCalendarGrid"></div>
+                <input type="hidden" id="hotelCheckInDate">
+
+                <!-- 入場時段膠囊 -->
+                <div class="pt-2">
+                  <div class="font-bold text-brand-900 text-[12px] mb-2">入住進場時段：</div>
+                  <div class="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFE8DE] transition min-h-[50px] flex items-center justify-center" id="hotelInTimeSlotContainer">
+                    <div class="text-xs text-gray-400 font-bold py-1">請先點選上方入住日期</div>
+                  </div>
+                  <input type="hidden" id="hotelCheckInTime" value="10:00">
                 </div>
               </div>
             </div>
 
-            <!-- 退房排程卡片 -->
-            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2 shadow-2xs">
-              <div class="flex justify-between items-center">
-                <span class="font-bold text-brand-900 flex items-center gap-1">
-                  <i class="fa-solid fa-arrow-right-from-bracket text-amber-700"></i> 2. 退房接回日期與時段 *
+            <!-- 手風琴 2: 退房日期與接回時段 -->
+            <div class="border border-[#EFE8DE] rounded-2xl overflow-hidden bg-white shadow-xs">
+              <button type="button" onclick="toggleHotelAccordion('checkOutAccordion')" class="w-full p-4 bg-[#FAF7F2] flex justify-between items-center text-xs font-black text-brand-900 border-b border-[#EFE8DE] transition hover:bg-[#F5EFE6]">
+                <span class="flex items-center gap-2">
+                  <i class="fa-solid fa-arrow-right-from-bracket text-[#B2977D]"></i> 2. 選擇【退房日期與接回時段】*
                 </span>
-                <span id="badge-checkout-summary" class="text-[10px] text-amber-800 font-mono font-bold"></span>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">退房日期</label>
-                  <input type="date" id="hotelCheckOutDate" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="onHotelDateChange()">
+                <span id="badge-checkout-summary" class="text-[#B2977D] font-bold flex items-center gap-1">
+                  尚未選擇 <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>
+                </span>
+              </button>
+
+              <div id="checkOutAccordion" class="p-4 space-y-3 bg-white hidden">
+                <!-- 退房年月切換 -->
+                <div class="flex justify-between items-center mb-1 px-2">
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(-1, 'out')">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                  </button>
+                  <span class="font-black text-brand-900 text-sm tracking-wide font-mono" id="hotel_out_month_title">讀取中...</span>
+                  <button type="button" class="w-7 h-7 flex items-center justify-center text-brand-700 hover:text-brand-900 hover:bg-brand-50 rounded-full" onclick="changeHotelCalMonth(1, 'out')">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                  </button>
                 </div>
-                <div>
-                  <label class="block text-[10px] text-gray-400 font-bold mb-0.5">預計接回退宿時段</label>
-                  <select id="hotelCheckOutTime" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" onchange="calculateBoardingDaysAndPrice()">
-                    <option value="10:00">10:00 (上午接回)</option>
-                    <option value="12:00">12:00</option>
-                    <option value="14:00">14:00</option>
-                    <option value="16:00">16:00</option>
-                    <option value="18:00" selected>18:00</option>
-                    <option value="19:30">19:30 (最晚接回)</option>
-                  </select>
+
+                <!-- 星期表頭 -->
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] text-gray-400 font-bold pb-1 border-b border-gray-100">
+                  <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                </div>
+
+                <!-- 退房日曆格 -->
+                <div class="grid grid-cols-7 gap-y-2 gap-x-1.5 text-center text-[12px] font-bold" id="hotelOutCalendarGrid"></div>
+                <input type="hidden" id="hotelCheckOutDate">
+
+                <!-- 退房時段膠囊 -->
+                <div class="pt-2">
+                  <div class="font-bold text-brand-900 text-[12px] mb-2">退房接回時段：</div>
+                  <div class="bg-[#FAF8F5] p-3 rounded-2xl border border-[#EFE8DE] transition min-h-[50px] flex items-center justify-center" id="hotelOutTimeSlotContainer">
+                    <div class="text-xs text-gray-400 font-bold py-1">請先點選上方退房日期</div>
+                  </div>
+                  <input type="hidden" id="hotelCheckOutTime" value="18:00">
                 </div>
               </div>
             </div>
@@ -894,7 +929,7 @@
   let guestLineUid = "";
   let activeBookingSubMode = 'grooming'; // 'grooming' 或 'boarding'
 
-  // 6 款美學色票庫
+  // 6 款品牌主題色盤定義
   const THEME_PALETTES = {
     latte:  { primary: '#8C7355', primaryHover: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8', text: '#3D3126' },
     matcha: { primary: '#5C725E', primaryHover: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE', text: '#2B382D' },
@@ -948,52 +983,118 @@
     }
   }
 
-  // 2. window.onload 優先順序修復 (解決重新整理還原預設問題)
   window.onload = async function() {
     try {
       await resolveStoreIdAndInitLiff();
       await checkMaintenanceAndAnnouncement();
 
-      const [stores, settings, services, bookings] = await Promise.all([
+      const nowIso = new Date().toISOString();
+      const [stores, settings, services, portfolios, bookings] = await Promise.all([
         directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
         directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
         directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
-        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
+        directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
+        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
       ]);
 
-      const sInfo = (stores && stores.length > 0) ? stores[0] : {};
-      const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+      const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
+      const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "線上預約" };
 
-      // 雙向相容讀取
-      const theme = sCfg.theme_color || sInfo.theme_color || 'latte';
-      const mode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
+      // 1. 公休日計算
+      const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
+      const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
+
+      const availableDates = [];
+      const today = new Date();
+      for (let i = 0; i < 60; i++) {
+        const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+        if (!weeklyOffDays.includes(target.getDay()) && !customOffDates.includes(dStr)) {
+          availableDates.push(dStr);
+        }
+      }
+
+      // 2. 服務項目整理
+      const formattedServices = (services && services.length > 0) ? services.map(s => ({
+        id: s.id,
+        name: s.service_name || s.name || '未命名項目',
+        duration: Number(s.duration_minutes || s.duration || 60),
+        type: s.service_type || s.type || "Group_A",
+        price: s.price !== undefined ? String(s.price) : "0",
+        isAddon: s.is_addon === true || s.isAddon === true,
+        sortOrder: s.sort_order || 0
+      })) : DEFAULT_SERVICES;
+
+      // 3. 雙向讀取
+      const rawTheme = sCfg.theme_color || sInfo.theme_color || 'latte';
+      const rawMode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
 
       db = {
         storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
         subtitle: sCfg.display_subtitle || "專業門市服務",
-        themeColor: theme,
-        industryType: mode,
-        services: services || [],
-        futureBookings: bookings || [],
-        staffList: sCfg.staff_list || [{ id: "all", name: "不指定" }],
+        themeColor: rawTheme,
+        industryType: rawMode,
+        enableLogo: sCfg.enable_logo !== false,
+        logoUrl: sCfg.logo_url || "",
+        storePhone: sCfg.store_phone || "",
+        promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
+        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
+          "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
+        ],
+        address: sCfg.address || "門市服務據點",
+        businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
+        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
+        careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
+        ig: sCfg.ig_url || "#",
+        line: sCfg.line_url || "#",
+        map: sCfg.map_url || "#",
+        enableEmailCopy: sCfg.enable_email_copy !== false,
+        enableDeposit: sCfg.enable_deposit === true,
+        depositMode: sCfg.deposit_mode || 'all',
+        depositAmount: Number(sCfg.deposit_amount || 0),
+        depositInfo: sCfg.deposit_info || '',
+        enableStaffSelect: sCfg.enable_staff_select !== false,
+        enableFeaturedShop: sCfg.enable_featured_shop === true,
+        enableShowPrice: sCfg.enable_show_price !== false,
+        enableCustNotes: sCfg.enable_cust_notes !== false,
+        enableContract: sCfg.enable_contract !== false,
+        contractTitle: sCfg.contract_title || '線上定型化服務契約書',
+        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
+        promoRulesText: sCfg.promo_rules_text || '',
+        walletRules: sCfg.wallet_rules || [],
+        packageRules: sCfg.package_rules || [],
+        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
         staffSchedules: sCfg.staff_schedules || {},
+        shiftStartTime: sCfg.shift_start_time || "09:00",
+        shiftEndTime: sCfg.shift_end_time || "19:00",
+        shiftInterval: Number(sCfg.shift_interval || 30),
+        services: formattedServices,
+        portfolio: portfolios || [],
+        availableDates: availableDates,
+        futureBookings: bookings || [],
         boardingSettings: sCfg.boarding_settings || {},
-        totalHotelRooms: Number(sCfg.total_hotel_rooms || 8)
+        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
+        petCustomFields: sCfg.pet_custom_fields || {}
       };
 
-      document.getElementById('brand-title').innerText = db.storeName;
-      document.getElementById('brand-subtitle').innerText = db.subtitle;
+      window.backendSettings = db;
 
-      // 立即執行主題與版型覆蓋
-      applyThemeAndIndustryMode(db.themeColor, db.industryType);
+      // 【核心修復】執行完整前台渲染
+      renderStoreUI();
+      loadApprovedReviews();
 
-      renderServices();
-      renderFrontCalendar();
-    } catch(e) {
+      // 監聽手機號碼查詢
+      const phoneEl = document.getElementById('phone');
+      if (phoneEl) {
+        phoneEl.addEventListener('blur', function() {
+          if (this.value.trim().length >= 8) checkPhoneAndLoadBenefits(this);
+        });
+      }
+    } catch (e) {
       console.error("載入失敗:", e);
     }
   };
-
+    
   // 3. 輸入電話帶入多毛孩選取與個別資產顯示
   async function checkPhoneAndLoadBenefits(el) {
     const phone = el.value.trim();
@@ -1063,36 +1164,78 @@
     updateCheckoutSummary();
   }
 
-  // 3 種前台商業模式版型切換核心：1. 純美業 (beauty)、2. 寵物美容 (pet_grooming)、3. 寵物美容＋住宿 (pet_hotel)
+  // 全域動態注入 CSS 樣式，徹底覆蓋所有寫死的色值
+  function applyThemeColors(themeKey) {
+    const t = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
+    document.documentElement.style.setProperty('--theme-primary', t.primary);
+    document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
+    document.documentElement.style.setProperty('--theme-bg', t.bg);
+    document.documentElement.style.setProperty('--theme-light', t.light);
+    document.documentElement.style.setProperty('--theme-text', t.text);
+    document.body.style.backgroundColor = t.bg;
+    document.body.style.color = t.text;
+
+    // 動態插入全域樣式覆蓋標籤
+    let styleTag = document.getElementById('dynamic-theme-override');
+    if (!styleTag) {
+      styleTag = document.createElement('style');
+      styleTag.id = 'dynamic-theme-override';
+      document.head.appendChild(styleTag);
+    }
+    styleTag.innerHTML = `
+      body, .bg-brand-50 { background-color: ${t.bg} !important; }
+      .bg-\\[\\#8C7355\\], #subBtn, .swal2-confirm, .swal2-styled.swal2-confirm, .swal2-confirm-brown {
+        background-color: ${t.primary} !important;
+        color: #FFFFFF !important;
+      }
+      .hover\\:bg-\\[\\#7A6246\\]:hover, .swal2-confirm:hover {
+        background-color: ${t.primaryHover} !important;
+      }
+      .text-\\[\\#8C7355\\], .text-brand-500 { color: ${t.primary} !important; }
+      .border-\\[\\#8C7355\\], .border-brand-400 { border-color: ${t.primary} !important; }
+      #promo { background-color: ${t.primary} !important; }
+      .time-pill.selected, .staff-btn.selected {
+        background-color: ${t.primary} !important;
+        color: #FFFFFF !important;
+      }
+    `;
+  }
+
+  // 3 種前台商業模式版型切換核心（徹底修正原本只比對 'pet' 的錯誤）
   function applyIndustryModeUI(mode) {
     const modeSelector = document.getElementById('serviceModeSelector');
     const petProfileSec = document.getElementById('petProfileSection');
     const groomingSec = document.getElementById('groomingServiceSection');
     const boardingSec = document.getElementById('boardingConfigSection');
-    const singleTimeSec = document.getElementById('singleTimeSection');
+    const singleTimeSec = document.getElementById('calendarPickerSection');
+    const singleHourSec = document.getElementById('timePickerSection');
     const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
 
     if (mode === 'beauty') {
-      // 1. 純美業版：無毛孩履歷、無住宿選擇、無寵物切換按鈕
+      // 1. 純美業版：徹底隱藏所有寵物相關欄位與住宿切換
       if (modeSelector) modeSelector.classList.add('hidden');
       if (petProfileSec) petProfileSec.classList.add('hidden');
       if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
-      if (groomingSec) groomingSec.classList.remove('hidden');
       if (boardingSec) boardingSec.classList.add('hidden');
+      if (groomingSec) groomingSec.classList.remove('hidden');
       if (singleTimeSec) singleTimeSec.classList.remove('hidden');
+      if (singleHourSec) singleHourSec.classList.remove('hidden');
     } else if (mode === 'pet_grooming') {
-      // 2. 寵物純美容版：顯示毛孩履歷，但無住宿預約
+      // 2. 寵物純美容版：開啟毛孩履歷，但無住宿預約
       if (modeSelector) modeSelector.classList.add('hidden');
       if (petProfileSec) petProfileSec.classList.remove('hidden');
       if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
-      if (groomingSec) groomingSec.classList.remove('hidden');
       if (boardingSec) boardingSec.classList.add('hidden');
+      if (groomingSec) groomingSec.classList.remove('hidden');
       if (singleTimeSec) singleTimeSec.classList.remove('hidden');
-    } else if (mode === 'pet_hotel') {
-      // 3. 寵物美容＋住宿：全部啟用，開啟美容/住宿切換條
+      if (singleHourSec) singleHourSec.classList.remove('hidden');
+      setupPetExtendedFields();
+    } else {
+      // 3. 寵物美容＋住宿旗艦版 (pet_hotel)
       if (modeSelector) modeSelector.classList.remove('hidden');
       if (petProfileSec) petProfileSec.classList.remove('hidden');
       if (stayNoticeWrapper) stayNoticeWrapper.classList.remove('hidden');
+      setupPetExtendedFields();
       switchBookingSubMode(activeBookingSubMode || 'grooming');
     }
   }
@@ -1248,120 +1391,13 @@
 
   setInterval(checkMaintenanceAndAnnouncement, 15000);
 
-  window.onload = async function() {
-    try {
-      await resolveStoreIdAndInitLiff();
-      await checkMaintenanceAndAnnouncement();
-
-      const nowIso = new Date().toISOString();
-      let [stores, settings, services, portfolios, bookings] = await Promise.all([
-        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
-        directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
-      ]);
-
-      let sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
-      const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "線上預約" };
-      
-      const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
-      const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
-      
-      const availableDates = [];
-      const today = new Date();
-      for (let i = 0; i < 60; i++) {
-        const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
-        if (!weeklyOffDays.includes(target.getDay()) && !customOffDates.includes(dStr)) {
-          availableDates.push(dStr);
-        }
-      }
-
-      let formattedServices = (services && services.length > 0) ? services.map(s => ({
-        id: s.id, 
-        name: s.service_name || s.name || '未命名項目', 
-        duration: Number(s.duration_minutes || s.duration || 60),
-        type: s.service_type || s.type || "Group_A", 
-        price: s.price !== undefined ? String(s.price) : "0",
-        isAddon: s.is_addon === true || s.isAddon === true, 
-        sortOrder: s.sort_order || 0
-      })) : DEFAULT_SERVICES;
-
-      // 確保兼容讀取：stores 主表優先，store_settings 為備援
-      const rawTheme = sInfo.theme_color || sCfg.theme_color || sCfg.themeColor || 'latte';
-      const rawMode = sInfo.industry_type || sCfg.industry_mode || sCfg.industryMode || 'pet_hotel';
-
-      db = {
-        storeName: sCfg.display_title || sInfo.store_name || "線上預約",
-        subtitle: sCfg.display_subtitle || "專業服務門市",
-        themeColor: rawTheme,
-        industryType: rawMode,
-        enableLogo: sCfg.enable_logo !== false,
-        logoUrl: sCfg.logo_url || "",
-        storePhone: sCfg.store_phone || "",
-        promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : db.promoImgs,
-        address: sCfg.address || "門市服務據點",
-        businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
-        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-        careText: sCfg.care_text || "1. 服務完成後請保持清潔與通風乾燥。\n2. 若有任何照護疑問歡迎隨時洽詢門市人員。",
-        ig: sCfg.ig_url || "#",
-        line: sCfg.line_url || "#",
-        map: sCfg.map_url || "#",
-        enableEmailCopy: sCfg.enable_email_copy !== false,
-        enableDeposit: sCfg.enable_deposit === true,
-        depositMode: sCfg.deposit_mode || 'all',
-        depositAmount: Number(sCfg.deposit_amount || 0),
-        depositInfo: sCfg.deposit_info || '',
-        enableStaffSelect: sCfg.enable_staff_select !== false,
-        enableFeaturedShop: sCfg.enable_featured_shop === true,
-        enableShowPrice: sCfg.enable_show_price !== false,
-        enableCustNotes: sCfg.enable_cust_notes !== false,
-        enableContract: sCfg.enable_contract !== false,
-        contractTitle: sCfg.contract_title || '線上定型化服務契約書',
-        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。\n二、顧客應誠實告知特殊體質與過敏史。\n三、若需改期請於預約日前 24 小時提出。',
-        promoRulesText: sCfg.promo_rules_text || '• 預約請準時抵達，為您保留 10 分鐘。\n• 如需改期請提前 24 小時告知店家。\n• 現場方案均可即時折抵與加購使用。',
-        walletRules: sCfg.wallet_rules || [],
-        packageRules: sCfg.package_rules || [],
-        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
-        staffSchedules: sCfg.staff_schedules || {},
-        shiftStartTime: sCfg.shift_start_time || "09:00",
-        shiftEndTime: sCfg.shift_end_time || "19:00",
-        shiftInterval: Number(sCfg.shift_interval || 30),
-        services: formattedServices,
-        portfolio: portfolios || [],
-        availableDates: availableDates,
-        futureBookings: bookings || [],
-        boardingSettings: sCfg.boarding_settings || db.boardingSettings,
-        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
-        petCustomFields: sCfg.pet_custom_fields || db.petCustomFields
-      };
-
-      window.backendSettings = db;
-      renderStoreUI();
-      loadApprovedReviews();
-
-      // 套用自訂色系與自訂商業模式版型
-      applyThemeColors(db.themeColor);
-      applyIndustryModeUI(db.industryType);
-
-      const phoneEl = document.getElementById('phone');
-      if (phoneEl) {
-        phoneEl.addEventListener('blur', function() {
-          if (this.value.trim().length >= 8) checkCustomerBenefitsByPhone();
-        });
-      }
-    } catch (e) {
-      console.error("載入失敗:", e);
-    }
-  };
-
   function renderStoreUI() {
+    // 1. 門市名稱與標語
     document.getElementById('brand-title').innerText = db.storeName;
     document.getElementById('brand-subtitle').innerText = db.subtitle;
-    
-    // Logo 顯示與隱藏：若無 Logo 則整塊隱藏，不留多餘高度
+    document.getElementById('promo-text').innerText = db.promoText;
+
+    // 2. Logo 顯示與隱藏
     const logoWrapper = document.getElementById('store-logo-wrapper');
     const logoImg = document.getElementById('store-logo-img');
     const logoPlaceholder = document.getElementById('store-logo-placeholder');
@@ -1376,7 +1412,7 @@
       if (logoWrapper) logoWrapper.style.display = 'none';
     }
 
-    // 門市電話 (嚴格僅顯示門市設定電話，不調用私人電話)
+    // 3. 門市電話
     const storePhoneBox = document.getElementById('store-phone-display');
     const storePhoneVal = document.getElementById('store-phone-val');
     if (db.storePhone && db.storePhone.trim() !== '') {
@@ -1386,78 +1422,33 @@
       storePhoneBox.classList.add('hidden');
     }
 
-    document.getElementById('promo-text').innerText = db.promoText;
+    // 4. 地址、營業時間、社群連結
     document.getElementById('nav-ig').href = db.ig || '#';
     document.getElementById('nav-line').href = db.line || '#';
     document.getElementById('nav-map').href = db.map || '#';
     document.getElementById('store-address').innerHTML = `<i class="fa-solid fa-map-pin text-brand-400 mr-1"></i> ${db.address || '門市服務據點'}`;
     document.getElementById('store-hours').innerHTML = `<i class="fa-regular fa-clock text-brand-400 mr-1"></i> ${db.businessHours || '營業時間：09:00 - 19:00'}`;
 
-    // 寵物模式判定
-    const isPetStore = (db.industryType === 'pet');
-    const modeSelector = document.getElementById('serviceModeSelector');
-    const petProfileSec = document.getElementById('petProfileSection');
-    if (isPetStore) {
-      if (modeSelector) modeSelector.classList.remove('hidden');
-      if (petProfileSec) petProfileSec.classList.remove('hidden');
-      setupPetExtendedFields();
-    } else {
-      if (modeSelector) modeSelector.classList.add('hidden');
-      if (petProfileSec) petProfileSec.classList.add('hidden');
+    // 5. 【關鍵修復】說明圖輪播模組 (徹底解決圖片未出現問題)
+    const track = document.getElementById('carouselTrack');
+    const dots = document.getElementById('carouselDots');
+    if (track && dots) {
+      track.innerHTML = '';
+      dots.innerHTML = '';
+      const imgs = (db.promoImgs && db.promoImgs.length > 0) ? db.promoImgs : [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
+      ];
+      imgs.forEach((imgUrl, i) => {
+        track.innerHTML += `
+          <div class="carousel-slide-916">
+            <div class="carousel-bg-blur" style="background-image: url('${imgUrl}')"></div>
+            <img src="${imgUrl}" loading="lazy" decoding="async" class="carousel-main-img" alt="說明圖 ${i + 1}">
+          </div>`;
+        dots.innerHTML += `<div class="w-2 h-2 rounded-full transition-all ${i === 0 ? 'bg-brand-500 scale-125' : 'bg-brand-300'}"></div>`;
+      });
     }
 
-    // 住宿小提醒
-    const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
-    const stayNoticeContent = document.getElementById('frontStayNoticeContent');
-    const bSettings = db.boardingSettings || {};
-    if (isPetStore && bSettings.toggleNotice !== false && bSettings.noticeContent) {
-      stayNoticeContent.innerText = bSettings.noticeContent;
-      stayNoticeWrapper.classList.remove('hidden');
-    } else {
-      stayNoticeWrapper.classList.add('hidden');
-    }
-
-    // 供餐單價標籤動態更新
-    const mealRates = db.boardingMealRates || { one: 80, two: 150, three: 220 };
-    const r1 = document.getElementById('radio-meal-1');
-    const r2 = document.getElementById('radio-meal-2');
-    const r3 = document.getElementById('radio-meal-3');
-    if (r1) { r1.setAttribute('data-price', mealRates.one); document.getElementById('label-meal-1').innerText = `精緻鮮食 / 一日一餐 (+NT$ ${mealRates.one} / 晚)`; }
-    if (r2) { r2.setAttribute('data-price', mealRates.two); document.getElementById('label-meal-2').innerText = `精緻鮮食 / 一日兩餐 (+NT$ ${mealRates.two} / 晚)`; }
-    if (r3) { r3.setAttribute('data-price', mealRates.three); document.getElementById('label-meal-3').innerText = `精緻鮮食 / 一日三餐 (+NT$ ${mealRates.three} / 晚)`; }
-
-    // 強制洗澡規範
-    const mandatoryNotice = document.getElementById('mandatoryInBathNotice');
-    if (mandatoryNotice) {
-      mandatoryNotice.classList.toggle('hidden', bSettings.mandatoryCheckinBath !== true);
-    }
-    const optOutBath = document.getElementById('optionalOutBathBox');
-    if (optOutBath) {
-      optOutBath.classList.toggle('hidden', bSettings.allowCheckoutBath === false);
-    }
-
-    // 定型化契約
-    const contractSec = document.getElementById('digitalContractSection');
-    if (contractSec) {
-      if (db.enableContract === true) {
-        contractSec.classList.remove('hidden');
-        document.getElementById('display-contract-title').innerText = db.contractTitle;
-        document.getElementById('modal-contract-title').innerText = db.contractTitle;
-        document.getElementById('contractScrollArea').innerText = db.contractContent;
-      } else {
-        contractSec.classList.add('hidden');
-      }
-    }
-    
-    updateDepositSectionDisplay();
-
-    const featuredShop = document.getElementById('featuredShopSection');
-    if (featuredShop) featuredShop.style.display = db.enableFeaturedShop ? 'block' : 'none';
-
-    const custNotesBox = document.getElementById('custNotesWrapper');
-    if (custNotesBox) custNotesBox.style.display = (db.enableCustNotes !== false) ? 'block' : 'none';
-
-    // 專員選單
+    // 6. 專員選單
     const staffSection = document.getElementById('staffSection');
     if (staffSection) {
       staffSection.style.display = (db.enableStaffSelect !== false) ? 'block' : 'none';
@@ -1466,51 +1457,54 @@
         document.getElementById('staffName').value = '不指定';
       }
     }
+    const staffGrid = document.getElementById('staffGrid');
+    if (staffGrid) {
+      staffGrid.innerHTML = (db.staffList || [{ id: "all", name: "不指定" }]).map((s, idx) => `
+        <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-sm' : 'bg-brand-50/50 border-brand-200 text-brand-800'}" onclick="selectStaff('${s.id}', '${s.name}', this)">
+          ${s.name}
+        </button>
+      `).join('');
+    }
 
-    document.getElementById('staffGrid').innerHTML = db.staffList.map((s, idx) => `
-      <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-sm' : 'bg-brand-50/50 border-brand-200 text-brand-800'}" onclick="selectStaff('${s.id}', '${s.name}', this)">
-        ${s.name}
-      </button>
-    `).join('');
-
-    const showPrice = (db.enableShowPrice !== false);
-    const checkoutBox = document.getElementById('checkoutSummaryBox');
-    const addonSection = document.getElementById('addon-package-select')?.closest('.p-4');
-    if (checkoutBox) checkoutBox.style.display = showPrice ? 'block' : 'none';
-    if (addonSection) addonSection.style.display = showPrice ? 'block' : 'none';
-
-    // 說明圖輪播
-    const track = document.getElementById('carouselTrack');
-    const dots = document.getElementById('carouselDots');
-    track.innerHTML = ''; dots.innerHTML = '';
-    db.promoImgs.forEach((imgUrl, i) => {
-      track.innerHTML += `
-        <div class="carousel-slide-916">
-          <div class="carousel-bg-blur" style="background-image: url('${imgUrl}')"></div>
-          <img src="${imgUrl}" loading="lazy" decoding="async" class="carousel-main-img" alt="說明圖 ${i+1}">
-        </div>`;
-      dots.innerHTML += `<div class="w-2 h-2 rounded-full transition-all ${i === 0 ? 'bg-brand-500 scale-125' : 'bg-brand-300'}"></div>`;
-    });
-
-    document.getElementById('care-content').innerText = db.careText;
+    // 7. 定型化契約與說明
+    document.getElementById('care-content').innerText = db.careText || '服務完成後請保持乾燥通風。';
     if (db.promoRulesText) document.getElementById('promo-rule-content').innerText = db.promoRulesText;
 
-    // 現場加購方案
-    if (db.packageRules && db.packageRules.length > 0) {
-      document.getElementById('addon-package-select').innerHTML = '<option value="none" data-price="0" data-times="0">不加購包卡</option>' +
-        db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">${p.name} (+NT$ ${p.price})</option>`).join('');
-    }
-    if (db.walletRules && db.walletRules.length > 0) {
-      document.getElementById('addon-wallet-select').innerHTML = '<option value="none" data-price="0">不加購儲值</option>' +
-        db.walletRules.map(w => `<option value="${w.name}" data-price="${w.price}" data-discount="${w.discount}">${w.name} (整單享 ${w.discount*10} 折 + 贈 $${w.bonus})</option>`).join('');
+    const contractSec = document.getElementById('digitalContractSection');
+    if (contractSec) {
+      if (db.enableContract !== false) {
+        contractSec.classList.remove('hidden');
+        document.getElementById('display-contract-title').innerText = db.contractTitle || '定型化服務契約書';
+        document.getElementById('modal-contract-title').innerText = db.contractTitle || '定型化服務契約書';
+        document.getElementById('contractScrollArea').innerText = db.contractContent || '';
+      } else {
+        contractSec.classList.add('hidden');
+      }
     }
 
+    // 8. 現場加購方案下拉清單
+    const pkgSelect = document.getElementById('addon-package-select');
+    const walSelect = document.getElementById('addon-wallet-select');
+    if (pkgSelect && db.packageRules && db.packageRules.length > 0) {
+      pkgSelect.innerHTML = '<option value="none" data-price="0" data-times="0">不加購包卡</option>' +
+        db.packageRules.map(p => `<option value="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">${p.name} (+NT$ ${p.price})</option>`).join('');
+    }
+    if (walSelect && db.walletRules && db.walletRules.length > 0) {
+      walSelect.innerHTML = '<option value="none" data-price="0">不加購儲值</option>' +
+        db.walletRules.map(w => `<option value="${w.name}" data-price="${w.price}" data-discount="${w.discount}">${w.name} (享${w.discount * 10}折/贈$${w.bonus || 0})</option>`).join('');
+    }
+
+    // 9. 呼叫子模組
     setupPortfolio();
     renderServices();
     renderFrontCalendar();
-    applyThemeColor(db.themeColor || 'latte');
-  }
+    updateDepositSectionDisplay();
 
+    // 10. 【關鍵修復】執行主題色與 3 種版型切換
+    applyThemeColors(db.themeColor || 'latte');
+    applyIndustryModeUI(db.industryType || 'pet_hotel');
+  }
+    
   function setupPetExtendedFields() {
     const cf = db.petCustomFields || {};
     document.getElementById('box-chip-id')?.classList.toggle('hidden', !cf.chipId);
@@ -1539,145 +1533,255 @@
     const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-primary').trim() || '#8C7355';
 
     if (mode === 'boarding') {
-      btnBoarding.style.backgroundColor = primaryColor;
-      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
-      btnGrooming.style.backgroundColor = 'transparent';
-      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
-      
-      groomingSec.classList.add('hidden');
-      boardingSec.classList.remove('hidden');
-      calPickerSec.classList.add('hidden');
-      timePickerSec.classList.add('hidden');
+      if (btnBoarding) {
+        btnBoarding.style.backgroundColor = primaryColor;
+        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
+      }
+      if (btnGrooming) {
+        btnGrooming.style.backgroundColor = 'transparent';
+        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
+      }
 
+      if (groomingSec) groomingSec.classList.add('hidden');
+      if (boardingSec) boardingSec.classList.remove('hidden');
+      if (calPickerSec) calPickerSec.classList.add('hidden');
+      if (timePickerSec) timePickerSec.classList.add('hidden');
+
+      // 預設今日與明日
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      if (!document.getElementById('hotelCheckInDate').value) document.getElementById('hotelCheckInDate').value = today.toISOString().split('T')[0];
-      if (!document.getElementById('hotelCheckOutDate').value) document.getElementById('hotelCheckOutDate').value = tomorrow.toISOString().split('T')[0];
+
+      if (!document.getElementById('hotelCheckInDate').value) {
+        document.getElementById('hotelCheckInDate').value = today.toISOString().split('T')[0];
+      }
+      if (!document.getElementById('hotelCheckOutDate').value) {
+        document.getElementById('hotelCheckOutDate').value = tomorrow.toISOString().split('T')[0];
+      }
+
+      // 【核心修復】初始化住宿月曆式手風琴
+      renderHotelInCalendar();
+      renderHotelOutCalendar();
+      renderHotelTimeGrid('in', document.getElementById('hotelCheckInDate').value);
+      renderHotelTimeGrid('out', document.getElementById('hotelCheckOutDate').value);
       calculateBoardingDaysAndPrice();
     } else {
-      btnGrooming.style.backgroundColor = primaryColor;
-      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
-      btnBoarding.style.backgroundColor = 'transparent';
-      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
+      if (btnGrooming) {
+        btnGrooming.style.backgroundColor = primaryColor;
+        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
+      }
+      if (btnBoarding) {
+        btnBoarding.style.backgroundColor = 'transparent';
+        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
+      }
 
-      groomingSec.classList.remove('hidden');
-      boardingSec.classList.add('hidden');
-      calPickerSec.classList.remove('hidden');
-      timePickerSec.classList.remove('hidden');
+      if (groomingSec) groomingSec.classList.remove('hidden');
+      if (boardingSec) boardingSec.classList.add('hidden');
+      if (calPickerSec) calPickerSec.classList.remove('hidden');
+      if (timePickerSec) timePickerSec.classList.remove('hidden');
+
+      renderFrontCalendar();
       updateCheckoutSummary();
     }
   }
-  // 智慧放飯演算法與價格區間試算器
-  function calculateBoardingDaysAndPrice() {
-  if (activeBookingSubMode !== 'boarding') return;
+  // 住宿雙月曆日曆變數狀態
+  let hotelInDateObj = new Date();
+  let hotelInYear = hotelInDateObj.getFullYear();
+  let hotelInMonth = hotelInDateObj.getMonth();
 
-  const inDateVal = document.getElementById('hotelCheckInDate')?.value;
-  const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
-  const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
-  const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '18:00';
-  const weightVal = Number(document.getElementById('petWeight')?.value || 5);
+  let hotelOutDateObj = new Date();
+  let hotelOutYear = hotelOutDateObj.getFullYear();
+  let hotelOutMonth = hotelOutDateObj.getMonth();
 
-  if (!inDateVal || !outDateVal) return;
-
-  // 1. 計算住宿晚數
-  const diffMs = new Date(outDateVal) - new Date(inDateVal);
-  const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-  const nightsBadge = document.getElementById('displayStayNightsBadge');
-  if (nightsBadge) nightsBadge.innerText = `共 ${nights} 晚`;
-
-  // 2. 依毛孩體重判定房型等級與基準房價
-  let baseRoomMin = 700, baseRoomMax = 900;
-  let tierName = "小型犬獨立房";
-  if (weightVal >= 21) {
-    baseRoomMin = 1300; baseRoomMax = 1600; tierName = "大型犬旗艦房";
-  } else if (weightVal >= 10) {
-    baseRoomMin = 900; baseRoomMax = 1200; tierName = "中型犬舒適房";
+  // 1. 折疊手風琴展開/收合
+  function toggleHotelAccordion(accordionId) {
+    const el = document.getElementById(accordionId);
+    if (el) el.classList.toggle('hidden');
   }
-  const roomMinTotal = baseRoomMin * nights;
-  const roomMaxTotal = baseRoomMax * nights;
 
-  // 3. 智慧放飯餐食計算 (早飯 09:00, 晚飯 18:00)
-  const mealRadio = document.querySelector('input[name="mealPlan"]:checked') || document.querySelector('input[name="mealPlanOption"]:checked');
-  const mealType = mealRadio ? mealRadio.value : 'none';
-  let mealUnitCost = 80;
-  if (weightVal >= 21) mealUnitCost = 150;
-  else if (weightVal >= 10) mealUnitCost = 120;
-
-  let actualMealCount = 0;
-  let totalMealFee = 0;
-  let mealExplain = "";
-
-  if (mealType !== 'none' && mealType !== 'SELF') {
-    const plannedPerDay = (mealType === 'one_meal' || mealType === 'ONE') ? 1 : 2;
-    let plannedTotal = plannedPerDay * nights;
-
-    // 早晚時間自動增扣餐數
-    if (inTimeVal > "09:30" && plannedPerDay === 2) plannedTotal = Math.max(1, plannedTotal - 1);
-    if (outTimeVal >= "18:00" && plannedPerDay === 2) plannedTotal += 1;
-
-    actualMealCount = plannedTotal;
-    totalMealFee = actualMealCount * mealUnitCost;
-    mealExplain = `店內鮮食共 ${actualMealCount} 餐 (+NT$ ${totalMealFee})`;
-
-    const mealRow = document.getElementById('row-boarding-meal-fee');
-    if (mealRow) {
-      mealRow.classList.remove('hidden');
-      document.getElementById('summary-meal-total').innerText = totalMealFee.toLocaleString();
-      document.getElementById('summary-meal-explain').innerText = `(${mealExplain}，每餐 $${mealUnitCost})`;
+  // 2. 年月切換
+  function changeHotelCalMonth(dir, type) {
+    if (type === 'in') {
+      hotelInMonth += dir;
+      if (hotelInMonth > 11) { hotelInMonth = 0; hotelInYear++; }
+      if (hotelInMonth < 0) { hotelInMonth = 11; hotelInYear--; }
+      renderHotelInCalendar();
+    } else {
+      hotelOutMonth += dir;
+      if (hotelOutMonth > 11) { hotelOutMonth = 0; hotelOutYear++; }
+      if (hotelOutMonth < 0) { hotelOutMonth = 11; hotelOutYear--; }
+      renderHotelOutCalendar();
     }
-  } else {
-    document.getElementById('row-boarding-meal-fee')?.classList.add('hidden');
   }
 
-  // 4. 入住前洗澡 與 退宿前洗澡美容加購
-  const hasInBath = document.getElementById('chkHotelBathCheckin')?.checked;
-  const hasOutBath = document.getElementById('chkHotelAddBath')?.checked || document.getElementById('chkHotelBathCheckout')?.checked;
+  // 3. 渲染入住日曆 (如圖樣式：灰底圓角膠囊為不可選或過去日期，可選日期黑字加粗，選取時立體棕色)
+  function renderHotelInCalendar() {
+    const title = document.getElementById('hotel_in_month_title');
+    const grid = document.getElementById('hotelInCalendarGrid');
+    if (!title || !grid) return;
 
-  let bathInMin = 0, bathInMax = 0;
-  let bathOutMin = 0, bathOutMax = 0;
+    title.innerText = `${hotelInYear} 年 ${hotelInMonth + 1} 月`;
+    const firstDay = new Date(hotelInYear, hotelInMonth, 1).getDay();
+    const daysInMonth = new Date(hotelInYear, hotelInMonth + 1, 0).getDate();
+    const selectedInDate = document.getElementById('hotelCheckInDate')?.value;
 
-  if (hasInBath) {
-    bathInMin = weightVal >= 21 ? 900 : (weightVal >= 10 ? 700 : 500);
-    bathInMax = weightVal >= 21 ? 1200 : (weightVal >= 10 ? 900 : 700);
-  }
-  if (hasOutBath) {
-    bathOutMin = weightVal >= 21 ? 1000 : (weightVal >= 10 ? 800 : 600);
-    bathOutMax = weightVal >= 21 ? 1500 : (weightVal >= 10 ? 1100 : 900);
-  }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const totalBathMin = bathInMin + bathOutMin;
-  const totalBathMax = bathInMax + bathOutMax;
+    let html = '';
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
 
-  // 5. 專車接送標記
-  const isShuttle = document.getElementById('chkNeedShuttle')?.checked;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(hotelInYear, hotelInMonth, day);
+      const dStr = `${hotelInYear}-${String(hotelInMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isPast = cellDate < today;
+      const isSelected = (dStr === selectedInDate);
 
-  // 6. 匯總小計明細與預估總額
-  const totalEstMin = roomMinTotal + totalMealFee + totalBathMin;
-  const totalEstMax = roomMaxTotal + totalMealFee + totalBathMax;
-
-  const breakdownBox = document.getElementById('summary-items-breakdown');
-  if (breakdownBox) {
-    breakdownBox.innerHTML = `
-      <div class="flex justify-between"><span>• ${tierName} (${nights} 晚)：</span><span class="font-mono">NT$ ${roomMinTotal.toLocaleString()} ~ ${roomMaxTotal.toLocaleString()}</span></div>
-      ${mealExplain ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplain}</span><span class="font-mono">+NT$ ${totalMealFee}</span></div>` : ''}
-      ${hasInBath ? `<div class="flex justify-between text-blue-700"><span>• 入住前清潔洗澡：</span><span class="font-mono">+NT$ ${bathInMin} ~${bathInMax}</span></div>` : ''}
-      ${hasOutBath ? `<div class="flex justify-between text-purple-700"><span>• 退宿前美容洗澡：</span><span class="font-mono">+NT$ ${bathOutMin} ~${bathOutMax}</span></div>` : ''}
-      ${isShuttle ? `<div class="text-emerald-800 font-bold">• 專車到府接送：車資現場依里程實收</div>` : ''}
-    `;
-  }
-
-  const rangeDisplay = document.getElementById('summary-service-range');
-  if (rangeDisplay) {
-    rangeDisplay.innerText = (totalEstMax > totalEstMin) ? `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
+      if (isPast) {
+        // 過去日期：柔和灰色膠囊樣式
+        html += `<div class="py-2.5 bg-[#F2ECE4] text-[#CBB39C] rounded-2xl flex items-center justify-center font-bold text-[12px] opacity-60 select-none">${day}</div>`;
+      } else if (isSelected) {
+        // 選取中：截圖同款暖棕色高光膠囊
+        html += `<div class="py-2.5 bg-[#B2977D] text-white rounded-2xl flex items-center justify-center font-black text-[12px] shadow-sm transform scale-102 cursor-pointer" onclick="selectHotelInDate('${dStr}')">${day}</div>`;
+      } else {
+        // 可選日期：純淨白底黑字圓角
+        html += `<div class="py-2.5 hover:bg-[#FAF7F2] text-brand-900 rounded-2xl flex items-center justify-center font-bold text-[12px] cursor-pointer transition active:scale-95" onclick="selectHotelInDate('${dStr}')">${day}</div>`;
+      }
+    }
+    grid.innerHTML = html;
   }
 
-  const finalDisplay = document.getElementById('summary-final-total');
-  if (finalDisplay) {
-    finalDisplay.innerText = (totalEstMax > totalEstMin) ? `NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
-  }
-}
+  // 4. 渲染退房日曆 (必須晚於或等於入住日)
+  function renderHotelOutCalendar() {
+    const title = document.getElementById('hotel_out_month_title');
+    const grid = document.getElementById('hotelOutCalendarGrid');
+    if (!title || !grid) return;
 
+    title.innerText = `${hotelOutYear} 年 ${hotelOutMonth + 1} 月`;
+    const firstDay = new Date(hotelOutYear, hotelOutMonth, 1).getDay();
+    const daysInMonth = new Date(hotelOutYear, hotelOutMonth + 1, 0).getDate();
+    const inDateVal = document.getElementById('hotelCheckInDate')?.value;
+    const selectedOutDate = document.getElementById('hotelCheckOutDate')?.value;
+
+    const minDate = inDateVal ? new Date(inDateVal) : new Date();
+    minDate.setHours(0, 0, 0, 0);
+
+    let html = '';
+    for (let i = 0; i < firstDay; i++) html += '<div></div>';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(hotelOutYear, hotelOutMonth, day);
+      const dStr = `${hotelOutYear}-${String(hotelOutMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isBeforeInDate = cellDate < minDate;
+      const isSelected = (dStr === selectedOutDate);
+
+      if (isBeforeInDate) {
+        html += `<div class="py-2.5 bg-[#F2ECE4] text-[#CBB39C] rounded-2xl flex items-center justify-center font-bold text-[12px] opacity-60 select-none">${day}</div>`;
+      } else if (isSelected) {
+        html += `<div class="py-2.5 bg-[#B2977D] text-white rounded-2xl flex items-center justify-center font-black text-[12px] shadow-sm transform scale-102 cursor-pointer" onclick="selectHotelOutDate('${dStr}')">${day}</div>`;
+      } else {
+        html += `<div class="py-2.5 hover:bg-[#FAF7F2] text-brand-900 rounded-2xl flex items-center justify-center font-bold text-[12px] cursor-pointer transition active:scale-95" onclick="selectHotelOutDate('${dStr}')">${day}</div>`;
+      }
+    }
+    grid.innerHTML = html;
+  }
+
+  // 5. 點選入住日期：自動展開時段網格、更新角標、自動解鎖退房手風琴
+  function selectHotelInDate(dateStr) {
+    document.getElementById('hotelCheckInDate').value = dateStr;
+    renderHotelInCalendar();
+
+    // 渲染如圖二的「三欄時段膠囊按鈕清單」
+    renderHotelTimeGrid('in', dateStr);
+
+    // 更新手風琴右側角標
+    const curTime = document.getElementById('hotelCheckInTime').value || '10:00';
+    document.getElementById('badge-checkin-summary').innerHTML = `✓ ${dateStr} ${curTime} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
+
+    // 自動預設退房日為次日
+    const inD = new Date(dateStr);
+    inD.setDate(inD.getDate() + 1);
+    const nextDayStr = inD.toISOString().split('T')[0];
+    if (!document.getElementById('hotelCheckOutDate').value || document.getElementById('hotelCheckOutDate').value <= dateStr) {
+      document.getElementById('hotelCheckOutDate').value = nextDayStr;
+    }
+
+    // 自動展開退房手風琴
+    const outBox = document.getElementById('checkOutAccordion');
+    if (outBox && outBox.classList.contains('hidden')) {
+      outBox.classList.remove('hidden');
+    }
+
+    renderHotelOutCalendar();
+    renderHotelTimeGrid('out', document.getElementById('hotelCheckOutDate').value);
+    calculateBoardingDaysAndPrice();
+  }
+
+  // 6. 點選退房日期
+  function selectHotelOutDate(dateStr) {
+    document.getElementById('hotelCheckOutDate').value = dateStr;
+    renderHotelOutCalendar();
+    renderHotelTimeGrid('out', dateStr);
+
+    const curTime = document.getElementById('hotelCheckOutTime').value || '18:00';
+    document.getElementById('badge-checkout-summary').innerHTML = `✓ ${dateStr} ${curTime} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
+    calculateBoardingDaysAndPrice();
+  }
+
+  // 7. 渲染截圖同款「三欄時段膠囊按鈕」
+  function renderHotelTimeGrid(type, dateStr) {
+    const container = document.getElementById(type === 'in' ? 'hotelInTimeSlotContainer' : 'hotelOutTimeSlotContainer');
+    if (!container) return;
+
+    const slots = [
+      "09:00", "09:30", "10:00",
+      "10:30", "11:00", "11:30",
+      "12:00", "12:30", "13:00",
+      "13:30", "14:00", "14:30",
+      "15:00", "15:30", "16:00",
+      "16:30", "17:00", "17:30",
+      "18:00", "18:30", "19:00"
+    ];
+
+    const currentSelectedTime = document.getElementById(type === 'in' ? 'hotelCheckInTime' : 'hotelCheckOutTime').value;
+
+    let html = '<div class="grid grid-cols-3 gap-2.5 w-full py-1">';
+    slots.forEach(time => {
+      const isSelected = (time === currentSelectedTime);
+      html += `
+        <button type="button" 
+          onclick="selectHotelTimePill('${type}', '${time}', this)" 
+          class="hotel-pill-${type} py-2.5 rounded-2xl text-xs font-bold font-mono transition border ${
+            isSelected 
+              ? 'bg-[#B2977D] text-white border-[#B2977D] shadow-sm' 
+              : 'bg-white hover:bg-[#FAF7F2] text-brand-900 border-[#EFE8DE] shadow-2xs'
+          }">
+          ${time}
+        </button>
+      `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }
+
+  // 8. 點選時段膠囊
+  function selectHotelTimePill(type, timeStr, btnEl) {
+    document.querySelectorAll(`.hotel-pill-${type}`).forEach(btn => {
+      btn.className = `hotel-pill-${type} py-2.5 rounded-2xl text-xs font-bold font-mono transition border bg-white hover:bg-[#FAF7F2] text-brand-900 border-[#EFE8DE] shadow-2xs`;
+    });
+    btnEl.className = `hotel-pill-${type} py-2.5 rounded-2xl text-xs font-bold font-mono transition border bg-[#B2977D] text-white border-[#B2977D] shadow-sm transform scale-102`;
+
+    if (type === 'in') {
+      document.getElementById('hotelCheckInTime').value = timeStr;
+      const dStr = document.getElementById('hotelCheckInDate').value;
+      document.getElementById('badge-checkin-summary').innerHTML = `✓ ${dStr} ${timeStr} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
+    } else {
+      document.getElementById('hotelCheckOutTime').value = timeStr;
+      const dStr = document.getElementById('hotelCheckOutDate').value;
+      document.getElementById('badge-checkout-summary').innerHTML = `✓ ${dStr} ${timeStr} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
+    }
+    calculateBoardingDaysAndPrice();
+  }
   function setupPortfolio() {
     const sec = document.getElementById('portfolioSection');
     const tabs = document.getElementById('portfolio-tabs');
