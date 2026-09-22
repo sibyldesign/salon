@@ -196,6 +196,17 @@
         </div>
         <div class="space-y-2 text-xs" id="boarding-care-checklist"></div>
       </div>
+
+      <!-- 今日專車接送調度清單 (自動提取地址、趟次與導航按鈕) -->
+      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-brand-100">
+          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-van-shuttle text-[#8C7355]"></i> 今日專車到府接送調度清單
+          </span>
+          <span class="text-[10px] text-brand-400 font-medium">支援一鍵開啟 Google 導航</span>
+        </div>
+        <div class="space-y-2 text-xs" id="boarding-shuttle-checklist"></div>
+      </div>
     </div>
 
     <!-- 分頁 4. 名單總覽 (page-customer) -->
@@ -592,16 +603,17 @@
           </div>
         </div>
 
-        <!-- 4-2. 寵物住宿專屬時段與照護加購 (pet_hotel 顯示，獨立換行不擠壓) -->
+        <!-- 4-2. 寵物住宿專屬多段時段與旗艦照護設定 (僅在 mode 3 顯示) -->
         <div id="quick-hotel-range-box" class="space-y-3 p-4 bg-amber-50/80 rounded-2xl border border-amber-200 hidden text-xs">
           <div class="font-bold text-amber-950 flex items-center justify-between border-b border-amber-200 pb-1.5">
-            <span class="flex items-center gap-1"><i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖排程與附加服務：</span>
-            <span id="quick-hotel-nights-badge" class="px-2 py-0.5 bg-amber-200 text-amber-900 rounded-full font-bold">1 晚</span>
+            <span class="flex items-center gap-1"><i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖排程與照護加購：</span>
+            <span class="text-[10px] text-amber-800">後台代客建檔</span>
           </div>
 
+          <!-- 入住退房時段獨立換行 -->
           <div class="grid grid-cols-1 gap-2.5">
             <div>
-              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">入住日期與進房時間：</label>
+              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">入住日期與抵達時間：</label>
               <div class="flex gap-1.5">
                 <input type="date" id="quick-hotel-checkin-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
                 <input type="time" id="quick-hotel-checkin-time" value="10:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
@@ -616,49 +628,51 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <div>
-              <label class="block font-bold text-amber-950 mb-0.5 text-[11px]">房型體型：</label>
-              <select id="quick-hotel-room-tier" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold" onchange="calcAdminQuickHotelFees()">
-                <option value="small" data-price="800">小型犬房 ($800/晚)</option>
-                <option value="medium" data-price="1050">中型犬房 ($1050/晚)</option>
-                <option value="large" data-price="1450">大型犬房 ($1450/晚)</option>
-                <option value="cat" data-price="750">貓咪跳台房 ($750/晚)</option>
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold text-amber-950 mb-0.5 text-[11px]">供餐安排：</label>
-              <select id="quick-hotel-meal-plan" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold" onchange="calcAdminQuickHotelFees()">
-                <option value="SELF" data-price="0">自備食料 (+$0)</option>
-                <option value="ONE" data-price="100">鮮食 1 餐 (+NT$100/晚)</option>
-                <option value="TWO" data-price="180">鮮食 2 餐 (+NT$180/晚)</option>
-              </select>
-            </div>
+          <!-- 房型選擇 -->
+          <div class="pt-2 border-t border-amber-200 space-y-1">
+            <label class="block font-bold text-amber-950 text-[11px]">選擇住宿房型/體型級距：</label>
+            <select id="quick-hotel-room-tier" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold text-xs" onchange="calcAdminQuickHotelFees()">
+              <option value="small" data-price="800">小型犬獨立房 (9kg以下 - NT$ 800/晚)</option>
+              <option value="medium" data-price="1050">中型犬舒適房 (10-20kg - NT$ 1050/晚)</option>
+              <option value="large" data-price="1450">大型犬旗艦房 (21kg以上 - NT$ 1450/晚)</option>
+              <option value="cat" data-price="750">貓咪專屬跳台房 (NT$ 750/晚)</option>
+            </select>
           </div>
 
+          <!-- 供餐方案 -->
+          <div class="pt-2 border-t border-amber-200 space-y-1">
+            <label class="block font-bold text-amber-950 text-[11px]">每日供餐安排：</label>
+            <select id="quick-hotel-meal-plan" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-bold text-xs" onchange="calcAdminQuickHotelFees()">
+              <option value="SELF" data-price="0">家長自備食料 (+NT$ 0)</option>
+              <option value="ONE" data-price="100">店內鮮食 / 一日一餐 (+NT$ 100/天)</option>
+              <option value="TWO" data-price="180">店內鮮食 / 一日兩餐 (+NT$ 180/天)</option>
+            </select>
+          </div>
+
+          <!-- 入住前與退宿前洗澡美容加購 -->
           <div class="pt-2 border-t border-amber-200 space-y-1.5">
-            <label class="block font-bold text-amber-950 text-[11px]">住宿附加洗澡美容：</label>
+            <label class="block font-bold text-amber-950 text-[11px]">附加洗澡與美容服務：</label>
             <div class="grid grid-cols-2 gap-2">
               <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-1.5 cursor-pointer">
                 <input type="checkbox" id="quick-bath-checkin" onchange="calcAdminQuickHotelFees()" class="accent-[#8C7355]">
-                <span>入住先洗澡 (+NT$600)</span>
+                <span>入住當天洗澡 (+NT$ 600)</span>
               </label>
               <label class="p-2 bg-white rounded-xl border border-amber-300 flex items-center gap-1.5 cursor-pointer">
                 <input type="checkbox" id="quick-bath-checkout" checked onchange="calcAdminQuickHotelFees()" class="accent-[#8C7355]">
-                <span>退房前洗澡 (+NT$800)</span>
+                <span>退房當天美容洗澡 (+NT$ 800)</span>
               </label>
             </div>
           </div>
 
-          <!-- 專屬接送勾選 -->
-          <div class="pt-2 border-t border-amber-200 space-y-1.5">
+          <!-- 專屬接送勾選與地址輸入 -->
+          <div class="pt-2 border-t border-amber-200 space-y-2">
             <label class="flex items-center gap-2 cursor-pointer font-bold text-amber-950">
-              <input type="checkbox" id="quick-need-shuttle" onchange="document.getElementById('quick-shuttle-box').classList.toggle('hidden', !this.checked)" class="accent-[#8C7355]">
+              <input type="checkbox" id="quick-need-shuttle" onchange="document.getElementById('quick-shuttle-addr-box').classList.toggle('hidden', !this.checked); calcAdminQuickHotelFees();" class="accent-[#8C7355]">
               <span>需要專車到府接送</span>
             </label>
-            <div id="quick-shuttle-box" class="hidden space-y-1">
-              <input type="text" id="quick-shuttle-address" placeholder="請填寫接送地址..." class="w-full p-2 bg-white rounded-xl border border-amber-300 outline-none">
-              <div class="flex gap-4 pt-0.5">
+            <div id="quick-shuttle-addr-box" class="hidden space-y-1.5">
+              <input type="text" id="quick-shuttle-address" placeholder="請輸入接送詳細地址..." class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs outline-none">
+              <div class="flex gap-4">
                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="quick-shuttle-trip" value="round" checked class="accent-[#8C7355]"> 來回接送</label>
                 <label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="quick-shuttle-trip" value="single" class="accent-[#8C7355]"> 單趟接送</label>
               </div>
@@ -1692,7 +1706,28 @@
     }
   }
 
-  function onAdminSelectPetChange(idx) {
+  // 後台住宿費用即時計算
+  function calcAdminQuickHotelFees() {
+    const inDate = document.getElementById('quick-hotel-checkin-date')?.value;
+    const outDate = document.getElementById('quick-hotel-checkout-date')?.value;
+    if (!inDate || !outDate) return;
+
+    const diffMs = new Date(outDate) - new Date(inDate);
+    const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+
+    const roomPrice = Number(document.getElementById('quick-hotel-room-tier')?.options[document.getElementById('quick-hotel-room-tier').selectedIndex]?.getAttribute('data-price') || 800);
+    const mealPricePerDay = Number(document.getElementById('quick-hotel-meal-plan')?.options[document.getElementById('quick-hotel-meal-plan').selectedIndex]?.getAttribute('data-price') || 0);
+
+    const bathIn = document.getElementById('quick-bath-checkin')?.checked ? 600 : 0;
+    const bathOut = document.getElementById('quick-bath-checkout')?.checked ? 800 : 0;
+
+    const totalHotelEst = (roomPrice * nights) + (mealPricePerDay * nights) + bathIn + bathOut;
+
+    document.getElementById('quick-disp-base').innerText = `$${totalHotelEst}`;
+    calcAdminQuickSummary();
+  }
+    
+    function onAdminSelectPetChange(idx) {
     const pet = adminCustomerPets[idx];
     if (!pet) return;
     document.getElementById('quick-pet-name').value = pet.name || '';
@@ -2125,6 +2160,11 @@
         if (navBoarding) navBoarding.style.display = 'none';
         if (hotelSettings) hotelSettings.style.display = 'none';
       }
+      if (pageId === 'boarding-schedule') { 
+    renderBoardingRoomStatus(); 
+    renderBoardingCareChecklist(); 
+    renderBoardingShuttleChecklist(); 
+  }
     }
 
     // ==========================================
@@ -2188,12 +2228,8 @@
         ${appts.map(a => renderSingleCardHTML(a)).join('')}`;
     }
 
-    // ==========================================
-    // 6. 預約卡片渲染引擎 (結構化資產拆解、現場手寫合約簽署)
-    // ==========================================
-    // ==========================================
-  // 6. 預約卡片渲染引擎 (獨立條列財務與折抵明細)
   // ==========================================
+  // 6. 預約卡片渲染引擎 (結構化解析住宿、放飯、美容洗護與接送地址)
   function renderSingleCardHTML(a) {
     const staffColor = getStaffColor(a.staffId, a.staffName);
     let parsedEmail = '';
@@ -2204,35 +2240,64 @@
       parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
     }
 
+    let detailBadges = [];
+
+    // 解析住宿排程
+    if (cleanNotes.includes('住宿排程')) {
+      const match = cleanNotes.match(/【住宿排程:\s*([^】]+)】/);
+      if (match) detailBadges.push(`<div class="text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200">🏨 住宿區間：${match[1]}</div>`);
+    }
+    // 解析房型
+    if (cleanNotes.includes('房型')) {
+      const match = cleanNotes.match(/【房型:\s*([^】]+)】/);
+      if (match) detailBadges.push(`<div class="text-brand-800 font-bold">🏠 預訂房型：${match[1]}</div>`);
+    }
+    // 解析供餐
+    if (cleanNotes.includes('供餐')) {
+      const match = cleanNotes.match(/【供餐:\s*([^】]+)】/);
+      if (match) detailBadges.push(`<div class="text-amber-800 font-bold">🥣 供餐照護：${match[1]}</div>`);
+    }
+    // 解析入退宿洗澡
+    if (cleanNotes.includes('入住清潔洗澡')) {
+      detailBadges.push(`<div class="text-blue-700 font-bold">✨ 入住附加：進房前清潔洗澡</div>`);
+    }
+    if (cleanNotes.includes('退房深層美容')) {
+      detailBadges.push(`<div class="text-purple-700 font-bold">🛁 退宿附加：退房前美容/洗澡</div>`);
+    }
+    // 解析專車接送與地址
+    let shuttleAddressHtml = '';
+    if (cleanNotes.includes('專車接送')) {
+      const match = cleanNotes.match(/【專車接送:\s*([^】]+)】/);
+      const sContent = match ? match[1] : '需要接送';
+      detailBadges.push(`<div class="text-emerald-800 font-bold bg-emerald-50 p-1.5 rounded-lg border border-emerald-200">🚘 專車接送：${sContent}</div>`);
+      
+      // 提取地址支援一鍵複製
+      const addrMatch = sContent.match(/^([^(]+)/);
+      const pureAddr = addrMatch ? addrMatch[1].trim() : sContent;
+      if (pureAddr && pureAddr !== '未填寫地址') {
+        shuttleAddressHtml = `
+          <div class="flex items-center gap-1.5 mt-1">
+            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]">
+              <i class="fa-solid fa-map-location-dot"></i> 地圖導航
+            </a>
+            <button type="button" onclick="navigator.clipboard.writeText('${pureAddr}'); Swal.fire('已複製接送地址！', '', 'success')" class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold text-[10px]">
+              複製地址
+            </button>
+          </div>
+        `;
+      }
+    }
+
+    // 財務抵扣
     let financialRows = [];
-    
-    // 安全萃取加購
-    if (cleanNotes.includes('加購')) {
-      const addonMatch = cleanNotes.match(/加購[：:\s]*([^\s|]+)/);
-      const addonText = (addonMatch && addonMatch[1]) ? addonMatch[1] : '現場加購方案';
-      financialRows.push(`<div class="flex justify-between text-amber-900 font-bold"><span>✨ 現場加購項目：</span><span>${addonText}</span></div>`);
+    if (cleanNotes.includes('包卡扣抵')) {
+      financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點：</span><span>當次扣減 1 點</span></div>`);
     }
-
-    // 包卡扣抵
-    if (cleanNotes.includes('包卡') || cleanNotes.includes('扣點')) {
-      financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點折抵：</span><span>當次扣減 1 點 (堂)</span></div>`);
+    if (cleanNotes.includes('儲值扣抵')) {
+      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值抵扣：</span><span>享專屬折數扣抵</span></div>`);
     }
-
-    // 儲值金折抵
-    if (cleanNotes.includes('儲值')) {
-      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值金扣抵支付：</span><span>享會員專屬折數扣抵</span></div>`);
-    }
-
-    // 折扣碼
-    if (cleanNotes.includes('折扣碼')) {
-      const codeMatch = cleanNotes.match(/折扣碼[:\s]*([A-Za-z0-9]+)/);
-      const codeStr = (codeMatch && codeMatch[1]) ? ` (${codeMatch[1]})` : '';
-      financialRows.push(`<div class="flex justify-between text-rose-600 font-bold"><span>🏷️ 促銷折扣碼折抵：</span><span>已套用代碼${codeStr}</span></div>`);
-    }
-
-    // 訂金
     if (Number(a.deposit_deducted || 0) > 0) {
-      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 預收訂金抵扣：</span><span>-$${a.deposit_deducted}</span></div>`);
+      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 已收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
     }
 
     const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
@@ -2242,7 +2307,7 @@
 
     const signBtnHtml = a.signature_url ? `
       <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
-        ✓ 檢視親筆契約
+        ✓ 檢視契約
       </button>
     ` : `
       <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
@@ -2263,7 +2328,7 @@
             <div class="font-bold text-brand-900 text-sm mt-1">
               ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
             </div>
-            ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單時間：${friendlyCreatedTime}</div>` : ''}
+            ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單：${friendlyCreatedTime}</div>` : ''}
           </div>
           <div class="flex flex-col items-end gap-1">
             <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
@@ -2278,23 +2343,33 @@
         </div>
 
         <div class="flex items-center gap-1.5 pt-0.5">
-          <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-            <i class="fa-solid fa-phone text-[9px]"></i> 撥打電話
+          <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+            <i class="fa-solid fa-phone text-[9px]"></i> 撥打
           </a>
-          <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition">
-            <i class="fa-brands fa-whatsapp text-xs"></i> WhatsApp
+          <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
+            <i class="fa-brands fa-whatsapp text-xs"></i> 通話/傳訊
           </a>
         </div>
 
         <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
-          <div class="font-bold text-brand-900 font-sans">施作項目：${a.service || '無'}</div>
-          <div class="text-brand-600 font-bold">預估費用：${a.price} 元 ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
+          <div class="font-bold text-brand-900 font-sans">項目：${a.service || '無'}</div>
+          <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
         </div>
 
-        <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1.5 text-[11px] border border-brand-100">
-          <div class="font-bold text-brand-800 border-b border-brand-200/60 pb-1">📊 當次方案與加購折抵明細：</div>
-          ${financialRows.length > 0 ? financialRows.join('') : '<div class="text-gray-400">無特殊加購或方案折抵紀錄</div>'}
-        </div>
+        <!-- 住宿細節與專車接送 -->
+        ${detailBadges.length > 0 ? `
+          <div class="p-2.5 bg-amber-50/50 rounded-xl space-y-1.5 border border-amber-200/60 text-[11px]">
+            <div class="font-bold text-amber-950">📋 住宿與專屬照護明細：</div>
+            ${detailBadges.join('')}${shuttleAddressHtml}
+          </div>
+        ` : ''}
+
+        <!-- 財務加購與折抵 -->
+        ${financialRows.length > 0 ? `
+          <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] border border-brand-100">
+            ${financialRows.join('')}
+          </div>
+        ` : ''}
 
         <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
           <div class="flex justify-between">
@@ -2702,6 +2777,51 @@
     }
   }
 
+    // 渲染今日專車接送清單
+  function renderBoardingShuttleChecklist() {
+    const container = document.getElementById('boarding-shuttle-checklist');
+    if (!container) return;
+
+    const todayStr = new Date().toISOString().split('T')[0].replace(/-/g, '/');
+    const shuttleAppts = (backendData.appointments || []).filter(a => {
+      return (a.notes || '').includes('專車接送') && a.status !== '已取消' && a.status !== '婉拒';
+    });
+
+    if (shuttleAppts.length === 0) {
+      container.innerHTML = '<div class="text-center py-4 text-brand-400 text-xs">今日無預約專車接送任務</div>';
+      return;
+    }
+
+    container.innerHTML = shuttleAppts.map(b => {
+      const match = b.notes.match(/【專車接送:\s*([^】]+)】/);
+      const sContent = match ? match[1] : '需要接送';
+      const pureAddr = sContent.replace(/\([^)]*\)/g, '').trim();
+
+      return `
+        <div class="p-3 bg-brand-50/80 rounded-2xl border border-brand-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-brand-900 text-sm">${b.name}</span>
+              <span class="font-mono text-gray-500">(${b.phone})</span>
+              <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full">${sContent.includes('來回') ? '來回趟' : '單趟'}</span>
+            </div>
+            <div class="text-[11.5px] text-brand-700 mt-1 flex items-center gap-1 font-medium">
+              <i class="fa-solid fa-location-dot text-rose-500"></i> ${pureAddr}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1">
+              <i class="fa-solid fa-diamond-turn-right"></i> 導航
+            </a>
+            <a href="tel:${b.phone}" class="px-3 py-1.5 bg-white border border-brand-200 text-brand-800 rounded-xl font-bold text-xs hover:bg-brand-100 transition">
+              撥號
+            </a>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+    
     function renderBoardingCareChecklist() {
       const container = document.getElementById('boarding-care-checklist');
       if (!container) return;
@@ -3702,27 +3822,30 @@
     }
 
     async function submitAdminQuickBooking() {
-      const phone = document.getElementById('quick-phone').value.trim();
-      const name = document.getElementById('quick-name').value.trim();
+      const phone = document.getElementById('quick-phone')?.value.trim() || '';
+      const name = document.getElementById('quick-name')?.value.trim() || '';
       const petName = document.getElementById('quick-pet-name')?.value.trim() || '';
       const email = document.getElementById('quick-email')?.value.trim() || '';
-      const service = document.getElementById('quick-service-names').value.trim();
-      const finalPrice = Number(document.getElementById('quick-final-price').value || 0);
-      const mode = document.querySelector('input[name="quick-booking-mode"]:checked')?.value || 'grooming';
+      const service = document.getElementById('quick-service-names')?.value.trim() || '';
+      const finalPrice = Number(document.getElementById('quick-final-price')?.value || 0);
       
+      // 讀取營運模式單選 (beauty / pet_grooming / pet_hotel)
+      const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
+
       if (!phone || !name) {
         return Swal.fire('請填寫顧客姓名與手機號碼', '', 'warning');
       }
 
-      let bookingDate = document.getElementById('quick-date')?.value;
+      let bookingDate = document.getElementById('quick-date')?.value || '';
       let bookingTime = document.getElementById('quick-time')?.value || '10:00';
       let stayLog = [];
 
-      if (mode === 'hotel' || mode === 'both') {
-        const inDate = document.getElementById('quick-hotel-checkin-date')?.value;
-        const inTime = document.getElementById('quick-hotel-checkin-time')?.value;
-        const outDate = document.getElementById('quick-hotel-checkout-date')?.value;
-        const outTime = document.getElementById('quick-hotel-checkout-time')?.value;
+      // 針對【寵物美容＋住宿】模式：打包完整排程、房型、餐食、洗澡與接送
+      if (mode === 'pet_hotel') {
+        const inDate = document.getElementById('quick-hotel-checkin-date')?.value || '';
+        const inTime = document.getElementById('quick-hotel-checkin-time')?.value || '10:00';
+        const outDate = document.getElementById('quick-hotel-checkout-date')?.value || '';
+        const outTime = document.getElementById('quick-hotel-checkout-time')?.value || '18:00';
 
         if (!inDate || !outDate) {
           return Swal.fire('請完整填寫入住與退房日期', '', 'warning');
@@ -3730,13 +3853,29 @@
 
         bookingDate = inDate;
         bookingTime = inTime;
-        stayLog.push(`【住宿: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退宿】`);
 
-        if (mode === 'both') {
-          const bathIn = document.getElementById('quick-bath-checkin')?.checked;
-          const bathOut = document.getElementById('quick-bath-checkout')?.checked;
-          if (bathIn) stayLog.push('【排程: 入住前洗護】');
-          if (bathOut) stayLog.push('【排程: 退房前美容/洗澡】');
+        // 1. 住宿起訖
+        stayLog.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房】`);
+
+        // 2. 房型與體型級距
+        const roomTierEl = document.getElementById('quick-hotel-room-tier');
+        const roomTierText = roomTierEl?.options[roomTierEl.selectedIndex]?.text || '小型犬房';
+        stayLog.push(`【房型: ${roomTierText}】`);
+
+        // 3. 供餐安排
+        const mealPlanEl = document.getElementById('quick-hotel-meal-plan');
+        const mealPlanText = mealPlanEl?.options[mealPlanEl.selectedIndex]?.text || '自備食料';
+        stayLog.push(`【供餐: ${mealPlanText}】`);
+
+        // 4. 入住洗澡 / 退房美容
+        if (document.getElementById('quick-bath-checkin')?.checked) stayLog.push('【加購: 入住清潔洗澡】');
+        if (document.getElementById('quick-bath-checkout')?.checked) stayLog.push('【加購: 退房深層美容】');
+
+        // 5. 專車到府接送與地址
+        if (document.getElementById('quick-need-shuttle')?.checked) {
+          const sAddr = document.getElementById('quick-shuttle-address')?.value.trim() || '未填寫地址';
+          const sTrip = document.querySelector('input[name="quick-shuttle-trip"]:checked')?.value === 'round' ? '來回接送' : '單趟接送';
+          stayLog.push(`【專車接送: ${sAddr} (${sTrip})】`);
         }
       }
 
@@ -3744,12 +3883,14 @@
         return Swal.fire('請設定預約日期', '', 'warning');
       }
 
+      // 寵物基本資料快照
       const petSize = document.getElementById('quick-pet-size')?.value || '小型犬';
       const selfFood = document.getElementById('quick-pet-food')?.value === 'true' ? '家長自備食料' : '店內鮮食供餐';
-      if (petName) {
+      if (petName && mode !== 'beauty') {
         stayLog.push(`【毛孩: ${petName} (${petSize}, ${selfFood})】`);
       }
 
+      // 整合備註事項
       const userNotes = document.getElementById('quick-notes')?.value.trim() || '';
       let finalNotesArray = [];
       if (userNotes) finalNotesArray.push(userNotes);
@@ -3758,12 +3899,14 @@
 
       Swal.showLoading();
 
+      const defaultServiceName = (mode === 'pet_hotel') ? '寵物度假住宿' : (mode === 'pet_grooming' ? '寵物精緻美容洗護' : '沙龍造型設計');
+
       const payload = {
         store_id: CURRENT_STORE_ID,
         customer_name: name,
         customer_phone: phone,
         customer_type: 'old',
-        service_names: service || (mode === 'hotel' ? '寵物度假住宿' : '寵物精緻美容洗護'),
+        service_names: service || defaultServiceName,
         price: finalPrice,
         final_price: finalPrice,
         appointment_time: `${bookingDate}T${bookingTime}:00+08:00`,
