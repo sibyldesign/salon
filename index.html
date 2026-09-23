@@ -29,16 +29,18 @@
     };
   </script>
 
-  <!-- 0 毫秒極速色盤攔截器 (韓系低飽和美學優化) -->
+  <!-- 0 毫秒極速色盤攔截器 (韓系低飽和美學優化 + 8 款色盤完整登錄) -->
   <script>
     (function(){
       window.THEME_PALETTES = {
-        latte:  { p: '#8C7355', ph: '#786145', bg: '#FDFBF7', light: '#F5ECE3', text: '#3A3026', border: '#E9DFD5' },
-        matcha: { p: '#637361', ph: '#51604F', bg: '#F7F8F5', light: '#E5EADF', text: '#2D352C', border: '#D8DFD4' },
-        noir:   { p: '#333333', ph: '#1A1A1A', bg: '#FBFBFB', light: '#EFEFEF', text: '#1A1A1A', border: '#DDDDDD' },
-        navy:   { p: '#4A5F73', ph: '#3B4D5E', bg: '#F6F8FA', light: '#E1E8EE', text: '#212B35', border: '#D0DCE5' },
-        rose:   { p: '#996C74', ph: '#825960', bg: '#FCF8F8', light: '#F1E2E4', text: '#42282C', border: '#E4CFD2' },
-        mist:   { p: '#557169', ph: '#445C55', bg: '#F5F7F6', light: '#E0E8E5', text: '#25332F', border: '#CBD8D4' }
+        latte:  { p: '#8C7355', ph: '#786145', bg: '#FDFBF7', light: '#F5ECE3', text: '#3A3026', border: '#E9DFD5', promoBg: '#8C7355', name: '大地燕麥暖棕' },
+        matcha: { p: '#637361', ph: '#51604F', bg: '#F7F8F5', light: '#E5EADF', text: '#2D352C', border: '#D8DFD4', promoBg: '#637361', name: '日系抹茶茶木' },
+        noir:   { p: '#333333', ph: '#1A1A1A', bg: '#FBFBFB', light: '#EFEFEF', text: '#1A1A1A', border: '#DDDDDD', promoBg: '#333333', name: '經典極簡碳黑' },
+        navy:   { p: '#4A5F73', ph: '#3B4D5E', bg: '#F6F8FA', light: '#E1E8EE', text: '#212B35', border: '#D0DCE5', promoBg: '#4A5F73', name: '韓系霧霾灰藍' },
+        rose:   { p: '#996C74', ph: '#825960', bg: '#FCF8F8', light: '#F1E2E4', text: '#42282C', border: '#E4CFD2', promoBg: '#996C74', name: '法式煙燻暮粉' },
+        mist:   { p: '#557169', ph: '#445C55', bg: '#F5F7F6', light: '#E0E8E5', text: '#25332F', border: '#CBD8D4', promoBg: '#557169', name: '莫蘭迪鼠尾草綠' },
+        amber:  { p: '#1F2937', ph: '#111827', bg: '#F9F6F0', light: '#FCEFD9', text: '#1F2937', border: '#EFE3D0', promoBg: '#ED8E38', name: '活力暖橘潮黑' },
+        taupe:  { p: '#6E6259', ph: '#594E46', bg: '#F8F6F4', light: '#E8E3DF', text: '#332B25', border: '#DCD5D0', promoBg: '#6E6259', name: '焙茶燕麥冷灰' }
       };
 
       const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
@@ -53,28 +55,40 @@
           --theme-light: ${t.light} !important;
           --theme-text: ${t.text} !important;
           --theme-border: ${t.border} !important;
+          --theme-promo-bg: ${t.promoBg || t.p} !important;
         }
         body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
         
-        /* 徹底杜絕瀏覽器醜陋亮藍框 */
+        /* 1. 全域核銷原生醜陋亮藍勾選框 */
+        input[type="checkbox"], input[type="radio"] {
+          accent-color: ${t.p} !important;
+        }
+
+        /* 2. 徹底杜絕瀏覽器藍色光暈 */
         input:focus, textarea:focus, select:focus {
           outline: none !important;
           box-shadow: 0 0 0 2px ${t.light} !important;
           border-color: ${t.p} !important;
         }
 
-        /* 主色背景穿透 (送出按鈕、頂部公告、切換選中) */
-        .bg-\\[\\#8C7355\\], .bg-brand-500, #promo, #subBtn, .tab-btn.active, .swal2-confirm, .btn-theme,
+        /* 3. 置頂公告區塊背景 */
+        #promo { 
+          background-color: var(--theme-promo-bg) !important; 
+          color: #FFFFFF !important; 
+        }
+
+        /* 4. 主按鈕、標籤與選取態穿透 */
+        #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm,
         .type-btn.active, .portfolio-tab.active { 
           background-color: ${t.p} !important; 
           color: #FFFFFF !important; 
           border-color: ${t.p} !important;
         }
-        .hover\\:bg-\\[\\#7A6246\\]:hover, #subBtn:hover, .swal2-confirm:hover { background-color: ${t.ph} !important; }
+        #subBtn:hover, .swal2-confirm:hover { background-color: ${t.ph} !important; }
         .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.p} !important; }
         .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.p} !important; }
 
-        /* 住宿日曆、膠囊按鈕選中穿透 */
+        /* 5. 住宿日曆、膠囊按鈕選中穿透 */
         .hotel-pill-in.selected, .hotel-pill-out.selected, .time-pill.selected,
         #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
         #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
@@ -92,6 +106,9 @@
   </script>
 
   <style>
+    input[type="checkbox"], input[type="radio"] {
+      accent-color: var(--theme-primary) !important;
+    }
     body { background-color: var(--theme-bg, #FDFBF7); color: var(--theme-text, #3D3126); }
     .bg-theme-primary { background-color: var(--theme-primary) !important; }
     .text-theme-primary { color: var(--theme-primary) !important; }
@@ -103,10 +120,42 @@
     .carousel-main-img { position: relative; max-height: 100%; max-width: 100%; object-fit: contain; z-index: 10; }
     details > summary { list-style: none; }
     details > summary::-webkit-details-marker { display: none; }
-    .swal2-popup { border-radius: 1.5rem !important; font-family: 'Noto Sans TC', sans-serif !important; padding: 1.75rem !important; border: 1px solid var(--theme-border, #EBE5DF) !important; }
-    .swal2-title { color: var(--theme-text, #3D3126) !important; font-size: 1.15rem !important; font-weight: 700 !important; }
-    .swal2-confirm, .swal2-styled.swal2-confirm { background-color: var(--theme-primary) !important; color: #FFFFFF !important; border-radius: 0.85rem !important; font-weight: 700 !important; border: none !important; }
-    .swal2-cancel, .swal2-styled.swal2-cancel { background-color: var(--theme-light, #EBE5DF) !important; color: var(--theme-text, #5C4B3C) !important; border-radius: 0.85rem !important; font-weight: 700 !important; border: none !important; }
+    
+    /* 彈窗韓系美學配色優化 */
+    .swal2-popup {
+      border-radius: 1.5rem !important;
+      font-family: 'Noto Sans TC', sans-serif !important;
+      padding: 1.75rem !important;
+      background-color: #FFFFFF !important;
+      border: 1px solid var(--theme-border, #EBE5DF) !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05) !important;
+    }
+    .swal2-title { 
+      color: var(--theme-text, #3D3126) !important; 
+      font-size: 1.15rem !important; 
+      font-weight: 700 !important; 
+    }
+    .swal2-html-container { 
+      color: var(--theme-text, #5C4B3C) !important; 
+      font-size: 0.85rem !important;
+    }
+    .swal2-confirm, .swal2-styled.swal2-confirm {
+      background-color: var(--theme-primary) !important;
+      color: #FFFFFF !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.65rem 1.8rem !important;
+      border: none !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    }
+    .swal2-cancel, .swal2-styled.swal2-cancel {
+      background-color: var(--theme-light, #EBE5DF) !important;
+      color: var(--theme-text, #5C4B3C) !important;
+      border-radius: 0.85rem !important;
+      font-weight: 700 !important;
+      padding: 0.65rem 1.5rem !important;
+      border: none !important;
+    }
   </style>
 </head>
 <body class="antialiased pb-20">
@@ -147,7 +196,7 @@
     <div id="brand-subtitle" class="text-xs tracking-[0.25em] mt-1 font-medium text-theme-primary">專業服務門市</div>
   </div>
 
-  <div id="promo" class="w-full text-white py-3.5 px-4 shadow-sm" style="background-color: var(--theme-primary);">
+  <div id="promo" class="w-full text-white py-3.5 px-4 shadow-sm" style="background-color: var(--theme-promo-bg);">
     <div class="max-w-md mx-auto text-center flex flex-col items-center justify-center">
       <div class="text-[13px] font-bold flex items-center justify-center gap-1.5 mb-1">
         <i class="fa-regular fa-bell text-xs"></i>
@@ -268,7 +317,7 @@
           <input type="email" id="email" placeholder="例如：user@gmail.com" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm outline-none transition">
         </div>
 
-        <!-- 顧客身份 (已移除寫死棕底藍框，使用動態 class) -->
+        <!-- 顧客身份 -->
         <div id="custTypeSection">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">顧客身份</label>
           <div class="grid grid-cols-2 gap-2">
@@ -284,7 +333,7 @@
           <input type="text" id="referrerName" placeholder="請填寫介紹人姓名、會員編號或社群" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/40 text-xs outline-none transition">
         </div>
 
-        <!-- 毛孩詳細履歷 (已完全抹除醜陋亮藍框) -->
+        <!-- 毛孩詳細履歷 -->
         <div id="petProfileSection" class="p-4 rounded-3xl bg-brand-50/80 border border-brand-200 space-y-3.5 text-xs hidden">
           <div class="font-bold text-sm text-brand-900 flex items-center justify-between border-b border-brand-200 pb-2">
             <span class="flex items-center gap-1.5"><i class="fa-solid fa-paw text-theme-primary"></i> 毛孩身分與照護履歷</span>
@@ -332,7 +381,7 @@
             <textarea id="petPersonality" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none leading-relaxed" placeholder="例如：親人、會怕吹風機等..."></textarea>
           </div>
 
-          <!-- 延伸題目 (疫苗、過敏等徹底去除預設藍框) -->
+          <!-- 延伸題目 -->
           <div id="petExtendedFieldsBox" class="space-y-2 pt-1 border-t border-brand-200/60">
             <div id="box-chip-id" class="hidden">
               <label class="block font-bold text-brand-700 mb-1 text-[11px]">晶片號碼 (15碼)：</label>
@@ -371,16 +420,16 @@
               </span>
               <span class="text-[10.5px] text-amber-800 font-bold block mt-1">※ 車資費用另計，將由門市於結單時依里程公里數另行核算</span>
             </div>
-            <input type="checkbox" id="chkNeedShuttle" class="w-4 h-4 ml-2 accent-theme-primary" onchange="toggleShuttleAddressBox()">
+            <input type="checkbox" id="chkNeedShuttle" class="w-4 h-4 ml-2" onchange="toggleShuttleAddressBox()">
           </label>
           <div id="shuttleDetailBox" class="hidden space-y-2.5 pt-2.5 border-t border-brand-100">
             <input type="text" id="shuttleAddress" class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 outline-none text-xs" placeholder="請填寫接送地址與樓層 (例: 竹東鎮光明路... 3樓有電梯)">
             <div class="flex gap-4 pt-0.5">
               <label class="flex items-center gap-1.5 text-xs text-brand-800 cursor-pointer font-bold">
-                <input type="radio" name="shuttleTrip" value="round" checked class="accent-theme-primary"> 來回接送
+                <input type="radio" name="shuttleTrip" value="round" checked> 來回接送
               </label>
               <label class="flex items-center gap-1.5 text-xs text-brand-800 cursor-pointer font-bold">
-                <input type="radio" name="shuttleTrip" value="single" class="accent-theme-primary"> 僅單趟接送
+                <input type="radio" name="shuttleTrip" value="single"> 僅單趟接送
               </label>
             </div>
           </div>
@@ -520,7 +569,7 @@
 
             <div class="p-3 bg-brand-50/60 rounded-xl border border-brand-200/80 space-y-2">
               <label class="flex items-center gap-2 cursor-pointer font-bold text-brand-900">
-                <input type="checkbox" id="chkHotelBathCheckin" onchange="toggleHotelBathSubSelect('in'); calculateBoardingDaysAndPrice();" class="accent-theme-primary">
+                <input type="checkbox" id="chkHotelBathCheckin" onchange="toggleHotelBathSubSelect('in'); calculateBoardingDaysAndPrice();">
                 <span>【入住當天】進房前基礎清潔洗護</span>
               </label>
               <div id="hotelBathInSubPanel" class="hidden pl-6 space-y-2 pt-1 border-t border-brand-200/50">
@@ -531,7 +580,7 @@
 
             <div class="p-3 bg-brand-50/60 rounded-xl border border-brand-200/80 space-y-2">
               <label class="flex items-center gap-2 cursor-pointer font-bold text-brand-900">
-                <input type="checkbox" id="chkHotelBathCheckout" checked onchange="toggleHotelBathSubSelect('out'); calculateBoardingDaysAndPrice();" class="accent-theme-primary">
+                <input type="checkbox" id="chkHotelBathCheckout" checked onchange="toggleHotelBathSubSelect('out'); calculateBoardingDaysAndPrice();">
                 <span>【退房當天】返家前深層造型美容／洗澡</span>
               </label>
               <div id="hotelBathOutSubPanel" class="pl-6 space-y-2 pt-1 border-t border-brand-200/50">
@@ -609,14 +658,14 @@
               <span class="text-[10px] text-amber-700 font-bold">※ 包卡/儲值金/折扣碼 擇一使用</span>
             </div>
             <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
-              <input type="checkbox" id="chk-use-package" onchange="handleDeductMethodChange('package')" class="accent-theme-primary rounded">
+              <input type="checkbox" id="chk-use-package" onchange="handleDeductMethodChange('package')" class="rounded">
               <div>
                 <span class="font-bold text-brand-800">使用包卡扣抵</span>
                 <span class="text-[10px] text-brand-400 block">抵扣對應之主項目 1 堂</span>
               </div>
             </label>
             <label class="flex items-start gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
-              <input type="checkbox" id="chk-use-wallet" onchange="handleDeductMethodChange('wallet')" class="accent-theme-primary rounded mt-0.5">
+              <input type="checkbox" id="chk-use-wallet" onchange="handleDeductMethodChange('wallet')" class="rounded mt-0.5">
               <div>
                 <span class="font-bold text-brand-800">使用儲值金扣抵</span>
                 <div class="text-[10px] text-amber-700 mt-0.5">※ 以折後金額扣抵，不足額現場補差價</div>
@@ -854,7 +903,6 @@
   let guestLineUid = "";
   let activeBookingSubMode = 'grooming';
 
-  // 預設服務項目
   const DEFAULT_SERVICES = [
     { id: "s1", name: "精緻深層洗澡護理", duration: 60, type: "Group_A", price: "700-1000", isAddon: false, sortOrder: 0 },
     { id: "s2", name: "全身客製造型剪毛", duration: 90, type: "Group_A", price: "1200-1800", isAddon: false, sortOrder: 1 },
@@ -862,7 +910,6 @@
     { id: "s4", name: "草本泥深層敷體", duration: 30, type: "Group_B", price: "400", isAddon: true, sortOrder: 3 }
   ];
 
-  // 全域 db 基礎結構
   let db = {
     storeName: "線上預約系統", subtitle: "專業服務沙龍",
     enableLogo: true, logoUrl: "", storePhone: "",
@@ -957,6 +1004,7 @@
     document.documentElement.style.setProperty('--theme-light', t.light);
     document.documentElement.style.setProperty('--theme-text', t.text);
     document.documentElement.style.setProperty('--theme-border', t.border);
+    document.documentElement.style.setProperty('--theme-promo-bg', t.promoBg || t.p);
     document.body.style.backgroundColor = t.bg;
 
     let styleTag = document.getElementById('theme-runtime-css');
@@ -974,14 +1022,21 @@
         --theme-light: ${t.light} !important;
         --theme-text: ${t.text} !important;
         --theme-border: ${t.border} !important;
+        --theme-promo-bg: ${t.promoBg || t.p} !important;
       }
       body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
+      input[type="checkbox"], input[type="radio"] {
+        accent-color: ${t.p} !important;
+      }
       input:focus, textarea:focus, select:focus {
         outline: none !important;
         box-shadow: 0 0 0 2px ${t.light} !important;
         border-color: ${t.p} !important;
       }
-      #promo { background-color: ${t.p} !important; color: #FFFFFF !important; }
+      #promo { 
+        background-color: var(--theme-promo-bg) !important; 
+        color: #FFFFFF !important; 
+      }
       #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm,
       .type-btn.active, .portfolio-tab.active {
         background-color: ${t.p} !important;
@@ -1002,6 +1057,7 @@
       #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
         background-color: ${t.p} !important;
         color: #FFFFFF !important;
+        border-color: ${t.p} !important;
       }
     `;
   }
@@ -1011,8 +1067,8 @@
     const petProfileSec = document.getElementById('petProfileSection');
     const groomingSec = document.getElementById('groomingServiceSection');
     const boardingSec = document.getElementById('boardingConfigSection');
-    const singleTimeSec = document.getElementById('calendarPickerSection');
-    const singleHourSec = document.getElementById('timePickerSection');
+    const calPickerSec = document.getElementById('calendarPickerSection');
+    const timePickerSec = document.getElementById('timePickerSection');
     const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
 
     if (mode === 'beauty') {
@@ -1021,16 +1077,16 @@
       if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
       if (boardingSec) boardingSec.classList.add('hidden');
       if (groomingSec) groomingSec.classList.remove('hidden');
-      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
-      if (singleHourSec) singleHourSec.classList.remove('hidden');
+      if (calPickerSec) calPickerSec.classList.remove('hidden');
+      if (timePickerSec) timePickerSec.classList.remove('hidden');
     } else if (mode === 'pet_grooming') {
       if (modeSelector) modeSelector.classList.add('hidden');
       if (petProfileSec) petProfileSec.classList.remove('hidden');
       if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
       if (boardingSec) boardingSec.classList.add('hidden');
       if (groomingSec) groomingSec.classList.remove('hidden');
-      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
-      if (singleHourSec) singleHourSec.classList.remove('hidden');
+      if (calPickerSec) calPickerSec.classList.remove('hidden');
+      if (timePickerSec) timePickerSec.classList.remove('hidden');
       setupPetExtendedFields();
     } else {
       if (modeSelector) modeSelector.classList.remove('hidden');
@@ -1058,7 +1114,6 @@
       const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
       const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
-      // 色彩覆蓋防呆判定
       const dbThemeCfg = sCfg.theme_color || sCfg.themeColor;
       const dbThemeStore = sInfo.theme_color || sInfo.themeColor;
       const localCachedTheme = localStorage.getItem('zy_cached_theme');
@@ -1079,7 +1134,6 @@
       localStorage.setItem('zy_cached_theme', resolvedTheme);
       applyThemeColors(resolvedTheme);
 
-      // 公休日計算
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
       const availableDates = [];
@@ -1245,7 +1299,6 @@
     renderPortfolioGrid();
   }
 
-  // 顧客資產載入
   async function checkPhoneAndLoadBenefits(el) {
     const phone = el.value.trim();
     if (phone.length < 8) return;
@@ -1372,7 +1425,7 @@
 
     const addonHtml = (prefix) => addonSvcs.map(a => `
       <label class="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-brand-200 cursor-pointer">
-        <input type="checkbox" class="hotel-bath-addon-${prefix} accent-theme-primary" value="${a.name}" data-price="${a.price}" onchange="calculateBoardingDaysAndPrice()">
+        <input type="checkbox" class="hotel-bath-addon-${prefix}" value="${a.name}" data-price="${a.price}" onchange="calculateBoardingDaysAndPrice()">
         <span>${a.name} (+$${a.price})</span>
       </label>
     `).join('');
@@ -1660,7 +1713,7 @@
     grid.innerHTML = tiers.map((t, idx) => `
       <label class="p-2.5 bg-brand-50/70 rounded-xl border border-brand-200 cursor-pointer flex flex-col justify-between hover:bg-brand-100/50 transition">
         <div class="flex items-center gap-1.5 font-bold text-brand-900">
-          <input type="radio" name="hotelRoomTier" value="${t.id}" data-name="${t.name}" data-min="${t.price_min}" data-max="${t.price_max}" ${idx === 0 ? 'checked' : ''} onchange="calculateBoardingDaysAndPrice()" class="accent-theme-primary">
+          <input type="radio" name="hotelRoomTier" value="${t.id}" data-name="${t.name}" data-min="${t.price_min}" data-max="${t.price_max}" ${idx === 0 ? 'checked' : ''} onchange="calculateBoardingDaysAndPrice()">
           <span class="truncate">${t.name}</span>
         </div>
         <div class="text-[10px] text-theme-primary font-mono mt-1">${t.desc} (NT$ ${t.price_min}-${t.price_max})</div>
@@ -1679,7 +1732,7 @@
 
     list.innerHTML = meals.map((m, idx) => `
       <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/60 border border-brand-200 cursor-pointer">
-        <input type="radio" name="mealPlanOption" value="${m.id}" data-name="${m.name}" data-price="${m.price}" data-type="${m.type}" ${idx === 0 ? 'checked' : ''} onchange="calculateBoardingDaysAndPrice()" class="accent-theme-primary">
+        <input type="radio" name="mealPlanOption" value="${m.id}" data-name="${m.name}" data-price="${m.price}" data-type="${m.type}" ${idx === 0 ? 'checked' : ''} onchange="calculateBoardingDaysAndPrice()">
         <div>
           <span class="font-bold text-brand-900">${m.name} (+NT$ ${m.price})</span>
           <span class="text-[10px] text-brand-400 block">${m.desc}</span>
@@ -1785,7 +1838,7 @@
       svcGrid.innerHTML += `
         <label class="service-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-white cursor-pointer transition text-xs ${disabledClass}">
           <div class="flex items-center gap-2 truncate">
-            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="accent-theme-primary rounded">
+            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="rounded">
             <span class="truncate font-medium">${isAddon ? '✨ ' : ''}${s.name}</span>
           </div>
           ${priceText ? `<span class="text-theme-primary font-bold ml-1 shrink-0 font-mono">${priceText}</span>` : ''}
@@ -2469,7 +2522,6 @@
     }
   }
 
-  // 送單監聽
   document.getElementById('bookForm').onsubmit = async function(e) {
     e.preventDefault();
 
@@ -2574,6 +2626,11 @@
       signature_url: signatureBase64, status: "待確認"
     };
 
+    // 真正的主題色代碼 (避免傳入 var() 導致 SweetAlert2 確認鈕變成瀏覽器藍色)
+    const activeHexColor = (window.THEME_PALETTES && window.THEME_PALETTES[db.themeColor]) 
+      ? window.THEME_PALETTES[db.themeColor].p 
+      : '#8C7355';
+
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
         method: "POST",
@@ -2615,7 +2672,7 @@
           `,
           icon: 'info',
           confirmButtonText: '已完成匯款，送出後五碼',
-          confirmButtonColor: 'var(--theme-primary)',
+          confirmButtonColor: activeHexColor,
           preConfirm: () => document.getElementById('swal-deposit-last5')?.value.trim()
         }).then(async (r) => {
           if (r.value && newBookingId) {
@@ -2631,7 +2688,7 @@
           title: '🎉 預約申請已成功送出！',
           text: '店家確認排程後將第一時間與您聯繫確認❤️',
           icon: 'success',
-          confirmButtonColor: 'var(--theme-primary)'
+          confirmButtonColor: activeHexColor
         }).then(() => {
           document.getElementById('booking-ui').style.display = 'none';
           document.getElementById('success-screen').classList.remove('hidden');
