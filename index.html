@@ -39,7 +39,7 @@
         navy:   { p: '#4A5F73', ph: '#3B4D5E', bg: '#F6F8FA', light: '#E1E8EE', text: '#212B35', border: '#D0DCE5', promoBg: '#4A5F73', name: '韓系霧霾灰藍' },
         rose:   { p: '#996C74', ph: '#825960', bg: '#FCF8F8', light: '#F1E2E4', text: '#42282C', border: '#E4CFD2', promoBg: '#996C74', name: '法式煙燻暮粉' },
         mist:   { p: '#557169', ph: '#445C55', bg: '#F5F7F6', light: '#E0E8E5', text: '#25332F', border: '#CBD8D4', promoBg: '#557169', name: '莫蘭迪鼠尾草綠' },
-        amber:  { p: '#1F2937', ph: '#111827', bg: '#F9F6F0', light: '#FCEFD9', text: '#1F2937', border: '#EFE3D0', promoBg: '#ED8E38', name: '活力暖橘潮黑' },
+        amber:  { p: '#000000', ph: '#222222', bg: '#F9F6F0', light: '#FCEFD9', text: '#000000', border: '#EFE3D0', promoBg: '#ED8E38', name: '活力暖橘潮黑' },
         taupe:  { p: '#6E6259', ph: '#594E46', bg: '#F8F6F4', light: '#E8E3DF', text: '#332B25', border: '#DCD5D0', promoBg: '#6E6259', name: '焙茶燕麥冷灰' }
       };
 
@@ -625,10 +625,10 @@
         </div>
 
         <!-- 8. 本月活動方案與折抵/加購 -->
-        <div class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 shadow-xs space-y-4 text-xs">
-          <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
-            <i class="fa-solid fa-tags text-theme-primary"></i> 本月活動方案與折抵/加購選擇
-          </div>
+        <div id="promoPlanSection" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 shadow-xs space-y-4 text-xs">
+  <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
+    <i class="fa-solid fa-tags text-theme-primary"></i> 本月活動方案與折抵/加購選擇
+  </div>
 
           <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-2 text-[11.5px] leading-relaxed text-amber-950">
             <div class="font-bold flex items-center gap-1.5 text-amber-900">
@@ -675,14 +675,14 @@
         </div>
 
         <!-- 9. 活動折扣碼 -->
-        <div class="my-4 space-y-1.5">
-          <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
-          <div class="flex gap-2">
-            <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3.5 py-3 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/40 font-mono">
-            <button type="button" onclick="applyCouponCode()" class="px-5 py-3 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
-          </div>
-          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-1"></div>
-        </div>
+        <div id="couponCodeSection" class="my-4 space-y-1.5">
+  <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
+  <div class="flex gap-2">
+    <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3.5 py-3 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/40 font-mono">
+    <button type="button" onclick="applyCouponCode()" class="px-5 py-3 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
+  </div>
+  <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-1"></div>
+</div>
 
         <!-- 10. 預算計價試算 -->
         <div id="checkoutSummaryBox" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 space-y-3.5 text-xs shadow-xs">
@@ -1446,79 +1446,318 @@ function parseBoolStrict(val, defaultVal = true) {
 // ========================================================
 // 【前台修復 2】UI 渲染與 20+ Feature Flags 嚴格隱藏
 // ========================================================
+// ========================================================
+// 【前台完整版】renderStoreUI() — 無省略、全功能 100% 渲染
+// ========================================================
 function renderStoreUI() {
-  // 1. 品牌標題與公告
-  document.getElementById('brand-title').innerText = db.storeName;
-  document.getElementById('brand-subtitle').innerText = db.subtitle;
-  document.getElementById('promo-text').innerText = db.promoText;
+  // ----------------------------------------------------
+  // 1. 品牌標題、副標題與置頂公告內容
+  // ----------------------------------------------------
+  const brandTitleEl = document.getElementById('brand-title');
+  const brandSubtitleEl = document.getElementById('brand-subtitle');
+  const promoTextEl = document.getElementById('promo-text');
+  
+  if (brandTitleEl) brandTitleEl.innerText = db.storeName || "線上預約系統";
+  if (brandSubtitleEl) brandSubtitleEl.innerText = db.subtitle || "專業門市服務";
+  if (promoTextEl) promoTextEl.innerText = db.promoText || "歡迎使用線上預約系統，請選取項目與合適時段。";
 
-  // 2. Logo 顯示/隱藏
+  // ----------------------------------------------------
+  // 2. 門市 LOGO 圖片展示與預設占位符顯隱
+  // ----------------------------------------------------
   const logoWrapper = document.getElementById('store-logo-wrapper');
   const logoImg = document.getElementById('store-logo-img');
   const logoPlaceholder = document.getElementById('store-logo-placeholder');
-  if (db.enableLogo && db.logoUrl) {
-    if (logoWrapper) logoWrapper.style.display = 'flex';
-    if (logoImg) {
-      logoImg.src = db.logoUrl;
-      logoImg.classList.remove('hidden');
+  const showLogo = parseBoolStrict(db.enableLogo, true);
+
+  if (logoWrapper) {
+    if (showLogo && db.logoUrl && db.logoUrl.trim() !== '') {
+      logoWrapper.style.display = 'flex';
+      logoWrapper.classList.remove('hidden');
+      if (logoImg) {
+        logoImg.src = db.logoUrl;
+        logoImg.classList.remove('hidden');
+      }
+      if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
+    } else {
+      logoWrapper.style.display = 'none';
+      logoWrapper.classList.add('hidden');
     }
-    if (logoPlaceholder) logoPlaceholder.classList.add('hidden');
-  } else {
-    if (logoWrapper) logoWrapper.style.display = 'none';
   }
 
-  // 3. 門市電話
+  // ----------------------------------------------------
+  // 3. 門市預約專線電話
+  // ----------------------------------------------------
   const storePhoneBox = document.getElementById('store-phone-display');
   const storePhoneVal = document.getElementById('store-phone-val');
-  if (db.storePhone && db.storePhone.trim() !== '') {
-    storePhoneVal.innerText = `門市預約專線：${db.storePhone}`;
-    storePhoneBox.classList.remove('hidden');
-  } else {
-    storePhoneBox.classList.add('hidden');
+  if (storePhoneBox && storePhoneVal) {
+    if (db.storePhone && db.storePhone.trim() !== '') {
+      storePhoneVal.innerText = `門市預約專線：${db.storePhone}`;
+      storePhoneBox.classList.remove('hidden');
+      storePhoneBox.style.display = 'flex';
+    } else {
+      storePhoneBox.classList.add('hidden');
+      storePhoneBox.style.display = 'none';
+    }
   }
 
-  // 4. 地址、營業時間、社群連結
-  document.getElementById('nav-ig').href = db.ig || '#';
-  document.getElementById('nav-line').href = db.line || '#';
-  document.getElementById('nav-map').href = db.map || '#';
-  document.getElementById('store-address').innerHTML = `<i class="fa-solid fa-map-pin text-brand-400 mr-1"></i> ${db.address || '門市服務據點'}`;
-  document.getElementById('store-hours').innerHTML = `<i class="fa-regular fa-clock text-brand-400 mr-1"></i> ${db.businessHours || '營業時間：09:00 - 19:00'}`;
+  // ----------------------------------------------------
+  // 4. 門市據點地址、營業時間與社群導航連結
+  // ----------------------------------------------------
+  const navIg = document.getElementById('nav-ig');
+  const navLine = document.getElementById('nav-line');
+  const navMap = document.getElementById('nav-map');
+  const storeAddrEl = document.getElementById('store-address');
+  const storeHoursEl = document.getElementById('store-hours');
 
-  // 5. 輪播說明圖 (Carousel) 徹底隱藏
+  if (navIg) navIg.href = db.ig || '#';
+  if (navLine) navLine.href = db.line || '#';
+  if (navMap) navMap.href = db.map || '#';
+  if (storeAddrEl) {
+    storeAddrEl.innerHTML = `<i class="fa-solid fa-map-pin text-brand-400 mr-1"></i> ${db.address || '門市服務據點'}`;
+  }
+  if (storeHoursEl) {
+    storeHoursEl.innerHTML = `<i class="fa-regular fa-clock text-brand-400 mr-1"></i> ${db.businessHours || '營業時間：09:00 - 19:00'}`;
+  }
+
+  // ----------------------------------------------------
+  // 5. 9:16 活動說明圖輪播（完整生成軌道 DOM 與導航圓點）
+  // ----------------------------------------------------
   const bannerWrapper = document.getElementById('bannerWrapper');
+  const track = document.getElementById('carouselTrack');
+  const dots = document.getElementById('carouselDots');
+  const showCarousel = parseBoolStrict(db.enableCarousel, true);
+  const validImgs = (db.promoImgs && Array.isArray(db.promoImgs)) ? db.promoImgs.filter(url => url && url.trim() !== '') : [];
+
   if (bannerWrapper) {
-    const showCarousel = parseBoolStrict(db.enableCarousel, true);
-    bannerWrapper.style.display = showCarousel ? 'block' : 'none';
-    bannerWrapper.classList.toggle('hidden', !showCarousel);
+    if (!showCarousel || validImgs.length === 0) {
+      bannerWrapper.style.display = 'none';
+      bannerWrapper.classList.add('hidden');
+    } else {
+      bannerWrapper.style.display = 'block';
+      bannerWrapper.classList.remove('hidden');
+      if (track && dots) {
+        track.innerHTML = '';
+        dots.innerHTML = '';
+        currentSlide = 0;
+        track.style.transform = 'translateX(0%)';
+
+        validImgs.forEach((imgUrl, i) => {
+          track.innerHTML += `
+            <div class="carousel-slide-916">
+              <div class="carousel-bg-blur" style="background-image: url('${imgUrl}');"></div>
+              <img src="${imgUrl}" loading="eager" decoding="async" class="carousel-main-img" alt="說明圖 ${i + 1}">
+            </div>`;
+          dots.innerHTML += `<div class="w-2 h-2 rounded-full transition-all ${i === 0 ? 'bg-theme-primary scale-125' : 'bg-brand-300'}"></div>`;
+        });
+      }
+    }
   }
 
-  // 6. 作品展示專區 (Portfolio) 徹底隱藏 (移除原先內部的 display: block 強制覆蓋)
+  // ----------------------------------------------------
+  // 6. 指定服務專員 / 美容師（標題與按鈕網格完整生成）
+  // ----------------------------------------------------
+  const staffSection = document.getElementById('staffSection');
+  const staffGrid = document.getElementById('staffGrid');
+  const showStaff = parseBoolStrict(db.enableStaffSelect, true);
+
+  if (staffSection) {
+    if (showStaff) {
+      staffSection.style.display = 'block';
+      staffSection.classList.remove('hidden');
+      if (staffGrid) {
+        const staffList = (db.staffList && db.staffList.length > 0) ? db.staffList : [{ id: "all", name: "不指定" }];
+        const currentSelectedStaffId = document.getElementById('staffId')?.value || 'all';
+        
+        staffGrid.innerHTML = staffList.map(s => {
+          const isSelected = (s.id === currentSelectedStaffId);
+          return `
+            <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${
+              isSelected 
+                ? 'bg-theme-primary text-white border-theme-primary shadow-sm' 
+                : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+            }" onclick="selectStaff('${s.id}', '${s.name}', this)">
+              ${s.name}
+            </button>
+          `;
+        }).join('');
+      }
+    } else {
+      staffSection.style.display = 'none';
+      staffSection.classList.add('hidden');
+      const staffIdInput = document.getElementById('staffId');
+      const staffNameInput = document.getElementById('staffName');
+      if (staffIdInput) staffIdInput.value = 'all';
+      if (staffNameInput) staffNameInput.value = '不指定';
+    }
+  }
+
+  // ----------------------------------------------------
+  // 7. 作品集展示專區 (PORTFOLIO) 顯隱與分類標籤啟動
+  // ----------------------------------------------------
   const portfolioSec = document.getElementById('portfolioSection');
   const showPortfolio = parseBoolStrict(db.enablePortfolio, true);
   if (portfolioSec) {
-    portfolioSec.style.display = showPortfolio ? 'block' : 'none';
-    portfolioSec.classList.toggle('hidden', !showPortfolio);
-    if (showPortfolio) setupPortfolio();
+    if (showPortfolio) {
+      portfolioSec.style.display = 'block';
+      portfolioSec.classList.remove('hidden');
+      setupPortfolio();
+    } else {
+      portfolioSec.style.display = 'none';
+      portfolioSec.classList.add('hidden');
+    }
   }
 
-  // 7. 顧客真實好評牆 徹底隱藏
+  // ----------------------------------------------------
+  // 8. 顧客真實好評牆顯隱
+  // ----------------------------------------------------
   const reviewWallSec = document.getElementById('reviewWallSection');
   const showReviews = parseBoolStrict(db.enableReviews, true);
   if (reviewWallSec) {
-    reviewWallSec.style.display = showReviews ? 'block' : 'none';
-    reviewWallSec.classList.toggle('hidden', !showReviews);
+    if (showReviews) {
+      reviewWallSec.style.display = 'block';
+      reviewWallSec.classList.remove('hidden');
+    } else {
+      reviewWallSec.style.display = 'none';
+      reviewWallSec.classList.add('hidden');
+    }
   }
 
-  // 8. 日常照護小叮嚀 徹底隱藏
+  // ----------------------------------------------------
+  // 9. 日常照護小叮嚀折疊面板
+  // ----------------------------------------------------
   const careSec = document.getElementById('careSection');
+  const careContent = document.getElementById('care-content');
   const showCare = parseBoolStrict(db.enableCare, true);
   if (careSec) {
-    careSec.style.display = showCare ? 'block' : 'none';
-    careSec.classList.toggle('hidden', !showCare);
+    if (showCare) {
+      careSec.style.display = 'block';
+      careSec.classList.remove('hidden');
+      if (careContent) {
+        careContent.innerText = db.careText || '服務完成後請保持清潔與通風乾燥。';
+      }
+    } else {
+      careSec.style.display = 'none';
+      careSec.classList.add('hidden');
+    }
   }
-  document.getElementById('care-content').innerText = db.careText || '服務完成後請保持清潔乾燥。';
 
-  // 9. 專員選單
+  // 門市使用規則文字內容
+  const promoRuleContent = document.getElementById('promo-rule-content');
+  if (promoRuleContent && db.promoRulesText && db.promoRulesText.trim() !== '') {
+    promoRuleContent.innerText = db.promoRulesText;
+  }
+
+  // ----------------------------------------------------
+  // 10. 線上定型化契約與簽署欄位
+  // ----------------------------------------------------
+  const contractSec = document.getElementById('digitalContractSection');
+  const contractTitleEl = document.getElementById('display-contract-title');
+  const modalContractTitle = document.getElementById('modal-contract-title');
+  const contractScrollArea = document.getElementById('contractScrollArea');
+  const showContract = parseBoolStrict(db.enableContract, false);
+
+  if (contractSec) {
+    if (showContract) {
+      contractSec.style.display = 'block';
+      contractSec.classList.remove('hidden');
+      const cTitle = db.contractTitle || '定型化服務契約書';
+      if (contractTitleEl) contractTitleEl.innerText = cTitle;
+      if (modalContractTitle) modalContractTitle.innerText = cTitle;
+      if (contractScrollArea && db.contractContent) {
+        contractScrollArea.innerText = db.contractContent;
+      }
+    } else {
+      contractSec.style.display = 'none';
+      contractSec.classList.add('hidden');
+      const hasAgreedInput = document.getElementById('hasAgreedContract');
+      if (hasAgreedInput) hasAgreedInput.value = 'true';
+    }
+  }
+
+  // ----------------------------------------------------
+  // 11. 顧客身份選取 (新舊朋友) 顯隱
+  // ----------------------------------------------------
+  const custTypeSec = document.getElementById('custTypeSection');
+  const showCustType = parseBoolStrict(db.enableCustType, true);
+  if (custTypeSec) {
+    if (showCustType) {
+      custTypeSec.style.display = 'block';
+      custTypeSec.classList.remove('hidden');
+    } else {
+      custTypeSec.style.display = 'none';
+      custTypeSec.classList.add('hidden');
+      const custTypeInput = document.getElementById('custType');
+      if (custTypeInput) custTypeInput.value = 'old';
+    }
+  }
+
+  // ----------------------------------------------------
+  // 12. 電子信箱與備註輸入框
+  // ----------------------------------------------------
+  const emailSec = document.getElementById('emailSection');
+  const showEmail = parseBoolStrict(db.enableEmailCopy, true);
+  if (emailSec) {
+    emailSec.style.display = showEmail ? 'block' : 'none';
+    emailSec.classList.toggle('hidden', !showEmail);
+  }
+
+  const notesSec = document.getElementById('custNotesWrapper');
+  const showNotes = parseBoolStrict(db.enableCustNotes, true);
+  if (notesSec) {
+    notesSec.style.display = showNotes ? 'block' : 'none';
+    notesSec.classList.toggle('hidden', !showNotes);
+  }
+
+  // ----------------------------------------------------
+  // 13. 現場加購方案（包卡/儲值）下拉選單 DOM 生成
+  // ----------------------------------------------------
+  const pkgSelect = document.getElementById('addon-package-select');
+  const walSelect = document.getElementById('addon-wallet-select');
+  
+  if (pkgSelect && db.packageRules && Array.isArray(db.packageRules)) {
+    pkgSelect.innerHTML = '<option value="none" data-price="0" data-times="0">不加購包卡</option>' +
+      db.packageRules.map(p => `
+        <option value="${p.name}" data-price="${p.price}" data-times="${p.times || 6}">
+          加購【${p.name}】(+NT$ ${Number(p.price).toLocaleString()}，含 ${p.times || 6} 點)
+        </option>
+      `).join('');
+  }
+
+  if (walSelect && db.walletRules && Array.isArray(db.walletRules)) {
+    walSelect.innerHTML = '<option value="none" data-price="0">不加購儲值</option>' +
+      db.walletRules.map(w => `
+        <option value="${w.name}" data-price="${w.price}" data-discount="${w.discount || 1}">
+          加購【${w.name}】(+NT$ ${Number(w.price).toLocaleString()}，享 ${Math.round((w.discount || 1) * 100) / 10} 折)
+        </option>
+      `).join('');
+  }
+
+  // ----------------------------------------------------
+  // 14. 寵物住宿專屬規格選項生成（房型與供餐選項）
+  // ----------------------------------------------------
+  if (typeof renderDynamicRoomTiers === 'function') renderDynamicRoomTiers();
+  if (typeof renderDynamicMealOptions === 'function') renderDynamicMealOptions();
+  if (typeof populateHotelBathServices === 'function') populateHotelBathServices();
+
+  // ----------------------------------------------------
+  // 15. 子系統核心生命週期觸發（模式、服務、行事曆與智慧計價框）
+  // ----------------------------------------------------
+  applyIndustryModeUI(db.industryType || 'pet_hotel');
+  renderServices();
+  renderFrontCalendar();
+  updateDepositSectionDisplay();
+  recalcSmartCheckoutLayout();
+}
+// ========================================================
+// 【前台修復 3】預算計價框智慧排列組合（防呆不留白）
+// ========================================================
+function recalcSmartCheckoutLayout() {
+  const showPrice = parseBoolStrict(db.enableShowPrice, true);
+  const showWallet = parseBoolStrict(db.enableWallet, true);
+  const showPackages = parseBoolStrict(db.enablePackages, true);
+  const showCoupons = parseBoolStrict(db.enableCoupons, true);
+
+  // 1. 指定服務專員標題與選單連動
   const staffSection = document.getElementById('staffSection');
   const showStaff = parseBoolStrict(db.enableStaffSelect, true);
   if (staffSection) {
@@ -1529,105 +1768,36 @@ function renderStoreUI() {
     }
   }
 
-  // 10. 定型化契約
-  const contractSec = document.getElementById('digitalContractSection');
-  const showContract = parseBoolStrict(db.enableContract, true);
-  if (contractSec) {
-    contractSec.style.display = showContract ? 'block' : 'none';
-    contractSec.classList.toggle('hidden', !showContract);
-  }
-
-  // 11. 顧客身份選取 (新舊朋友)
-  const custTypeSec = document.getElementById('custTypeSection');
-  const showCustType = parseBoolStrict(db.enableCustType, true);
-  if (custTypeSec) {
-    custTypeSec.style.display = showCustType ? 'block' : 'none';
-    custTypeSec.classList.toggle('hidden', !showCustType);
-  }
-
-  // 12. 電子信箱與備註
-  const emailSec = document.getElementById('emailSection');
-  const showEmail = parseBoolStrict(db.enableEmailCopy, true);
-  if (emailSec) emailSec.classList.toggle('hidden', !showEmail);
-
-  const notesSec = document.getElementById('custNotesWrapper');
-  const showNotes = parseBoolStrict(db.enableCustNotes, true);
-  if (notesSec) notesSec.classList.toggle('hidden', !showNotes);
-
-  // 13. 商業模式與動態結構渲染
-  applyIndustryModeUI(db.industryType || 'pet_hotel');
-  renderServices();
-  renderFrontCalendar();
-  updateDepositSectionDisplay();
-  recalcSmartCheckoutLayout();
-}
-
-// ========================================================
-// 【前台修復 3】預算計價框智慧排列組合（防呆不留白）
-// ========================================================
-function recalcSmartCheckoutLayout() {
-  const showPrice = parseBoolStrict(db.enableShowPrice, true);
-  const showWallet = parseBoolStrict(db.enableWallet, true);
-  const showPackages = parseBoolStrict(db.enablePackages, true);
-  const showCoupons = parseBoolStrict(db.enableCoupons, true);
-
-  // 1. 加購包卡與儲值金選單連動
+  // 2. 加購包卡與儲值選單隱藏
   const pkgSelect = document.getElementById('addon-package-select');
   const walSelect = document.getElementById('addon-wallet-select');
   if (pkgSelect) pkgSelect.style.display = showPackages ? 'block' : 'none';
   if (walSelect) walSelect.style.display = showWallet ? 'block' : 'none';
 
-  // 現場加購外層容器
-  const addonContainer = pkgSelect?.closest('.p-3\\.5');
-  if (addonContainer) {
-    addonContainer.style.display = (!showPackages && !showWallet) ? 'none' : 'block';
-  }
-
-  // 2. 折抵方式選取勾選框連動
+  // 3. 折抵方式選取勾選框隱藏
   const chkUsePkg = document.getElementById('chk-use-package');
   const chkUseWal = document.getElementById('chk-use-wallet');
   const pkgOptionLabel = chkUsePkg?.closest('label');
   const walOptionLabel = chkUseWal?.closest('label');
-
   if (pkgOptionLabel) pkgOptionLabel.style.display = showPackages ? 'flex' : 'none';
   if (walOptionLabel) walOptionLabel.style.display = showWallet ? 'flex' : 'none';
 
-  const deductContainer = pkgOptionLabel?.closest('.p-3\\.5');
-  if (deductContainer) {
-    deductContainer.style.display = (!showPackages && !showWallet) ? 'none' : 'block';
+  // 4. 【本月活動方案與折抵/加購選擇】大標題與整張卡片連動隱藏
+  const promoPlanSection = document.getElementById('promoPlanSection');
+  if (promoPlanSection) {
+    promoPlanSection.style.display = (!showPackages && !showWallet) ? 'none' : 'block';
   }
 
-  // 3. 折扣碼輸入區塊連動
-  const couponContainer = document.getElementById('couponCode')?.closest('.my-4');
-  if (couponContainer) {
-    couponContainer.style.display = showCoupons ? 'block' : 'none';
+  // 5. 【活動折扣碼】大標題與整行輸入區連動隱藏
+  const couponCodeSection = document.getElementById('couponCodeSection');
+  if (couponCodeSection) {
+    couponCodeSection.style.display = showCoupons ? 'block' : 'none';
   }
 
-  // 4. 活動方案與加購折抵大外層
-  const promoSection = addonContainer?.closest('.my-4.p-5');
-  if (promoSection) {
-    promoSection.style.display = (!showPackages && !showWallet && !showCoupons) ? 'none' : 'block';
-  }
-
-  // 5. 計價試算框（checkoutSummaryBox）智慧排列
+  // 6. 預算計價框智慧排列
   const summaryBox = document.getElementById('checkoutSummaryBox');
-  if (!summaryBox) return;
-
-  // 如果完全不顯示金額，且無加購無折抵 -> 隱藏整個計價盒，絕不留空白
-  if (!showPrice && !showPackages && !showWallet) {
-    summaryBox.style.display = 'none';
-    return;
-  }
-  summaryBox.style.display = 'block';
-
-  // 金額顯示列動態控制
-  const rangeEl = document.getElementById('summary-service-range');
-  const finalTotalEl = document.getElementById('summary-final-total');
-  const finalRow = finalTotalEl?.closest('.flex.justify-between.items-baseline');
-
-  if (!showPrice) {
-    if (rangeEl) rangeEl.innerText = '依現場評估';
-    if (finalTotalEl) finalTotalEl.innerText = '現場報價';
+  if (summaryBox) {
+    summaryBox.style.display = (!showPrice && !showPackages && !showWallet) ? 'none' : 'block';
   }
 
   updateCheckoutSummary();
@@ -1873,37 +2043,54 @@ function recalcSmartCheckoutLayout() {
     calculateBoardingDaysAndPrice();
   }
 
-  function renderHotelTimeGrid(type, dateStr) {
-    const container = document.getElementById(type === 'in' ? 'hotelInTimeSlotContainer' : 'hotelOutTimeSlotContainer');
-    if (!container) return;
+  // 寵物住宿模式：進場與退房時段 100% 依據排班表開班
+function renderHotelTimeGrid(type, dateStr) {
+  const container = document.getElementById(type === 'in' ? 'hotelInTimeSlotContainer' : 'hotelOutTimeSlotContainer');
+  if (!container || !dateStr) return;
 
-    const slots = [
-      "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-      "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
-      "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-      "18:00", "18:30", "19:00"
-    ];
+  const slots = [
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+    "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
+    "18:00", "18:30", "19:00"
+  ];
 
-    const currentSelectedTime = document.getElementById(type === 'in' ? 'hotelCheckInTime' : 'hotelCheckOutTime').value;
+  const schedules = db.staffSchedules || {};
+  const dSlash = dateStr.replace(/-/g, '/');
+  const currentSelected = document.getElementById(type === 'in' ? 'hotelCheckInTime' : 'hotelCheckOutTime').value;
 
-    let html = '<div class="grid grid-cols-3 gap-2.5 w-full py-1">';
-    slots.forEach(time => {
-      const isSelected = (time === currentSelectedTime);
+  let html = '<div class="grid grid-cols-3 gap-2.5 w-full py-1">';
+  let openCount = 0;
+
+  slots.forEach(time => {
+    let isAvailable = false;
+    if (schedules[`all_${dSlash}`] && schedules[`all_${dSlash}`][time] === true) {
+      isAvailable = true;
+    } else {
+      for (let s of (db.staffList || [])) {
+        if (schedules[`${s.id}_${dSlash}`] && schedules[`${s.id}_${dSlash}`][time] === true) {
+          isAvailable = true;
+          break;
+        }
+      }
+    }
+
+    if (isAvailable) {
+      openCount++;
+      const isSelected = (time === currentSelected);
       html += `
-        <button type="button" 
-          onclick="selectHotelTimePill('${type}', '${time}', this)" 
-          class="hotel-pill-${type} py-2.5 rounded-2xl text-xs font-bold font-mono transition border ${
-            isSelected 
-              ? 'selected text-white shadow-sm' 
-              : 'bg-white hover:bg-brand-50 text-brand-900 border-brand-200'
-          }">
+        <button type="button" onclick="selectHotelTimePill('${type}', '${time}', this)" class="hotel-pill-${type} py-2.5 rounded-2xl text-xs font-bold font-mono transition border ${isSelected ? 'selected text-white bg-theme-primary' : 'bg-white text-brand-900 border-brand-200'}">
           ${time}
         </button>
       `;
-    });
-    html += '</div>';
-    container.innerHTML = html;
-  }
+    }
+  });
+  html += '</div>';
+
+  container.innerHTML = (openCount > 0) 
+    ? html 
+    : '<div class="text-xs text-rose-500 font-bold py-2">該日無排班開班時段，無法辦理入住/退房</div>';
+}
 
   function selectHotelTimePill(type, timeStr, btnEl) {
     document.querySelectorAll(`.hotel-pill-${type}`).forEach(btn => {
@@ -2012,74 +2199,66 @@ function recalcSmartCheckoutLayout() {
     calculateTimesLocally();
   }
 
-  function calculateTimesLocally() {
-    const sStr = document.getElementById('service').value;
-    const dStr = document.getElementById('date').value;
-    const staffId = document.getElementById('staffId').value || 'all';
-    const grid = document.getElementById('timePillGrid');
-    
-    if (!sStr || !dStr) {
-      grid.innerHTML = '<div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
-      return;
+  // 單日美容/純美業模式：100% 依據排班表開班
+function calculateTimesLocally() {
+  const sStr = document.getElementById('service').value;
+  const dStr = document.getElementById('date').value;
+  const staffId = document.getElementById('staffId').value || 'all';
+  const grid = document.getElementById('timePillGrid');
+  if (!grid) return;
+  
+  if (!sStr || !dStr) {
+    grid.innerHTML = '<div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
+    return;
+  }
+
+  const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
+  const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
+  const interval = Number(db.shiftInterval || 30);
+  const defaultSlots = [];
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+    const hh = Math.floor(m / 60); const mm = m % 60;
+    defaultSlots.push((hh < 10 ? "0" + hh : hh) + ":" + (mm === 0 ? "00" : mm));
+  }
+
+  const schedules = db.staffSchedules || {};
+  let html = '';
+  let openCount = 0;
+
+  defaultSlots.forEach(time => {
+    let isAvailable = false;
+
+    // 嚴格判定：排班表中必須明確 === true 才開放，其餘狀態一律不顯示
+    if (staffId !== 'all') {
+      const key = `${staffId}_${dStr}`;
+      if (schedules[key] && schedules[key][time] === true) isAvailable = true;
+    } else {
+      if (schedules[`all_${dStr}`] && schedules[`all_${dStr}`][time] === true) {
+        isAvailable = true;
+      } else {
+        for (let s of (db.staffList || [])) {
+          const key = `${s.id}_${dStr}`;
+          if (schedules[key] && schedules[key][time] === true) {
+            isAvailable = true;
+            break;
+          }
+        }
+      }
     }
 
-    let totalDuration = 0;
-    document.querySelectorAll('#service-grid input:checked').forEach(cb => {
-      totalDuration += Number(cb.getAttribute('data-duration') || 60);
-    });
-    if (totalDuration === 0) totalDuration = 60;
+    if (isAvailable) {
+      openCount++;
+      html += `
+        <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-xs" onclick="selectTimePill('${time}', this)">
+          ${time}
+        </div>`;
+    }
+  });
 
-    const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
-    const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
-    const interval = Number(db.shiftInterval || 30);
-    const startMin = sH * 60 + sM;
-    const endMin = eH * 60 + eM;
-    const defaultSlots = [];
-    for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
-    
-    const targetDateFormatted = dStr.replace(/\//g, '-');
-    const dayAppts = (db.futureBookings || []).filter(a => {
-      return a.appointment_time && a.appointment_time.startsWith(targetDateFormatted) && (staffId === 'all' || a.staff_id === staffId);
-    });
-
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
-    const isToday = (dStr === todayStr);
-    const currentMinutesNow = now.getHours() * 60 + now.getMinutes();
-    const bufferMinutes = (Number(db.bookingBufferHours) || 1) * 60;
-
-    const staffKey = `${staffId}_${dStr}`;
-    const customStaffSlots = db.staffSchedules && db.staffSchedules[staffKey];
-
-    let html = '';
-    defaultSlots.forEach(t => {
-      const slotHour = Math.floor(t / 60);
-      const slotMin = t % 60;
-      const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
-      
-      let isAvailable = true;
-      if (isToday && (t < (currentMinutesNow + bufferMinutes))) isAvailable = false;
-      if (t + totalDuration > endMin + interval) isAvailable = false;
-      if (customStaffSlots && customStaffSlots[timeFormatted] === false) isAvailable = false;
-
-      let concurrent = 0;
-      dayAppts.forEach(a => {
-        const aDate = new Date(a.appointment_time);
-        const aStart = aDate.getHours() * 60 + aDate.getMinutes();
-        if (t >= aStart && t < aStart + 60) concurrent++;
-      });
-      if (concurrent >= 2) isAvailable = false;
-
-      if (isAvailable) {
-        html += `
-          <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-xs" onclick="selectTimePill('${timeFormatted}', this)">
-            ${timeFormatted}
-          </div>`;
-      }
-    });
-
-    grid.innerHTML = html || '<div class="col-span-full text-center py-4 text-xs text-brand-400">當日專員無開放預約時段</div>';
-  }
+  grid.innerHTML = (openCount > 0) 
+    ? html 
+    : '<div class="col-span-full text-center py-4 text-xs text-rose-500 bg-rose-50 rounded-2xl border border-rose-200 font-bold">當日門市無排班開放預約，請選擇其他日期</div>';
+}
 
   function selectTimePill(timeStr, el) {
     document.querySelectorAll('.time-pill').forEach(p => {
