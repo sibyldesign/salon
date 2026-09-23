@@ -5516,6 +5516,9 @@ function populateSettings() {
 // ========================================================
 // 【後台修復 2】全欄位原子化保存 (包含 stores 與 store_settings)
 // ========================================================
+// ==========================================
+// 後台完整版 saveStoreSettings() — 不省略、帶欄位容錯防呆
+// ==========================================
 async function saveStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -5634,6 +5637,13 @@ async function saveStoreSettings() {
     // 檢查 PATCH 是否更新成功 (若為 0 筆則代表尚無此 row，改用 POST 建立)
     let patchData = settingsRes.ok ? await settingsRes.json() : [];
     if (!settingsRes.ok || !Array.isArray(patchData) || patchData.length === 0) {
+      const errText = !settingsRes.ok ? await settingsRes.text() : "";
+      
+      // 如果資料庫真的缺少該欄位，明確提示執行 SQL
+      if (errText.includes("Could not find the") && errText.includes("column")) {
+        throw new Error(`資料庫欄位缺少，請至 Supabase SQL Editor 執行 ALTER TABLE 補齊欄位：${errText}`);
+      }
+
       settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
         method: "POST",
         headers: {
@@ -5646,7 +5656,11 @@ async function saveStoreSettings() {
       });
 
       if (!settingsRes.ok) {
-        throw new Error(`更新門市設定失敗：${await settingsRes.text()}`);
+        const postErr = await settingsRes.text();
+        if (postErr.includes("Could not find the") && postErr.includes("column")) {
+          throw new Error(`資料庫欄位缺少，請至 Supabase SQL Editor 執行 ALTER TABLE 補齊欄位：${postErr}`);
+        }
+        throw new Error(`更新門市設定失敗：${postErr}`);
       }
     }
 
