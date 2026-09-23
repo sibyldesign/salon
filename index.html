@@ -992,11 +992,11 @@
     const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
     const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
-    // 1. 優先從資料庫抓取主題色與模式，若無則抓本地快取或預設 latte
-    const rawTheme = sCfg.theme_color || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte';
-    const rawMode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
+    // 關鍵修復：從資料庫取值，若資料庫無值才取本地快取，絕對不強制蓋回 latte
+    const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
+    const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || 'pet_hotel';
 
-    // 2. 公休日計算
+    // 1. 公休日計算
     const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
     const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
 
@@ -1010,7 +1010,7 @@
       }
     }
 
-    // 3. 服務項目整理
+    // 2. 服務項目整理
     const formattedServices = (services && services.length > 0) ? services.map(s => ({
       id: s.id,
       name: s.service_name || s.name || '未命名項目',
@@ -1021,7 +1021,7 @@
       sortOrder: s.sort_order || 0
     })) : DEFAULT_SERVICES;
 
-    // 4. 一次性建構完整的 db 物件（絕不覆蓋 themeColor 與 industryType）
+    // 3. 完整構建 db 物件
     db = {
       storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
       subtitle: sCfg.display_subtitle || "專業門市服務",
@@ -1072,14 +1072,13 @@
 
     window.backendSettings = db;
 
-    // 5. 初始化完成後，統一執行一次色彩與版型載入
+    // 4. 立即鎖死色彩並套用，絕不再被改回去！
     localStorage.setItem('zy_cached_theme', rawTheme);
     applyThemeColors(rawTheme);
 
     renderStoreUI();
     loadApprovedReviews();
 
-    // 6. 監聽手機號碼查詢
     const phoneEl = document.getElementById('phone');
     if (phoneEl) {
       phoneEl.addEventListener('blur', function() {
@@ -1808,9 +1807,8 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
   populateHotelBathServices();
 
     // 10. 【關鍵修復】執行主題色與 3 種版型切換
-    applyThemeColors(db.themeColor || 'latte');
     applyIndustryModeUI(db.industryType || 'pet_hotel');
-  }
+}
     
   function setupPetExtendedFields() {
     const cf = db.petCustomFields || {};
