@@ -2831,17 +2831,25 @@ function editPetProfileDirect(petId, petName, phone) {
 }
     
     // 打包訊息一鍵通知
-  function sendUpcomingNotice(custName, petName, phone, date, time) {
-    const msg = `【預約提醒】親愛的 ${custName} 您好：提醒您為 ${petName} 預約的時段為 ${date} ${time}，期待為毛孩服務！如有改期需求請提前告知我們唷❤️`;
+  // 打包訊息一鍵通知 (純美業與寵物模式智慧切換文案)
+  function sendUpcomingNotice(custName, subjectName, phone, date, time) {
+    const isPetMode = (backendData.settings?.industryMode === 'pet_grooming' || backendData.settings?.industryMode === 'pet_hotel');
+    const displayTarget = (isPetMode && subjectName && subjectName !== '門市服務') ? `為 ${subjectName}` : '';
+    const msg = `【預約提醒】親愛的 ${custName} 您好：提醒您${displayTarget}預約的時段為 ${date} ${time}，期待為您服務！如有改期需求請提前告知我們唷❤️`;
+    
     navigator.clipboard.writeText(msg).then(() => {
       Swal.fire({ title: '已複製預約提醒文案！', text: '可直接貼至 LINE 或簡訊發送給顧客。', icon: 'success' });
     });
   }
 
-  function sendPickupNotice(custName, petName, phone) {
-    const msg = `【完工接回通知】親愛的 ${custName} 您好：${petName} 的洗護美容已經順利完成囉！毛孩目前在店內休息等您，隨時可以前來接回寶貝囉🐾`;
+  function sendPickupNotice(custName, subjectName, phone) {
+    const isPetMode = (backendData.settings?.industryMode === 'pet_grooming' || backendData.settings?.industryMode === 'pet_hotel');
+    const msg = isPetMode
+      ? `【完工接回通知】親愛的 ${custName} 您好：${subjectName || '寶貝'} 的洗護美容已經順利完成囉！目前在店內休息等您，隨時可以前來接回囉🐾`
+      : `【服務完成通知】親愛的 ${custName} 您好：今日的美業沙龍服務已完成，感謝您的光臨，請留意日常保養與維護，期待再次為您服務❤️`;
+    
     navigator.clipboard.writeText(msg).then(() => {
-      Swal.fire({ title: '已複製接回通知文案！', text: '可直接貼至 LINE 發送給家長。', icon: 'success' });
+      Swal.fire({ title: '已複製通知文案！', text: '可直接貼至 LINE 發送給顧客。', icon: 'success' });
     });
   }
     
@@ -6368,6 +6376,7 @@ async function confirmDepositPayment(bookingId, customerName, last5) {
         }
 
         Swal.fire({ title: '訂金核對成功！', text: '預約已排入確認名單。', icon: 'success', timer: 1200, showConfirmButton: false });
+        // 核心更新：同時重新渲染日曆、名單與審核區
         renderCustomer();
         renderCalendar();
       } catch (err) {
