@@ -5419,24 +5419,33 @@ function previewSelectedThemeColor(themeKey) {
 // 19. 設定分頁回填與儲存修復 (嚴格保存 false 狀態)
 // ==========================================
 
+// ==========================================
+// 修復 1 & 2：後台設定載入與儲存完整邏輯
+// ==========================================
+
+// 通用布林值解析器：嚴格保全 false 狀態
+function resolveFlag(val, defaultVal = true) {
+  if (val === false || val === 'false') return false;
+  if (val === true || val === 'true') return true;
+  return defaultVal;
+}
+
 function populateSettings() {
   const s = backendData.settings || {};
 
-  // 安全字串/數值賦值
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (el && val !== undefined && val !== null) el.value = val;
   };
 
-  // 關鍵修復：嚴格判定布林值，只有在 undefined/null 時才使用預設值，為 false 絕對不打勾！
   const setCheck = (id, val, defaultVal = true) => {
     const el = document.getElementById(id);
     if (el) {
-      el.checked = (val !== undefined && val !== null) ? Boolean(val) : defaultVal;
+      el.checked = resolveFlag(val, defaultVal);
     }
   };
 
-  // 1. 基礎文字與數值欄位
+  // 1. 基礎文字與數值
   setVal('cfg-title', s.storeName);
   setVal('cfg-subtitle', s.subtitle);
   setVal('cfg-logo', s.logoUrl);
@@ -5446,8 +5455,8 @@ function populateSettings() {
   setVal('cfg-buffer', s.bookingBufferHours);
   setVal('cfg-care', s.careText);
   setVal('cfg-deposit-info', s.depositInfo);
-  setVal('cfg-deposit-mode', s.depositMode);
-  setVal('cfg-deposit-amount', s.depositAmount);
+  setVal('cfg-deposit-mode', s.depositMode || 'all');
+  setVal('cfg-deposit-amount', s.depositAmount || 0);
   setVal('cfg-shift-start', s.shiftStartTime || '09:00');
   setVal('cfg-shift-end', s.shiftEndTime || '19:00');
   setVal('cfg-shift-interval', String(s.shiftInterval || 30));
@@ -5462,21 +5471,17 @@ function populateSettings() {
   setVal('cfg-commission-rate', s.commissionRate || 50);
   setVal('cfg-designated-bonus', s.designatedBonus || 50);
 
-  // 2. 色系與商業模式回填 (本地第一優先)
+  // 2. 主題色系雙向同步 (Bug 1 修復)
   const localSavedTheme = localStorage.getItem('zy_cached_theme');
+  const dbTheme = s.theme_color || s.themeColor;
   const currentTheme = (localSavedTheme && THEME_PALETTES[localSavedTheme])
     ? localSavedTheme
-    : (s.theme_color || s.themeColor || 'latte');
+    : ((dbTheme && THEME_PALETTES[dbTheme]) ? dbTheme : 'latte');
 
   setVal('cfg-theme-color', currentTheme);
   previewSelectedThemeColor(currentTheme);
 
-  const currentMode = s.industryMode || 'pet_hotel';
-  const modeRadio = document.querySelector(`input[name="cfg-industry-mode"][value="${currentMode}"]`);
-  if (modeRadio) modeRadio.checked = true;
-  handleIndustryModeChange(currentMode);
-
-  // 3. 20+ 模組 Feature Flags 嚴格回填 (修正點：若設定為 false 則維持未勾選)
+  // 3. 20+ 個 Feature Flags 嚴格回填 (Bug 2 修復)
   setCheck('cfg-toggle-logo', s.enableLogo, true);
   setCheck('cfg-toggle-audit-booking', s.enableAuditBooking, true);
   setCheck('cfg-toggle-deposit', s.enableDeposit, false);
@@ -5491,11 +5496,11 @@ function populateSettings() {
   setCheck('cfg-toggle-reviews', s.enableReviews, true);
   setCheck('cfg-toggle-portfolio', s.enablePortfolio, true);
   setCheck('cfg-toggle-care', s.enableCare, true);
+  setCheck('cfg-toggle-carousel', s.enableCarousel, true);
+  setCheck('cfg-toggle-featured-shop', s.enableFeaturedShop, false);
   setCheck('cfg-toggle-quick-contact', s.enableQuickContact, true);
   setCheck('cfg-toggle-cancel-reason', s.enableCancelReason, true);
   setCheck('cfg-toggle-email', s.enableEmailCopy, true);
-  setCheck('cfg-toggle-carousel', s.enableCarousel, true);
-  setCheck('cfg-toggle-featured-shop', s.enableFeaturedShop, false);
   setCheck('cfg-toggle-line-one-click', s.enableLineOneClickAudit, true);
   setCheck('cfg-toggle-commission-calc', s.enableCommissionCalc, true);
   setCheck('cfg-toggle-contract', s.enableContract, false);
@@ -5504,7 +5509,7 @@ function populateSettings() {
   setCheck('cfg-toggle-flex-menu', s.enableFlexMenu, true);
   setCheck('cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
 
-  // 4. 公休回填
+  // 4. 每週公休與排班
   if (Array.isArray(s.weeklyOffDays)) {
     document.querySelectorAll('#weekly-off-grid input').forEach(input => {
       input.checked = s.weeklyOffDays.includes(Number(input.value));
@@ -5516,7 +5521,6 @@ function populateSettings() {
   renderUploadSlots();
 }
 
-// 核心儲存邏輯：完整寫入所有開關值至資料庫
 async function saveStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -5533,11 +5537,12 @@ async function saveStoreSettings() {
   const selectedMode = backendData.settings.industryMode || 'pet_hotel';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
+  // 1. 同步快取與記憶體物件
   localStorage.setItem('zy_cached_theme', selectedTheme);
   backendData.settings.themeColor = selectedTheme;
   backendData.settings.theme_color = selectedTheme;
 
-  // 完整組裝 settingsPayload，對齊 store_settings 表欄位
+  // 2. 構建完整 Payload
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -5575,7 +5580,7 @@ async function saveStoreSettings() {
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
 
-    // 關鍵修復：完整儲存所有 Feature Flags 到資料庫
+    // 20+ 個 Feature Flags 儲存
     enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
     enable_deposit: getCheck('cfg-toggle-deposit'),
     enable_staff_select: getCheck('cfg-toggle-staff-select'),
@@ -5616,19 +5621,12 @@ async function saveStoreSettings() {
       directSupabaseUpsert('store_settings', settingsPayload, 'store_id')
     ]);
 
-    // 即時同步本地記憶體中的設定物件
-    Object.keys(settingsPayload).forEach(key => {
-      backendData.settings[key] = settingsPayload[key];
-    });
-
-    // 重新校準開關狀態
-    backendData.settings.enablePortfolio = settingsPayload.enable_portfolio;
-    backendData.settings.enableReviews = settingsPayload.enable_reviews;
-    backendData.settings.enableCare = settingsPayload.enable_care;
+    // 更新本地狀態
+    Object.assign(backendData.settings, settingsPayload);
 
     Swal.fire({
       title: '系統設定已儲存！',
-      text: '開關狀態已成功更新至資料庫。',
+      text: '主題色調與功能模組狀態已完整同步。',
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
