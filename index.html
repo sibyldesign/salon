@@ -30,10 +30,11 @@
   </script>
   <!-- 0 毫秒極速色盤攔截 (比照 link 微頁系統) -->
   <!-- 前台 head 頂部的 0 毫秒色盤攔截器 -->
+<!-- 0 毫秒極速色盤攔截器 (首屏零閃爍) -->
 <script>
   (function(){
-    const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
-    const palettes = {
+    // 嚴格定義 6 款品牌主題色盤
+    window.THEME_PALETTES = {
       latte:  { p: '#8C7355', ph: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8', text: '#3D3126', border: '#EBE5DF' },
       matcha: { p: '#5C725E', ph: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE', text: '#2B382D', border: '#D5DDD3' },
       noir:   { p: '#262626', ph: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5', text: '#0A0A0A', border: '#D4D4D4' },
@@ -41,7 +42,9 @@
       rose:   { p: '#A26D74', ph: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD', text: '#4E2C32', border: '#DFC5C7' },
       mist:   { p: '#4A7C6D', ph: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1', text: '#1F3B33', border: '#C2D1CD' }
     };
-    const t = palettes[cachedTheme] || palettes['latte'];
+
+    const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
+    const t = window.THEME_PALETTES[cachedTheme] || window.THEME_PALETTES['latte'];
     document.documentElement.style.backgroundColor = t.bg;
 
     const css = `
@@ -54,14 +57,13 @@
         --theme-border: ${t.border} !important;
       }
       body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
-      .bg-\\[\\#8C7355\\], .bg-brand-500, #promo, #subBtn, .tab-btn.active, .swal2-confirm { 
+      .bg-\\[\\#8C7355\\], .bg-brand-500, #promo, #subBtn, .tab-btn.active, .swal2-confirm, .btn-theme { 
         background-color: ${t.p} !important; 
         color: #FFFFFF !important; 
       }
-      .hover\\:bg-\\[\\#7A6246\\]:hover, #subBtn:hover { background-color: ${t.ph} !important; }
+      .hover\\:bg-\\[\\#7A6246\\]:hover, #subBtn:hover, .swal2-confirm:hover { background-color: ${t.ph} !important; }
       .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.p} !important; }
       .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.p} !important; }
-      /* 關鍵日曆膠囊、時段按鈕穿透 */
       .hotel-pill-in.selected, .hotel-pill-out.selected, .time-pill.selected,
       div[onclick].bg-\\[\\#8C7355\\], div[onclick].bg-\\[\\#B2977D\\] {
         background-color: ${t.p} !important;
@@ -75,69 +77,25 @@
     document.head.appendChild(s);
   })();
 </script>
-  <style>
-    /* 1. 動態主題色彩變數（後台切換色系時由 JS 即時覆蓋） */
-    :root {
-      --theme-primary: #8C7355;
-      --theme-primary-hover: #7A6246;
-      --theme-bg: #FDFBF7;
-      --theme-light: #F7EDE8;
-      --theme-text: #3D3126;
-    }
-    body { background-color: var(--theme-bg); color: var(--theme-text); }
 
-    /* 2. 動態主題輔助類別 */
-    .bg-theme-primary { background-color: var(--theme-primary) !important; }
-    .text-theme-primary { color: var(--theme-primary) !important; }
-    .border-theme-primary { border-color: var(--theme-primary) !important; }
-
-    /* 3. 滾動條隱藏 */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-    /* 4. 9:16 輪播圖樣式 */
-    .carousel-slide-916 {
-      min-width: 100%; aspect-ratio: 9 / 16; position: relative;
-      overflow: hidden; display: flex; align-items: center; justify-content: center;
-    }
-    .carousel-bg-blur {
-      position: absolute; inset: 0; background-size: cover; background-position: center;
-      filter: blur(16px) brightness(0.8); transform: scale(1.15);
-    }
-    .carousel-main-img {
-      position: relative; max-height: 100%; max-width: 100%; object-fit: contain; z-index: 10;
-    }
-    details > summary { list-style: none; }
-    details > summary::-webkit-details-marker { display: none; }
-
-    /* 5. 彈窗主題色綁定 */
-    .swal2-popup {
-      border-radius: 1.5rem !important;
-      font-family: 'Noto Sans TC', sans-serif !important;
-      padding: 1.75rem !important;
-      border: 1px solid #EBE5DF !important;
-    }
-    .swal2-title { color: #3D3126 !important; font-size: 1.15rem !important; font-weight: 700 !important; }
-    .swal2-html-container { color: #5C4B3C !important; }
-    .swal2-confirm, .swal2-styled.swal2-confirm, .swal2-confirm-brown {
-      background-color: var(--theme-primary) !important;
-      color: #FFFFFF !important;
-      border-radius: 0.85rem !important;
-      font-weight: 700 !important;
-      padding: 0.6rem 1.6rem !important;
-      border: none !important;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
-    }
-    .swal2-confirm:hover, .swal2-confirm-brown:hover { background-color: var(--theme-primary-hover) !important; }
-    .swal2-cancel, .swal2-styled.swal2-cancel {
-      background-color: #EBE5DF !important;
-      color: #5C4B3C !important;
-      border-radius: 0.85rem !important;
-      font-weight: 700 !important;
-      padding: 0.6rem 1.4rem !important;
-      border: none !important;
-    }
-  </style>
+<style>
+  body { background-color: var(--theme-bg, #FDFBF7); color: var(--theme-text, #3D3126); }
+  .bg-theme-primary { background-color: var(--theme-primary) !important; }
+  .text-theme-primary { color: var(--theme-primary) !important; }
+  .border-theme-primary { border-color: var(--theme-primary) !important; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .carousel-slide-916 { min-width: 100%; aspect-ratio: 9 / 16; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .carousel-bg-blur { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(16px) brightness(0.8); transform: scale(1.15); }
+  .carousel-main-img { position: relative; max-height: 100%; max-width: 100%; object-fit: contain; z-index: 10; }
+  details > summary { list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  .swal2-popup { border-radius: 1.5rem !important; font-family: 'Noto Sans TC', sans-serif !important; padding: 1.75rem !important; border: 1px solid #EBE5DF !important; }
+  .swal2-title { color: #3D3126 !important; font-size: 1.15rem !important; font-weight: 700 !important; }
+  .swal2-html-container { color: #5C4B3C !important; }
+  .swal2-confirm, .swal2-styled.swal2-confirm { background-color: var(--theme-primary) !important; color: #FFFFFF !important; border-radius: 0.85rem !important; font-weight: 700 !important; border: none !important; }
+  .swal2-cancel, .swal2-styled.swal2-cancel { background-color: #EBE5DF !important; color: #5C4B3C !important; border-radius: 0.85rem !important; font-weight: 700 !important; border: none !important; }
+</style>
   <script>
   (function(){
     const cached = localStorage.getItem('zy_cached_theme') || 'latte';
@@ -934,47 +892,6 @@
   let cachedPetList = [];
   let currentSelectedPet = null;
 
-  // 1. 動態套用主題色與版型
-  function applyThemeAndIndustryMode(themeKey, modeKey) {
-    const t = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
-    document.documentElement.style.setProperty('--theme-primary', t.primary);
-    document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
-    document.documentElement.style.setProperty('--theme-bg', t.bg);
-    document.documentElement.style.setProperty('--theme-light', t.light);
-    document.documentElement.style.setProperty('--theme-text', t.text);
-    document.body.style.backgroundColor = t.bg;
-
-    const promo = document.getElementById('promo');
-    if (promo) promo.style.backgroundColor = t.primary;
-    const subBtn = document.getElementById('subBtn');
-    if (subBtn) subBtn.style.backgroundColor = t.primary;
-
-    // 版型切換：beauty (美業), pet_grooming (寵美), pet_hotel (寵美+住宿)
-    const modeSelector = document.getElementById('serviceModeSelector');
-    const petBox = document.getElementById('petProfileSection');
-    const hotelBox = document.getElementById('boardingConfigSection');
-    const groomingSec = document.getElementById('groomingServiceSection');
-    const singleTimeSec = document.getElementById('singleTimeSection');
-
-    if (modeKey === 'beauty') {
-      if (modeSelector) modeSelector.classList.add('hidden');
-      if (petBox) petBox.classList.add('hidden');
-      if (hotelBox) hotelBox.classList.add('hidden');
-      if (groomingSec) groomingSec.classList.remove('hidden');
-      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
-    } else if (modeKey === 'pet_grooming') {
-      if (modeSelector) modeSelector.classList.add('hidden');
-      if (petBox) petBox.classList.remove('hidden');
-      if (hotelBox) hotelBox.classList.add('hidden');
-      if (groomingSec) groomingSec.classList.remove('hidden');
-      if (singleTimeSec) singleTimeSec.classList.remove('hidden');
-    } else { // pet_hotel
-      if (modeSelector) modeSelector.classList.remove('hidden');
-      if (petBox) petBox.classList.remove('hidden');
-      switchBookingSubMode(activeBookingSubMode || 'grooming');
-    }
-  }
-
   window.onload = async function() {
   try {
     await resolveStoreIdAndInitLiff();
@@ -992,14 +909,33 @@
     const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
     const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
-    // 關鍵修復：從資料庫取值，若資料庫無值才取本地快取，絕對不強制蓋回 latte
-    const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
+    // 【核心修復：防止資料庫預設值反向覆寫】
+    const dbThemeCfg = sCfg.theme_color || sCfg.themeColor;
+    const dbThemeStore = sInfo.theme_color || sInfo.themeColor;
+    const localCachedTheme = localStorage.getItem('zy_cached_theme');
+
+    let resolvedTheme = 'latte';
+    // 若資料庫有明確自訂色系且非 latte，第一優先採用資料庫
+    if (dbThemeCfg && dbThemeCfg !== 'latte' && window.THEME_PALETTES[dbThemeCfg]) {
+      resolvedTheme = dbThemeCfg;
+    } else if (dbThemeStore && dbThemeStore !== 'latte' && window.THEME_PALETTES[dbThemeStore]) {
+      resolvedTheme = dbThemeStore;
+    } else if (localCachedTheme && window.THEME_PALETTES[localCachedTheme]) {
+      // 若資料庫為空或維持預設 latte，而本地已有選定之快取，優先尊重本地快取
+      resolvedTheme = localCachedTheme;
+    } else if (dbThemeCfg && window.THEME_PALETTES[dbThemeCfg]) {
+      resolvedTheme = dbThemeCfg;
+    }
+
     const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || 'pet_hotel';
 
-    // 1. 公休日計算
+    // 立即鎖定並套用色系
+    localStorage.setItem('zy_cached_theme', resolvedTheme);
+    applyThemeColors(resolvedTheme);
+
+    // 公休日計算
     const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
     const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
-
     const availableDates = [];
     const today = new Date();
     for (let i = 0; i < 60; i++) {
@@ -1010,7 +946,7 @@
       }
     }
 
-    // 2. 服務項目整理
+    // 格式化服務項目
     const formattedServices = (services && services.length > 0) ? services.map(s => ({
       id: s.id,
       name: s.service_name || s.name || '未命名項目',
@@ -1021,11 +957,11 @@
       sortOrder: s.sort_order || 0
     })) : DEFAULT_SERVICES;
 
-    // 3. 完整構建 db 物件
-    db = {
+    // 構建執行環境 db 物件
+    Object.assign(db, {
       storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
       subtitle: sCfg.display_subtitle || "專業門市服務",
-      themeColor: rawTheme,
+      themeColor: resolvedTheme,
       industryType: rawMode,
       enableLogo: sCfg.enable_logo !== false,
       logoUrl: sCfg.logo_url || "",
@@ -1038,9 +974,7 @@
       businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
       bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
       careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
-      ig: sCfg.ig_url || "#",
-      line: sCfg.line_url || "#",
-      map: sCfg.map_url || "#",
+      ig: sCfg.ig_url || "#", line: sCfg.line_url || "#", map: sCfg.map_url || "#",
       enableEmailCopy: sCfg.enable_email_copy !== false,
       enableDeposit: sCfg.enable_deposit === true,
       depositMode: sCfg.deposit_mode || 'all',
@@ -1067,15 +1001,14 @@
       futureBookings: bookings || [],
       boardingSettings: sCfg.boarding_settings || {},
       boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
+      hotelRoomTiers: sCfg.hotel_room_tiers || [],
+      hotelMealOptions: sCfg.hotel_meal_options || [],
       petCustomFields: sCfg.pet_custom_fields || {}
-    };
+    });
 
     window.backendSettings = db;
 
-    // 4. 立即鎖死色彩並套用，絕不再被改回去！
-    localStorage.setItem('zy_cached_theme', rawTheme);
-    applyThemeColors(rawTheme);
-
+    // 渲染各 UI 子區塊
     renderStoreUI();
     loadApprovedReviews();
 
@@ -1294,19 +1227,23 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
   }
 
   function applyThemeColors(themeKey) {
-  const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : (localStorage.getItem('zy_cached_theme') || 'latte');
-  const t = THEME_PALETTES[safeKey] || THEME_PALETTES['latte'];
+  const safeKey = (themeKey && window.THEME_PALETTES && window.THEME_PALETTES[themeKey]) 
+    ? themeKey 
+    : (localStorage.getItem('zy_cached_theme') || 'latte');
+  const t = window.THEME_PALETTES[safeKey] || window.THEME_PALETTES['latte'];
+  
   localStorage.setItem('zy_cached_theme', safeKey);
 
-  // 同步更新 CSS 變數
-  document.documentElement.style.setProperty('--theme-primary', t.primary);
-  document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
+  // 1. 同步更新 CSS 變數
+  document.documentElement.style.setProperty('--theme-primary', t.p);
+  document.documentElement.style.setProperty('--theme-primary-hover', t.ph);
   document.documentElement.style.setProperty('--theme-bg', t.bg);
   document.documentElement.style.setProperty('--theme-light', t.light);
   document.documentElement.style.setProperty('--theme-text', t.text);
   document.documentElement.style.setProperty('--theme-border', t.border);
   document.body.style.backgroundColor = t.bg;
 
+  // 2. 注入或更新 style 標籤 (必含 !important :root)
   let styleTag = document.getElementById('theme-runtime-css');
   if (!styleTag) {
     styleTag = document.createElement('style');
@@ -1314,27 +1251,34 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
     document.head.appendChild(styleTag);
   }
 
-  // 強力覆蓋，所有硬編碼棕色的 class 全部被攔截
   styleTag.innerHTML = `
+    :root {
+      --theme-primary: ${t.p} !important;
+      --theme-primary-hover: ${t.ph} !important;
+      --theme-bg: ${t.bg} !important;
+      --theme-light: ${t.light} !important;
+      --theme-text: ${t.text} !important;
+      --theme-border: ${t.border} !important;
+    }
     body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
-    #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
+    #promo { background-color: ${t.p} !important; color: #FFFFFF !important; }
     #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm {
-      background-color: ${t.primary} !important;
+      background-color: ${t.p} !important;
       color: #FFFFFF !important;
     }
-    #subBtn:hover, .swal2-confirm:hover { background-color: ${t.primaryHover} !important; }
-    .bg-\\[\\#8C7355\\], .bg-brand-500, .bg-\\[\\#B2977D\\] { background-color: ${t.primary} !important; }
-    .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.primary} !important; }
-    .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.primary} !important; }
+    #subBtn:hover, .swal2-confirm:hover { background-color: ${t.ph} !important; }
+    .bg-\\[\\#8C7355\\], .bg-brand-500, .bg-\\[\\#B2977D\\] { background-color: ${t.p} !important; }
+    .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.p} !important; }
+    .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.p} !important; }
     .tab-btn.active, .time-pill.selected, .hotel-pill-in.selected, .hotel-pill-out.selected {
-      background-color: ${t.primary} !important;
+      background-color: ${t.p} !important;
       color: #FFFFFF !important;
-      border-color: ${t.primary} !important;
+      border-color: ${t.p} !important;
     }
     #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
     #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
     #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
-      background-color: ${t.primary} !important;
+      background-color: ${t.p} !important;
       color: #FFFFFF !important;
     }
   `;
