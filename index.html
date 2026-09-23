@@ -281,47 +281,104 @@
     <div class="bg-white/95 rounded-3xl p-6 shadow-sm border border-white/80 backdrop-blur-md mb-6">
       <form id="bookForm" class="space-y-5">
         
-        <!-- 顧客手機號碼、會員資產卡與訂金回填區 -->
-<div>
-  <div class="flex justify-between items-center mb-1.5">
-    <label class="block text-xs font-bold text-brand-800">聯絡手機號碼 *</label>
-    <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
-  </div>
-  <input type="tel" id="phone" required placeholder="例如：0912345678" class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm outline-none transition font-mono font-bold" oninput="checkPhoneLength(this)">
-  
-  <!-- 輸入電話後自動帶出的舊客提示訊息 -->
-  <div id="welcome-msg" class="text-xs font-bold text-theme-primary hidden mt-1.5 px-1 flex items-center gap-1"></div>
+        <!-- 1. 聯絡手機號碼、資產卡與訂金後五碼回報區 -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="phone" class="block text-xs font-bold text-brand-800">聯絡手機號碼 *</label>
+            <span id="memberStatusBadge" class="hidden px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-md text-[10px] font-bold"></span>
+          </div>
+          <input 
+            type="tel" 
+            id="phone" 
+            required 
+            placeholder="例如：0912345678" 
+            autocomplete="tel"
+            inputmode="numeric"
+            class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm font-mono font-bold outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary" 
+            oninput="checkPhoneLength(this)"
+          >
 
-  <!-- 【強烈優化】會員儲值金與包卡即時卡片 -->
-  <div id="memberWalletCard" class="hidden mt-2 p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-1.5 text-xs shadow-2xs">
-    <div class="flex justify-between items-center font-bold text-amber-950">
-      <span class="flex items-center gap-1.5">
-        <i class="fa-solid fa-wallet text-theme-primary"></i> 您的專屬儲值金餘額：
-        <span id="displayWalletBalance" class="text-theme-primary font-black text-sm font-mono">0</span> 元
-      </span>
-      <span id="displayWalletDiscountTag" class="text-[10px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-md font-bold">儲值享有專屬優惠</span>
-    </div>
-    <div id="displayPackagesList" class="text-[11px] text-emerald-800 font-bold flex items-center gap-1 pt-0.5 border-t border-amber-200/50"></div>
-  </div>
+          <!-- 舊客自動帶入歡迎提示 -->
+          <div id="welcome-msg" class="hidden mt-1.5 px-1 flex items-center gap-1 text-xs font-bold text-theme-primary" aria-live="polite"></div>
 
-  <!-- 【強烈優化】電話下方即時回填「訂金匯款後五碼」專區 (僅在有勾選訂金規則時由 JS 展開) -->
-  <div id="quickDepositLast5Box" class="hidden mt-2.5 p-3 bg-amber-100/70 rounded-2xl border border-amber-300 space-y-2 text-xs">
-    <div class="flex items-center justify-between font-bold text-amber-950">
-      <span class="flex items-center gap-1.5">
-        <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
-      </span>
-      <span class="text-theme-primary font-black" id="quickDepositAmountLabel">NT$ 0</span>
-    </div>
-    <!-- 匯款銀行與帳號說明由 JS 動態填入 -->
-    <div id="quickDepositBankInfo" class="text-[11px] text-amber-900/90 whitespace-pre-line leading-relaxed bg-white/80 p-2.5 rounded-xl border border-amber-200 select-all font-mono font-medium"></div>
-    <div>
-      <label class="block font-bold text-amber-950 mb-1 text-[11px]">如已完成匯款，可直接填寫帳號後五碼 (選填)：</label>
-      <input type="text" id="depositLast5Input" maxlength="5" placeholder="例如：12345" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none">
-    </div>
-  </div>
-</div>
+          <!-- 會員儲值金與包卡即時資產卡片 -->
+          <div id="memberWalletCard" class="hidden mt-2 p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-1.5 text-xs shadow-2xs">
+            <div class="flex items-center justify-between font-bold text-amber-950">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-wallet text-theme-primary"></i> 
+                您的專屬儲值金餘額：
+                <span id="displayWalletBalance" class="text-theme-primary font-black text-sm font-mono">0</span> 元
+              </span>
+              <span id="displayWalletDiscountTag" class="text-[10px] text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-md font-bold">儲值享有專屬優惠</span>
+            </div>
+            <div id="displayPackagesList" class="hidden pt-0.5 border-t border-amber-200/50 flex items-center gap-1 text-[11px] text-emerald-800 font-bold"></div>
+          </div>
 
-        <!-- 顧客身份 -->
+          <!-- 訂金匯款帳號說明與後五碼快速回報專區 (依後台設定動態展開) -->
+          <div id="quickDepositLast5Box" class="hidden mt-2.5 p-3 bg-amber-100/70 rounded-2xl border border-amber-300 space-y-2 text-xs">
+            <div class="flex items-center justify-between font-bold text-amber-950">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
+              </span>
+              <span id="quickDepositAmountLabel" class="text-theme-primary font-black">NT$ 0</span>
+            </div>
+            
+            <div id="quickDepositBankInfo" class="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11px] text-amber-900/90 whitespace-pre-line leading-relaxed font-mono font-medium select-all"></div>
+            
+            <div>
+              <label for="depositLast5Input" class="block mb-1 text-[11px] font-bold text-amber-950">如已完成匯款，可直接填寫帳號後五碼 (選填)：</label>
+              <input 
+                type="text" 
+                id="depositLast5Input" 
+                maxlength="5" 
+                placeholder="例如：12345" 
+                inputmode="numeric"
+                pattern="[0-9]*"
+                class="w-full p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none transition focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 預約人姓名 -->
+        <div>
+          <label for="name" class="block text-xs font-bold text-brand-800 mb-1.5">預約人姓名 *</label>
+          <input 
+            type="text" 
+            id="name" 
+            required 
+            placeholder="請輸入您的真實姓名" 
+            autocomplete="name"
+            class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary"
+          >
+        </div>
+
+        <!-- 3. LINE 顯示名稱 -->
+        <div>
+          <label for="lineName" class="block text-xs font-bold text-brand-800 mb-1.5">LINE 顯示名稱</label>
+          <input 
+            type="text" 
+            id="lineName" 
+            placeholder="例如：小美" 
+            class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary"
+          >
+        </div>
+
+        <!-- 4. 電子信箱 (寄送預約與憑證副本) -->
+        <div id="emailSection">
+          <label for="email" class="block text-xs font-bold text-brand-800 mb-1.5" id="emailLabel">
+            電子信箱 <span class="text-[10px] text-brand-400 font-normal">(寄送預約與憑證副本)</span>
+          </label>
+          <input 
+            type="email" 
+            id="email" 
+            placeholder="例如：user@gmail.com" 
+            autocomplete="email"
+            class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary font-mono"
+          >
+        </div>
+
+        <!-- 5. 顧客身份選取 (新舊朋友) -->
         <div id="custTypeSection">
           <label class="block text-xs font-bold text-brand-800 mb-1.5">顧客身份</label>
           <div class="grid grid-cols-2 gap-2">
@@ -331,12 +388,18 @@
           <input type="hidden" id="custType" value="old">
         </div>
 
-        <!-- 介紹人 / 推薦來源 -->
+        <!-- 6. 介紹人 / 推薦來源 (選填，由後台開關控制顯隱) -->
         <div id="referrerSection" class="hidden">
-          <label class="block text-xs font-bold text-brand-800 mb-1.5">介紹人 / 推薦來源 <span class="text-[10px] text-brand-400 font-normal">(選填)</span></label>
-          <input type="text" id="referrerName" placeholder="請填寫介紹人姓名、會員編號或社群" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/40 text-xs outline-none transition">
+          <label for="referrerName" class="block text-xs font-bold text-brand-800 mb-1.5">
+            介紹人 / 推薦來源 <span class="text-[10px] text-brand-400 font-normal">(選填)</span>
+          </label>
+          <input 
+            type="text" 
+            id="referrerName" 
+            placeholder="請填寫介紹人姓名、會員編號或社群" 
+            class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/40 text-xs outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary"
+          >
         </div>
-
         <!-- 毛孩詳細履歷 -->
         <div id="petProfileSection" class="p-4 rounded-3xl bg-brand-50/80 border border-brand-200 space-y-3.5 text-xs hidden">
           <div class="font-bold text-sm text-brand-900 flex items-center justify-between border-b border-brand-200 pb-2">
@@ -1846,6 +1909,8 @@ function renderStoreUI() {
   // ----------------------------------------------------
   // 15. 子系統核心生命週期觸發（模式、服務、行事曆與智慧計價框）
   // ----------------------------------------------------
+  // 渲染店家自訂問卷題目
+  if (typeof renderCustomPetQuestions === 'function') renderCustomPetQuestions();
   applyIndustryModeUI(db.industryType || 'pet_hotel');
   renderServices();
   renderFrontCalendar();
@@ -2796,6 +2861,7 @@ function updateCheckoutSummary() {
   // ========================================================
 // 3. 【強烈優化】訂金提醒、匯款文字展示與電話下方後五碼回報
 // ========================================================
+// 【補齊】訂金上下雙區塊提醒與匯款文字
 function updateDepositSectionDisplay() {
   const depositBox = document.getElementById('frontDepositSection');
   const quickDepositBox = document.getElementById('quickDepositLast5Box');
@@ -2804,30 +2870,30 @@ function updateDepositSectionDisplay() {
   const isTargetCust = (db.depositMode === 'all') || (db.depositMode === 'new_only' && currentType === 'new');
   const depositAmt = Number(db.depositAmount || 0);
 
-  const shouldShowDeposit = enableDeposit && isTargetCust && depositAmt > 0;
+  const shouldShow = enableDeposit && isTargetCust && depositAmt > 0;
 
-  // A. 電話正下方快速回報後五碼與匯款帳號說明區塊
+  // 1. 電話正下方快速回報區塊
   if (quickDepositBox) {
-    if (shouldShowDeposit) {
+    if (shouldShow) {
       quickDepositBox.classList.remove('hidden');
       quickDepositBox.style.display = 'block';
       const amtLabel = document.getElementById('quickDepositAmountLabel');
       const bankInfo = document.getElementById('quickDepositBankInfo');
       if (amtLabel) amtLabel.innerText = `定額訂金：NT$ ${depositAmt.toLocaleString()} 元`;
       if (bankInfo) {
-        bankInfo.innerText = db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012\n戶名：門市負責人\n請於預約後 24 小時內完成匯款。';
+        bankInfo.innerText = db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012\n請於預約後完成匯款並填寫後五碼。';
       }
     } else {
       quickDepositBox.classList.add('hidden');
       quickDepositBox.style.display = 'none';
-      const last5 = document.getElementById('depositLast5Input');
-      if (last5) last5.value = '';
+      const last5Input = document.getElementById('depositLast5Input');
+      if (last5Input) last5Input.value = '';
     }
   }
 
-  // B. 表單底部定額訂金說明卡片
+  // 2. 表單底部定額訂金說明卡片
   if (depositBox) {
-    if (shouldShowDeposit) {
+    if (shouldShow) {
       depositBox.classList.remove('hidden');
       depositBox.style.display = 'block';
       const amtTag = document.getElementById('depositAmountTag');
@@ -2836,7 +2902,7 @@ function updateDepositSectionDisplay() {
       if (infoText) {
         infoText.innerHTML = `
           <div class="font-bold text-amber-900 mb-1">【店家指定匯款帳戶資訊】</div>
-          <div class="whitespace-pre-line leading-relaxed bg-white/70 p-2.5 rounded-xl border border-amber-200 font-mono select-all">${db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012\n戶名：門市負責人'}</div>
+          <div class="whitespace-pre-line leading-relaxed bg-white/70 p-2.5 rounded-xl border border-amber-200 font-mono select-all">${db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012'}</div>
         `;
       }
     } else {
@@ -2859,9 +2925,115 @@ function updateDepositSectionDisplay() {
   // 監聽手機輸入長度
 function checkPhoneLength(el) {
   const clean = el.value.trim().replace(/[^0-9]/g, '');
-  if (clean.length >= 10) {
-    checkPhoneAndLoadBenefits(el);
+  if (clean.length >= 8) {
+    checkCustomerBenefitsByPhone();
   }
+}
+
+// 【補齊】輸入電話自動帶入全部資料 (個人資料 + 毛孩檔案 + 包卡儲值資產)
+async function checkCustomerBenefitsByPhone() {
+  const phoneInput = document.getElementById('phone');
+  if (!phoneInput) return;
+  const phone = phoneInput.value.trim().replace(/[^0-9]/g, '');
+  if (phone.length < 8) return;
+
+  try {
+    const [bookings, custs, pkgs, pets] = await Promise.all([
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`),
+      directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
+      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`)
+    ]);
+
+    // 1. 自動帶入顧客基本資料與身份切換
+    const nameInput = document.getElementById('name');
+    const lineInput = document.getElementById('lineName');
+    const emailInput = document.getElementById('email');
+    const welcomeMsg = document.getElementById('welcome-msg');
+    let isFoundOldCust = false;
+
+    if (Array.isArray(bookings) && bookings.length > 0) {
+      isFoundOldCust = true;
+      const lastBooking = bookings[0];
+      if (nameInput && !nameInput.value) nameInput.value = lastBooking.customer_name || '';
+      if (lineInput && !lineInput.value && lastBooking.line_name && !lastBooking.line_name.startsWith('U')) {
+        lineInput.value = lastBooking.line_name;
+      }
+      if (emailInput && !emailInput.value && lastBooking.notes && lastBooking.notes.includes('Email:')) {
+        const parts = lastBooking.notes.split('Email:');
+        if (parts.length > 1) {
+          emailInput.value = parts[1].trim().split(' ')[0].split('|')[0].trim();
+        }
+      }
+    }
+
+    if (custs && custs.length > 0) {
+      isFoundOldCust = true;
+      if (nameInput && !nameInput.value) nameInput.value = custs[0].name || '';
+      memberData.walletBalance = Number(custs[0].wallet_balance || 0);
+      memberData.discountPercent = Number(custs[0].member_discount || 1);
+    }
+    memberData.packages = pkgs || [];
+
+    // 自動切換「舊朋友」或「新朋友」
+    if (isFoundOldCust) {
+      const oldBtn = document.querySelector('.type-btn[onclick*="\'old\'"]');
+      if (oldBtn) setType('old', oldBtn);
+      if (welcomeMsg) {
+        welcomeMsg.innerText = `✓ 歡迎回來！已為您自動帶入歷史預約與資產資料`;
+        welcomeMsg.classList.remove('hidden');
+      }
+    }
+
+    // 2. 顯示儲值金與包卡卡片
+    const walletBalEl = document.getElementById('displayWalletBalance');
+    const walletCard = document.getElementById('memberWalletCard');
+    const statusBadge = document.getElementById('memberStatusBadge');
+    const dispPkgs = document.getElementById('displayPackagesList');
+
+    if (memberData.walletBalance > 0 || (pkgs && pkgs.length > 0)) {
+      if (walletBalEl) walletBalEl.innerText = memberData.walletBalance.toLocaleString();
+      if (walletCard) walletCard.classList.remove('hidden');
+      if (statusBadge) {
+        statusBadge.innerText = "VIP 熟客已登入";
+        statusBadge.classList.remove('hidden');
+      }
+      if (dispPkgs) {
+        if (pkgs && pkgs.length > 0) {
+          dispPkgs.innerHTML = `<i class="fa-solid fa-ticket text-emerald-600"></i> 名下可用包卡：` + 
+            pkgs.map(p => `<span class="bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded font-bold">${p.service_name} 剩 ${p.remaining_times} 堂</span>`).join(' ');
+          dispPkgs.classList.remove('hidden');
+        } else {
+          dispPkgs.classList.add('hidden');
+        }
+      }
+    } else {
+      if (walletCard) walletCard.classList.add('hidden');
+    }
+
+    // 3. 毛孩名冊下拉選單與履歷帶入
+    userPetProfiles = pets || [];
+    const multiBox = document.getElementById('multiPetSelectBlock');
+    const dropdown = document.getElementById('multiPetDropdown');
+
+    if (userPetProfiles.length > 0) {
+      let optHtml = `<option value="" disabled>--- 請選擇本次施作毛孩 ---</option>`;
+      userPetProfiles.forEach((p, idx) => {
+        optHtml += `<option value="${idx}" ${idx === 0 ? 'selected' : ''}>🐾 ${p.name} (${p.breed || '一般'}) - 包卡: ${p.package_balance || 0}堂 / 儲值: $${p.wallet_balance || 0}</option>`;
+      });
+      if (dropdown) dropdown.innerHTML = optHtml;
+      if (multiBox) multiBox.classList.remove('hidden');
+      selectFrontPetByIndex(0);
+    } else {
+      if (multiBox) multiBox.classList.add('hidden');
+      document.getElementById('petAssetBadge')?.classList.add('hidden');
+    }
+
+  } catch(e) {
+    console.warn("自動帶入舊資料異常:", e);
+  }
+  updateDepositSectionDisplay();
+  updateCheckoutSummary();
 }
 
   function moveSlide(direction) {
@@ -3235,92 +3407,123 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   const finalRawPriceStr = document.getElementById('summary-final-total')?.innerText.replace(/[^\d]/g, '') || '0';
   const finalPrice = Number(finalRawPriceStr);
 
-  const quickDepositLast5 = document.getElementById('depositLast5Input')?.value.trim() || '';
-  const isReportedDeposit = Boolean(quickDepositLast5.length === 5);
+  // 取得電話下方填寫的訂金後五碼
+    const quickDepositLast5 = document.getElementById('depositLast5Input')?.value.trim() || '';
+    const isReportedDeposit = Boolean(quickDepositLast5.length === 5);
 
-  const dbPayload = {
-    store_id: CURRENT_STORE_ID, customer_name: nameVal, customer_phone: phoneVal,
-    customer_type: document.getElementById('custType')?.value || 'old',
-    customer_notes: custNotesVal, line_name: guestLineUid || document.getElementById('lineName').value.trim(),
-    notes: notesArray.join(' | '), service_names: sVal, price: finalPrice,
-    appointment_time: appointmentIso, staff_id: staffIdVal, staff_name: staffNameVal,
-    signature_url: signatureBase64, status: "待確認",
-    deposit_reported: isReportedDeposit,
-    deposit_last5: quickDepositLast5
-  };
-
-  const activeHexColor = (window.THEME_PALETTES && window.THEME_PALETTES[db.themeColor]) 
-    ? window.THEME_PALETTES[db.themeColor].p 
-    : '#8C7355';
-
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json", "Prefer": "return=representation"
-      },
-      body: JSON.stringify(dbPayload)
+    // 收集自訂題庫答案
+    document.querySelectorAll('#customQuestionsContainer input[data-custom-q]').forEach(inp => {
+      if (inp.value.trim()) {
+        notesArray.push(`【${inp.getAttribute('data-custom-q')}: ${inp.value.trim()}】`);
+      }
     });
-    
-    if (!res.ok) throw new Error(await res.text());
-    const resData = await res.json();
-    const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
-    fetch(API_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        action: "submitBooking", store_id: CURRENT_STORE_ID,
-        data: Object.assign({}, dbPayload, { date: dValRaw, time: tVal, service: sVal, signature_url: signatureBase64 })
-      })
-    }).catch(() => {});
+    const dbPayload = {
+      store_id: CURRENT_STORE_ID,
+      customer_name: nameVal,
+      customer_phone: phoneVal,
+      customer_type: document.getElementById('custType')?.value || 'old',
+      customer_notes: custNotesVal,
+      line_name: guestLineUid || document.getElementById('lineName').value.trim(),
+      notes: notesArray.join(' | '),
+      service_names: sVal,
+      price: finalPrice,
+      appointment_time: appointmentIso,
+      staff_id: staffIdVal,
+      staff_name: staffNameVal,
+      signature_url: signatureBase64,
+      deposit_reported: isReportedDeposit,
+      deposit_last5: quickDepositLast5,
+      status: "待確認"
+    };
 
-    await syncCurrentPetToDatabase(phoneVal, nameVal);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(dbPayload)
+      });
+      
+      if (!res.ok) throw new Error(await res.text());
+      const resData = await res.json();
+      const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
-    const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
+      // 自動同步更新最新填寫內容至 customers 與 pets 資料庫
+      await directSupabaseUpsert('customers', {
+        store_id: CURRENT_STORE_ID,
+        phone: phoneVal,
+        name: nameVal,
+        updated_at: new Date().toISOString()
+      }, 'store_id,phone');
 
-    if (isNeedDeposit && db.depositAmount > 0 && !isReportedDeposit) {
-      Swal.fire({
-        title: '預約已送出！請完成訂金預付',
-        html: `
-          <div class="text-left text-xs space-y-3 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950">
-            <div class="font-bold text-sm text-center text-amber-900 border-b border-amber-200 pb-1">定額訂金：NT$ ${db.depositAmount} 元</div>
-            <div class="whitespace-pre-line leading-relaxed">${db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012'}</div>
-            <div class="pt-2 border-t border-amber-200">
-              <label class="block font-bold mb-1 text-[11px]">轉帳完成請回報帳號後五碼：</label>
-              <input type="text" id="swal-deposit-last5" maxlength="5" placeholder="例如：12345" class="w-full p-2 bg-white border border-amber-300 rounded-xl font-mono text-center font-bold text-sm outline-none">
+      await syncCurrentPetToDatabase(phoneVal, nameVal);
+
+      // 觸發後端寄送憑證信件與推播
+      fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "submitBooking",
+          store_id: CURRENT_STORE_ID,
+          data: Object.assign({}, dbPayload, { 
+            date: dValRaw, 
+            time: tVal, 
+            service: sVal, 
+            signature_url: signatureBase64 
+          })
+        })
+      }).catch(() => {});
+
+      // 判定是否需收訂金彈窗
+      const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
+
+      if (isNeedDeposit && db.depositAmount > 0 && !isReportedDeposit) {
+        Swal.fire({
+          title: '預約已送出！請完成訂金預付',
+          html: `
+            <div class="text-left text-xs space-y-3 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950">
+              <div class="font-bold text-sm text-center text-amber-900 border-b border-amber-200 pb-1">定額訂金：NT$ ${db.depositAmount} 元</div>
+              <div class="whitespace-pre-line leading-relaxed select-all font-mono">${db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012'}</div>
+              <div class="pt-2 border-t border-amber-200">
+                <label class="block font-bold mb-1 text-[11px]">轉帳完成請回報帳號後五碼：</label>
+                <input type="text" id="swal-deposit-last5" maxlength="5" placeholder="例如：12345" class="w-full p-2 bg-white border border-amber-300 rounded-xl font-mono text-center font-bold text-sm outline-none">
+              </div>
             </div>
-          </div>
-        `,
-        icon: 'info',
-        confirmButtonText: '已完成匯款，送出後五碼',
-        confirmButtonColor: activeHexColor,
-        preConfirm: () => document.getElementById('swal-deposit-last5')?.value.trim()
-      }).then(async (r) => {
-        if (r.value && newBookingId) {
-          await directSupabasePatch('bookings', `id=eq.${newBookingId}`, {
-            deposit_reported: true, deposit_last5: r.value
-          });
-        }
-        document.getElementById('booking-ui').style.display = 'none';
-        document.getElementById('success-screen').classList.remove('hidden');
-      });
-    } else {
-      Swal.fire({
-        title: '🎉 預約申請已成功送出！',
-        text: '店家確認排程後將第一時間與您聯繫確認❤️',
-        icon: 'success',
-        confirmButtonColor: activeHexColor
-      }).then(() => {
-        document.getElementById('booking-ui').style.display = 'none';
-        document.getElementById('success-screen').classList.remove('hidden');
-      });
+          `,
+          icon: 'info',
+          confirmButtonText: '已完成匯款，送出後五碼',
+          confirmButtonColor: '#8C7355',
+          preConfirm: () => document.getElementById('swal-deposit-last5')?.value.trim()
+        }).then(async (r) => {
+          if (r.value && newBookingId) {
+            await directSupabasePatch('bookings', `id=eq.${newBookingId}`, {
+              deposit_reported: true,
+              deposit_last5: r.value
+            });
+          }
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('success-screen').classList.remove('hidden');
+        });
+      } else {
+        Swal.fire({
+          title: '🎉 預約申請已成功送出！',
+          text: isReportedDeposit ? `已登記您的訂金後五碼【${quickDepositLast5}】，店家確認排程後將第一時間與您聯繫❤️` : '店家確認排程後會立即與您聯繫確認❤️',
+          icon: 'success',
+          confirmButtonColor: '#8C7355'
+        }).then(() => {
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('success-screen').classList.remove('hidden');
+        });
+      }
+    } catch (err) {
+      Swal.fire('預約傳送失敗', err.message, 'error');
+      btn.disabled = false;
+      btn.innerText = "送出預約申請";
     }
-  } catch (err) {
-    Swal.fire('預約傳送失敗', err.message, 'error');
-    btn.disabled = false;
-    btn.innerText = "送出預約申請";
-  }
 };
 </script>
 </body>
