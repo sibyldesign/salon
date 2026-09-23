@@ -254,6 +254,34 @@
       </div>
     </div>
 
+    <!-- 分頁 4-1. 毛孩履歷主檔分頁 (page-pets，寵美模式專屬) -->
+    <div id="page-pets" class="page space-y-4 full-admin-only" style="display: none;">
+      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-brand-100">
+          <div>
+            <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-paw text-theme-primary"></i> 毛孩履歷與照護健康總檔
+            </h2>
+            <p class="text-[10.5px] text-brand-400 mt-0.5">匯集身分資料、疫苗驅蟲、病史過敏與專屬包卡儲值資產</p>
+          </div>
+          <span id="pets-total-badge" class="px-2.5 py-0.5 bg-brand-100 text-brand-800 text-[10px] font-bold rounded-full">0 隻毛孩</span>
+        </div>
+
+        <!-- 搜尋列 -->
+        <div class="flex gap-2">
+          <input type="text" id="pet-search-input" placeholder="輸入毛孩名字、品種、家長手機或姓名..." class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-medium" oninput="filterAdminPetsList(this.value)">
+          <button type="button" onclick="loadAdminPetsPageData()" class="px-3.5 py-2 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl text-xs font-bold transition">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+
+        <!-- 毛孩卡片列表容器 -->
+        <div id="pets-card-container" class="space-y-3 pt-1">
+          <div class="text-center py-8 text-xs text-brand-400">正在讀取毛孩履歷資料庫...</div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 分頁 5. 進銷存主檔 (page-inventory) -->
     <div id="page-inventory" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
@@ -1618,14 +1646,17 @@
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
         <i class="fa-solid fa-calendar-day text-base"></i><span class="text-[10px] mt-1">日曆</span>
       </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
+        <i class="fa-solid fa-list-check text-base"></i><span class="text-[10px] mt-1">名單</span>
+      </button>
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium" onclick="switchPage('shift', this)">
         <i class="fa-solid fa-clock text-base"></i><span class="text-[10px] mt-1">排班</span>
       </button>
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" id="nav-btn-boarding" onclick="switchPage('boarding-schedule', this)">
         <i class="fa-solid fa-hotel text-base"></i><span class="text-[10px] mt-1">住宿</span>
       </button>
-      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
-        <i class="fa-solid fa-list-check text-base"></i><span class="text-[10px] mt-1">名單</span>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" id="nav-btn-pets" onclick="switchPage('pets', this)">
+        <i class="fa-solid fa-paw text-base"></i><span class="text-[10px] mt-1">毛孩</span>
       </button>
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('inventory', this)">
         <i class="fa-solid fa-boxes-stacked text-base"></i><span class="text-[10px] mt-1">庫存</span>
@@ -2405,6 +2436,7 @@ if (dispStoreId && CURRENT_STORE_ID) {
       if (target) target.style.display = 'block';
       if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
 
+      if (pageId === 'pets') loadAdminPetsPageData();
       if (pageId === 'calendar') renderCalendar();
       if (pageId === 'shift') renderShift();
       if (pageId === 'boarding-schedule') { renderBoardingRoomStatus(); renderBoardingCareChecklist(); }
@@ -2421,18 +2453,26 @@ if (dispStoreId && CURRENT_STORE_ID) {
       if (pageId === 'settings') { populateSettings(); renderStaffManager(); }
     }
 
-    // 商業營運型態切換：動態控制住宿導覽鈕與房況顯隱
-    function handleIndustryModeChange(mode) {
-      const navBoarding = document.getElementById('nav-btn-boarding');
-      const hotelSettings = document.getElementById('section-pet-hotel-settings');
-      if (mode === 'pet_hotel') {
-        if (navBoarding) navBoarding.style.display = 'flex';
-        if (hotelSettings) hotelSettings.style.display = 'block';
-      } else {
-        if (navBoarding) navBoarding.style.display = 'none';
-        if (hotelSettings) hotelSettings.style.display = 'none';
-      }
-    }
+    // 商業營運型態切換：動態控制住宿與毛孩導覽鈕顯隱
+function handleIndustryModeChange(mode) {
+  const navBoarding = document.getElementById('nav-btn-boarding');
+  const navPets = document.getElementById('nav-btn-pets');
+  const hotelSettings = document.getElementById('section-pet-hotel-settings');
+  const petQuestionsManager = document.getElementById('section-pet-questions-manager');
+
+  const isPetMode = (mode === 'pet_grooming' || mode === 'pet_hotel');
+
+  if (navPets) navPets.style.display = isPetMode ? 'flex' : 'none';
+  if (petQuestionsManager) petQuestionsManager.style.display = isPetMode ? 'block' : 'none';
+
+  if (mode === 'pet_hotel') {
+    if (navBoarding) navBoarding.style.display = 'flex';
+    if (hotelSettings) hotelSettings.style.display = 'block';
+  } else {
+    if (navBoarding) navBoarding.style.display = 'none';
+    if (hotelSettings) hotelSettings.style.display = 'none';
+  }
+}
 
     // ==========================================
     // 5. 日曆檢視
@@ -2669,36 +2709,128 @@ if (dispStoreId && CURRENT_STORE_ID) {
     });
   }
     
-    // 彈出毛孩完整履歷資料卡
-  async function openPetProfileModal(phone, petName) {
-    Swal.showLoading();
-    const pets = await directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}`);
-    const matched = (pets && pets.length > 0) ? pets.find(p => p.name === petName) || pets[0] : null;
+    // ========================================================
+// 【毛孩詳細履歷卡】彈窗：含完整照護背景與包卡儲值資產
+// ========================================================
+async function openPetProfileModal(phone, petName) {
+  Swal.showLoading();
+  const cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+  const [pets, custs] = await Promise.all([
+    directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${cleanPhone}`),
+    directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${cleanPhone}`)
+  ]);
 
-    if (!matched) return Swal.fire('查無該毛孩履歷檔案', '', 'info');
+  const matched = (pets && pets.length > 0)
+    ? (pets.find(p => p.name === petName) || pets[0])
+    : null;
 
-    Swal.fire({
-      title: `🐾 【${matched.name}】詳細照護履歷卡`,
-      html: `
-        <div class="text-left text-xs space-y-2 bg-brand-50 p-4 rounded-2xl border border-brand-200 text-brand-900 leading-relaxed">
-          <div class="flex justify-between border-b pb-1 font-bold">
-            <span>品種：${matched.breed || '未填'}</span>
-            <span>體重：${matched.weight_kg || 0} kg</span>
-          </div>
-          <div class="flex justify-between border-b pb-1 font-bold">
-            <span>剩餘包卡點數：<b class="text-emerald-700">${matched.package_balance || 0} 次</b></span>
-            <span>儲值金餘額：<b class="text-emerald-700">$${matched.wallet_balance || 0}</b></span>
-          </div>
-          <div><b>健康/性格標籤：</b>${matched.temperament_tags || matched.notes || '無特殊備註'}</div>
-          <div class="text-gray-500 text-[10.5px]">建立日期：${matched.created_at ? matched.created_at.split('T')[0] : ''}</div>
-        </div>
-      `,
-      confirmButtonText: '關閉履歷',
-      confirmButtonColor: '#8C7355'
-    });
+  if (!matched) {
+    Swal.fire('查無該毛孩檔案', `電話 ${cleanPhone} 名下尚無登記名為【${petName}】的毛孩履歷`, 'info');
+    return;
   }
 
-  // 打包訊息一鍵通知
+  const parent = (custs && custs.length > 0) ? custs[0] : {};
+  const walletBal = Number(matched.wallet_balance || parent.wallet_balance || 0);
+
+  Swal.fire({
+    title: `🐾 【${matched.name}】毛孩照護履歷檔案`,
+    html: `
+      <div class="text-left text-xs space-y-3 bg-brand-50 p-4 rounded-2xl border border-brand-200 text-brand-900 leading-relaxed font-sans max-h-[75vh] overflow-y-auto">
+        <!-- 基本身分 -->
+        <div class="flex justify-between items-center border-b border-brand-200 pb-2">
+          <div>
+            <div class="text-base font-black text-amber-950">${matched.name}</div>
+            <div class="text-gray-500 text-[11px]">${matched.breed || '一般米克斯'} ｜ ${matched.species || '性別未填'}</div>
+          </div>
+          <div class="text-right font-mono text-[11px]">
+            <div>體重：<b>${matched.weight_kg || 0} kg</b></div>
+            <div>年齡：<b>${matched.age_str || '未註記'} 歲</b></div>
+          </div>
+        </div>
+
+        <!-- 專屬資產 -->
+        <div class="p-2.5 bg-white rounded-xl border border-brand-200 grid grid-cols-2 gap-2 text-center font-mono">
+          <div class="p-1 bg-brand-50 rounded-lg">
+            <div class="text-[10px] text-gray-400 font-sans">包卡剩餘點數</div>
+            <div class="text-sm font-black text-emerald-700">${matched.package_balance || 0} 次</div>
+          </div>
+          <div class="p-1 bg-brand-50 rounded-lg">
+            <div class="text-[10px] text-gray-400 font-sans">儲值金餘額</div>
+            <div class="text-sm font-black text-[#8C7355]">NT$ ${walletBal.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <!-- 醫療健康紀錄 -->
+        <div class="space-y-1.5 p-2.5 bg-white rounded-xl border border-brand-200 text-[11.5px]">
+          <div class="font-bold text-brand-900 border-b pb-1">🏥 醫療與健康履歷：</div>
+          <div>• 晶片號碼：<span class="font-mono">${matched.coat_type || '無晶片紀錄'}</span></div>
+          <div>• 定期驅蟲：<span>${matched.temperament_tags || '未記載'}</span></div>
+          <div>• 重大病史/過敏：<span class="text-rose-600 font-bold">${matched.notes?.includes('過敏') ? matched.notes : '無紀錄'}</span></div>
+        </div>
+
+        <!-- 性格習慣與日常照護備註 -->
+        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11.5px] space-y-1 text-amber-950">
+          <div class="font-bold flex items-center gap-1"><i class="fa-solid fa-heart text-rose-500"></i> 家長日常叮嚀與性格說明：</div>
+          <div class="whitespace-pre-line leading-relaxed pl-1">${matched.notes || '無特殊習慣備註'}</div>
+        </div>
+
+        <div class="text-[10px] text-gray-400 text-right font-mono">建立時間：${matched.created_at ? matched.created_at.split('T')[0] : '歷史檔案'}</div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '編輯此毛孩履歷',
+    cancelButtonText: '關閉檢視',
+    confirmButtonColor: '#8C7355'
+  }).then(r => {
+    if (r.isConfirmed) {
+      editPetProfileDirect(matched.id, matched.name, cleanPhone);
+    }
+  });
+}
+
+  // 直接編輯該毛孩檔案
+function editPetProfileDirect(petId, petName, phone) {
+  const p = allAdminPetsCache.find(item => item.id === petId) || {};
+  Swal.fire({
+    title: `編輯【${petName}】照護履歷`,
+    html: `
+      <div class="text-left text-xs space-y-2.5 font-sans">
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">品種：</label><input id="edit-pet-breed" class="swal2-input text-xs" value="${p.breed || ''}"></div>
+          <div><label class="font-bold">體重 (kg)：</label><input id="edit-pet-weight" type="number" step="0.1" class="swal2-input text-xs" value="${parseFloat(p.weight) || ''}"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">年齡 (歲)：</label><input id="edit-pet-age" class="swal2-input text-xs" value="${p.age || ''}"></div>
+          <div><label class="font-bold">包卡堂數：</label><input id="edit-pet-card" type="number" class="swal2-input text-xs font-bold font-mono" value="${p.packageBalance || 0}"></div>
+        </div>
+        <div>
+          <label class="font-bold">照護、性格與過敏備註：</label>
+          <textarea id="edit-pet-notes" class="swal2-textarea text-xs" rows="3">${p.notes || ''}</textarea>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '儲存更新',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => ({
+      breed: document.getElementById('edit-pet-breed').value.trim(),
+      weight_kg: Number(document.getElementById('edit-pet-weight').value || 0),
+      age_str: document.getElementById('edit-pet-age').value.trim(),
+      package_balance: Number(document.getElementById('edit-pet-card').value || 0),
+      notes: document.getElementById('edit-pet-notes').value.trim()
+    })
+  }).then(async r => {
+    if (r.isConfirmed && r.value) {
+      Swal.showLoading();
+      await directSupabasePatch('pets', `id=eq.${petId}`, Object.assign(r.value, { updated_at: new Date().toISOString() }));
+      Swal.fire({ title: '履歷更新成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+      loadAdminPetsPageData();
+      fetchDataAndRender();
+    }
+  });
+}
+    
+    // 打包訊息一鍵通知
   function sendUpcomingNotice(custName, petName, phone, date, time) {
     const msg = `【預約提醒】親愛的 ${custName} 您好：提醒您為 ${petName} 預約的時段為 ${date} ${time}，期待為毛孩服務！如有改期需求請提前告知我們唷❤️`;
     navigator.clipboard.writeText(msg).then(() => {
@@ -2714,24 +2846,105 @@ if (dispStoreId && CURRENT_STORE_ID) {
   }
     
     // ========================================================
-// 【後台卡片完整版】renderSingleCardHTML(a) — 訂金高亮與全功能保留
+// 【深度重構版】預約卡片渲染：強烈凸顯毛孩名字、備註欄淨空不預填
 // ========================================================
 function renderSingleCardHTML(a) {
   const staffColor = getStaffColor(a.staffId, a.staffName);
+  const rawNotes = a.notes || '';
+
+  // 1. 徹底分離系統標記，淨化老闆的內部備註欄 (避免預設填入雜質文字)
+  let cleanUserNote = rawNotes;
   let parsedEmail = '';
-  let cleanNotes = a.notes || '';
-  if (cleanNotes.includes('Email:')) {
-    const parts = cleanNotes.split('Email:');
-    cleanNotes = parts[0].trim();
+  let petName = a.pet_name || '';
+  let petDetailsStr = '';
+  let shuttleText = '';
+  let stayScheduleText = '';
+  let roomTierText = '';
+  let mealPlanText = '';
+  let bathAddons = [];
+
+  // A. 提取 Email
+  if (cleanUserNote.includes('Email:')) {
+    const parts = cleanUserNote.split('Email:');
+    cleanUserNote = parts[0];
     parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
   }
 
-  // 1. 全域提取毛孩名字
-  const petMatch = cleanNotes.match(/【毛孩:\s*([^/，,\s】]+)/);
-  const petName = petMatch ? petMatch[1].trim() : (a.pet_name || '毛孩');
+  // B. 提取毛孩身分與照護履歷
+  const petMatch = cleanUserNote.match(/【毛孩:\s*([^】]+)】/);
+  if (petMatch) {
+    petDetailsStr = petMatch[1].trim();
+    cleanUserNote = cleanUserNote.replace(petMatch[0], '');
+    const namePart = petDetailsStr.split('/')[0].split('(')[0].trim();
+    if (namePart) petName = namePart;
+  }
+  if (!petName) petName = '未指定毛孩';
 
-  // 2. 訂金狀態判定與專屬高亮區塊 (三段式警示)
-  const isDepositConfirmed = (a.deposit_confirmed === true || cleanNotes.includes('訂金已核對'));
+  // C. 提取專車接送
+  const shuttleMatch = cleanUserNote.match(/【(?:專車接送|需要接送):\s*([^】]+)】/);
+  if (shuttleMatch) {
+    shuttleText = shuttleMatch[1].trim();
+    cleanUserNote = cleanUserNote.replace(shuttleMatch[0], '');
+  }
+
+  // D. 提取住宿起訖、房型、供餐與附加洗澡
+  const stayMatch = cleanUserNote.match(/【住宿排程:\s*([^】]+)】/);
+  if (stayMatch) {
+    stayScheduleText = stayMatch[1].trim();
+    cleanUserNote = cleanUserNote.replace(stayMatch[0], '');
+  }
+  const roomMatch = cleanUserNote.match(/【房型:\s*([^】]+)】/);
+  if (roomMatch) {
+    roomTierText = roomMatch[1].trim();
+    cleanUserNote = cleanUserNote.replace(roomMatch[0], '');
+  }
+  const mealMatch = cleanUserNote.match(/【供餐:\s*([^】]+)】/);
+  if (mealMatch) {
+    mealPlanText = mealMatch[1].trim();
+    cleanUserNote = cleanUserNote.replace(mealMatch[0], '');
+  }
+  if (cleanUserNote.includes('【加購: 入住清潔洗澡】')) {
+    bathAddons.push('入住前清潔洗澡');
+    cleanUserNote = cleanUserNote.replace('【加購: 入住清潔洗澡】', '');
+  }
+  if (cleanUserNote.includes('【加購: 退房深層美容】')) {
+    bathAddons.push('退宿前深層美容');
+    cleanUserNote = cleanUserNote.replace('【加購: 退房深層美容】', '');
+  }
+
+  // 清除財務折抵與加購標籤，避免污染純手寫備註框
+  cleanUserNote = cleanUserNote
+    .replace(/【(?:現場加購|現場儲值|使用包卡扣抵|使用儲值扣抵|折扣碼|訂金已核對)[^】]*】/g, '')
+    .replace(/\|\s*\|/g, '|')
+    .replace(/^[\s|]+|[\s|]+$/g, '')
+    .trim();
+
+  // 2. 組裝照護與履歷明細卡片 (將原本塞在備註的內容精美結構化)
+  let careDetailsHtml = '';
+  if (petDetailsStr || shuttleText || stayScheduleText || roomTierText || mealPlanText || bathAddons.length > 0) {
+    careDetailsHtml = `
+      <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-1.5 text-xs">
+        <div class="font-bold text-amber-950 flex items-center justify-between border-b border-amber-200/60 pb-1">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-clipboard-list text-amber-600"></i> 本次施作與照護排程明細</span>
+          <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="text-[10px] text-theme-primary underline font-bold">查看完整身分健康檔案 ➔</button>
+        </div>
+        ${petDetailsStr ? `<div class="text-amber-900 font-bold">• 毛孩履歷：<span class="text-brand-900 font-medium">${petDetailsStr}</span></div>` : ''}
+        ${stayScheduleText ? `<div class="text-amber-900 font-bold">• 住宿排程：<span class="text-brand-900 font-medium">${stayScheduleText}</span></div>` : ''}
+        ${roomTierText ? `<div class="text-amber-900 font-bold">• 預約房型：<span class="text-brand-900 font-medium">${roomTierText}</span></div>` : ''}
+        ${mealPlanText ? `<div class="text-amber-900 font-bold">• 供餐方案：<span class="text-brand-900 font-medium">${mealPlanText}</span></div>` : ''}
+        ${bathAddons.length > 0 ? `<div class="text-blue-700 font-bold">• 附加美容：<span>${bathAddons.join(' ＋ ')}</span></div>` : ''}
+        ${shuttleText ? `
+          <div class="text-emerald-800 font-bold flex flex-wrap items-center gap-1 pt-0.5">
+            <span>• 專車接送：${shuttleText}</span>
+            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shuttleText.replace(/\([^)]*\)/g, '').trim())}" target="_blank" class="px-1.5 py-0.2 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded text-[9.5px] font-bold">導航</a>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // 3. 訂金狀態醒目提式與高亮邊框
+  const isDepositConfirmed = (a.deposit_confirmed === true || rawNotes.includes('訂金已核對'));
   const hasLast5 = Boolean((a.depositLast5 || a.deposit_last5) && String(a.depositLast5 || a.deposit_last5).trim() !== '');
   const reportedLast5 = a.depositLast5 || a.deposit_last5 || '';
   
@@ -2740,9 +2953,9 @@ function renderSingleCardHTML(a) {
 
   if (isDepositConfirmed) {
     depositStatusBadge = `
-      <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
+      <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
         <span class="text-emerald-800 font-bold flex items-center gap-1.5">
-          <i class="fa-solid fa-circle-check text-emerald-600"></i> ✓ 訂金已核對無誤 ${reportedLast5 ? `(帳號末碼: <b class="font-mono text-emerald-900 font-bold">${reportedLast5}</b>)` : ''}
+          <i class="fa-solid fa-circle-check text-emerald-600"></i> ✓ 訂金已核對無誤 ${reportedLast5 ? `(帳號末五碼: <b class="font-mono text-emerald-900 font-bold">${reportedLast5}</b>)` : ''}
         </span>
         <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-bold">已入帳</span>
       </div>`;
@@ -2755,7 +2968,7 @@ function renderSingleCardHTML(a) {
             <i class="fa-solid fa-bell text-amber-600 animate-pulse"></i> 客人已回報匯款末五碼：
             <span class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-lg font-mono text-sm tracking-widest font-black">${reportedLast5}</span>
           </span>
-          <div class="text-[10px] text-amber-800 mt-0.5">請確認網銀款項後點擊核銷按鈕</div>
+          <div class="text-[10px] text-amber-800 mt-0.5">請查對網銀款項後點擊確認</div>
         </div>
         <button type="button" onclick="confirmDepositPayment('${a.id}', '${a.name}', '${reportedLast5}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1 shrink-0">
           <i class="fa-solid fa-check"></i> 確認入帳
@@ -2773,73 +2986,9 @@ function renderSingleCardHTML(a) {
       </div>`;
   }
 
-  // 3. 全域解析專車接送與地址
-  const shuttleMatch = cleanNotes.match(/【專車接送:\s*([^】]+)】/);
-  const isNeedShuttle = Boolean(shuttleMatch);
-  const shuttleText = shuttleMatch ? shuttleMatch[1] : '';
-
-  let detailBadges = [];
-
-  // 解析住宿排程
-  if (cleanNotes.includes('住宿排程')) {
-    const match = cleanNotes.match(/【住宿排程:\s*([^】]+)】/);
-    if (match) detailBadges.push(`<div class="text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200">🏨 住宿區間：${match[1]}</div>`);
-  }
-  // 解析房型
-  if (cleanNotes.includes('房型')) {
-    const match = cleanNotes.match(/【房型:\s*([^】]+)】/);
-    if (match) detailBadges.push(`<div class="text-brand-800 font-bold">🏠 預訂房型：${match[1]}</div>`);
-  }
-  // 解析供餐
-  if (cleanNotes.includes('供餐')) {
-    const match = cleanNotes.match(/【供餐:\s*([^】]+)】/);
-    if (match) detailBadges.push(`<div class="text-amber-800 font-bold">🥣 供餐照護：${match[1]}</div>`);
-  }
-  // 解析入退宿洗澡
-  if (cleanNotes.includes('入住清潔洗澡')) {
-    detailBadges.push(`<div class="text-blue-700 font-bold">✨ 入住附加：進房前清潔洗澡</div>`);
-  }
-  if (cleanNotes.includes('退房深層美容')) {
-    detailBadges.push(`<div class="text-purple-700 font-bold">🛁 退宿附加：退房前美容/洗澡</div>`);
-  }
-
-  // 解析專車接送明細與導航按鈕
-  let shuttleAddressHtml = '';
-  if (isNeedShuttle) {
-    detailBadges.push(`<div class="text-emerald-800 font-bold bg-emerald-50 p-1.5 rounded-lg border border-emerald-200">🚘 專車接送：${shuttleText}</div>`);
-    
-    const addrMatch = shuttleText.match(/^([^(]+)/);
-    const pureAddr = addrMatch ? addrMatch[1].trim() : shuttleText;
-    if (pureAddr && pureAddr !== '未填寫地址') {
-      shuttleAddressHtml = `
-        <div class="flex items-center gap-1.5 mt-1">
-          <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]">
-            <i class="fa-solid fa-map-location-dot"></i> 地圖導航
-          </a>
-          <button type="button" onclick="navigator.clipboard.writeText('${pureAddr}'); Swal.fire('已複製接送地址！', '', 'success')" class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold text-[10px]">
-            複製地址
-          </button>
-        </div>
-      `;
-    }
-  }
-
-  // 4. 財務抵扣條列
-  let financialRows = [];
-  if (cleanNotes.includes('包卡扣抵')) {
-    financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點：</span><span>當次扣減 1 點</span></div>`);
-  }
-  if (cleanNotes.includes('儲值扣抵')) {
-    financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值抵扣：</span><span>享專屬折數扣抵</span></div>`);
-  }
-  if (Number(a.deposit_deducted || 0) > 0) {
-    financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 已收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
-  }
-
-  const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
-  const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
   const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
   const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+  const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
 
   const signBtnHtml = a.signature_url ? `
     <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
@@ -2853,25 +3002,30 @@ function renderSingleCardHTML(a) {
 
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
+      
+      <!-- 頂部：時間、專屬顯眼毛孩大字膠囊、客人姓名 -->
       <div class="flex justify-between items-start">
-        <div>
-          <div class="flex items-center gap-2">
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
               <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
             </span>
             <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
-            <span class="px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-black rounded-lg">
-              🐾 ${petName}
-            </span>
-            <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded font-bold text-[10px] transition">
-              履歷卡
+            
+            <!-- 【強烈優化】超顯眼大字毛孩名字膠囊，點擊直達履歷卡 -->
+            <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1 transform hover:scale-105" title="點擊查看此毛孩專屬履歷">
+              <i class="fa-solid fa-paw"></i>
+              <span>${petName}</span>
+              <span class="text-[9px] bg-white/30 px-1 py-0.2 rounded font-normal ml-0.5">履歷 ➔</span>
             </button>
           </div>
-          <div class="font-bold text-brand-900 text-sm mt-1">
-            ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
+
+          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5 pt-0.5">
+            <span>${a.name}</span>
+            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
           </div>
-          ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單：${friendlyCreatedTime}</div>` : ''}
         </div>
+
         <div class="flex flex-col items-end gap-1">
           <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
             <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
@@ -2884,51 +3038,42 @@ function renderSingleCardHTML(a) {
         </div>
       </div>
 
-      <!-- 訂金狀態警示與回報區塊 -->
+      <!-- 訂金狀態提示 -->
       ${depositStatusBadge}
 
+      <!-- 施作項目與費用 -->
       <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
-        <div class="font-bold text-brand-900 font-sans">項目：${a.service || '無'}</div>
+        <div class="font-bold text-brand-900 font-sans">預約項目：${a.service || '無指定項目'}</div>
         <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
       </div>
 
-      <!-- 住宿細節與專車接送 -->
-      ${detailBadges.length > 0 ? `
-        <div class="p-2.5 bg-amber-50/50 rounded-xl space-y-1.5 border border-amber-200/60 text-[11px]">
-          <div class="font-bold text-amber-950">📋 住宿與專屬照護明細：</div>
-          ${detailBadges.join('')}${shuttleAddressHtml}
-        </div>
-      ` : ''}
+      <!-- 【照護明細區】原本塞在備註的資料全數美化呈現在此 -->
+      ${careDetailsHtml}
 
-      <!-- 財務加購與折抵 -->
-      ${financialRows.length > 0 ? `
-        <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] border border-brand-100">
-          ${financialRows.join('')}
-        </div>
-      ` : ''}
-
+      <!-- 顧客通訊與合約 -->
       <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
         <div class="flex justify-between">
           <span>LINE：<b>${a.lineName || '未填寫'}</b></span>
           <span>信箱：<b>${parsedEmail || '未填寫'}</b></span>
         </div>
-        ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客備註：${a.customer_notes}</div>` : ''}
+        ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客特殊需求備註：${a.customer_notes}</div>` : ''}
         ${a.signature_url ? `
           <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
-            <span>✓ 已簽署定型化契約 ${friendlySignedTime ? `(${friendlySignedTime})` : ''}</span>
+            <span>✓ 已簽署定型化照護契約</span>
             <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
           </div>
         ` : ''}
       </div>
 
+      <!-- 【內部備註欄位】完全乾淨，不預設填寫任何系統資料，專供老闆輸入內部筆記 -->
       <div class="w-full flex items-center gap-2 pt-1">
-        <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
-        <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
+        <input type="text" id="admin-note-${a.id}" placeholder="點此輸入店內內部筆記 (例如：毛打結另收200、會兇人等)..." value="${cleanUserNote}" class="flex-1 min-w-0 p-2.5 text-xs border border-brand-200 rounded-xl bg-white outline-none focus:border-brand-500 font-medium">
+        <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
           存備註
         </button>
       </div>
 
-      <!-- 卡片底部操作列：撥號、通知按鈕、改項目、改期、結單 -->
+      <!-- 底部操作列 -->
       <div class="flex flex-wrap justify-between items-center pt-2 border-t border-brand-100 gap-2">
         <div class="flex items-center gap-1.5">
           <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
@@ -2938,17 +3083,17 @@ function renderSingleCardHTML(a) {
             <i class="fa-brands fa-whatsapp text-xs"></i> 通訊
           </a>
           ${signBtnHtml}
-          <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px] transition">
+          <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">
             提醒預約
           </button>
-          <button type="button" onclick="sendPickupNotice('${a.name}', '${petName}', '${a.phone}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-[10.5px] transition">
+          <button type="button" onclick="sendPickupNotice('${a.name}', '${petName}', '${a.phone}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-[10.5px]">
             通知接回
           </button>
         </div>
         <div class="flex items-center gap-1.5">
-          <button type="button" class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5C6D7B] text-white rounded-lg font-bold text-[11px] transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
-          <button type="button" class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold text-[11px] transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-          <button type="button" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0}, ${isNeedShuttle})">結單</button>
+          <button type="button" class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5C6D7B] text-white rounded-lg font-bold text-[11px]" onclick="openEditServiceModal('${a.id}')">改項目</button>
+          <button type="button" class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold text-[11px]" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button type="button" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0}, ${Boolean(shuttleText)})">結單</button>
         </div>
       </div>
     </div>`;
@@ -3276,38 +3421,49 @@ function renderSingleCardHTML(a) {
     renderBoardingRoomStatus();
   }
 
-  // 房間點擊互動管理
-  function handleRoomCardClick(roomNo, bookingId, petName) {
-    if (bookingId) {
-      Swal.fire({
-        title: `${roomNo} 房位管理`,
-        text: `房客：${petName}`,
-        showCancelButton: true,
-        confirmButtonText: '辦理退房結單',
-        cancelButtonText: '關閉',
-        confirmButtonColor: '#8C7355'
-      }).then(r => {
-        if (r.isConfirmed) {
-          const appt = backendData.appointments.find(a => String(a.id) === String(bookingId));
-          if (appt) openCheckoutModal(appt.id, appt.name, appt.phone, appt.service, appt.price);
-        }
-      });
-    } else {
-      Swal.fire({
-        title: `安排毛孩入住 ${roomNo}`,
-        text: '是否直接前往代客新增分頁進行排程建立？',
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: '前往新增排程',
-        confirmButtonColor: '#8C7355'
-      }).then(r => {
-        if (r.isConfirmed) {
-          switchPage('add', document.querySelectorAll('.nav-item')[9]);
-          document.querySelector('input[name="quick-industry-mode"][value="pet_hotel"]')?.click();
-        }
-      });
-    }
+  // 住宿房況房間卡片點擊：提供「查看毛孩履歷」與「退房結單」
+function handleRoomCardClick(roomNo, bookingId, petName) {
+  if (bookingId) {
+    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    Swal.fire({
+      title: `🏨 房號 ${roomNo} 在宿管理`,
+      html: `
+        <div class="text-left text-xs space-y-2 bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950">
+          <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName}</b></div>
+          <div>家長資訊：<b>${appt ? appt.name : ''}</b> <span class="font-mono">(${appt ? appt.phone : ''})</span></div>
+          <div>入住排程：<b>${appt ? `${appt.date}${appt.time}` : ''}</b></div>
+        </div>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: '🐾 查看毛孩詳細照護履歷',
+      denyButtonText: '辦理退宿結單',
+      cancelButtonText: '關閉',
+      confirmButtonColor: '#8C7355',
+      denyButtonColor: '#10B981'
+    }).then(r => {
+      if (r.isConfirmed && appt) {
+        openPetProfileModal(appt.phone, petName);
+      } else if (r.isDenied && appt) {
+        openCheckoutModal(appt.id, appt.name, appt.phone, appt.service, appt.price);
+      }
+    });
+  } else {
+    Swal.fire({
+      title: `安排毛孩入住 ${roomNo}`,
+      text: '該房間目前為空房且已消毒完成，是否前往建立代客預約排程？',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: '前往代客排程',
+      confirmButtonColor: '#8C7355'
+    }).then(r => {
+      if (r.isConfirmed) {
+        switchPage('add', document.querySelectorAll('.nav-item')[9]);
+        document.querySelector('input[name="quick-industry-mode"][value="pet_hotel"]')?.click();
+      }
+    });
   }
+}
 
     // 渲染今日專車接送清單
   function renderBoardingShuttleChecklist() {
@@ -6244,6 +6400,128 @@ function promptManualInputLast5(bookingId, customerName) {
       renderCustomer();
     }
   });
+}
+    
+    // ========================================================
+// 【毛孩履歷分頁】全域狀態與渲染邏輯
+// ========================================================
+let allAdminPetsCache = [];
+
+async function loadAdminPetsPageData() {
+  const container = document.getElementById('pets-card-container');
+  const badge = document.getElementById('pets-total-badge');
+  if (container) container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400">正在同步毛孩照護履歷...</div>';
+
+  try {
+    const [petsRes, custsRes] = await Promise.all([
+      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&order=updated_at.desc`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,name,wallet_balance`)
+    ]);
+
+    const custMap = {};
+    (custsRes || []).forEach(c => {
+      custMap[c.phone] = c;
+    });
+
+    allAdminPetsCache = (petsRes || []).map(p => {
+      const parent = custMap[p.customer_phone] || {};
+      return {
+        id: p.id,
+        name: p.name || '未命名寶貝',
+        breed: p.breed || '一般品種',
+        weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
+        age: p.age_str ? `${p.age_str} 歲` : '未記錄',
+        gender: p.species || p.gender || '未記錄',
+        chipId: p.coat_type || '無晶片紀錄',
+        notes: p.notes || '',
+        parentPhone: p.customer_phone || '',
+        parentName: parent.name || '家長',
+        packageBalance: Number(p.package_balance || 0),
+        walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
+        updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
+      };
+    });
+
+    if (badge) badge.innerText = `${allAdminPetsCache.length} 隻毛孩`;
+    renderAdminPetsCards(allAdminPetsCache);
+  } catch (err) {
+    if (container) container.innerHTML = `<div class="text-center py-6 text-xs text-rose-500 font-bold">讀取失敗：${err.message}</div>`;
+  }
+}
+
+function filterAdminPetsList(kw) {
+  const q = (kw || '').trim().toLowerCase();
+  if (!q) {
+    renderAdminPetsCards(allAdminPetsCache);
+    return;
+  }
+  const filtered = allAdminPetsCache.filter(p => {
+    return p.name.toLowerCase().includes(q) ||
+           p.breed.toLowerCase().includes(q) ||
+           p.parentPhone.includes(q) ||
+           p.parentName.toLowerCase().includes(q);
+  });
+  renderAdminPetsCards(filtered);
+}
+
+function renderAdminPetsCards(list) {
+  const container = document.getElementById('pets-card-container');
+  if (!container) return;
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">查無相符的毛孩檔案</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(p => `
+    <div class="p-4 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2.5 text-xs hover:border-[#8C7355] transition">
+      <!-- 頂部：毛孩名稱大標、品種、家長聯絡 -->
+      <div class="flex justify-between items-start border-b border-brand-100 pb-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-black text-amber-950 flex items-center gap-1">
+              🐾 ${p.name}
+            </span>
+            <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10.5px] font-bold">${p.breed}</span>
+            <span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-md text-[10.5px] font-bold">${p.gender}</span>
+          </div>
+          <div class="text-[11px] text-brand-500 mt-1 flex items-center gap-2">
+            <span>家長：<b>${p.parentName}</b></span>
+            <span class="font-mono">(${p.parentPhone})</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <button type="button" onclick="editPetProfileDirect('${p.id}', '${p.name}', '${p.parentPhone}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-lg text-[11px] font-bold transition">
+            編輯履歷
+          </button>
+        </div>
+      </div>
+
+      <!-- 資產展示：包卡堂數與儲值金 -->
+      <div class="grid grid-cols-2 gap-2 p-2 bg-brand-50/80 rounded-xl border border-brand-200/60 font-mono text-center">
+        <div class="p-1.5 bg-white rounded-lg border border-brand-100">
+          <div class="text-[10px] text-gray-500 font-sans">剩餘包卡點數</div>
+          <div class="text-sm font-black text-emerald-700">${p.packageBalance} 次</div>
+        </div>
+        <div class="p-1.5 bg-white rounded-lg border border-brand-100">
+          <div class="text-[10px] text-gray-500 font-sans">專屬儲值金餘額</div>
+          <div class="text-sm font-black text-[#8C7355]">NT$ ${p.walletBalance.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <!-- 生理指標 -->
+      <div class="grid grid-cols-3 gap-1 text-[11px] text-brand-800 bg-brand-50/40 p-2 rounded-xl">
+        <div>體重：<b>${p.weight}</b></div>
+        <div>年齡：<b>${p.age}</b></div>
+        <div class="truncate">晶片：<b>${p.chipId}</b></div>
+      </div>
+
+      <!-- 性格與日常照護備註 -->
+      <div class="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[11.5px] leading-relaxed text-amber-950 whitespace-pre-wrap">
+        <b>照護/性格/健康標籤：</b>\n${p.notes || '無特殊照護備註'}
+      </div>
+    </div>
+  `).join('');
 }
     
     // 三種商業模式動態切換排程欄位
