@@ -2546,6 +2546,143 @@
       stars[i].className = (i < star) ? "fa-solid fa-star text-amber-400" : "fa-solid fa-star text-gray-300";
     }
   }
+  // =======================================================
+// 修復 3：前台金額試算與計價框智慧排列組合防呆函式
+// =======================================================
+function smartLayoutAndCalculate() {
+  const isWalletEnabled = resolveFlag(db.enableWallet, true);
+  const isPackageEnabled = resolveFlag(db.enablePackages, true);
+  const isCouponEnabled = resolveFlag(db.enableCoupons, true);
+  const isShowPrice = resolveFlag(db.enableShowPrice, true);
+
+  // 1. 現場加購方案與折抵面板智慧顯隱
+  const addonSection = document.getElementById('addon-package-select')?.closest('.p-3.5');
+  const deductSection = document.getElementById('chk-use-package')?.closest('.p-3.5');
+  const couponContainer = document.getElementById('couponCode')?.closest('.my-4');
+  const pkgDropdown = document.getElementById('addon-package-select');
+  const walDropdown = document.getElementById('addon-wallet-select');
+  const pkgLabel = document.getElementById('chk-use-package')?.closest('label');
+  const walLabel = document.getElementById('chk-use-wallet')?.closest('label');
+
+  if (pkgDropdown) pkgDropdown.style.display = isPackageEnabled ? 'block' : 'none';
+  if (walDropdown) walDropdown.style.display = isWalletEnabled ? 'block' : 'none';
+  if (pkgLabel) pkgLabel.style.display = isPackageEnabled ? 'flex' : 'none';
+  if (walLabel) walLabel.style.display = isWalletEnabled ? 'flex' : 'none';
+
+  if (addonSection) addonSection.style.display = (!isPackageEnabled && !isWalletEnabled) ? 'none' : 'block';
+  if (deductSection) deductSection.style.display = (!isPackageEnabled && !isWalletEnabled) ? 'none' : 'block';
+  if (couponContainer) couponContainer.style.display = isCouponEnabled ? 'block' : 'none';
+
+  // 2. 住宿模式分流
+  if (activeBookingSubMode === 'boarding') {
+    calculateBoardingDaysAndPrice();
+    return;
+  }
+
+  // 3. 試算主金額加總
+  let mainTotal = 0;
+  let breakdownHtml = '';
+  const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
+
+  const summaryItems = document.getElementById('summary-items-breakdown');
+  const summaryRange = document.getElementById('summary-service-range');
+
+  if (checkedBoxes.length === 0) {
+    if (summaryItems) summaryItems.innerHTML = '<div>(尚未選擇項目)</div>';
+    if (summaryRange) summaryRange.innerText = isShowPrice ? 'NT$ 0' : '現場確認';
+  } else {
+    checkedBoxes.forEach(cb => {
+      const rawPriceStr = cb.getAttribute('data-price') || '0';
+      const num = rawPriceStr.match(/\d+/);
+      const itemPrice = num ? Number(num[0]) : 0;
+      mainTotal += itemPrice;
+      const isAddon = cb.getAttribute('data-isaddon') === 'true';
+
+      breakdownHtml += `
+        <div class="flex justify-between items-center">
+          <span>(${isAddon ? '加購' : '項目'}：${cb.value})</span>
+          <span class="font-mono">${isShowPrice ? `${isAddon ? '+' : ''}預估 NT$ ${rawPriceStr}` : '現場確認'}</span>
+        </div>`;
+    });
+    if (summaryItems) summaryItems.innerHTML = breakdownHtml;
+    if (summaryRange) summaryRange.innerText = isShowPrice ? `預估 NT$ ${mainTotal}` : '現場確認';
+  }
+
+  // 4. 加購額度統計
+  const addonPkgFee = (isPackageEnabled && pkgDropdown) ? Number(pkgDropdown.options[pkgDropdown.selectedIndex]?.getAttribute('data-price') || 0) : 0;
+  const addonWalFee = (isWalletEnabled && walDropdown) ? Number(walDropdown.options[walDropdown.selectedIndex]?.getAttribute('data-price') || 0) : 0;
+  const totalAddon = addonPkgFee + addonWalFee;
+
+  // 5. 互斥折抵邏輯 (包卡 / 儲值金 / 折扣碼 擇一)
+  const usePkg = isPackageEnabled && document.getElementById('chk-use-package')?.checked;
+  const useWallet = isWalletEnabled && document.getElementById('chk-use-wallet')?.checked;
+
+  let deductAmount = 0;
+  let deductText = '無折抵';
+  const pkgNoticeBox = document.getElementById('box-package-remain-notice');
+
+  if (usePkg && mainTotal > 0) {
+    deductAmount = mainTotal;
+    deductText = `套用包卡抵扣 1 堂 (折抵主項目 -$${mainTotal})`;
+    if (pkgNoticeBox) {
+      pkgNoticeBox.classList.remove('hidden');
+      const remTimes = Math.max(0, (memberData.packages?.[0]?.remaining_times || 1) - 1);
+      document.getElementById('text-remain-package-times').innerText = remTimes;
+    }
+  } else {
+    if (pkgNoticeBox) pkgNoticeBox.classList.add('hidden');
+  }
+
+  if (useWallet && !usePkg && mainTotal > 0) {
+    const activeDiscount = memberData.discountPercent || 1;
+    const discountedMain = Math.round(mainTotal * activeDiscount);
+    deductAmount = memberData.walletBalance >= discountedMain ? mainTotal : memberData.walletBalance;
+    deductText = `儲值金折抵 -$${deductAmount}`;
+  }
+
+  if (activeCoupon && !usePkg && !useWallet && mainTotal > 0) {
+    deductAmount = activeCoupon.discount_type === 'cash'
+      ? Number(activeCoupon.discount_value || 0)
+      : Math.round(mainTotal * (1 - Number(activeCoupon.discount_value || 1)));
+    deductText = `折扣碼【${activeCoupon.code}】折抵 (-$${deductAmount})`;
+  }
+
+  // 6. 即時小計框細項顯隱排列
+  const rowDeduct = document.getElementById('row-deduct-detail');
+  const rowAddon = document.getElementById('row-addon-plan-fee');
+  const summaryBox = document.getElementById('checkoutSummaryBox');
+
+  if (rowDeduct) rowDeduct.style.display = (!isPackageEnabled && !isWalletEnabled && !isCouponEnabled) ? 'none' : 'flex';
+  if (rowAddon) rowAddon.style.display = totalAddon > 0 ? 'flex' : 'none';
+
+  document.getElementById('summary-deduct-text').innerText = deductText;
+  const addonTotalEl = document.getElementById('summary-addon-total');
+  if (addonTotalEl) addonTotalEl.innerText = totalAddon.toLocaleString();
+
+  // 訂金核算
+  const custTypeVal = document.getElementById('custType')?.value || 'old';
+  const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+  const depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
+  const rowDeposit = document.getElementById('rowDepositDeduct');
+
+  if (rowDeposit) rowDeposit.classList.toggle('hidden', depositDeduct <= 0);
+  if (depositDeduct > 0) document.getElementById('summaryDepositDeduct').innerText = depositDeduct;
+
+  // 7. 計算最終應付金額
+  const finalTotal = Math.max(0, (mainTotal - deductAmount) + totalAddon - depositDeduct);
+  const finalTotalEl = document.getElementById('summary-final-total');
+  if (finalTotalEl) {
+    finalTotalEl.innerText = isShowPrice ? `預估 NT$ ${finalTotal.toLocaleString()}` : '現場報價';
+  }
+
+  // 若儲值、包卡、折扣全關且關閉顯示金額，收合整個計價框以防留白
+  if (!isShowPrice && !isPackageEnabled && !isWalletEnabled && !isCouponEnabled && totalAddon === 0 && depositDeduct === 0) {
+    if (summaryBox) summaryBox.classList.add('hidden');
+  } else {
+    if (summaryBox) summaryBox.classList.remove('hidden');
+  }
+}
+  
   function toggleReviewTag(el) {
     el.classList.toggle('bg-theme-primary');
     el.classList.toggle('text-white');
