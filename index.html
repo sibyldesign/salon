@@ -26,9 +26,10 @@
           }
         }
       }
-    }
-    <script>
-    // 0 毫秒極速色盤攔截 (比照 link 微頁系統)
+    };
+  </script>
+  <!-- 0 毫秒極速色盤攔截 (比照 link 微頁系統) -->
+  <script>
     (function(){
       const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
       const palettes = {
@@ -320,34 +321,41 @@
           <input type="text" id="referrerName" placeholder="請填寫介紹人姓名、會員編號或社群" class="w-full px-4 py-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs outline-none focus:bg-white transition">
         </div>
 
-        <!-- 毛孩詳細履歷 (若為寵物店型態則顯示) -->
-        <div id="petProfileSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3 text-xs hidden">
-          <div class="font-bold text-sm text-brand-900 flex items-center gap-1.5 border-b border-brand-200 pb-2">
-            <i class="fa-solid fa-paw text-brand-500"></i> 毛孩身分與照護履歷
+        <!-- 毛孩詳細履歷 (已修復多餘標籤造成的排版斷裂) -->
+        <div id="petProfileSection" class="p-4 rounded-3xl bg-brand-50/90 border border-brand-200 space-y-3.5 text-xs hidden">
+          <div class="font-bold text-sm text-brand-900 flex items-center justify-between border-b border-brand-200 pb-2">
+            <span class="flex items-center gap-1.5"><i class="fa-solid fa-paw text-brand-500"></i> 毛孩身分與照護履歷</span>
+            <span id="petAssetBadge" class="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-bold hidden"></span>
           </div>
-          
+
+          <!-- 歷史毛孩快查切換選單 -->
+          <div id="multiPetSelectBlock" class="hidden p-2.5 bg-white rounded-2xl border border-brand-200 space-y-1">
+            <label class="block font-bold text-brand-800 text-[11px]">🐾 選擇施作毛孩 (自動帶入專屬履歷與包卡)：</label>
+            <select id="multiPetDropdown" class="w-full p-2 bg-brand-50 rounded-xl border border-brand-200 font-bold text-xs outline-none" onchange="selectFrontPetByIndex(this.value)"></select>
+          </div>
+
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block font-bold text-brand-700 mb-1">毛孩姓名 *</label>
               <input type="text" id="petName" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold" placeholder="例: 圓圓">
             </div>
             <div>
-              <label class="block font-bold text-brand-700 mb-1">品種 / 犬貓分類 *</label>
-              <input type="text" id="petBreed" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold" placeholder="例: 柴犬 / 美短">
+              <label class="block font-bold text-brand-700 mb-1">品種 / 分類 *</label>
+              <input type="text" id="petBreed" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold" placeholder="例: 柴犬 / 貴賓">
             </div>
           </div>
 
           <div class="grid grid-cols-3 gap-2">
             <div>
-              <label class="block font-bold text-brand-700 mb-1">體重 (公斤) *</label>
+              <label class="block font-bold text-brand-700 mb-1">體重 (kg) *</label>
               <input type="number" step="0.1" id="petWeight" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold font-mono" placeholder="kg" oninput="calculateBoardingDaysAndPrice()">
             </div>
             <div>
-              <label class="block font-bold text-brand-700 mb-1">年齡 / 歲 *</label>
+              <label class="block font-bold text-brand-700 mb-1">年齡 (歲) *</label>
               <input type="number" id="petAge" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold font-mono" placeholder="歲">
             </div>
             <div>
-              <label class="block font-bold text-brand-700 mb-1">性別 / 結紮 *</label>
+              <label class="block font-bold text-brand-700 mb-1">性別 *</label>
               <select id="petGender" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none font-bold">
                 <option value="公(已結紮)">公 (已結紮)</option>
                 <option value="公(未結紮)">公 (未結紮)</option>
@@ -358,36 +366,38 @@
           </div>
 
           <div>
-            <label class="block font-bold text-brand-700 mb-1">毛孩性格與日常照護備註 *</label>
-            <textarea id="petPersonality" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none leading-relaxed" placeholder="例如：親人、緊張會護食、會怕吹風機等..."></textarea>
+            <label class="block font-bold text-brand-700 mb-1">毛孩性格與日常照護備註</label>
+            <textarea id="petPersonality" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 outline-none leading-relaxed" placeholder="例如：親人、會怕吹風機等..."></textarea>
           </div>
 
-          <!-- 後台勾選之延伸照護欄位 -->
-          <!-- 後台勾選之預設問答 ＋ 老闆自訂動態問答題庫 (受後台控制) -->
-          <div class="space-y-2.5 pt-2 border-t border-brand-200/60" id="petExtendedFieldsBox">
-            <!-- 預設常用開關問題 -->
+          <!-- 延伸題目與動態問卷 -->
+          <div id="petExtendedFieldsBox" class="space-y-2 pt-1 border-t border-brand-200/60">
             <div id="box-chip-id" class="hidden">
-              <label class="block font-bold text-brand-700 mb-1 text-[11px]">晶片號碼 (Microchip 15碼)：</label>
-              <input type="text" id="petChipId" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs font-mono" placeholder="請填寫 15 碼晶片號碼">
+              <label class="block font-bold text-brand-700 mb-1 text-[11px]">晶片號碼 (15碼)：</label>
+              <input type="text" id="petChipId" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs font-mono">
             </div>
             <div id="box-vaccine" class="hidden grid grid-cols-2 gap-2">
               <div>
-                <label class="block font-bold text-brand-700 mb-1 text-[11px]">核心狂犬/十合一疫苗年份：</label>
-                <input type="text" id="petVaccineYear" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 2026/05 已施打">
+                <label class="block font-bold text-brand-700 mb-1 text-[11px]">疫苗施打年份：</label>
+                <input type="text" id="petVaccineYear" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 2026/05">
               </div>
               <div>
-                <label class="block font-bold text-brand-700 mb-1 text-[11px]">最近定期驅蟲品牌/月份：</label>
-                <input type="text" id="petDewormDate" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 一錠除 (8月)">
+                <label class="block font-bold text-brand-700 mb-1 text-[11px]">定期驅蟲月份：</label>
+                <input type="text" id="petDewormDate" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 8月">
               </div>
             </div>
             <div id="box-allergy" class="hidden">
-              <label class="block font-bold text-brand-700 mb-1 text-[11px]">過敏食物、慢性重大病史：</label>
-              <input type="text" id="petAllergy" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs" placeholder="例: 雞肉過敏、心臟病、關節退化">
+              <label class="block font-bold text-brand-700 mb-1 text-[11px]">重大病史與過敏體質：</label>
+              <input type="text" id="petAllergy" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs">
             </div>
-
-            <!-- 老闆於後台動態新增的自訂問題渲染區 -->
             <div id="customQuestionsContainer" class="space-y-2 pt-1"></div>
           </div>
+
+          <!-- 新增毛孩按鈕 -->
+          <div class="pt-1 text-center">
+            <button type="button" onclick="promptAddNewPetProfile()" class="w-full py-2.5 border-2 border-dashed border-brand-300 hover:border-brand-500 rounded-xl text-brand-700 font-bold flex items-center justify-center gap-1 transition">
+              <i class="fa-solid fa-plus text-xs"></i> 登記名下另一隻新毛孩
+            </button>
           </div>
         </div>
 
@@ -1057,43 +1067,131 @@
   };
     
   // 3. 輸入電話帶入多毛孩選取與個別資產顯示
-  async function checkPhoneAndLoadBenefits(el) {
-    const phone = el.value.trim();
-    if (phone.length < 8) return;
+  let userPetProfiles = [];
+let currentPetIndex = 0;
 
-    const [pets, custs] = await Promise.all([
-      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`),
-      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
-    ]);
+// 輸入電話帶入顧客名下多隻毛孩
+async function checkPhoneAndLoadBenefits(el) {
+  const phone = el.value.trim();
+  if (phone.length < 8) return;
 
-    cachedPetList = pets || [];
-    const multiPetBlock = document.getElementById('multiPetSelectBlock');
-    const multiPetDropdown = document.getElementById('multiPetDropdown');
-    const balanceBlock = document.getElementById('customerBalanceBadgeBlock');
+  const [pets, custs] = await Promise.all([
+    directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`),
+    directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+  ]);
 
-    if (custs && custs.length > 0) {
-      document.getElementById('name').value = custs[0].name || '';
-    }
+  userPetProfiles = pets || [];
+  const multiBox = document.getElementById('multiPetSelectBlock');
+  const dropdown = document.getElementById('multiPetDropdown');
 
-    if (cachedPetList.length > 0) {
-      if (multiPetBlock && multiPetDropdown) {
-        let optHtml = `<option value="" disabled selected>--- 選擇歷史毛孩 (可自動帶入) ---</option>`;
-        cachedPetList.forEach((p, idx) => {
-          optHtml += `<option value="${idx}">🐾 ${p.name} (${p.breed || '未填品種'}) - 包卡: ${p.package_balance || 0}次 / 儲值: $${p.wallet_balance || 0}</option>`;
-        });
-        optHtml += `<option value="_NEW_">＋ 填寫新毛孩資料</option>`;
-        multiPetDropdown.innerHTML = optHtml;
-        multiPetBlock.classList.remove('hidden');
-      }
-
-      // 預設帶入第一隻毛孩
-      selectPetByIndex(0);
-    } else {
-      if (multiPetBlock) multiPetBlock.classList.add('hidden');
-      if (balanceBlock) balanceBlock.classList.add('hidden');
-    }
+  if (custs && custs.length > 0) {
+    document.getElementById('name').value = custs[0].name || '';
   }
 
+  if (userPetProfiles.length > 0) {
+    let optHtml = `<option value="" disabled>--- 請選擇本次施作毛孩 ---</option>`;
+    userPetProfiles.forEach((p, idx) => {
+      optHtml += `<option value="${idx}" ${idx === 0 ? 'selected' : ''}>🐾 ${p.name} (${p.breed || '一般'}) - 包卡: ${p.package_balance || 0}次 / 儲值: $${p.wallet_balance || 0}</option>`;
+    });
+    dropdown.innerHTML = optHtml;
+    multiBox.classList.remove('hidden');
+    selectFrontPetByIndex(0);
+  } else {
+    multiBox.classList.add('hidden');
+    document.getElementById('petAssetBadge').classList.add('hidden');
+    document.getElementById('memberWalletCard').classList.add('hidden');
+  }
+
+  // 檢查是否需收訂金並更新前台顯示
+  updateDepositSectionDisplay();
+}
+
+// 切換選擇的毛孩：獨立顯示該毛孩之包卡與儲值
+function selectFrontPetByIndex(idx) {
+  const p = userPetProfiles[idx];
+  if (!p) return;
+  currentPetIndex = idx;
+
+  document.getElementById('petName').value = p.name || '';
+  document.getElementById('petBreed').value = p.breed || '';
+  if (document.getElementById('petWeight')) document.getElementById('petWeight').value = p.weight_kg || '';
+  if (document.getElementById('petAge')) document.getElementById('petAge').value = p.age_str || '';
+  if (document.getElementById('petPersonality')) document.getElementById('petPersonality').value = p.notes || '';
+
+  // 1. 毛孩卡片右上角獨立標記
+  const badge = document.getElementById('petAssetBadge');
+  badge.innerText = `🐾 ${p.name}：剩餘包卡 ${p.package_balance || 0} 次 / 儲值金 $${p.wallet_balance || 0}`;
+  badge.classList.remove('hidden');
+
+  // 2. 電話下方資產卡片同步更新為該毛孩專屬數值
+  document.getElementById('displayWalletBalance').innerText = Number(p.wallet_balance || 0).toLocaleString();
+  document.getElementById('memberWalletCard').classList.remove('hidden');
+
+  // 3. 包卡勾選框防呆：若該毛孩包卡次數為 0，鎖定並取消勾選
+  const chkCard = document.getElementById('chk-use-package');
+  if (chkCard) {
+    chkCard.disabled = (Number(p.package_balance || 0) <= 0);
+    if (chkCard.disabled) chkCard.checked = false;
+  }
+
+  updateCheckoutSummary();
+}
+
+// 點擊新增毛孩按鈕：清空欄位供家長填寫新毛孩
+function promptAddNewPetProfile() {
+  document.getElementById('petName').value = '';
+  document.getElementById('petBreed').value = '';
+  document.getElementById('petWeight').value = '';
+  document.getElementById('petAge').value = '';
+  document.getElementById('petPersonality').value = '';
+  document.getElementById('petAssetBadge').classList.add('hidden');
+  document.getElementById('petName').focus();
+
+  // 由於是新毛孩，包卡與儲值為 0，鎖定包卡扣抵
+  const chkCard = document.getElementById('chk-use-package');
+  if (chkCard) { chkCard.disabled = true; chkCard.checked = false; }
+
+  Swal.fire({
+    title: '填寫新毛孩資料',
+    text: '請於下方填寫寶貝資訊，送單後系統將自動將此毛孩建立於您的名下。',
+    icon: 'info',
+    timer: 1500,
+    showConfirmButton: false
+  });
+  updateCheckoutSummary();
+}
+
+// 送單前即時同步或新增毛孩至 pets 資料表（毛孩若修改過也會更新為最新）
+async function syncCurrentPetToDatabase(phone, ownerName) {
+  const petName = document.getElementById('petName')?.value.trim();
+  if (!petName || !phone) return;
+
+  const breed = document.getElementById('petBreed')?.value.trim() || '';
+  const weight = Number(document.getElementById('petWeight')?.value || 0);
+  const age = document.getElementById('petAge')?.value.trim() || '';
+  const notes = document.getElementById('petPersonality')?.value.trim() || '';
+
+  const payload = {
+    store_id: CURRENT_STORE_ID,
+    customer_phone: phone,
+    name: petName,
+    breed: breed,
+    weight_kg: weight,
+    age_str: age,
+    notes: notes,
+    updated_at: new Date().toISOString()
+  };
+
+  const exist = userPetProfiles.find(p => p.name === petName);
+  if (exist) {
+    // 存在則更新為最新填寫內容
+    await directSupabasePatch('pets', `id=eq.${exist.id}`, payload);
+  } else {
+    // 不存在則新建該毛孩檔案
+    await directSupabaseUpsert('pets', payload, 'id');
+  }
+}
+  
   function toggleHotelBathSubSelect(type) {
     const isChecked = document.getElementById(type === 'in' ? 'chkHotelBathCheckin' : 'chkHotelBathCheckout').checked;
     const panel = document.getElementById(type === 'in' ? 'hotelBathInSubPanel' : 'hotelBathOutSubPanel');
@@ -1171,11 +1269,10 @@
     updateCheckoutSummary();
   }
 
-  // 全域動態注入 CSS 樣式，徹底覆蓋所有寫死的色值
   function applyThemeColors(themeKey) {
     const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : (localStorage.getItem('zy_cached_theme') || 'latte');
     const t = THEME_PALETTES[safeKey];
-    localStorage.setItem('zy_cached_theme', safeKey); // 立即固化在瀏覽器
+    localStorage.setItem('zy_cached_theme', safeKey);
 
     let styleTag = document.getElementById('theme-runtime-css');
     if (!styleTag) {
@@ -1183,8 +1280,6 @@
       styleTag.id = 'theme-runtime-css';
       document.head.appendChild(styleTag);
     }
-    
-    // 徹底穿透 Tailwind 的所有寫死色碼
     styleTag.innerHTML = `
       body, .bg-brand-50 { background-color: ${t.bg} !important; }
       #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
@@ -1201,7 +1296,6 @@
         color: #FFFFFF !important;
         border-color: ${t.primary} !important;
       }
-      /* 日曆選取高亮穿透 */
       #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
       #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
       #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
@@ -1352,7 +1446,47 @@
     }
   }
 
-  async function checkMaintenanceAndAnnouncement() {
+  // 補進：更新資料表函式
+  async function directSupabasePatch(table, query, payload) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch(e) {
+      console.warn("Patch failed:", e);
+      return null;
+    }
+  }
+
+  // 補進：新增/覆寫資料表函式
+  async function directSupabaseUpsert(table, payload) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(payload)
+      });
+      return await res.json();
+    } catch(e) {
+      console.warn("Upsert failed:", e);
+      return null;
+    }
+  }
+    
+    async function checkMaintenanceAndAnnouncement() {
     try {
       const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=plan_status,store_name`);
       if (storeRes && storeRes.length > 0) {
@@ -1402,6 +1536,7 @@
   setInterval(checkMaintenanceAndAnnouncement, 15000);
 
   // 智慧放飯餐數與體型階梯餐費計算引擎
+  // 智慧放飯餐數與體型階梯餐費計算引擎
   function calculateBoardingDaysAndPrice() {
     if (activeBookingSubMode !== 'boarding') return;
 
@@ -1422,7 +1557,7 @@
     // 2. 依體重判定房型等級與基準房價
     let baseRoomMin = 700, baseRoomMax = 900;
     let tierName = "小型犬獨立房";
-    let sizeKey = 'small'; // 預設小犬/貓
+    let sizeKey = 'small';
 
     if (weightVal >= 21) {
       baseRoomMin = 1300; baseRoomMax = 1600; tierName = "大型犬旗艦房"; sizeKey = 'large';
@@ -1433,38 +1568,52 @@
     const roomMinTotal = baseRoomMin * nights;
     const roomMaxTotal = baseRoomMax * nights;
 
-    // 3. 智慧放飯餐費計算 (從後台抓取對應體型的 1/2/3 餐單價)
+    // 3. 供餐單餐計價與餐數計算 (小型犬$75/餐，中型犬$100/餐，大型犬$140/餐，或由後台動態設定)
+    const mealRates = db.boardingMealRates || {};
+    let unitMealPrice = 75;
+    if (typeof mealRates[sizeKey] === 'number') {
+      unitMealPrice = mealRates[sizeKey];
+    } else if (Array.isArray(mealRates[sizeKey])) {
+      unitMealPrice = mealRates[sizeKey][0] || 75;
+    } else {
+      if (weightVal >= 21) unitMealPrice = 140;
+      else if (weightVal >= 10) unitMealPrice = 100;
+    }
+
     const mealRadio = document.querySelector('input[name="mealPlanOption"]:checked');
     const mealType = mealRadio ? mealRadio.getAttribute('data-type') : 'SELF';
     const mealName = mealRadio ? mealRadio.getAttribute('data-name') : '自備飼料';
 
-    const rates = db.boardingMealRates || {
-      small: [80, 150, 220],
-      medium: [100, 180, 260],
-      large: [120, 220, 320]
-    };
-
-    let tierRatesArr = rates[sizeKey] || [80, 150, 220];
-    let mealTotal = 0;
-    let mealExplain = "";
+    let actualMealCount = 0;
+    let totalMealFee = 0;
+    let mealExplainStr = "";
 
     if (mealType !== 'SELF') {
-      let dailyTimes = (mealType === 'ONE') ? 1 : (mealType === 'THREE' ? 3 : 2);
-      let unitMealPrice = tierRatesArr[dailyTimes - 1] || tierRatesArr[0]; // 0對應1餐, 1對應2餐, 2對應3餐
+      const checkInDt = new Date(`${inDateVal}T${inTimeVal}:00`);
+      const checkOutDt = new Date(`${outDateVal}T${outTimeVal}:00`);
 
-      let calculatedMeals = dailyTimes * nights;
-      const bTime = db.boardingSettings?.breakfastTime || '09:00';
-      const dTime = db.boardingSettings?.dinnerTime || '18:00';
-      
-      if (inTimeVal > bTime && dailyTimes >= 2) calculatedMeals = Math.max(1, calculatedMeals - 1);
-      if (outTimeVal >= dTime && dailyTimes >= 2) calculatedMeals += 1;
+      let cur = new Date(checkInDt.getFullYear(), checkInDt.getMonth(), checkInDt.getDate());
+      const endD = new Date(checkOutDt.getFullYear(), checkOutDt.getMonth(), checkOutDt.getDate());
 
-      mealTotal = calculatedMeals * unitMealPrice;
-      mealExplain = `${mealName} (${dailyTimes}餐/天，共 ${calculatedMeals} 餐，+NT$ ${mealTotal})`;
+      while (cur <= endD) {
+        const y = cur.getFullYear(), m = cur.getMonth(), d = cur.getDate();
+        const breakfastDt = new Date(y, m, d, 9, 0, 0);
+        const dinnerDt = new Date(y, m, d, 18, 0, 0);
+
+        if (breakfastDt >= checkInDt && breakfastDt <= checkOutDt) actualMealCount++;
+        if (dinnerDt >= checkInDt && dinnerDt <= checkOutDt) actualMealCount++;
+
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      if (mealType === 'ONE') actualMealCount = Math.max(1, Math.ceil(actualMealCount / 2));
+
+      totalMealFee = actualMealCount * unitMealPrice;
+      mealExplainStr = `${mealName} (經時段核算共 ${actualMealCount} 餐，每餐 NT$ ${unitMealPrice}，餐費小計 +NT$ ${totalMealFee})`;
 
       const explainBox = document.getElementById('hotelMealCountExplain');
       if (explainBox) {
-        explainBox.innerText = `🥣 ${mealExplain} (依${tierName}單價計)`;
+        explainBox.innerText = `🥣 ${mealExplainStr}`;
         explainBox.classList.remove('hidden');
       }
     } else {
@@ -1492,14 +1641,14 @@
     const isShuttle = document.getElementById('chkNeedShuttle')?.checked;
 
     // 5. 總金額試算合成
-    const totalEstMin = roomMinTotal + mealTotal + totalBathMin;
-    const totalEstMax = roomMaxTotal + mealTotal + totalBathMax;
+    const totalEstMin = roomMinTotal + totalMealFee + totalBathMin;
+    const totalEstMax = roomMaxTotal + totalMealFee + totalBathMax;
 
     const breakdownBox = document.getElementById('summary-items-breakdown');
     if (breakdownBox) {
       breakdownBox.innerHTML = `
         <div class="flex justify-between"><span>• ${tierName} (${nights} 晚)：</span><span class="font-mono">NT$ ${roomMinTotal.toLocaleString()} ~ ${roomMaxTotal.toLocaleString()}</span></div>
-        ${mealExplain ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplain}</span></div>` : ''}
+        ${mealExplainStr ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplainStr}</span></div>` : ''}
         ${hasInBath ? `<div class="flex justify-between text-blue-700"><span>• 入住前清潔洗護：</span><span class="font-mono">+NT$ ${bathInMin} ~${bathInMax}</span></div>` : ''}
         ${hasOutBath ? `<div class="flex justify-between text-purple-700"><span>• 退宿前造型美容：</span><span class="font-mono">+NT$ ${bathOutMin} ~${bathOutMax}</span></div>` : ''}
         ${isShuttle ? `<div class="text-emerald-800 font-bold">• 專車到府接送：車資現場依里程實收</div>` : ''}
@@ -2801,6 +2950,8 @@
       });
       
       if (!res.ok) throw new Error(await res.text());
+      const resData = await res.json();
+      const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
       // 觸發後端寄送憑證信件與推播
       fetch(API_URL, {
@@ -2811,21 +2962,56 @@
           data: Object.assign({}, dbPayload, { 
             date: dValRaw, 
             time: tVal, 
-            service: sVal,
-            signature_url: signatureBase64
+            service: sVal, 
+            signature_url: signatureBase64 
           })
         })
       }).catch(() => {});
 
-      Swal.fire({
-        title: '預約申請已成功送出！',
-        text: '店家確認排程後將第一時間與您聯繫確認❤️',
-        icon: 'success',
-        confirmButtonColor: '#8C7355'
-      }).then(() => {
-        document.getElementById('booking-ui').style.display = 'none';
-        document.getElementById('success-screen').style.display = 'flex';
-      });
+      // 送單前同步更新毛孩資料至 pets 表
+      await syncCurrentPetToDatabase(phoneVal, nameVal);
+
+      // 判定是否需收訂金
+      const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
+
+      if (isNeedDeposit && db.depositAmount > 0) {
+        Swal.fire({
+          title: '預約已送出！請完成訂金預付',
+          html: `
+            <div class="text-left text-xs space-y-3 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950">
+              <div class="font-bold text-sm text-center text-amber-900 border-b border-amber-200 pb-1">定額訂金：NT$ ${db.depositAmount} 元</div>
+              <div class="whitespace-pre-line leading-relaxed">${db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012'}</div>
+              <div class="pt-2 border-t border-amber-200">
+                <label class="block font-bold mb-1 text-[11px]">轉帳完成請回報帳號後五碼：</label>
+                <input type="text" id="swal-deposit-last5" maxlength="5" placeholder="例如：12345" class="w-full p-2 bg-white border border-amber-300 rounded-xl font-mono text-center font-bold text-sm outline-none">
+              </div>
+            </div>
+          `,
+          icon: 'info',
+          confirmButtonText: '已完成匯款，送出後五碼',
+          confirmButtonColor: '#8C7355',
+          preConfirm: () => document.getElementById('swal-deposit-last5')?.value.trim()
+        }).then(async (r) => {
+          if (r.value && newBookingId) {
+            await directSupabasePatch('bookings', `id=eq.${newBookingId}`, {
+              deposit_reported: true,
+              deposit_last5: r.value
+            });
+          }
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('success-screen').classList.remove('hidden');
+        });
+      } else {
+        Swal.fire({
+          title: '🎉 預約申請已成功送出！',
+          text: '店家確認排程後將第一時間與您聯繫確認❤️',
+          icon: 'success',
+          confirmButtonColor: '#8C7355'
+        }).then(() => {
+          document.getElementById('booking-ui').style.display = 'none';
+          document.getElementById('success-screen').classList.remove('hidden');
+        });
+      }
     } catch (err) {
       Swal.fire('預約傳送失敗', err.message, 'error');
       btn.disabled = false;
