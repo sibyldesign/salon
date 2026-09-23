@@ -27,6 +27,31 @@
         }
       }
     }
+    <script>
+    // 0 毫秒極速色盤攔截 (比照 link 微頁系統)
+    (function(){
+      const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
+      const palettes = {
+        latte:  { p: '#8C7355', ph: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8' },
+        matcha: { p: '#5C725E', ph: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE' },
+        noir:   { p: '#262626', ph: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5' },
+        navy:   { p: '#2B4C6F', ph: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC' },
+        rose:   { p: '#A26D74', ph: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD' },
+        mist:   { p: '#4A7C6D', ph: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1' }
+      };
+      const t = palettes[cachedTheme] || palettes['latte'];
+      const css = `
+        :root { --theme-primary: ${t.p} !important; --theme-bg: ${t.bg} !important; }
+        body, .bg-brand-50 { background-color: ${t.bg} !important; }
+        .bg-\\[\\#8C7355\\], #promo, #subBtn, .tab-btn.active, .swal2-confirm { background-color: ${t.p} !important; color: #fff !important; }
+        .text-\\[\\#8C7355\\], .text-brand-500 { color: ${t.p} !important; }
+        .border-\\[\\#8C7355\\] { border-color: ${t.p} !important; }
+      `;
+      const s = document.createElement('style');
+      s.id = 'early-theme-style';
+      s.innerHTML = css;
+      document.head.appendChild(s);
+    })();
   </script>
   <style>
     /* 1. 動態主題色彩變數（後台切換色系時由 JS 即時覆蓋） */
@@ -1148,16 +1173,9 @@
 
   // 全域動態注入 CSS 樣式，徹底覆蓋所有寫死的色值
   function applyThemeColors(themeKey) {
-    const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : 'latte';
+    const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : (localStorage.getItem('zy_cached_theme') || 'latte');
     const t = THEME_PALETTES[safeKey];
-    localStorage.setItem('zy_cached_theme', safeKey);
-
-    document.documentElement.style.setProperty('--theme-primary', t.primary);
-    document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
-    document.documentElement.style.setProperty('--theme-bg', t.bg);
-    document.documentElement.style.setProperty('--theme-text', t.text);
-    document.body.style.backgroundColor = t.bg;
-    document.body.style.color = t.text;
+    localStorage.setItem('zy_cached_theme', safeKey); // 立即固化在瀏覽器
 
     let styleTag = document.getElementById('theme-runtime-css');
     if (!styleTag) {
@@ -1165,20 +1183,30 @@
       styleTag.id = 'theme-runtime-css';
       document.head.appendChild(styleTag);
     }
+    
+    // 徹底穿透 Tailwind 的所有寫死色碼
     styleTag.innerHTML = `
       body, .bg-brand-50 { background-color: ${t.bg} !important; }
-      #promo { background-color: ${t.primary} !important; color: #fff !important; }
+      #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
       #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm {
         background-color: ${t.primary} !important;
-        color: #fff !important;
+        color: #FFFFFF !important;
       }
       #subBtn:hover, .swal2-confirm:hover { background-color: ${t.primaryHover} !important; }
-      .text-brand-500, .text-[#8C7355], #brand-subtitle { color: ${t.primary} !important; }
-      .border-brand-400, .border-[#8C7355] { border-color: ${t.primary} !important; }
+      .bg-\\[\\#8C7355\\] { background-color: ${t.primary} !important; }
+      .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.primary} !important; }
+      .border-\\[\\#8C7355\\], .border-brand-400 { border-color: ${t.primary} !important; }
       .tab-btn.active, .time-pill.selected, .hotel-pill-in.selected, .hotel-pill-out.selected {
         background-color: ${t.primary} !important;
-        color: #fff !important;
+        color: #FFFFFF !important;
         border-color: ${t.primary} !important;
+      }
+      /* 日曆選取高亮穿透 */
+      #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
+      #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
+      #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
+        background-color: ${t.primary} !important;
+        color: #FFFFFF !important;
       }
     `;
   }
