@@ -2164,194 +2164,228 @@
     // 3. 全域資料載入與同步 (完整支援住宿、色系、指定獎金與 20+ 模組)
     // ==========================================
     async function fetchDataAndRender() {
-      try {
-        let [stores, settings, services, portfolios, bookings] = await Promise.all([
-          directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
-          directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
-          directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
-          directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-          directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
-        ]);
+  try {
+    let [stores, settings, services, portfolios, bookings] = await Promise.all([
+      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
+      directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
+    ]);
 
-        const sCfg = (settings && settings.length > 0) ? settings[0] : {};
-        const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+    const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
 
-        const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
-        customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
-        
-        const availableDates = [];
-        const today = new Date();
-        for (let i = 0; i < 60; i++) {
-          const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-          const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
-          if (!weeklyOffDays.includes(target.getDay()) && !customOffDatesArray.includes(dStr)) {
-            availableDates.push(dStr);
-          }
-        }
-
-        promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
-        while (promoImgsArray.length < 7) promoImgsArray.push("");
-
-        backendData = {
-          appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
-            const d = new Date(b.appointment_time);
-            const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
-            return {
-              id: b.id,
-              date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
-              time: timeStr,
-              name: b.customer_name,
-              phone: b.customer_phone,
-              customer_type: b.customer_type || 'old',
-              customer_notes: b.customer_notes || '',
-              lineName: b.line_name || '',
-              service: b.service_names || '',
-              price: Number(b.price) || 0,
-              finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
-              notes: b.notes || '',
-              staffId: b.staff_id || 'all',
-              staffName: b.staff_name || '不指定',
-              status: b.status || '待確認',
-              deposit_confirmed: b.deposit_confirmed === true,
-              deposit_deducted: Number(b.deposit_deducted || 0),
-              depositLast5: b.deposit_last5 || '',
-              signature_url: b.signature_url || '',
-              signed_at: b.signed_at || '',
-              created_at: b.created_at || '',
-              pet_type: b.pet_type || '小型犬',
-  industryMode: sInfo.industry_type || sCfg.industry_mode || "pet_hotel",
-  themeColor: sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte',
-  theme_color: sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte',
-              self_food: b.self_food !== false
-            };
-          }) : [],
-          scheduleDates: availableDates.map(dStr => ({ date: dStr })),
-          services: (services && services.length > 0) ? services.map(s => ({
-            id: s.id,
-            name: s.service_name || s.name,
-            duration: s.duration_minutes || s.duration || 60,
-            type: s.service_type || s.type || "Group_A",
-            price: s.price || 0,
-            isAddon: s.is_addon === true || s.isAddon === true,
-            sortOrder: s.sort_order || 0,
-            materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
-          })) : [
-            { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0, materials: [] },
-            { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1, materials: [{ name: "日系染膏/精油萃取原液", dosage: "50ml" }] }
-          ],
-          portfolio: (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
-            id: p.id,
-            cat: p.category || p.cat || '作品精選',
-            title: p.title || '',
-            link: p.link || '',
-            img: p.img_url || p.img,
-            sortOrder: p.sort_order || 0
-          })) : [
-            { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 }
-          ],
-          settings: {
-            storeName: sCfg.display_title || sInfo.store_name || "專業沙龍與寵物旗艦館",
-            subtitle: sCfg.display_subtitle || "",
-            logoUrl: sCfg.logo_url || "",
-            enableLogo: sCfg.enable_logo ?? true,
-            storePhone: sCfg.store_phone || "",
-            address: sCfg.address || "",
-            businessHours: sCfg.business_hours || "09:00 - 19:00",
-            bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-            careText: sCfg.care_text || "服務完成後請保持乾爽通風與定期保養。",
-            depositInfo: sCfg.deposit_info || "",
-            depositMode: sCfg.deposit_mode || "all",
-            depositAmount: Number(sCfg.deposit_amount || 0),
-            promoText: sCfg.promo_text || "",
-            promoRulesText: sCfg.promo_rules_text || '',
-            contractTitle: sCfg.contract_title || '美容定型化契約書',
-            contractContent: sCfg.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT,
-            staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
-            walletRules: sCfg.wallet_rules || [{ name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 }],
-            packageRules: sCfg.package_rules || [{ name: "剪髮買5送1暢遊卡", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000, deduct_points: 1 }],
-            careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
-            reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
-            
-            // 前台美學風格色系 (預設 latte)
-            themeColor: sCfg.theme_color || 'latte',
-            
-            // 商業營運引擎模式 (beauty / pet_grooming / pet_hotel)
-            industryMode: sCfg.industry_mode || sInfo.industry_type || "pet_hotel",
-            
-            // 寵物住宿房數與進退房時段配置
-            totalHotelRooms: Number(sCfg.total_hotel_rooms || 8),
-            hotelCheckinStart: sCfg.hotel_checkin_start || "10:00",
-            hotelCheckoutEnd: sCfg.hotel_checkout_end || "19:00",
-            mealTimeBreakfast: sCfg.meal_time_breakfast || "09:00",
-            mealTimeLunch: sCfg.meal_time_lunch || "12:30",
-            mealTimeDinner: sCfg.meal_time_dinner || "18:00",
-            
-            line: sCfg.line_url || "",
-            ig: sCfg.ig_url || "",
-            map: sCfg.map_url || "",
-            lineChannelToken: sCfg.line_channel_token || "",
-            shiftStartTime: sCfg.shift_start_time || "09:00",
-            shiftEndTime: sCfg.shift_end_time || "19:00",
-            shiftInterval: Number(sCfg.shift_interval || 30),
-            
-            // 專員抽成比例 ＆ 每客指定專員獎金
-            commissionRate: Number(sCfg.commission_rate || 50),
-            designatedBonus: Number(sCfg.designated_bonus || 50),
-            
-            publishedSlots: sCfg.published_slots || [],
-            
-            // 20+ 模組開關旗標
-            enableAuditBooking: sCfg.enable_audit_booking ?? true,
-            enableDeposit: sCfg.enable_deposit ?? true,
-            enableStaffSelect: sCfg.enable_staff_select ?? true,
-            enableMultiStaffSchedule: sCfg.enable_multi_staff_schedule ?? true,
-            enableCustType: sCfg.enable_cust_type ?? true,
-            enableShowPrice: sCfg.enable_show_price ?? true,
-            enableCustNotes: sCfg.enable_cust_notes ?? true,
-            enableWallet: sCfg.enable_wallet ?? true,
-            enablePackages: sCfg.enable_packages ?? true,
-            enableCoupons: sCfg.enable_coupons ?? true,
-            enableReviews: sCfg.enable_reviews ?? true,
-            enablePortfolio: sCfg.enable_portfolio ?? true,
-            enableCare: sCfg.enable_care ?? true,
-            enableQuickContact: sCfg.enable_quick_contact ?? true,
-            enableCancelReason: sCfg.enable_cancel_reason ?? true,
-            enableEmailCopy: sCfg.enable_email_copy ?? true,
-            enableCarousel: sCfg.enable_carousel ?? true,
-            enableFeaturedShop: sCfg.enable_featured_shop === true,
-            enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
-            enableCommissionCalc: sCfg.enable_commission_calc ?? true,
-            enableContract: sCfg.enable_contract ?? true,
-            enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
-            enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
-            enableFlexMenu: sCfg.enable_flex_menu ?? true
-          }
-        };
-
-        // 啟動前台商業模式分頁顯隱響應
-        handleIndustryModeChange(backendData.settings.industryMode);
-
-        renderCalendar();
-        renderCustomer();
-        renderShift();
-        renderRevenueSelect();
-        renderRevenue();
-        renderCare();
-        renderBOMCheckboxes();
-        renderServiceList();
-        renderPortfolioList();
-        populateSettings();
-        loadMarketingCenter();
-        loadAdminReviews();
-        renderUploadSlots();
-        renderInventoryList();
-        renderBoardingRoomStatus();
-        renderBoardingCareChecklist();
-        initSlotsLiveUrl();
-      } catch (err) {
-        console.error("同步失敗:", err);
+    // 1. 公休日計算
+    const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
+    customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
+    
+    const availableDates = [];
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+      if (!weeklyOffDays.includes(target.getDay()) && !customOffDatesArray.includes(dStr)) {
+        availableDates.push(dStr);
       }
     }
+
+    promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
+    while (promoImgsArray.length < 7) promoImgsArray.push("");
+
+    // 核心提取：優先級為 store_settings > stores > localStorage > 預設 latte
+    const rawTheme = sCfg.theme_color || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte';
+    const rawMode = sCfg.industry_mode || sInfo.industry_type || "pet_hotel";
+
+    // 同步儲存至本地快取
+    localStorage.setItem('zy_cached_theme', rawTheme);
+
+    // 供餐費率安全轉換 (相容陣列與單一物件格式)
+    const mealRatesCfg = sCfg.boarding_meal_rates || {};
+    const safeMealRates = {
+      small: Array.isArray(mealRatesCfg.small) ? mealRatesCfg.small : [mealRatesCfg.small || 80, 150, 220],
+      medium: Array.isArray(mealRatesCfg.medium) ? mealRatesCfg.medium : [mealRatesCfg.medium || 100, 180, 260],
+      large: Array.isArray(mealRatesCfg.large) ? mealRatesCfg.large : [mealRatesCfg.large || 120, 220, 320]
+    };
+
+    backendData = {
+      // 1. 預約清單解析 (已徹底移除錯置的 themeColor 污染)
+      appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
+        const d = new Date(b.appointment_time);
+        const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+        return {
+          id: b.id,
+          date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+          time: timeStr,
+          name: b.customer_name,
+          phone: b.customer_phone,
+          customer_type: b.customer_type || 'old',
+          customer_notes: b.customer_notes || '',
+          lineName: b.line_name || '',
+          service: b.service_names || '',
+          price: Number(b.price) || 0,
+          finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
+          notes: b.notes || '',
+          staffId: b.staff_id || 'all',
+          staffName: b.staff_name || '不指定',
+          status: b.status || '待確認',
+          deposit_confirmed: b.deposit_confirmed === true,
+          deposit_deducted: Number(b.deposit_deducted || 0),
+          depositLast5: b.deposit_last5 || '',
+          signature_url: b.signature_url || '',
+          signed_at: b.signed_at || '',
+          created_at: b.created_at || '',
+          pet_type: b.pet_type || '小型犬',
+          self_food: b.self_food !== false
+        };
+      }) : [],
+
+      scheduleDates: availableDates.map(dStr => ({ date: dStr })),
+
+      // 2. 服務項目
+      services: (services && services.length > 0) ? services.map(s => ({
+        id: s.id,
+        name: s.service_name || s.name,
+        duration: s.duration_minutes || s.duration || 60,
+        type: s.service_type || s.type || "Group_A",
+        price: s.price || 0,
+        isAddon: s.is_addon === true || s.isAddon === true,
+        sortOrder: s.sort_order || 0,
+        materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
+      })) : [
+        { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0, materials: [] },
+        { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1, materials: [{ name: "日系染膏/精油萃取原液", dosage: "50ml" }] }
+      ],
+
+      // 3. 作品集
+      portfolio: (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
+        id: p.id,
+        cat: p.category || p.cat || '作品精選',
+        title: p.title || '',
+        link: p.link || '',
+        img: p.img_url || p.img,
+        sortOrder: p.sort_order || 0
+      })) : [
+        { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 }
+      ],
+
+      // 4. 全域設定
+      settings: {
+        storeName: sCfg.display_title || sInfo.store_name || "專業沙龍與寵物旗艦館",
+        subtitle: sCfg.display_subtitle || "",
+        logoUrl: sCfg.logo_url || "",
+        enableLogo: sCfg.enable_logo ?? true,
+        storePhone: sCfg.store_phone || "",
+        address: sCfg.address || "",
+        businessHours: sCfg.business_hours || "09:00 - 19:00",
+        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
+        careText: sCfg.care_text || "服務完成後請保持乾爽通風與定期保養。",
+        depositInfo: sCfg.deposit_info || "",
+        depositMode: sCfg.deposit_mode || "all",
+        depositAmount: Number(sCfg.deposit_amount || 0),
+        promoText: sCfg.promo_text || "",
+        promoRulesText: sCfg.promo_rules_text || '',
+        contractTitle: sCfg.contract_title || '美容定型化契約書',
+        contractContent: sCfg.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT,
+        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
+        walletRules: sCfg.wallet_rules || [{ name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 }],
+        packageRules: sCfg.package_rules || [{ name: "剪髮買5送1暢遊卡", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000, deduct_points: 1 }],
+        careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
+        reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
+        
+        // 【核心修正】雙向綁定色系與模式
+        themeColor: rawTheme,
+        theme_color: rawTheme,
+        industryMode: rawMode,
+        industry_mode: rawMode,
+        
+        // 住宿進退房與房況規格
+        totalHotelRooms: Number(sCfg.total_hotel_rooms || 8),
+        hotelCheckinStart: sCfg.hotel_checkin_start || "10:00",
+        hotelCheckoutEnd: sCfg.hotel_checkout_end || "19:00",
+        mealTimeBreakfast: sCfg.meal_time_breakfast || "09:00",
+        mealTimeLunch: sCfg.meal_time_lunch || "12:30",
+        mealTimeDinner: sCfg.meal_time_dinner || "18:00",
+        boardingMealRates: safeMealRates,
+
+        // 動態房型與供餐選項
+        hotelRoomTiers: sCfg.hotel_room_tiers || [],
+        hotelMealOptions: sCfg.hotel_meal_options || [],
+
+        // 前台按鈕標題自訂
+        labelModeGrooming: sCfg.label_mode_grooming || '精緻洗護美容',
+        labelModeBoarding: sCfg.label_mode_boarding || '安親度假住宿',
+        labelHotelBathIn: sCfg.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護',
+        labelHotelBathOut: sCfg.label_hotel_bath_out || '【退房當天】返家前深層造型美容／洗澡',
+
+        // 行前叮嚀
+        front_stay_notice: sCfg.front_stay_notice || '',
+        enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
+
+        line: sCfg.line_url || "",
+        ig: sCfg.ig_url || "",
+        map: sCfg.map_url || "",
+        lineChannelToken: sCfg.line_channel_token || "",
+        shiftStartTime: sCfg.shift_start_time || "09:00",
+        shiftEndTime: sCfg.shift_end_time || "19:00",
+        shiftInterval: Number(sCfg.shift_interval || 30),
+        
+        commissionRate: Number(sCfg.commission_rate || 50),
+        designatedBonus: Number(sCfg.designated_bonus || 50),
+        publishedSlots: sCfg.published_slots || [],
+        
+        // 20+ 模組開關
+        enableAuditBooking: sCfg.enable_audit_booking ?? true,
+        enableDeposit: sCfg.enable_deposit ?? true,
+        enableStaffSelect: sCfg.enable_staff_select ?? true,
+        enableMultiStaffSchedule: sCfg.enable_multi_staff_schedule ?? true,
+        enableCustType: sCfg.enable_cust_type ?? true,
+        enableShowPrice: sCfg.enable_show_price ?? true,
+        enableCustNotes: sCfg.enable_cust_notes ?? true,
+        enableWallet: sCfg.enable_wallet ?? true,
+        enablePackages: sCfg.enable_packages ?? true,
+        enableCoupons: sCfg.enable_coupons ?? true,
+        enableReviews: sCfg.enable_reviews ?? true,
+        enablePortfolio: sCfg.enable_portfolio ?? true,
+        enableCare: sCfg.enable_care ?? true,
+        enableQuickContact: sCfg.enable_quick_contact ?? true,
+        enableCancelReason: sCfg.enable_cancel_reason ?? true,
+        enableEmailCopy: sCfg.enable_email_copy ?? true,
+        enableCarousel: sCfg.enable_carousel ?? true,
+        enableFeaturedShop: sCfg.enable_featured_shop === true,
+        enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
+        enableCommissionCalc: sCfg.enable_commission_calc ?? true,
+        enableContract: sCfg.enable_contract ?? true,
+        enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
+        enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
+        enableFlexMenu: sCfg.enable_flex_menu ?? true
+      }
+    };
+
+    // 啟動模式切換與 UI 渲染
+    handleIndustryModeChange(backendData.settings.industryMode);
+
+    renderCalendar();
+    renderCustomer();
+    renderShift();
+    renderRevenueSelect();
+    renderRevenue();
+    renderCare();
+    renderBOMCheckboxes();
+    renderServiceList();
+    renderPortfolioList();
+    populateSettings();
+    loadMarketingCenter();
+    loadAdminReviews();
+    renderUploadSlots();
+    renderInventoryList();
+    renderBoardingRoomStatus();
+    renderBoardingCareChecklist();
+    initSlotsLiveUrl();
+  } catch (err) {
+    console.error("同步失敗:", err);
+  }
+}
     // ==========================================
     // 4. 路由切換器 (全域 14 個核心分頁)
     // ==========================================
@@ -5504,8 +5538,8 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
   const finalPromoImgs = rawImgsText ? rawImgsText.split('\n').map(u => u.trim()).filter(Boolean) : promoImgsArray.filter(Boolean);
 
-  // 2. 取得營運模式、主題色與門市名稱
-  const selectedMode = document.querySelector('input[name="cfg-industry-mode"]:checked')?.value || backendData.settings.industryMode || 'pet_hotel';
+  // 2. 取得營運模式、主題色與門市名稱 (嚴格防呆)
+  const selectedMode = backendData.settings.industryMode || 'pet_hotel';
   const selectedTheme = document.getElementById('cfg-theme-color')?.value || backendData.settings.themeColor || 'latte';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
@@ -5537,11 +5571,11 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    // 雙向相容主題色與模式欄位
+    // 雙向相容色彩與模式欄位
     theme_color: selectedTheme,
     industry_mode: selectedMode,
 
-    // 毛孩照護履歷問卷管理 (開關與動態題庫)
+    // 毛孩照護履歷問卷管理
     pet_profile_questions: (typeof customQuestionsList !== 'undefined') ? customQuestionsList : [],
     pet_custom_fields: {
       chipId: Boolean(document.getElementById('field-chip-id')?.checked),
@@ -5552,28 +5586,40 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
       shuttle: Boolean(document.getElementById('field-shuttle')?.checked)
     },
 
-    // 寵物住宿供餐單餐定額計費 (小型犬/中型犬/大型犬 單餐費率)
+    // 寵物住宿鮮食餐費率設定 (矩陣格式)
     boarding_meal_rates: {
-      small: Number(document.getElementById('cfg-meal-small-1')?.value || 75),
-      medium: Number(document.getElementById('cfg-meal-med-1')?.value || 100),
-      large: Number(document.getElementById('cfg-meal-large-1')?.value || 140)
+      small: [
+        Number(document.getElementById('cfg-meal-small-1')?.value || 80),
+        Number(document.getElementById('cfg-meal-small-2')?.value || 150),
+        Number(document.getElementById('cfg-meal-small-3')?.value || 220)
+      ],
+      medium: [
+        Number(document.getElementById('cfg-meal-med-1')?.value || 100),
+        Number(document.getElementById('cfg-meal-med-2')?.value || 180),
+        Number(document.getElementById('cfg-meal-med-3')?.value || 260)
+      ],
+      large: [
+        Number(document.getElementById('cfg-meal-large-1')?.value || 120),
+        Number(document.getElementById('cfg-meal-large-2')?.value || 220),
+        Number(document.getElementById('cfg-meal-large-3')?.value || 320)
+      ]
     },
     
     // 動態房型陣列與供餐選項
     hotel_room_tiers: (typeof adminRoomTiers !== 'undefined') ? adminRoomTiers : [],
     hotel_meal_options: (typeof adminMealOptions !== 'undefined') ? adminMealOptions : [],
 
-    // 前台顯示按鈕文案與入退宿洗護標題自訂
+    // 前台自訂按鈕與標題
     label_mode_grooming: document.getElementById('cfg-label-mode-grooming')?.value.trim() || '精緻洗護美容',
     label_mode_boarding: document.getElementById('cfg-label-mode-boarding')?.value.trim() || '安親度假住宿',
     label_hotel_bath_in: document.getElementById('cfg-label-hotel-bath-in')?.value.trim() || '【入住當天】進房前基礎清潔洗護',
     label_hotel_bath_out: document.getElementById('cfg-label-hotel-bath-out')?.value.trim() || '【退房當天】返家前深層造型美容／洗澡',
 
-    // 住宿行前叮嚀與規範 (補齊前台好評牆下方顯示設定)
+    // 行前叮嚀與規範
     front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
     enable_front_stay_notice: Boolean(document.getElementById('cfg-toggle-stay-notice')?.checked),
 
-    // 住宿進退房時段與放飯時間設定
+    // 住宿房間數與時段
     total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
     hotel_checkin_start: document.getElementById('cfg-hotel-checkin-start')?.value || '10:00',
     hotel_checkout_end: document.getElementById('cfg-hotel-checkout-end')?.value || '19:00',
@@ -5581,7 +5627,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     meal_time_lunch: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
     meal_time_dinner: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
 
-    // 排班與公休
+    // 排班與抽成
     weekly_off_days: checkedWeekly,
     custom_off_dates: customOffDatesArray,
     shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
@@ -5590,7 +5636,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
 
-    // 功能模組開關 Flags
+    // 模組開關
     enable_audit_booking: Boolean(document.getElementById('cfg-toggle-audit-booking')?.checked),
     enable_deposit: Boolean(document.getElementById('cfg-toggle-deposit')?.checked),
     enable_staff_select: Boolean(document.getElementById('cfg-toggle-staff-select')?.checked),
@@ -5619,17 +5665,17 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   };
 
   try {
-    // 1. 同步更新 stores 主資料表 (確保 theme_color 與 industry_type 雙寫入)
-  await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-    store_name: storeTitle,
-    industry_type: selectedMode,
-    theme_color: selectedTheme
-  });
+    // 1. 同步更新 stores 主資料表 (雙重寫入保障)
+    await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
+      store_name: storeTitle,
+      industry_type: selectedMode,
+      theme_color: selectedTheme
+    });
 
     // 2. 寫入 store_settings 表
     await directSupabaseUpsert('store_settings', settingsPayload, 'store_id');
 
-    // 3. 更新後台記憶體與即時預覽 UI
+    // 3. 同步更新本地記憶體與預覽
     backendData.settings = Object.assign({}, backendData.settings, settingsPayload);
     handleIndustryModeChange(selectedMode);
     if (typeof previewSelectedThemeColor === 'function') {
@@ -5638,7 +5684,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
 
     Swal.fire({
       title: '設定儲存成功！',
-      text: '前台色彩、住宿規格、餐食費率與營運模式已完成雙向同步',
+      text: `已同步更新【${THEME_PALETTES[selectedTheme]?.name || selectedTheme}】色系與營運設定。`,
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
@@ -5647,7 +5693,6 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     Swal.fire('儲存失敗', e.message, 'error');
   }
 }
-
     // 說明圖上傳與獨立紅叉刪除
     function renderUploadSlots() {
       const grid = document.getElementById('promo-upload-grid');
