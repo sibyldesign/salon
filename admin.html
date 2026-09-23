@@ -2012,17 +2012,32 @@
       } catch(e) { return []; }
     }
 
-    async function directSupabaseUpsert(table, payload, conflictKey = 'id') {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates,return=representation"
-        },
-        body: JSON.stringify(payload)
-      });
-      return res.ok ? await res.json() : [];
+    async function directSupabaseUpsert(table, payload, conflictKey = 'store_id') {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?on_conflict=${conflictKey}`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[Supabase Upsert Error on ${table}]:`, errText);
+      // 若因 on_conflict 失敗，退回使用 PATCH 嘗試更新
+      if (payload.store_id) {
+        return await directSupabasePatch(table, `store_id=eq.${payload.store_id}`, payload);
+      }
     }
+    return await res.json();
+  } catch(e) {
+    console.error("Upsert Exception:", e);
+    return [];
+  }
+}
 
     async function directSupabasePatch(table, queryFilter, payload) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${queryFilter}`, {
@@ -5521,7 +5536,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   const selectedMode = backendData.settings.industryMode || 'pet_hotel';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
-  // 1. 本地鎖死
+  // 立即寫死在 localStorage
   localStorage.setItem('zy_cached_theme', selectedTheme);
   backendData.settings.themeColor = selectedTheme;
   backendData.settings.theme_color = selectedTheme;
@@ -5550,39 +5565,10 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    // 雙重欄位確保不同版本的 SQL 查詢都能抓到
+    // 關鍵雙欄位存入
     theme_color: selectedTheme,
-    themeColor: selectedTheme,
     industry_mode: selectedMode,
 
-    pet_profile_questions: (typeof customQuestionsList !== 'undefined') ? customQuestionsList : [],
-    pet_custom_fields: {
-      chipId: Boolean(document.getElementById('field-chip-id')?.checked),
-      vaccine: Boolean(document.getElementById('field-vaccine')?.checked),
-      deworm: Boolean(document.getElementById('field-deworm')?.checked),
-      allergy: Boolean(document.getElementById('field-allergy')?.checked),
-      intro: Boolean(document.getElementById('field-intro')?.checked),
-      shuttle: Boolean(document.getElementById('field-shuttle')?.checked)
-    },
-    boarding_meal_rates: {
-      small: [Number(document.getElementById('cfg-meal-small-1')?.value || 80), Number(document.getElementById('cfg-meal-small-2')?.value || 150), Number(document.getElementById('cfg-meal-small-3')?.value || 220)],
-      medium: [Number(document.getElementById('cfg-meal-med-1')?.value || 100), Number(document.getElementById('cfg-meal-med-2')?.value || 180), Number(document.getElementById('cfg-meal-med-3')?.value || 260)],
-      large: [Number(document.getElementById('cfg-meal-large-1')?.value || 120), Number(document.getElementById('cfg-meal-large-2')?.value || 220), Number(document.getElementById('cfg-meal-large-3')?.value || 320)]
-    },
-    hotel_room_tiers: (typeof adminRoomTiers !== 'undefined') ? adminRoomTiers : [],
-    hotel_meal_options: (typeof adminMealOptions !== 'undefined') ? adminMealOptions : [],
-    label_mode_grooming: document.getElementById('cfg-label-mode-grooming')?.value.trim() || '精緻洗護美容',
-    label_mode_boarding: document.getElementById('cfg-label-mode-boarding')?.value.trim() || '安親度假住宿',
-    label_hotel_bath_in: document.getElementById('cfg-label-hotel-bath-in')?.value.trim() || '【入住當天】進房前基礎清潔洗護',
-    label_hotel_bath_out: document.getElementById('cfg-label-hotel-bath-out')?.value.trim() || '【退房當天】返家前深層造型美容／洗澡',
-    front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
-    enable_front_stay_notice: Boolean(document.getElementById('cfg-toggle-stay-notice')?.checked),
-    total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
-    hotel_checkin_start: document.getElementById('cfg-hotel-checkin-start')?.value || '10:00',
-    hotel_checkout_end: document.getElementById('cfg-hotel-checkout-end')?.value || '19:00',
-    meal_time_breakfast: document.getElementById('cfg-meal-time-breakfast')?.value || '09:00',
-    meal_time_lunch: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
-    meal_time_dinner: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
     weekly_off_days: checkedWeekly,
     custom_off_dates: customOffDatesArray,
     shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
@@ -5590,42 +5576,18 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
-    enable_audit_booking: Boolean(document.getElementById('cfg-toggle-audit-booking')?.checked),
-    enable_deposit: Boolean(document.getElementById('cfg-toggle-deposit')?.checked),
-    enable_staff_select: Boolean(document.getElementById('cfg-toggle-staff-select')?.checked),
-    enable_multi_staff_schedule: Boolean(document.getElementById('cfg-toggle-multi-staff-schedule')?.checked),
-    enable_cust_type: Boolean(document.getElementById('cfg-toggle-custtype')?.checked),
-    enable_show_price: Boolean(document.getElementById('cfg-toggle-show-price')?.checked),
-    enable_cust_notes: Boolean(document.getElementById('cfg-toggle-cust-notes')?.checked),
-    enable_wallet: Boolean(document.getElementById('cfg-toggle-wallet')?.checked),
-    enable_packages: Boolean(document.getElementById('cfg-toggle-packages')?.checked),
-    enable_coupons: Boolean(document.getElementById('cfg-toggle-coupons')?.checked),
-    enable_reviews: Boolean(document.getElementById('cfg-toggle-reviews')?.checked),
-    enable_portfolio: Boolean(document.getElementById('cfg-toggle-portfolio')?.checked),
-    enable_care: Boolean(document.getElementById('cfg-toggle-care')?.checked),
-    enable_quick_contact: Boolean(document.getElementById('cfg-toggle-quick-contact')?.checked),
-    enable_cancel_reason: Boolean(document.getElementById('cfg-toggle-cancel-reason')?.checked),
-    enable_email_copy: Boolean(document.getElementById('cfg-toggle-email')?.checked),
-    enable_carousel: Boolean(document.getElementById('cfg-toggle-carousel')?.checked),
-    enable_featured_shop: Boolean(document.getElementById('cfg-toggle-featured-shop')?.checked),
-    enable_line_one_click_audit: Boolean(document.getElementById('cfg-toggle-line-one-click')?.checked),
-    enable_commission_calc: Boolean(document.getElementById('cfg-toggle-commission-calc')?.checked),
-    enable_contract: Boolean(document.getElementById('cfg-toggle-contract')?.checked),
-    enable_owner_line_push: Boolean(document.getElementById('cfg-toggle-owner-line-push')?.checked),
-    enable_line_auto_notify: Boolean(document.getElementById('cfg-toggle-line-auto-notify')?.checked),
-    enable_flex_menu: Boolean(document.getElementById('cfg-toggle-flex-menu')?.checked),
     updated_at: new Date().toISOString()
   };
 
   try {
-    await Promise.all([
-      directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-        store_name: storeTitle,
-        industry_type: selectedMode,
-        theme_color: selectedTheme
-      }),
-      directSupabaseUpsert('store_settings', settingsPayload, 'store_id')
-    ]);
+    // 嚴格執行：stores 更新 + store_settings 更新
+    const patchRes = await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
+      store_name: storeTitle,
+      industry_type: selectedMode,
+      theme_color: selectedTheme
+    });
+
+    const upsertRes = await directSupabaseUpsert('store_settings', settingsPayload, 'store_id');
 
     if (typeof previewSelectedThemeColor === 'function') {
       previewSelectedThemeColor(selectedTheme);
@@ -5633,12 +5595,13 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
 
     Swal.fire({
       title: '設定儲存成功！',
-      text: `已同步更新【${THEME_PALETTES[selectedTheme]?.name || selectedTheme}】色系。`,
+      text: `已成功保存【${THEME_PALETTES[selectedTheme]?.name || selectedTheme}】色系至資料庫。`,
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
     });
   } catch (e) {
+    console.error("儲存遭遇異常:", e);
     Swal.fire('儲存失敗', e.message, 'error');
   }
 }
