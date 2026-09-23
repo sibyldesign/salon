@@ -1809,11 +1809,11 @@
 const THEME_PALETTES = {
   latte:  { name: '大地燕麥暖棕', colors: ['#FDFBF7', '#F5ECE3', '#8C7355', '#3A3026'] },
   matcha: { name: '日系抹茶茶木', colors: ['#F7F8F5', '#E5EADF', '#637361', '#2D352C'] },
-  noir:   { name: '經典極簡黑白', colors: ['#FBFBFB', '#EFEFEF', '#333333', '#1A1A1A'] },
+  noir:   { name: '經典極簡黑白', colors: ['#FBFBFB', '#EFEFEF', '#1A1A1A', '#000000'] },
   navy:   { name: '韓系霧霾灰藍', colors: ['#F6F8FA', '#E1E8EE', '#4A5F73', '#212B35'] },
   rose:   { name: '法式暮粉煙燻', colors: ['#FCF8F8', '#F1E2E4', '#996C74', '#42282C'] },
   mist:   { name: '莫蘭迪鼠尾草綠', colors: ['#F5F7F6', '#E0E8E5', '#557169', '#25332F'] },
-  amber:  { name: '活力暖橘潮黑', colors: ['#F9F6F0', '#FCEFD9', '#ED8E38', '#1F2937'] }, // 含橘色公告 + 潮黑按鈕
+  amber:  { name: '活力暖橘潮黑', colors: ['#F9F6F0', '#FCEFD9', '#ED8E38', '#000000'] }, // 最深色為純黑 #000000
   taupe:  { name: '焙茶燕麥冷灰', colors: ['#F8F6F4', '#E8E3DF', '#6E6259', '#332B25'] }
 };
 
@@ -5524,21 +5524,17 @@ async function saveStoreSettings() {
     return el ? Boolean(el.checked) : false;
   };
 
-  const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
-  const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
-  const finalPromoImgs = rawImgsText ? rawImgsText.split('\n').map(u => u.trim()).filter(Boolean) : promoImgsArray.filter(Boolean);
-
   const selectedTheme = document.getElementById('cfg-theme-color')?.value || 'latte';
   const selectedMode = backendData.settings.industryMode || 'pet_hotel';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
-  // 1. 雙向同步 LocalStorage
+  // 1. 同步瀏覽器雙向快取
   localStorage.setItem('zy_cached_theme', selectedTheme);
   localStorage.setItem('z_cached_theme', selectedTheme);
   backendData.settings.themeColor = selectedTheme;
   backendData.settings.theme_color = selectedTheme;
 
-  // 2. 嚴格對齊 Supabase store_settings 資料表欄位
+  // 2. 組裝資料庫 Payload
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -5554,7 +5550,6 @@ async function saveStoreSettings() {
     deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
     deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
     promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
-    promo_imgs: finalPromoImgs,
     line_url: document.getElementById('cfg-line')?.value.trim() || '',
     ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
     map_url: document.getElementById('cfg-map')?.value.trim() || '',
@@ -5565,19 +5560,16 @@ async function saveStoreSettings() {
     front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
     enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
 
-    // 核心雙向設定
     theme_color: selectedTheme,
     industry_mode: selectedMode,
 
-    weekly_off_days: checkedWeekly,
-    custom_off_dates: customOffDatesArray,
     shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
     shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
     shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
 
-    // 20+ 個 Feature Flags 嚴格布林值儲存
+    // 20+ 個 Feature Flags 精確儲存 (false 也能確實寫入)
     enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
     enable_deposit: getCheck('cfg-toggle-deposit'),
     enable_staff_select: getCheck('cfg-toggle-staff-select'),
@@ -5603,37 +5595,78 @@ async function saveStoreSettings() {
     enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
     enable_flex_menu: getCheck('cfg-toggle-flex-menu'),
 
-    hotel_room_tiers: adminRoomTiers,
-    hotel_meal_options: adminMealOptions,
     updated_at: new Date().toISOString()
   };
 
   try {
-    // 同時更新 stores 主表與 store_settings 子表，保證資料庫完全一致
-    await Promise.all([
-      directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
+    // 1. 同步更新 stores 主表
+    const storePatchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify({
         store_name: storeTitle,
         industry_type: selectedMode,
         theme_color: selectedTheme
-      }),
-      directSupabaseUpsert('store_settings', settingsPayload, 'store_id')
-    ]);
+      })
+    });
 
-    // 即時同步本地記憶體中的設定物件
+    if (!storePatchRes.ok) {
+      throw new Error(`更新門市主表失敗：${await storePatchRes.text()}`);
+    }
+
+    // 2. 先嘗試 PATCH 更新 store_settings
+    let settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+      },
+      body: JSON.stringify(settingsPayload)
+    });
+
+    // 檢查 PATCH 是否更新成功 (若為 0 筆則代表尚無此 row，改用 POST 建立)
+    let patchData = settingsRes.ok ? await settingsRes.json() : [];
+    if (!settingsRes.ok || !Array.isArray(patchData) || patchData.length === 0) {
+      settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(settingsPayload)
+      });
+
+      if (!settingsRes.ok) {
+        throw new Error(`更新門市設定失敗：${await settingsRes.text()}`);
+      }
+    }
+
+    // 記憶體中資料即時同步
     Object.assign(backendData.settings, settingsPayload);
-    backendData.settings.enablePortfolio = settingsPayload.enable_portfolio;
-    backendData.settings.enableReviews = settingsPayload.enable_reviews;
-    backendData.settings.enableCare = settingsPayload.enable_care;
 
     Swal.fire({
       title: '系統設定已儲存！',
-      text: '主題色調與 20+ 開關狀態已永久生效。',
+      text: '主題色系與開關狀態已成功寫入資料庫，重新整理保證不會跳回。',
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
     });
-  } catch (e) {
-    Swal.fire('儲存失敗', e.message, 'error');
+  } catch (err) {
+    console.error("儲存失敗詳細錯誤:", err);
+    Swal.fire({
+      title: '儲存失敗',
+      html: `<div class="text-left text-xs bg-rose-50 p-3 rounded-xl border border-rose-200 text-rose-800 leading-relaxed font-mono">${err.message}</div>`,
+      icon: 'error'
+    });
   }
 }
     // 說明圖上傳與獨立紅叉刪除
