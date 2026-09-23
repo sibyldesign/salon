@@ -691,11 +691,11 @@
           <textarea id="custNotes" rows="2" placeholder="如有任何特殊需求請在此填寫..." class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-xs outline-none transition"></textarea>
         </div>
 
-        <!-- 8. 本月活動方案與折抵/加購 -->
+        <!-- 8. 本月活動方案與折抵/加購 (加上 id="promoPlanSection") -->
         <div id="promoPlanSection" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 shadow-xs space-y-4 text-xs">
-  <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
-    <i class="fa-solid fa-tags text-theme-primary"></i> 本月活動方案與折抵/加購選擇
-  </div>
+          <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
+            <i class="fa-solid fa-tags text-theme-primary"></i> 本月活動方案與折抵/加購選擇
+          </div>
 
           <div class="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200/80 space-y-2 text-[11.5px] leading-relaxed text-amber-950">
             <div class="font-bold flex items-center gap-1.5 text-amber-900">
@@ -709,7 +709,7 @@
             </div>
           </div>
 
-          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2.5">
+          <div id="addonPlanBox" class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2.5">
             <label class="block font-bold text-brand-900">1. 現場加購方案選擇：</label>
             <select id="addon-package-select" onchange="updateCheckoutSummary()" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none text-xs font-medium">
               <option value="none" data-price="0" data-times="0">不加購包卡</option>
@@ -719,19 +719,19 @@
             </select>
           </div>
 
-          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2.5">
+          <div id="deductPlanBox" class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2.5">
             <div class="flex justify-between items-center">
               <label class="block font-bold text-brand-900">2. 折抵方式選取：</label>
               <span class="text-[10px] text-amber-700 font-bold">※ 包卡/儲值金/折扣碼 擇一使用</span>
             </div>
-            <label class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+            <label id="opt-pkg-deduct-box" class="flex items-center gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
               <input type="checkbox" id="chk-use-package" onchange="handleDeductMethodChange('package')" class="rounded">
               <div>
                 <span class="font-bold text-brand-800">使用包卡扣抵</span>
                 <span class="text-[10px] text-brand-400 block">抵扣對應之主項目 1 堂</span>
               </div>
             </label>
-            <label class="flex items-start gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
+            <label id="opt-wallet-deduct-box" class="flex items-start gap-2 p-2.5 rounded-xl bg-brand-50/50 border border-brand-200 cursor-pointer">
               <input type="checkbox" id="chk-use-wallet" onchange="handleDeductMethodChange('wallet')" class="rounded mt-0.5">
               <div>
                 <span class="font-bold text-brand-800">使用儲值金扣抵</span>
@@ -741,15 +741,15 @@
           </div>
         </div>
 
-        <!-- 9. 活動折扣碼 -->
+        <!-- 9. 活動折扣碼 (加上 id="couponCodeSection") -->
         <div id="couponCodeSection" class="my-4 space-y-1.5">
-  <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
-  <div class="flex gap-2">
-    <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3.5 py-3 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/40 font-mono">
-    <button type="button" onclick="applyCouponCode()" class="px-5 py-3 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
-  </div>
-  <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-1"></div>
-</div>
+          <label class="block text-xs font-bold text-brand-800">活動折扣碼</label>
+          <div class="flex gap-2">
+            <input type="text" id="couponCode" placeholder="輸入代碼 (例如：VIP88)" class="flex-1 px-3.5 py-3 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-brand-50/40 font-mono">
+            <button type="button" onclick="applyCouponCode()" class="px-5 py-3 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition">套用</button>
+          </div>
+          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-1"></div>
+        </div>
 
         <!-- 10. 預算計價試算 -->
         <div id="checkoutSummaryBox" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 space-y-3.5 text-xs shadow-xs">
@@ -1918,6 +1918,9 @@ function renderStoreUI() {
   recalcSmartCheckoutLayout();
 }
 
+// ========================================================
+// 【完整版】前台介面與計價框智慧排列組合（無省略優化版）
+// ========================================================
 function recalcSmartCheckoutLayout() {
   const showPrice = parseBoolStrict(db.enableShowPrice, true);
   const showWallet = parseBoolStrict(db.enableWallet, true);
@@ -1925,25 +1928,32 @@ function recalcSmartCheckoutLayout() {
   const showCoupons = parseBoolStrict(db.enableCoupons, true);
   const showStaff = parseBoolStrict(db.enableStaffSelect, true);
 
+  // 輔助函式：統一進行強制顯隱控制
+  const toggleVisibility = (el, isVisible) => {
+    if (!el) return;
+    if (isVisible) {
+      el.style.removeProperty('display');
+      el.classList.remove('hidden');
+    } else {
+      el.style.setProperty('display', 'none', 'important');
+      el.classList.add('hidden');
+    }
+  };
+
   // 1. 指定服務專員標題與選單連動（徹底隱藏標題與按鈕網格）
   const staffSection = document.getElementById('staffSection');
-  if (staffSection) {
-    if (!showStaff) {
-      staffSection.style.setProperty('display', 'none', 'important');
-      staffSection.classList.add('hidden');
-      const staffIdInput = document.getElementById('staffId');
-      const staffNameInput = document.getElementById('staffName');
-      if (staffIdInput) staffIdInput.value = 'all';
-      if (staffNameInput) staffNameInput.value = '不指定';
-    } else {
-      staffSection.style.removeProperty('display');
-      staffSection.classList.remove('hidden');
-    }
+  toggleVisibility(staffSection, showStaff);
+  if (!showStaff) {
+    const staffIdInput = document.getElementById('staffId');
+    const staffNameInput = document.getElementById('staffName');
+    if (staffIdInput) staffIdInput.value = 'all';
+    if (staffNameInput) staffNameInput.value = '不指定';
   }
 
   // 2. 加購包卡與儲值金選單隱藏控制
   const pkgSelect = document.getElementById('addon-package-select');
   const walSelect = document.getElementById('addon-wallet-select');
+  
   if (pkgSelect) {
     if (!showPackages) {
       pkgSelect.style.setProperty('display', 'none', 'important');
@@ -1952,6 +1962,7 @@ function recalcSmartCheckoutLayout() {
       pkgSelect.style.removeProperty('display');
     }
   }
+  
   if (walSelect) {
     if (!showWallet) {
       walSelect.style.setProperty('display', 'none', 'important');
@@ -1963,15 +1974,7 @@ function recalcSmartCheckoutLayout() {
 
   // 加購方案子容器外層
   const addonPlanBox = document.getElementById('addonPlanBox') || pkgSelect?.closest('.p-3\\.5');
-  if (addonPlanBox) {
-    if (!showPackages && !showWallet) {
-      addonPlanBox.style.setProperty('display', 'none', 'important');
-      addonPlanBox.classList.add('hidden');
-    } else {
-      addonPlanBox.style.removeProperty('display');
-      addonPlanBox.classList.remove('hidden');
-    }
-  }
+  toggleVisibility(addonPlanBox, showPackages || showWallet);
 
   // 3. 折抵方式選取勾選框隱藏控制
   const chkUsePkg = document.getElementById('chk-use-package');
@@ -1980,81 +1983,41 @@ function recalcSmartCheckoutLayout() {
   const walOptionLabel = document.getElementById('opt-wallet-deduct-box') || chkUseWal?.closest('label');
 
   if (pkgOptionLabel) {
-    if (!showPackages) {
-      pkgOptionLabel.style.setProperty('display', 'none', 'important');
-      pkgOptionLabel.classList.add('hidden');
-      if (chkUsePkg) chkUsePkg.checked = false;
-    } else {
-      pkgOptionLabel.style.removeProperty('display');
-      pkgOptionLabel.classList.remove('hidden');
-    }
+    toggleVisibility(pkgOptionLabel, showPackages);
+    if (!showPackages && chkUsePkg) chkUsePkg.checked = false;
   }
+  
   if (walOptionLabel) {
-    if (!showWallet) {
-      walOptionLabel.style.setProperty('display', 'none', 'important');
-      walOptionLabel.classList.add('hidden');
-      if (chkUseWal) chkUseWal.checked = false;
-    } else {
-      walOptionLabel.style.removeProperty('display');
-      walOptionLabel.classList.remove('hidden');
-    }
+    toggleVisibility(walOptionLabel, showWallet);
+    if (!showWallet && chkUseWal) chkUseWal.checked = false;
   }
 
   // 折抵方式子容器外層
   const deductPlanBox = document.getElementById('deductPlanBox') || pkgOptionLabel?.closest('.p-3\\.5');
-  if (deductPlanBox) {
-    if (!showPackages && !showWallet) {
-      deductPlanBox.style.setProperty('display', 'none', 'important');
-      deductPlanBox.classList.add('hidden');
-    } else {
-      deductPlanBox.style.removeProperty('display');
-      deductPlanBox.classList.remove('hidden');
-    }
-  }
+  toggleVisibility(deductPlanBox, showPackages || showWallet);
 
   // 4. 【本月活動方案與折抵/加購選擇】大標題與整張大卡片連動隱藏
   const promoPlanSection = document.getElementById('promoPlanSection');
-  if (promoPlanSection) {
-    if (!showPackages && !showWallet) {
-      promoPlanSection.style.setProperty('display', 'none', 'important');
-      promoPlanSection.classList.add('hidden');
-    } else {
-      promoPlanSection.style.removeProperty('display');
-      promoPlanSection.classList.remove('hidden');
-    }
-  }
+  toggleVisibility(promoPlanSection, showPackages || showWallet);
 
   // 5. 【活動折扣碼】大標題與整行輸入區連動隱藏
   const couponCodeSection = document.getElementById('couponCodeSection');
-  if (couponCodeSection) {
-    if (!showCoupons) {
-      couponCodeSection.style.setProperty('display', 'none', 'important');
-      couponCodeSection.classList.add('hidden');
-      const couponInput = document.getElementById('couponCode');
-      const couponNotice = document.getElementById('couponNotice');
-      if (couponInput) couponInput.value = '';
-      if (couponNotice) {
-        couponNotice.innerText = '';
-        couponNotice.classList.add('hidden');
-      }
-      if (typeof activeCoupon !== 'undefined') activeCoupon = null;
-    } else {
-      couponCodeSection.style.removeProperty('display');
-      couponCodeSection.classList.remove('hidden');
+  toggleVisibility(couponCodeSection, showCoupons);
+  if (!showCoupons) {
+    const couponInput = document.getElementById('couponCode');
+    const couponNotice = document.getElementById('couponNotice');
+    if (couponInput) couponInput.value = '';
+    if (couponNotice) {
+      couponNotice.innerText = '';
+      couponNotice.classList.add('hidden');
     }
+    if (typeof activeCoupon !== 'undefined') activeCoupon = null;
   }
 
   // 6. 預算計價試算框（checkoutSummaryBox）智慧排列
   const summaryBox = document.getElementById('checkoutSummaryBox');
-  if (summaryBox) {
-    if (!showPrice && !showPackages && !showWallet) {
-      summaryBox.style.setProperty('display', 'none', 'important');
-      summaryBox.classList.add('hidden');
-    } else {
-      summaryBox.style.removeProperty('display');
-      summaryBox.classList.remove('hidden');
-    }
-  }
+  const shouldShowSummary = showPrice || showPackages || showWallet;
+  toggleVisibility(summaryBox, shouldShowSummary);
 
   // 7. 呼叫金額重新核算以刷新所有小計與實收總計
   if (typeof updateCheckoutSummary === 'function') {
