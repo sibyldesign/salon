@@ -2193,14 +2193,13 @@
     promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
     while (promoImgsArray.length < 7) promoImgsArray.push("");
 
-    // 核心提取：優先級為 store_settings > stores > localStorage > 預設 latte
-    const rawTheme = sCfg.theme_color || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte';
-    const rawMode = sCfg.industry_mode || sInfo.industry_type || "pet_hotel";
+    // 【關鍵核心修復】：精確抓取後台儲存的色系，絕不被覆蓋
+    const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
+    const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || "pet_hotel";
 
-    // 同步儲存至本地快取
+    // 同步鎖定在本地
     localStorage.setItem('zy_cached_theme', rawTheme);
 
-    // 供餐費率安全轉換 (相容陣列與單一物件格式)
     const mealRatesCfg = sCfg.boarding_meal_rates || {};
     const safeMealRates = {
       small: Array.isArray(mealRatesCfg.small) ? mealRatesCfg.small : [mealRatesCfg.small || 80, 150, 220],
@@ -2209,7 +2208,6 @@
     };
 
     backendData = {
-      // 1. 預約清單解析 (已徹底移除錯置的 themeColor 污染)
       appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
         const d = new Date(b.appointment_time);
         const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
@@ -2242,7 +2240,6 @@
 
       scheduleDates: availableDates.map(dStr => ({ date: dStr })),
 
-      // 2. 服務項目
       services: (services && services.length > 0) ? services.map(s => ({
         id: s.id,
         name: s.service_name || s.name,
@@ -2252,12 +2249,8 @@
         isAddon: s.is_addon === true || s.isAddon === true,
         sortOrder: s.sort_order || 0,
         materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
-      })) : [
-        { id: "def-svc-1", name: "剪髮造型設計 (含洗吹)", price: "800", duration: 60, type: "Group_B", isAddon: false, sortOrder: 0, materials: [] },
-        { id: "def-svc-2", name: "日系質感染髮 (依長度實收)", price: "2200-3600", duration: 120, type: "Group_A", isAddon: false, sortOrder: 1, materials: [{ name: "日系染膏/精油萃取原液", dosage: "50ml" }] }
-      ],
+      })) : [],
 
-      // 3. 作品集
       portfolio: (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
         id: p.id,
         cat: p.category || p.cat || '作品精選',
@@ -2265,11 +2258,8 @@
         link: p.link || '',
         img: p.img_url || p.img,
         sortOrder: p.sort_order || 0
-      })) : [
-        { id: "def-port-1", cat: "日系剪染", title: "法式慵懶鎖骨髮", link: "https://instagram.com", img: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80", sortOrder: 0 }
-      ],
+      })) : [],
 
-      // 4. 全域設定
       settings: {
         storeName: sCfg.display_title || sInfo.store_name || "專業沙龍與寵物旗艦館",
         subtitle: sCfg.display_subtitle || "",
@@ -2288,18 +2278,17 @@
         contractTitle: sCfg.contract_title || '美容定型化契約書',
         contractContent: sCfg.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT,
         staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
-        walletRules: sCfg.wallet_rules || [{ name: "儲值 $3,000", price: 3000, bonus: 300, discount: 0.9 }],
-        packageRules: sCfg.package_rules || [{ name: "剪髮買5送1暢遊卡", service_name: "剪髮造型設計 (含洗吹)", times: 6, price: 4000, deduct_points: 1 }],
+        walletRules: sCfg.wallet_rules || [],
+        packageRules: sCfg.package_rules || [],
         careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
         reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
         
-        // 【核心修正】雙向綁定色系與模式
+        // 雙欄位完全鎖死
         themeColor: rawTheme,
         theme_color: rawTheme,
         industryMode: rawMode,
         industry_mode: rawMode,
         
-        // 住宿進退房與房況規格
         totalHotelRooms: Number(sCfg.total_hotel_rooms || 8),
         hotelCheckinStart: sCfg.hotel_checkin_start || "10:00",
         hotelCheckoutEnd: sCfg.hotel_checkout_end || "19:00",
@@ -2307,18 +2296,12 @@
         mealTimeLunch: sCfg.meal_time_lunch || "12:30",
         mealTimeDinner: sCfg.meal_time_dinner || "18:00",
         boardingMealRates: safeMealRates,
-
-        // 動態房型與供餐選項
         hotelRoomTiers: sCfg.hotel_room_tiers || [],
         hotelMealOptions: sCfg.hotel_meal_options || [],
-
-        // 前台按鈕標題自訂
         labelModeGrooming: sCfg.label_mode_grooming || '精緻洗護美容',
         labelModeBoarding: sCfg.label_mode_boarding || '安親度假住宿',
         labelHotelBathIn: sCfg.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護',
         labelHotelBathOut: sCfg.label_hotel_bath_out || '【退房當天】返家前深層造型美容／洗澡',
-
-        // 行前叮嚀
         front_stay_notice: sCfg.front_stay_notice || '',
         enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
 
@@ -2329,12 +2312,10 @@
         shiftStartTime: sCfg.shift_start_time || "09:00",
         shiftEndTime: sCfg.shift_end_time || "19:00",
         shiftInterval: Number(sCfg.shift_interval || 30),
-        
         commissionRate: Number(sCfg.commission_rate || 50),
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
         
-        // 20+ 模組開關
         enableAuditBooking: sCfg.enable_audit_booking ?? true,
         enableDeposit: sCfg.enable_deposit ?? true,
         enableStaffSelect: sCfg.enable_staff_select ?? true,
@@ -2362,7 +2343,6 @@
       }
     };
 
-    // 啟動模式切換與 UI 渲染
     handleIndustryModeChange(backendData.settings.industryMode);
 
     renderCalendar();
@@ -5533,20 +5513,19 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     async function saveStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-  // 1. 取得週休與說明圖陣列
   const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
   const rawImgsText = document.getElementById('cfg-promo-imgs-text')?.value.trim() || '';
   const finalPromoImgs = rawImgsText ? rawImgsText.split('\n').map(u => u.trim()).filter(Boolean) : promoImgsArray.filter(Boolean);
 
-  // 2. 取得營運模式、主題色與門市名稱 (嚴格防呆)
+  const selectedTheme = document.getElementById('cfg-theme-color')?.value || 'latte';
   const selectedMode = backendData.settings.industryMode || 'pet_hotel';
-  const selectedTheme = document.getElementById('cfg-theme-color')?.value || backendData.settings.themeColor || 'latte';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
-  // 立即寫入本地瀏覽器快取 (確保 0 毫秒極速換色)
+  // 1. 本地鎖死
   localStorage.setItem('zy_cached_theme', selectedTheme);
+  backendData.settings.themeColor = selectedTheme;
+  backendData.settings.theme_color = selectedTheme;
 
-  // 3. 打包完整 store_settings 寫入物件
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -5571,11 +5550,11 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    // 雙向相容色彩與模式欄位
+    // 雙重欄位確保不同版本的 SQL 查詢都能抓到
     theme_color: selectedTheme,
+    themeColor: selectedTheme,
     industry_mode: selectedMode,
 
-    // 毛孩照護履歷問卷管理
     pet_profile_questions: (typeof customQuestionsList !== 'undefined') ? customQuestionsList : [],
     pet_custom_fields: {
       chipId: Boolean(document.getElementById('field-chip-id')?.checked),
@@ -5585,49 +5564,25 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
       intro: Boolean(document.getElementById('field-intro')?.checked),
       shuttle: Boolean(document.getElementById('field-shuttle')?.checked)
     },
-
-    // 寵物住宿鮮食餐費率設定 (矩陣格式)
     boarding_meal_rates: {
-      small: [
-        Number(document.getElementById('cfg-meal-small-1')?.value || 80),
-        Number(document.getElementById('cfg-meal-small-2')?.value || 150),
-        Number(document.getElementById('cfg-meal-small-3')?.value || 220)
-      ],
-      medium: [
-        Number(document.getElementById('cfg-meal-med-1')?.value || 100),
-        Number(document.getElementById('cfg-meal-med-2')?.value || 180),
-        Number(document.getElementById('cfg-meal-med-3')?.value || 260)
-      ],
-      large: [
-        Number(document.getElementById('cfg-meal-large-1')?.value || 120),
-        Number(document.getElementById('cfg-meal-large-2')?.value || 220),
-        Number(document.getElementById('cfg-meal-large-3')?.value || 320)
-      ]
+      small: [Number(document.getElementById('cfg-meal-small-1')?.value || 80), Number(document.getElementById('cfg-meal-small-2')?.value || 150), Number(document.getElementById('cfg-meal-small-3')?.value || 220)],
+      medium: [Number(document.getElementById('cfg-meal-med-1')?.value || 100), Number(document.getElementById('cfg-meal-med-2')?.value || 180), Number(document.getElementById('cfg-meal-med-3')?.value || 260)],
+      large: [Number(document.getElementById('cfg-meal-large-1')?.value || 120), Number(document.getElementById('cfg-meal-large-2')?.value || 220), Number(document.getElementById('cfg-meal-large-3')?.value || 320)]
     },
-    
-    // 動態房型陣列與供餐選項
     hotel_room_tiers: (typeof adminRoomTiers !== 'undefined') ? adminRoomTiers : [],
     hotel_meal_options: (typeof adminMealOptions !== 'undefined') ? adminMealOptions : [],
-
-    // 前台自訂按鈕與標題
     label_mode_grooming: document.getElementById('cfg-label-mode-grooming')?.value.trim() || '精緻洗護美容',
     label_mode_boarding: document.getElementById('cfg-label-mode-boarding')?.value.trim() || '安親度假住宿',
     label_hotel_bath_in: document.getElementById('cfg-label-hotel-bath-in')?.value.trim() || '【入住當天】進房前基礎清潔洗護',
     label_hotel_bath_out: document.getElementById('cfg-label-hotel-bath-out')?.value.trim() || '【退房當天】返家前深層造型美容／洗澡',
-
-    // 行前叮嚀與規範
     front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
     enable_front_stay_notice: Boolean(document.getElementById('cfg-toggle-stay-notice')?.checked),
-
-    // 住宿房間數與時段
     total_hotel_rooms: Number(document.getElementById('cfg-hotel-total-rooms')?.value || 8),
     hotel_checkin_start: document.getElementById('cfg-hotel-checkin-start')?.value || '10:00',
     hotel_checkout_end: document.getElementById('cfg-hotel-checkout-end')?.value || '19:00',
     meal_time_breakfast: document.getElementById('cfg-meal-time-breakfast')?.value || '09:00',
     meal_time_lunch: document.getElementById('cfg-meal-time-lunch')?.value || '12:30',
     meal_time_dinner: document.getElementById('cfg-meal-time-dinner')?.value || '18:00',
-
-    // 排班與抽成
     weekly_off_days: checkedWeekly,
     custom_off_dates: customOffDatesArray,
     shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
@@ -5635,8 +5590,6 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
-
-    // 模組開關
     enable_audit_booking: Boolean(document.getElementById('cfg-toggle-audit-booking')?.checked),
     enable_deposit: Boolean(document.getElementById('cfg-toggle-deposit')?.checked),
     enable_staff_select: Boolean(document.getElementById('cfg-toggle-staff-select')?.checked),
@@ -5665,26 +5618,22 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   };
 
   try {
-    // 1. 同步更新 stores 主資料表 (雙重寫入保障)
-    await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-      store_name: storeTitle,
-      industry_type: selectedMode,
-      theme_color: selectedTheme
-    });
+    await Promise.all([
+      directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
+        store_name: storeTitle,
+        industry_type: selectedMode,
+        theme_color: selectedTheme
+      }),
+      directSupabaseUpsert('store_settings', settingsPayload, 'store_id')
+    ]);
 
-    // 2. 寫入 store_settings 表
-    await directSupabaseUpsert('store_settings', settingsPayload, 'store_id');
-
-    // 3. 同步更新本地記憶體與預覽
-    backendData.settings = Object.assign({}, backendData.settings, settingsPayload);
-    handleIndustryModeChange(selectedMode);
     if (typeof previewSelectedThemeColor === 'function') {
       previewSelectedThemeColor(selectedTheme);
     }
 
     Swal.fire({
       title: '設定儲存成功！',
-      text: `已同步更新【${THEME_PALETTES[selectedTheme]?.name || selectedTheme}】色系與營運設定。`,
+      text: `已同步更新【${THEME_PALETTES[selectedTheme]?.name || selectedTheme}】色系。`,
       icon: 'success',
       timer: 1500,
       showConfirmButton: false
