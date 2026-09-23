@@ -3472,19 +3472,25 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       await syncCurrentPetToDatabase(phoneVal, nameVal);
 
       // 觸發後端寄送憑證信件與推播
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "submitBooking",
-          store_id: CURRENT_STORE_ID,
-          data: Object.assign({}, dbPayload, { 
-            date: dValRaw, 
-            time: tVal, 
-            service: sVal, 
-            signature_url: signatureBase64 
+      // 觸發後端寄送憑證信件與推播 (加固：不阻塞主流程，增加 keepalive)
+      try {
+        fetch(API_URL, {
+          method: "POST",
+          mode: "no-cors",
+          keepalive: true,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "submitBooking",
+            store_id: CURRENT_STORE_ID,
+            data: Object.assign({}, dbPayload, { 
+              date: dValRaw, 
+              time: tVal, 
+              service: sVal, 
+              signature_url: signatureBase64 
+            })
           })
-        })
-      }).catch(() => {});
+        }).catch(err => console.warn("背景推播通知非同步派送中..."));
+      } catch(e) {}
 
       // 判定是否需收訂金彈窗
       const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
