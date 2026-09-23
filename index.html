@@ -29,31 +29,52 @@
     };
   </script>
   <!-- 0 毫秒極速色盤攔截 (比照 link 微頁系統) -->
-  <script>
-    (function(){
-      const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
-      const palettes = {
-        latte:  { p: '#8C7355', ph: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8' },
-        matcha: { p: '#5C725E', ph: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE' },
-        noir:   { p: '#262626', ph: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5' },
-        navy:   { p: '#2B4C6F', ph: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC' },
-        rose:   { p: '#A26D74', ph: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD' },
-        mist:   { p: '#4A7C6D', ph: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1' }
-      };
-      const t = palettes[cachedTheme] || palettes['latte'];
-      const css = `
-        :root { --theme-primary: ${t.p} !important; --theme-bg: ${t.bg} !important; }
-        body, .bg-brand-50 { background-color: ${t.bg} !important; }
-        .bg-\\[\\#8C7355\\], #promo, #subBtn, .tab-btn.active, .swal2-confirm { background-color: ${t.p} !important; color: #fff !important; }
-        .text-\\[\\#8C7355\\], .text-brand-500 { color: ${t.p} !important; }
-        .border-\\[\\#8C7355\\] { border-color: ${t.p} !important; }
-      `;
-      const s = document.createElement('style');
-      s.id = 'early-theme-style';
-      s.innerHTML = css;
-      document.head.appendChild(s);
-    })();
-  </script>
+  <!-- 前台 head 頂部的 0 毫秒色盤攔截器 -->
+<script>
+  (function(){
+    const cachedTheme = localStorage.getItem('zy_cached_theme') || 'latte';
+    const palettes = {
+      latte:  { p: '#8C7355', ph: '#7A6246', bg: '#FDFBF7', light: '#F7EDE8', text: '#3D3126', border: '#EBE5DF' },
+      matcha: { p: '#5C725E', ph: '#4B5E4D', bg: '#F7F8F5', light: '#E3E8DE', text: '#2B382D', border: '#D5DDD3' },
+      noir:   { p: '#262626', ph: '#0A0A0A', bg: '#FAFAFA', light: '#E5E5E5', text: '#0A0A0A', border: '#D4D4D4' },
+      navy:   { p: '#2B4C6F', ph: '#1E354F', bg: '#F4F6F9', light: '#D9E2EC', text: '#102A43', border: '#BCCCDC' },
+      rose:   { p: '#A26D74', ph: '#8A5A60', bg: '#FCF8F8', light: '#EEDCDD', text: '#4E2C32', border: '#DFC5C7' },
+      mist:   { p: '#4A7C6D', ph: '#3B6458', bg: '#F4F7F6', light: '#DAE4E1', text: '#1F3B33', border: '#C2D1CD' }
+    };
+    const t = palettes[cachedTheme] || palettes['latte'];
+    document.documentElement.style.backgroundColor = t.bg;
+
+    const css = `
+      :root {
+        --theme-primary: ${t.p} !important;
+        --theme-primary-hover: ${t.ph} !important;
+        --theme-bg: ${t.bg} !important;
+        --theme-light: ${t.light} !important;
+        --theme-text: ${t.text} !important;
+        --theme-border: ${t.border} !important;
+      }
+      body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
+      .bg-\\[\\#8C7355\\], .bg-brand-500, #promo, #subBtn, .tab-btn.active, .swal2-confirm { 
+        background-color: ${t.p} !important; 
+        color: #FFFFFF !important; 
+      }
+      .hover\\:bg-\\[\\#7A6246\\]:hover, #subBtn:hover { background-color: ${t.ph} !important; }
+      .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.p} !important; }
+      .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.p} !important; }
+      /* 關鍵日曆膠囊、時段按鈕穿透 */
+      .hotel-pill-in.selected, .hotel-pill-out.selected, .time-pill.selected,
+      div[onclick].bg-\\[\\#8C7355\\], div[onclick].bg-\\[\\#B2977D\\] {
+        background-color: ${t.p} !important;
+        color: #FFFFFF !important;
+        border-color: ${t.p} !important;
+      }
+    `;
+    const s = document.createElement('style');
+    s.id = 'theme-runtime-css';
+    s.innerHTML = css;
+    document.head.appendChild(s);
+  })();
+</script>
   <style>
     /* 1. 動態主題色彩變數（後台切換色系時由 JS 即時覆蓋） */
     :root {
@@ -955,116 +976,120 @@
   }
 
   window.onload = async function() {
-    try {
-      await resolveStoreIdAndInitLiff();
-      await checkMaintenanceAndAnnouncement();
+  try {
+    await resolveStoreIdAndInitLiff();
+    await checkMaintenanceAndAnnouncement();
 
-      const nowIso = new Date().toISOString();
-      const [stores, settings, services, portfolios, bookings] = await Promise.all([
-        directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
-        directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
-        directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
-      ]);
+    const nowIso = new Date().toISOString();
+    const [stores, settings, services, portfolios, bookings] = await Promise.all([
+      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
+      directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
+    ]);
 
-      const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
-      const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : { store_name: sCfg.display_title || "線上預約" };
+    const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
+    const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
-      // 1. 公休日計算
-      const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
-      const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
+    // 1. 優先從資料庫抓取主題色與模式，若無則抓本地快取或預設 latte
+    const rawTheme = sCfg.theme_color || sInfo.theme_color || localStorage.getItem('zy_cached_theme') || 'latte';
+    const rawMode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
 
-      const availableDates = [];
-      const today = new Date();
-      for (let i = 0; i < 60; i++) {
-        const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
-        if (!weeklyOffDays.includes(target.getDay()) && !customOffDates.includes(dStr)) {
-          availableDates.push(dStr);
-        }
+    // 2. 公休日計算
+    const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
+    const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
+
+    const availableDates = [];
+    const today = new Date();
+    for (let i = 0; i < 60; i++) {
+      const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+      if (!weeklyOffDays.includes(target.getDay()) && !customOffDates.includes(dStr)) {
+        availableDates.push(dStr);
       }
-
-      // 2. 服務項目整理
-      const formattedServices = (services && services.length > 0) ? services.map(s => ({
-        id: s.id,
-        name: s.service_name || s.name || '未命名項目',
-        duration: Number(s.duration_minutes || s.duration || 60),
-        type: s.service_type || s.type || "Group_A",
-        price: s.price !== undefined ? String(s.price) : "0",
-        isAddon: s.is_addon === true || s.isAddon === true,
-        sortOrder: s.sort_order || 0
-      })) : DEFAULT_SERVICES;
-
-      // 3. 雙向讀取
-      const rawTheme = sCfg.theme_color || sInfo.theme_color || 'latte';
-      const rawMode = sCfg.industry_mode || sInfo.industry_type || 'pet_hotel';
-
-      db = {
-        storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
-        subtitle: sCfg.display_subtitle || "專業門市服務",
-        themeColor: rawTheme,
-        industryType: rawMode,
-        enableLogo: sCfg.enable_logo !== false,
-        logoUrl: sCfg.logo_url || "",
-        storePhone: sCfg.store_phone || "",
-        promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
-          "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
-        ],
-        address: sCfg.address || "門市服務據點",
-        businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
-        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-        careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
-        ig: sCfg.ig_url || "#",
-        line: sCfg.line_url || "#",
-        map: sCfg.map_url || "#",
-        enableEmailCopy: sCfg.enable_email_copy !== false,
-        enableDeposit: sCfg.enable_deposit === true,
-        depositMode: sCfg.deposit_mode || 'all',
-        depositAmount: Number(sCfg.deposit_amount || 0),
-        depositInfo: sCfg.deposit_info || '',
-        enableStaffSelect: sCfg.enable_staff_select !== false,
-        enableFeaturedShop: sCfg.enable_featured_shop === true,
-        enableShowPrice: sCfg.enable_show_price !== false,
-        enableCustNotes: sCfg.enable_cust_notes !== false,
-        enableContract: sCfg.enable_contract !== false,
-        contractTitle: sCfg.contract_title || '線上定型化服務契約書',
-        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
-        promoRulesText: sCfg.promo_rules_text || '',
-        walletRules: sCfg.wallet_rules || [],
-        packageRules: sCfg.package_rules || [],
-        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
-        staffSchedules: sCfg.staff_schedules || {},
-        shiftStartTime: sCfg.shift_start_time || "09:00",
-        shiftEndTime: sCfg.shift_end_time || "19:00",
-        shiftInterval: Number(sCfg.shift_interval || 30),
-        services: formattedServices,
-        portfolio: portfolios || [],
-        availableDates: availableDates,
-        futureBookings: bookings || [],
-        boardingSettings: sCfg.boarding_settings || {},
-        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
-        petCustomFields: sCfg.pet_custom_fields || {}
-      };
-
-      window.backendSettings = db;
-
-      // 【核心修復】執行完整前台渲染
-      renderStoreUI();
-      loadApprovedReviews();
-
-      // 監聽手機號碼查詢
-      const phoneEl = document.getElementById('phone');
-      if (phoneEl) {
-        phoneEl.addEventListener('blur', function() {
-          if (this.value.trim().length >= 8) checkPhoneAndLoadBenefits(this);
-        });
-      }
-    } catch (e) {
-      console.error("載入失敗:", e);
     }
-  };
+
+    // 3. 服務項目整理
+    const formattedServices = (services && services.length > 0) ? services.map(s => ({
+      id: s.id,
+      name: s.service_name || s.name || '未命名項目',
+      duration: Number(s.duration_minutes || s.duration || 60),
+      type: s.service_type || s.type || "Group_A",
+      price: s.price !== undefined ? String(s.price) : "0",
+      isAddon: s.is_addon === true || s.isAddon === true,
+      sortOrder: s.sort_order || 0
+    })) : DEFAULT_SERVICES;
+
+    // 4. 一次性建構完整的 db 物件（絕不覆蓋 themeColor 與 industryType）
+    db = {
+      storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
+      subtitle: sCfg.display_subtitle || "專業門市服務",
+      themeColor: rawTheme,
+      industryType: rawMode,
+      enableLogo: sCfg.enable_logo !== false,
+      logoUrl: sCfg.logo_url || "",
+      storePhone: sCfg.store_phone || "",
+      promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
+      promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
+        "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
+      ],
+      address: sCfg.address || "門市服務據點",
+      businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
+      bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
+      careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
+      ig: sCfg.ig_url || "#",
+      line: sCfg.line_url || "#",
+      map: sCfg.map_url || "#",
+      enableEmailCopy: sCfg.enable_email_copy !== false,
+      enableDeposit: sCfg.enable_deposit === true,
+      depositMode: sCfg.deposit_mode || 'all',
+      depositAmount: Number(sCfg.deposit_amount || 0),
+      depositInfo: sCfg.deposit_info || '',
+      enableStaffSelect: sCfg.enable_staff_select !== false,
+      enableFeaturedShop: sCfg.enable_featured_shop === true,
+      enableShowPrice: sCfg.enable_show_price !== false,
+      enableCustNotes: sCfg.enable_cust_notes !== false,
+      enableContract: sCfg.enable_contract !== false,
+      contractTitle: sCfg.contract_title || '線上定型化服務契約書',
+      contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
+      promoRulesText: sCfg.promo_rules_text || '',
+      walletRules: sCfg.wallet_rules || [],
+      packageRules: sCfg.package_rules || [],
+      staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
+      staffSchedules: sCfg.staff_schedules || {},
+      shiftStartTime: sCfg.shift_start_time || "09:00",
+      shiftEndTime: sCfg.shift_end_time || "19:00",
+      shiftInterval: Number(sCfg.shift_interval || 30),
+      services: formattedServices,
+      portfolio: portfolios || [],
+      availableDates: availableDates,
+      futureBookings: bookings || [],
+      boardingSettings: sCfg.boarding_settings || {},
+      boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
+      petCustomFields: sCfg.pet_custom_fields || {}
+    };
+
+    window.backendSettings = db;
+
+    // 5. 初始化完成後，統一執行一次色彩與版型載入
+    localStorage.setItem('zy_cached_theme', rawTheme);
+    applyThemeColors(rawTheme);
+
+    renderStoreUI();
+    loadApprovedReviews();
+
+    // 6. 監聽手機號碼查詢
+    const phoneEl = document.getElementById('phone');
+    if (phoneEl) {
+      phoneEl.addEventListener('blur', function() {
+        if (this.value.trim().length >= 8) checkPhoneAndLoadBenefits(this);
+      });
+    }
+  } catch (e) {
+    console.error("載入失敗:", e);
+  }
+};
     
   // 3. 輸入電話帶入多毛孩選取與個別資產顯示
   let userPetProfiles = [];
@@ -1270,40 +1295,51 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
   }
 
   function applyThemeColors(themeKey) {
-    const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : (localStorage.getItem('zy_cached_theme') || 'latte');
-    const t = THEME_PALETTES[safeKey];
-    localStorage.setItem('zy_cached_theme', safeKey);
+  const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : (localStorage.getItem('zy_cached_theme') || 'latte');
+  const t = THEME_PALETTES[safeKey] || THEME_PALETTES['latte'];
+  localStorage.setItem('zy_cached_theme', safeKey);
 
-    let styleTag = document.getElementById('theme-runtime-css');
-    if (!styleTag) {
-      styleTag = document.createElement('style');
-      styleTag.id = 'theme-runtime-css';
-      document.head.appendChild(styleTag);
-    }
-    styleTag.innerHTML = `
-      body, .bg-brand-50 { background-color: ${t.bg} !important; }
-      #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
-      #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm {
-        background-color: ${t.primary} !important;
-        color: #FFFFFF !important;
-      }
-      #subBtn:hover, .swal2-confirm:hover { background-color: ${t.primaryHover} !important; }
-      .bg-\\[\\#8C7355\\] { background-color: ${t.primary} !important; }
-      .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.primary} !important; }
-      .border-\\[\\#8C7355\\], .border-brand-400 { border-color: ${t.primary} !important; }
-      .tab-btn.active, .time-pill.selected, .hotel-pill-in.selected, .hotel-pill-out.selected {
-        background-color: ${t.primary} !important;
-        color: #FFFFFF !important;
-        border-color: ${t.primary} !important;
-      }
-      #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
-      #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
-      #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
-        background-color: ${t.primary} !important;
-        color: #FFFFFF !important;
-      }
-    `;
+  // 同步更新 CSS 變數
+  document.documentElement.style.setProperty('--theme-primary', t.primary);
+  document.documentElement.style.setProperty('--theme-primary-hover', t.primaryHover);
+  document.documentElement.style.setProperty('--theme-bg', t.bg);
+  document.documentElement.style.setProperty('--theme-light', t.light);
+  document.documentElement.style.setProperty('--theme-text', t.text);
+  document.documentElement.style.setProperty('--theme-border', t.border);
+  document.body.style.backgroundColor = t.bg;
+
+  let styleTag = document.getElementById('theme-runtime-css');
+  if (!styleTag) {
+    styleTag = document.createElement('style');
+    styleTag.id = 'theme-runtime-css';
+    document.head.appendChild(styleTag);
   }
+
+  // 強力覆蓋，所有硬編碼棕色的 class 全部被攔截
+  styleTag.innerHTML = `
+    body, .bg-brand-50 { background-color: ${t.bg} !important; color: ${t.text} !important; }
+    #promo { background-color: ${t.primary} !important; color: #FFFFFF !important; }
+    #subBtn, .btn-theme, .swal2-confirm, .swal2-styled.swal2-confirm {
+      background-color: ${t.primary} !important;
+      color: #FFFFFF !important;
+    }
+    #subBtn:hover, .swal2-confirm:hover { background-color: ${t.primaryHover} !important; }
+    .bg-\\[\\#8C7355\\], .bg-brand-500, .bg-\\[\\#B2977D\\] { background-color: ${t.primary} !important; }
+    .text-\\[\\#8C7355\\], .text-brand-500, #brand-subtitle { color: ${t.primary} !important; }
+    .border-\\[\\#8C7355\\], .border-brand-400, .border-brand-500 { border-color: ${t.primary} !important; }
+    .tab-btn.active, .time-pill.selected, .hotel-pill-in.selected, .hotel-pill-out.selected {
+      background-color: ${t.primary} !important;
+      color: #FFFFFF !important;
+      border-color: ${t.primary} !important;
+    }
+    #hotelInCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
+    #hotelOutCalendarGrid div[onclick].bg-\\[\\#B2977D\\],
+    #cal-grid div[onclick].bg-\\[\\#8C7355\\] {
+      background-color: ${t.primary} !important;
+      color: #FFFFFF !important;
+    }
+  `;
+}
 
   // 3 種前台商業模式版型切換核心（徹底修正原本只比對 'pet' 的錯誤）
   function applyIndustryModeUI(mode) {
@@ -1793,68 +1829,62 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
   }
 
   function switchBookingSubMode(mode) {
-    activeBookingSubMode = mode;
-    const btnGrooming = document.getElementById('btnModeGrooming');
-    const btnBoarding = document.getElementById('btnModeBoarding');
-    const groomingSec = document.getElementById('groomingServiceSection');
-    const boardingSec = document.getElementById('boardingConfigSection');
-    const calPickerSec = document.getElementById('calendarPickerSection');
-    const timePickerSec = document.getElementById('timePickerSection');
+  activeBookingSubMode = mode;
+  const btnGrooming = document.getElementById('btnModeGrooming');
+  const btnBoarding = document.getElementById('btnModeBoarding');
+  const groomingSec = document.getElementById('groomingServiceSection');
+  const boardingSec = document.getElementById('boardingConfigSection');
+  const calPickerSec = document.getElementById('calendarPickerSection');
+  const timePickerSec = document.getElementById('timePickerSection');
 
-    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--theme-primary').trim() || '#8C7355';
-
-    if (mode === 'boarding') {
-      if (btnBoarding) {
-        btnBoarding.style.backgroundColor = primaryColor;
-        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
-      }
-      if (btnGrooming) {
-        btnGrooming.style.backgroundColor = 'transparent';
-        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
-      }
-
-      if (groomingSec) groomingSec.classList.add('hidden');
-      if (boardingSec) boardingSec.classList.remove('hidden');
-      if (calPickerSec) calPickerSec.classList.add('hidden');
-      if (timePickerSec) timePickerSec.classList.add('hidden');
-
-      // 預設今日與明日
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      if (!document.getElementById('hotelCheckInDate').value) {
-        document.getElementById('hotelCheckInDate').value = today.toISOString().split('T')[0];
-      }
-      if (!document.getElementById('hotelCheckOutDate').value) {
-        document.getElementById('hotelCheckOutDate').value = tomorrow.toISOString().split('T')[0];
-      }
-
-      // 【核心修復】初始化住宿月曆式手風琴
-      renderHotelInCalendar();
-      renderHotelOutCalendar();
-      renderHotelTimeGrid('in', document.getElementById('hotelCheckInDate').value);
-      renderHotelTimeGrid('out', document.getElementById('hotelCheckOutDate').value);
-      calculateBoardingDaysAndPrice();
-    } else {
-      if (btnGrooming) {
-        btnGrooming.style.backgroundColor = primaryColor;
-        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-white shadow-sm flex items-center justify-center gap-1.5";
-      }
-      if (btnBoarding) {
-        btnBoarding.style.backgroundColor = 'transparent';
-        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-gray-800 hover:bg-white/50 flex items-center justify-center gap-1.5";
-      }
-
-      if (groomingSec) groomingSec.classList.remove('hidden');
-      if (boardingSec) boardingSec.classList.add('hidden');
-      if (calPickerSec) calPickerSec.classList.remove('hidden');
-      if (timePickerSec) timePickerSec.classList.remove('hidden');
-
-      renderFrontCalendar();
-      updateCheckoutSummary();
+  if (mode === 'boarding') {
+    if (btnBoarding) {
+      btnBoarding.style.backgroundColor = '';
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
     }
+    if (btnGrooming) {
+      btnGrooming.style.backgroundColor = 'transparent';
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+    }
+    if (groomingSec) groomingSec.classList.add('hidden');
+    if (boardingSec) boardingSec.classList.remove('hidden');
+    if (calPickerSec) calPickerSec.classList.add('hidden');
+    if (timePickerSec) timePickerSec.classList.add('hidden');
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    if (!document.getElementById('hotelCheckInDate').value) {
+      document.getElementById('hotelCheckInDate').value = today.toISOString().split('T')[0];
+    }
+    if (!document.getElementById('hotelCheckOutDate').value) {
+      document.getElementById('hotelCheckOutDate').value = tomorrow.toISOString().split('T')[0];
+    }
+
+    renderHotelInCalendar();
+    renderHotelOutCalendar();
+    renderHotelTimeGrid('in', document.getElementById('hotelCheckInDate').value);
+    renderHotelTimeGrid('out', document.getElementById('hotelCheckOutDate').value);
+    calculateBoardingDaysAndPrice();
+  } else {
+    if (btnGrooming) {
+      btnGrooming.style.backgroundColor = '';
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
+    }
+    if (btnBoarding) {
+      btnBoarding.style.backgroundColor = 'transparent';
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+    }
+    if (groomingSec) groomingSec.classList.remove('hidden');
+    if (boardingSec) boardingSec.classList.add('hidden');
+    if (calPickerSec) calPickerSec.classList.remove('hidden');
+    if (timePickerSec) timePickerSec.classList.remove('hidden');
+
+    renderFrontCalendar();
+    updateCheckoutSummary();
   }
+}
   // 住宿雙月曆日曆變數狀態
   let hotelInDateObj = new Date();
   let hotelInYear = hotelInDateObj.getFullYear();
@@ -2431,16 +2461,14 @@ async function syncCurrentPetToDatabase(phone, ownerName) {
   }
 
   function selectTimePill(timeStr, el) {
-    document.querySelectorAll('.time-pill').forEach(p => {
-      p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-xs";
-      p.style.backgroundColor = '#FFFFFF';
-      p.style.color = '#3D3126';
-    });
-    el.style.backgroundColor = 'var(--theme-primary, #8C7355)';
-    el.style.color = '#FFFFFF';
-    el.classList.add('shadow-md');
-    document.getElementById('time').value = timeStr;
-  }
+  document.querySelectorAll('.time-pill').forEach(p => {
+    p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-xs";
+    p.style.backgroundColor = '';
+    p.style.color = '';
+  });
+  el.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-theme-primary bg-theme-primary text-white cursor-pointer shadow-md transition";
+  document.getElementById('time').value = timeStr;
+}
 
   // 美容洗澡模式之試算框更新器
   function updateCheckoutSummary() {
