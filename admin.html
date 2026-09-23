@@ -5467,9 +5467,16 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   handleIndustryModeChange(currentMode);
 
   // 回填色系並即時切換預覽色票
-  const currentTheme = backendData.settings?.theme_color || backendData.settings?.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
-  setVal('cfg-theme-color', currentTheme);
-  previewSelectedThemeColor(currentTheme);
+  const localSavedTheme = localStorage.getItem('zy_cached_theme');
+  const currentTheme = (localSavedTheme && THEME_PALETTES[localSavedTheme]) 
+    ? localSavedTheme 
+    : (s.theme_color || s.themeColor || 'latte');
+
+  const themeSelect = document.getElementById('cfg-theme-color');
+  if (themeSelect) {
+    themeSelect.value = currentTheme;
+    previewSelectedThemeColor(currentTheme);
+  }
 
       // 回填商業模式單選框
       const modeRadio = document.querySelector(`input[name="cfg-industry-mode"][value="${s.industryMode || 'pet_hotel'}"]`);
