@@ -1435,10 +1435,12 @@
   }
 
   function renderStoreUI() {
+    // 1. 門市名稱與標語
     document.getElementById('brand-title').innerText = db.storeName;
     document.getElementById('brand-subtitle').innerText = db.subtitle;
     document.getElementById('promo-text').innerText = db.promoText;
 
+    // 2. Logo 顯示與隱藏
     const logoWrapper = document.getElementById('store-logo-wrapper');
     const logoImg = document.getElementById('store-logo-img');
     const logoPlaceholder = document.getElementById('store-logo-placeholder');
@@ -1453,6 +1455,7 @@
       if (logoWrapper) logoWrapper.style.display = 'none';
     }
 
+    // 3. 門市電話
     const storePhoneBox = document.getElementById('store-phone-display');
     const storePhoneVal = document.getElementById('store-phone-val');
     if (db.storePhone && db.storePhone.trim() !== '') {
@@ -1462,15 +1465,21 @@
       storePhoneBox.classList.add('hidden');
     }
 
+    // 4. 地址、營業時間、社群連結
     document.getElementById('nav-ig').href = db.ig || '#';
     document.getElementById('nav-line').href = db.line || '#';
     document.getElementById('nav-map').href = db.map || '#';
     document.getElementById('store-address').innerHTML = `<i class="fa-solid fa-map-pin text-brand-400 mr-1"></i> ${db.address || '門市服務據點'}`;
     document.getElementById('store-hours').innerHTML = `<i class="fa-regular fa-clock text-brand-400 mr-1"></i> ${db.businessHours || '營業時間：09:00 - 19:00'}`;
 
+    // 5. 說明圖輪播模組 (依開關控制顯隱)
+    const bannerWrapper = document.getElementById('bannerWrapper');
+    if (bannerWrapper) {
+      bannerWrapper.classList.toggle('hidden', db.enableCarousel === false);
+    }
     const track = document.getElementById('carouselTrack');
     const dots = document.getElementById('carouselDots');
-    if (track && dots) {
+    if (track && dots && db.enableCarousel !== false) {
       track.innerHTML = '';
       dots.innerHTML = '';
       const imgs = (db.promoImgs && db.promoImgs.length > 0) ? db.promoImgs : [
@@ -1486,12 +1495,17 @@
       });
     }
 
+    // 6. 專員選單開關連動
     const staffSection = document.getElementById('staffSection');
     if (staffSection) {
       staffSection.style.display = (db.enableStaffSelect !== false) ? 'block' : 'none';
+      if (db.enableStaffSelect === false) {
+        document.getElementById('staffId').value = 'all';
+        document.getElementById('staffName').value = '不指定';
+      }
     }
     const staffGrid = document.getElementById('staffGrid');
-    if (staffGrid) {
+    if (staffGrid && db.enableStaffSelect !== false) {
       staffGrid.innerHTML = (db.staffList || [{ id: "all", name: "不指定" }]).map((s, idx) => `
         <button type="button" class="staff-btn py-2 px-1 rounded-xl border text-xs font-bold truncate transition ${idx === 0 ? 'bg-theme-primary text-white border-theme-primary shadow-sm' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectStaff('${s.id}', '${s.name}', this)">
           ${s.name}
@@ -1499,9 +1513,15 @@
       `).join('');
     }
 
+    // 7. 居家保養與小叮嚀 (依開關控制顯隱)
+    const careSec = document.getElementById('careSection');
+    if (careSec) {
+      careSec.classList.toggle('hidden', db.enableCare === false);
+    }
     document.getElementById('care-content').innerText = db.careText || '服務完成後請保持乾燥通風。';
     if (db.promoRulesText) document.getElementById('promo-rule-content').innerText = db.promoRulesText;
 
+    // 8. 定型化契約開關連動
     const contractSec = document.getElementById('digitalContractSection');
     if (contractSec) {
       if (db.enableContract !== false) {
@@ -1514,6 +1534,41 @@
       }
     }
 
+    // 9. 顧客好評牆開關連動
+    const reviewWallSec = document.getElementById('reviewWallSection');
+    if (reviewWallSec) {
+      reviewWallSec.classList.toggle('hidden', db.enableReviews === false);
+    }
+
+    // 10. 作品集專區開關連動
+    const portfolioSec = document.getElementById('portfolioSection');
+    if (portfolioSec) {
+      portfolioSec.classList.toggle('hidden', db.enablePortfolio === false);
+    }
+
+    // 11. 商城專區開關連動
+    const shopSec = document.getElementById('featuredShopSection');
+    if (shopSec) {
+      shopSec.classList.toggle('hidden', db.enableFeaturedShop !== true);
+    }
+
+    // 12. 新舊客身份選取開關連動
+    const custTypeSec = document.getElementById('custTypeSection');
+    if (custTypeSec) {
+      custTypeSec.classList.toggle('hidden', db.enableCustType === false);
+    }
+
+    // 13. 電子信箱與備註開關連動
+    const emailSec = document.getElementById('emailSection');
+    if (emailSec) {
+      emailSec.classList.toggle('hidden', db.enableEmailCopy === false);
+    }
+    const notesSec = document.getElementById('custNotesWrapper');
+    if (notesSec) {
+      notesSec.classList.toggle('hidden', db.enableCustNotes === false);
+    }
+
+    // 14. 現場加購方案下拉清單
     const pkgSelect = document.getElementById('addon-package-select');
     const walSelect = document.getElementById('addon-wallet-select');
     if (pkgSelect && db.packageRules && db.packageRules.length > 0) {
@@ -1525,7 +1580,8 @@
         db.walletRules.map(w => `<option value="${w.name}" data-price="${w.price}" data-discount="${w.discount}">${w.name} (享${w.discount * 10}折/贈$${w.bonus || 0})</option>`).join('');
     }
 
-    setupPortfolio();
+    // 15. 執行各子模組初始化
+    if (db.enablePortfolio !== false) setupPortfolio();
     renderServices();
     renderFrontCalendar();
     updateDepositSectionDisplay();
@@ -1533,7 +1589,7 @@
     renderDynamicMealOptions();
     populateHotelBathServices();
     applyIndustryModeUI(db.industryType || 'pet_hotel');
-  }
+}
 
   function setupPetExtendedFields() {
     const cf = db.petCustomFields || {};
