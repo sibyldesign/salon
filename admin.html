@@ -5525,7 +5525,8 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
       renderUploadSlots();
     }
 
-    async function saveStoreSettings() {
+    // 後台儲存設定核心邏輯
+async function saveStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   const checkedWeekly = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
@@ -5536,7 +5537,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   const selectedMode = backendData.settings.industryMode || 'pet_hotel';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
 
-  // 立即寫死在 localStorage
+  // 1. 立即同步本地快取與運行時物件
   localStorage.setItem('zy_cached_theme', selectedTheme);
   backendData.settings.themeColor = selectedTheme;
   backendData.settings.theme_color = selectedTheme;
@@ -5565,7 +5566,7 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    // 關鍵雙欄位存入
+    // 關鍵雙欄位
     theme_color: selectedTheme,
     industry_mode: selectedMode,
 
@@ -5580,15 +5581,17 @@ setVal('cfg-stay-notice-content', s.front_stay_notice || '1. 入住前請確保�
   };
 
   try {
-    // 嚴格執行：stores 更新 + store_settings 更新
-    const patchRes = await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-      store_name: storeTitle,
-      industry_type: selectedMode,
-      theme_color: selectedTheme
-    });
+    // 嚴格雙寫：stores (租戶總表) + store_settings (設定表)
+    const [storeRes, settingsRes] = await Promise.all([
+      directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
+        store_name: storeTitle,
+        industry_type: selectedMode,
+        theme_color: selectedTheme
+      }),
+      directSupabaseUpsert('store_settings', settingsPayload, 'store_id')
+    ]);
 
-    const upsertRes = await directSupabaseUpsert('store_settings', settingsPayload, 'store_id');
-
+    // 更新色票預覽
     if (typeof previewSelectedThemeColor === 'function') {
       previewSelectedThemeColor(selectedTheme);
     }
