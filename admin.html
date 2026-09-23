@@ -2713,203 +2713,246 @@ if (dispStoreId && CURRENT_STORE_ID) {
     });
   }
     
-    // ==========================================
-  // 6. 預約卡片渲染引擎 (結構化解析住宿、放飯、美容洗護、接送地址與毛孩履歷)
-  // ==========================================
-  function renderSingleCardHTML(a) {
-    const staffColor = getStaffColor(a.staffId, a.staffName);
-    let parsedEmail = '';
-    let cleanNotes = a.notes || '';
-    if (cleanNotes.includes('Email:')) {
-      const parts = cleanNotes.split('Email:');
-      cleanNotes = parts[0].trim();
-      parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
-    }
+    // ========================================================
+// 【後台卡片完整版】renderSingleCardHTML(a) — 訂金高亮與全功能保留
+// ========================================================
+function renderSingleCardHTML(a) {
+  const staffColor = getStaffColor(a.staffId, a.staffName);
+  let parsedEmail = '';
+  let cleanNotes = a.notes || '';
+  if (cleanNotes.includes('Email:')) {
+    const parts = cleanNotes.split('Email:');
+    cleanNotes = parts[0].trim();
+    parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
+  }
 
-    // 1. 全域提取毛孩名字 (確保所有單據皆能抓到)
-    const petMatch = cleanNotes.match(/【毛孩:\s*([^/，,\s】]+)/);
-    const petName = petMatch ? petMatch[1].trim() : (a.pet_name || '毛孩');
+  // 1. 全域提取毛孩名字
+  const petMatch = cleanNotes.match(/【毛孩:\s*([^/，,\s】]+)/);
+  const petName = petMatch ? petMatch[1].trim() : (a.pet_name || '毛孩');
 
-    // 2. 全域解析專車接送與地址
-    const shuttleMatch = cleanNotes.match(/【專車接送:\s*([^】]+)】/);
-    const isNeedShuttle = Boolean(shuttleMatch);
-    const shuttleText = shuttleMatch ? shuttleMatch[1] : '';
+  // 2. 訂金狀態判定與專屬高亮區塊 (三段式警示)
+  const isDepositConfirmed = (a.deposit_confirmed === true || cleanNotes.includes('訂金已核對'));
+  const hasLast5 = Boolean((a.depositLast5 || a.deposit_last5) && String(a.depositLast5 || a.deposit_last5).trim() !== '');
+  const reportedLast5 = a.depositLast5 || a.deposit_last5 || '';
+  
+  let depositStatusBadge = '';
+  let cardBorderClass = 'border-brand-200';
 
-    let detailBadges = [];
+  if (isDepositConfirmed) {
+    depositStatusBadge = `
+      <div class="p-2.5 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
+        <span class="text-emerald-800 font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-emerald-600"></i> ✓ 訂金已核對無誤 ${reportedLast5 ? `(帳號末碼: <b class="font-mono text-emerald-900 font-bold">${reportedLast5}</b>)` : ''}
+        </span>
+        <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-bold">已入帳</span>
+      </div>`;
+  } else if (hasLast5) {
+    cardBorderClass = 'border-amber-400 bg-amber-50/20';
+    depositStatusBadge = `
+      <div class="p-2.5 bg-amber-50 rounded-xl border-2 border-amber-300 flex justify-between items-center text-xs shadow-2xs">
+        <div>
+          <span class="text-amber-950 font-black flex items-center gap-1.5 text-xs">
+            <i class="fa-solid fa-bell text-amber-600 animate-pulse"></i> 客人已回報匯款末五碼：
+            <span class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-lg font-mono text-sm tracking-widest font-black">${reportedLast5}</span>
+          </span>
+          <div class="text-[10px] text-amber-800 mt-0.5">請確認網銀款項後點擊核銷按鈕</div>
+        </div>
+        <button type="button" onclick="confirmDepositPayment('${a.id}', '${a.name}', '${reportedLast5}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1 shrink-0">
+          <i class="fa-solid fa-check"></i> 確認入帳
+        </button>
+      </div>`;
+  } else {
+    depositStatusBadge = `
+      <div class="p-2 bg-rose-50 rounded-xl border border-rose-200 flex justify-between items-center text-xs">
+        <span class="text-rose-800 font-bold flex items-center gap-1 text-[11px]">
+          <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> 尚未收到訂金回報 (未填後五碼)
+        </span>
+        <button type="button" onclick="promptManualInputLast5('${a.id}', '${a.name}')" class="text-[10.5px] text-rose-700 underline font-bold hover:text-rose-900">
+          手動補登
+        </button>
+      </div>`;
+  }
 
-    // 解析住宿排程
-    if (cleanNotes.includes('住宿排程')) {
-      const match = cleanNotes.match(/【住宿排程:\s*([^】]+)】/);
-      if (match) detailBadges.push(`<div class="text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200">🏨 住宿區間：${match[1]}</div>`);
-    }
-    // 解析房型
-    if (cleanNotes.includes('房型')) {
-      const match = cleanNotes.match(/【房型:\s*([^】]+)】/);
-      if (match) detailBadges.push(`<div class="text-brand-800 font-bold">🏠 預訂房型：${match[1]}</div>`);
-    }
-    // 解析供餐
-    if (cleanNotes.includes('供餐')) {
-      const match = cleanNotes.match(/【供餐:\s*([^】]+)】/);
-      if (match) detailBadges.push(`<div class="text-amber-800 font-bold">🥣 供餐照護：${match[1]}</div>`);
-    }
-    // 解析入退宿洗澡
-    if (cleanNotes.includes('入住清潔洗澡')) {
-      detailBadges.push(`<div class="text-blue-700 font-bold">✨ 入住附加：進房前清潔洗澡</div>`);
-    }
-    if (cleanNotes.includes('退房深層美容')) {
-      detailBadges.push(`<div class="text-purple-700 font-bold">🛁 退宿附加：退房前美容/洗澡</div>`);
-    }
+  // 3. 全域解析專車接送與地址
+  const shuttleMatch = cleanNotes.match(/【專車接送:\s*([^】]+)】/);
+  const isNeedShuttle = Boolean(shuttleMatch);
+  const shuttleText = shuttleMatch ? shuttleMatch[1] : '';
 
-    // 解析專車接送明細與導航按鈕
-    let shuttleAddressHtml = '';
-    if (isNeedShuttle) {
-      detailBadges.push(`<div class="text-emerald-800 font-bold bg-emerald-50 p-1.5 rounded-lg border border-emerald-200">🚘 專車接送：${shuttleText}</div>`);
-      
-      const addrMatch = shuttleText.match(/^([^(]+)/);
-      const pureAddr = addrMatch ? addrMatch[1].trim() : shuttleText;
-      if (pureAddr && pureAddr !== '未填寫地址') {
-        shuttleAddressHtml = `
-          <div class="flex items-center gap-1.5 mt-1">
-            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]">
-              <i class="fa-solid fa-map-location-dot"></i> 地圖導航
-            </a>
-            <button type="button" onclick="navigator.clipboard.writeText('${pureAddr}'); Swal.fire('已複製接送地址！', '', 'success')" class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold text-[10px]">
-              複製地址
+  let detailBadges = [];
+
+  // 解析住宿排程
+  if (cleanNotes.includes('住宿排程')) {
+    const match = cleanNotes.match(/【住宿排程:\s*([^】]+)】/);
+    if (match) detailBadges.push(`<div class="text-amber-900 font-bold bg-amber-50 p-1.5 rounded-lg border border-amber-200">🏨 住宿區間：${match[1]}</div>`);
+  }
+  // 解析房型
+  if (cleanNotes.includes('房型')) {
+    const match = cleanNotes.match(/【房型:\s*([^】]+)】/);
+    if (match) detailBadges.push(`<div class="text-brand-800 font-bold">🏠 預訂房型：${match[1]}</div>`);
+  }
+  // 解析供餐
+  if (cleanNotes.includes('供餐')) {
+    const match = cleanNotes.match(/【供餐:\s*([^】]+)】/);
+    if (match) detailBadges.push(`<div class="text-amber-800 font-bold">🥣 供餐照護：${match[1]}</div>`);
+  }
+  // 解析入退宿洗澡
+  if (cleanNotes.includes('入住清潔洗澡')) {
+    detailBadges.push(`<div class="text-blue-700 font-bold">✨ 入住附加：進房前清潔洗澡</div>`);
+  }
+  if (cleanNotes.includes('退房深層美容')) {
+    detailBadges.push(`<div class="text-purple-700 font-bold">🛁 退宿附加：退房前美容/洗澡</div>`);
+  }
+
+  // 解析專車接送明細與導航按鈕
+  let shuttleAddressHtml = '';
+  if (isNeedShuttle) {
+    detailBadges.push(`<div class="text-emerald-800 font-bold bg-emerald-50 p-1.5 rounded-lg border border-emerald-200">🚘 專車接送：${shuttleText}</div>`);
+    
+    const addrMatch = shuttleText.match(/^([^(]+)/);
+    const pureAddr = addrMatch ? addrMatch[1].trim() : shuttleText;
+    if (pureAddr && pureAddr !== '未填寫地址') {
+      shuttleAddressHtml = `
+        <div class="flex items-center gap-1.5 mt-1">
+          <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold text-[10px]">
+            <i class="fa-solid fa-map-location-dot"></i> 地圖導航
+          </a>
+          <button type="button" onclick="navigator.clipboard.writeText('${pureAddr}'); Swal.fire('已複製接送地址！', '', 'success')" class="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded font-bold text-[10px]">
+            複製地址
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  // 4. 財務抵扣條列
+  let financialRows = [];
+  if (cleanNotes.includes('包卡扣抵')) {
+    financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點：</span><span>當次扣減 1 點</span></div>`);
+  }
+  if (cleanNotes.includes('儲值扣抵')) {
+    financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值抵扣：</span><span>享專屬折數扣抵</span></div>`);
+  }
+  if (Number(a.deposit_deducted || 0) > 0) {
+    financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 已收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
+  }
+
+  const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
+  const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
+  const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
+  const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
+
+  const signBtnHtml = a.signature_url ? `
+    <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
+      ✓ 檢視契約
+    </button>
+  ` : `
+    <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
+      <i class="fa-solid fa-pen-nib text-[10px]"></i> 現場簽約
+    </button>
+  `;
+
+  return `
+    <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
+              <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
+            </span>
+            <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
+            <span class="px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-black rounded-lg">
+              🐾 ${petName}
+            </span>
+            <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded font-bold text-[10px] transition">
+              履歷卡
             </button>
           </div>
-        `;
-      }
-    }
-
-    // 財務抵扣條列
-    let financialRows = [];
-    if (cleanNotes.includes('包卡扣抵')) {
-      financialRows.push(`<div class="flex justify-between text-blue-700 font-bold"><span>🎟️ 包卡扣點：</span><span>當次扣減 1 點</span></div>`);
-    }
-    if (cleanNotes.includes('儲值扣抵')) {
-      financialRows.push(`<div class="flex justify-between text-purple-700 font-bold"><span>💰 儲值抵扣：</span><span>享專屬折數扣抵</span></div>`);
-    }
-    if (Number(a.deposit_deducted || 0) > 0) {
-      financialRows.push(`<div class="flex justify-between text-amber-700 font-bold"><span>💵 已收訂金扣抵：</span><span>-$${a.deposit_deducted}</span></div>`);
-    }
-
-    const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '';
-    const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
-    const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
-    const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
-
-    const signBtnHtml = a.signature_url ? `
-      <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
-        ✓ 檢視契約
-      </button>
-    ` : `
-      <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
-        <i class="fa-solid fa-pen-nib text-[10px]"></i> 現場簽約
-      </button>
-    `;
-
-    return `
-      <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border border-brand-200 shadow-sm space-y-2.5 text-xs">
-        <div class="flex justify-between items-start">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
-                <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
-              </span>
-              <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
-              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 text-[10px] font-black rounded-lg">
-                🐾 ${petName}
-              </span>
-              <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2 py-0.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded font-bold text-[10px] transition">
-                履歷卡
-              </button>
-            </div>
-            <div class="font-bold text-brand-900 text-sm mt-1">
-              ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
-            </div>
-            ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單：${friendlyCreatedTime}</div>` : ''}
+          <div class="font-bold text-brand-900 text-sm mt-1">
+            ${a.name} <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
           </div>
-          <div class="flex flex-col items-end gap-1">
-            <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
-              <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
-              <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
-              <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
-              <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
-              <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
-            </select>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
-          </div>
+          ${friendlyCreatedTime ? `<div class="text-[10px] text-brand-400 font-mono mt-0.5"><i class="fa-solid fa-calendar-plus mr-1"></i>下單：${friendlyCreatedTime}</div>` : ''}
         </div>
+        <div class="flex flex-col items-end gap-1">
+          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
+            <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
+            <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
+            <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
+            <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
+            <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
+          </select>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
+        </div>
+      </div>
 
-        <div class="flex items-center gap-1.5 pt-0.5">
+      <!-- 訂金狀態警示與回報區塊 -->
+      ${depositStatusBadge}
+
+      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
+        <div class="font-bold text-brand-900 font-sans">項目：${a.service || '無'}</div>
+        <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
+      </div>
+
+      <!-- 住宿細節與專車接送 -->
+      ${detailBadges.length > 0 ? `
+        <div class="p-2.5 bg-amber-50/50 rounded-xl space-y-1.5 border border-amber-200/60 text-[11px]">
+          <div class="font-bold text-amber-950">📋 住宿與專屬照護明細：</div>
+          ${detailBadges.join('')}${shuttleAddressHtml}
+        </div>
+      ` : ''}
+
+      <!-- 財務加購與折抵 -->
+      ${financialRows.length > 0 ? `
+        <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] border border-brand-100">
+          ${financialRows.join('')}
+        </div>
+      ` : ''}
+
+      <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
+        <div class="flex justify-between">
+          <span>LINE：<b>${a.lineName || '未填寫'}</b></span>
+          <span>信箱：<b>${parsedEmail || '未填寫'}</b></span>
+        </div>
+        ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客備註：${a.customer_notes}</div>` : ''}
+        ${a.signature_url ? `
+          <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
+            <span>✓ 已簽署定型化契約 ${friendlySignedTime ? `(${friendlySignedTime})` : ''}</span>
+            <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="w-full flex items-center gap-2 pt-1">
+        <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
+        <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
+          存備註
+        </button>
+      </div>
+
+      <!-- 卡片底部操作列：撥號、通知按鈕、改項目、改期、結單 -->
+      <div class="flex flex-wrap justify-between items-center pt-2 border-t border-brand-100 gap-2">
+        <div class="flex items-center gap-1.5">
           <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
             <i class="fa-solid fa-phone text-[9px]"></i> 撥打
           </a>
           <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
-            <i class="fa-brands fa-whatsapp text-xs"></i> 通話/傳訊
+            <i class="fa-brands fa-whatsapp text-xs"></i> 通訊
           </a>
-        </div>
-
-        <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
-          <div class="font-bold text-brand-900 font-sans">項目：${a.service || '無'}</div>
-          <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
-        </div>
-
-        <!-- 住宿細節與專車接送 -->
-        ${detailBadges.length > 0 ? `
-          <div class="p-2.5 bg-amber-50/50 rounded-xl space-y-1.5 border border-amber-200/60 text-[11px]">
-            <div class="font-bold text-amber-950">📋 住宿與專屬照護明細：</div>
-            ${detailBadges.join('')}${shuttleAddressHtml}
-          </div>
-        ` : ''}
-
-        <!-- 財務加購與折抵 -->
-        ${financialRows.length > 0 ? `
-          <div class="p-2.5 bg-brand-50/70 rounded-xl space-y-1 text-[11px] border border-brand-100">
-            ${financialRows.join('')}
-          </div>
-        ` : ''}
-
-        <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
-          <div class="flex justify-between">
-            <span>LINE：<b>${a.lineName || '未填寫'}</b></span>
-            <span>信箱：<b>${parsedEmail || '未填寫'}</b></span>
-          </div>
-          ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客備註：${a.customer_notes}</div>` : ''}
-          ${a.signature_url ? `
-            <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
-              <span>✓ 已簽署定型化契約 ${friendlySignedTime ? `(${friendlySignedTime})` : ''}</span>
-              <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="w-full flex items-center gap-2 pt-1">
-          <input type="text" id="admin-note-${a.id}" placeholder="內部備註事項..." value="${cleanNotes}" class="flex-1 min-w-0 p-2 text-xs border border-brand-200 rounded-xl bg-white outline-none">
-          <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs">
-            存備註
+          ${signBtnHtml}
+          <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px] transition">
+            提醒預約
+          </button>
+          <button type="button" onclick="sendPickupNotice('${a.name}', '${petName}', '${a.phone}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-[10.5px] transition">
+            通知接回
           </button>
         </div>
-
-        <!-- 卡片底部操作列：簽約、通知按鈕、改期、結單 -->
-        <div class="flex flex-wrap justify-between items-center pt-2 border-t border-brand-100 gap-2">
-          <div class="flex items-center gap-1.5">
-            ${signBtnHtml}
-            <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px] transition">
-              提醒預約
-            </button>
-            <button type="button" onclick="sendPickupNotice('${a.name}', '${petName}', '${a.phone}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-[10.5px] transition">
-              通知接回
-            </button>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button type="button" class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5C6D7B] text-white rounded-lg font-bold text-[11px] transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
-            <button type="button" class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold text-[11px] transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
-            <button type="button" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0}, ${isNeedShuttle})">結單</button>
-          </div>
+        <div class="flex items-center gap-1.5">
+          <button type="button" class="px-2.5 py-1 bg-[#6D7E8C] hover:bg-[#5C6D7B] text-white rounded-lg font-bold text-[11px] transition" onclick="openEditServiceModal('${a.id}')">改項目</button>
+          <button type="button" class="px-2.5 py-1 bg-brand-400 hover:bg-brand-500 text-white rounded-lg font-bold text-[11px] transition" onclick="openRescheduleModal('${a.id}', '${a.name}', '${a.date}', '${a.time}')">改期</button>
+          <button type="button" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs transition shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0}, ${isNeedShuttle})">結單</button>
         </div>
-      </div>`;
-  }
+      </div>
+    </div>`;
+}
 
     function formatFriendlyTime(isoStr) {
       if (!isoStr) return '';
@@ -6121,6 +6164,88 @@ async function saveStoreSettings() {
       }
     });
 
+    // ========================================================
+// 【新增】後台專用：老闆一鍵確認訂金入帳
+// ========================================================
+async function confirmDepositPayment(bookingId, customerName, last5) {
+  Swal.fire({
+    title: `確認核准訂金？`,
+    html: `
+      <div class="text-left text-xs space-y-2 bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950">
+        <div>顧客姓名：<b>${customerName}</b></div>
+        <div>匯款後五碼：<b class="font-mono text-sm text-emerald-700">${last5}</b></div>
+        <div class="text-[11px] text-gray-500 pt-1">確認入帳後，此預約將自動從「訂金警戒區」移除並正式排入行程。</div>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '✓ 網銀已確認，確定入帳',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#10B981'
+  }).then(async (r) => {
+    if (r.isConfirmed) {
+      Swal.showLoading();
+      try {
+        const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+        const updatedNotes = `${appt ? appt.notes : ''} | 訂金已核對`.trim();
+
+        await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+          deposit_confirmed: true,
+          status: '已確認',
+          notes: updatedNotes
+        });
+
+        if (appt) {
+          appt.deposit_confirmed = true;
+          appt.status = '已確認';
+          appt.notes = updatedNotes;
+        }
+
+        Swal.fire({ title: '訂金核對成功！', text: '預約已排入確認名單。', icon: 'success', timer: 1200, showConfirmButton: false });
+        renderCustomer();
+        renderCalendar();
+      } catch (err) {
+        Swal.fire('核對失敗', err.message, 'error');
+      }
+    }
+  });
+}
+
+// 【新增】後台專用：老闆手動幫客人補登後五碼
+function promptManualInputLast5(bookingId, customerName) {
+  Swal.fire({
+    title: `補登 ${customerName} 的訂金後五碼`,
+    input: 'text',
+    inputPlaceholder: '請輸入客人提供的末五碼 (例如：12345)',
+    showCancelButton: true,
+    confirmButtonText: '確認補登並標記已付款',
+    confirmButtonColor: '#8C7355',
+    inputValidator: (val) => {
+      if (!val || val.trim().length !== 5) return '請輸入正確的 5 碼末五碼！';
+    }
+  }).then(async (r) => {
+    if (r.isConfirmed && r.value) {
+      const code = r.value.trim();
+      await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+        deposit_reported: true,
+        deposit_last5: code,
+        deposit_confirmed: true,
+        status: '已確認'
+      });
+
+      const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+      if (appt) {
+        appt.depositLast5 = code;
+        appt.deposit_confirmed = true;
+        appt.status = '已確認';
+      }
+
+      Swal.fire('補登成功！', `已登記末五碼 ${code}`, 'success');
+      renderCustomer();
+    }
+  });
+}
+    
     // 三種商業模式動態切換排程欄位
   function toggleQuickIndustryMode() {
     const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
