@@ -1444,10 +1444,7 @@ function parseBoolStrict(val, defaultVal = true) {
 }
 
 // ========================================================
-// 【前台修復 2】UI 渲染與 20+ Feature Flags 嚴格隱藏
-// ========================================================
-// ========================================================
-// 【前台完整版】renderStoreUI() — 無省略、全功能 100% 渲染
+// 【完整零省略版】前台 renderStoreUI() — 15 大區塊精準生命週期
 // ========================================================
 function renderStoreUI() {
   // ----------------------------------------------------
@@ -1530,10 +1527,10 @@ function renderStoreUI() {
 
   if (bannerWrapper) {
     if (!showCarousel || validImgs.length === 0) {
-      bannerWrapper.style.display = 'none';
+      bannerWrapper.style.setProperty('display', 'none', 'important');
       bannerWrapper.classList.add('hidden');
     } else {
-      bannerWrapper.style.display = 'block';
+      bannerWrapper.style.removeProperty('display');
       bannerWrapper.classList.remove('hidden');
       if (track && dots) {
         track.innerHTML = '';
@@ -1562,7 +1559,7 @@ function renderStoreUI() {
 
   if (staffSection) {
     if (showStaff) {
-      staffSection.style.display = 'block';
+      staffSection.style.removeProperty('display');
       staffSection.classList.remove('hidden');
       if (staffGrid) {
         const staffList = (db.staffList && db.staffList.length > 0) ? db.staffList : [{ id: "all", name: "不指定" }];
@@ -1582,7 +1579,7 @@ function renderStoreUI() {
         }).join('');
       }
     } else {
-      staffSection.style.display = 'none';
+      staffSection.style.setProperty('display', 'none', 'important');
       staffSection.classList.add('hidden');
       const staffIdInput = document.getElementById('staffId');
       const staffNameInput = document.getElementById('staffName');
@@ -1598,11 +1595,11 @@ function renderStoreUI() {
   const showPortfolio = parseBoolStrict(db.enablePortfolio, true);
   if (portfolioSec) {
     if (showPortfolio) {
-      portfolioSec.style.display = 'block';
+      portfolioSec.style.removeProperty('display');
       portfolioSec.classList.remove('hidden');
       setupPortfolio();
     } else {
-      portfolioSec.style.display = 'none';
+      portfolioSec.style.setProperty('display', 'none', 'important');
       portfolioSec.classList.add('hidden');
     }
   }
@@ -1614,10 +1611,10 @@ function renderStoreUI() {
   const showReviews = parseBoolStrict(db.enableReviews, true);
   if (reviewWallSec) {
     if (showReviews) {
-      reviewWallSec.style.display = 'block';
+      reviewWallSec.style.removeProperty('display');
       reviewWallSec.classList.remove('hidden');
     } else {
-      reviewWallSec.style.display = 'none';
+      reviewWallSec.style.setProperty('display', 'none', 'important');
       reviewWallSec.classList.add('hidden');
     }
   }
@@ -1630,13 +1627,13 @@ function renderStoreUI() {
   const showCare = parseBoolStrict(db.enableCare, true);
   if (careSec) {
     if (showCare) {
-      careSec.style.display = 'block';
+      careSec.style.removeProperty('display');
       careSec.classList.remove('hidden');
       if (careContent) {
         careContent.innerText = db.careText || '服務完成後請保持清潔與通風乾燥。';
       }
     } else {
-      careSec.style.display = 'none';
+      careSec.style.setProperty('display', 'none', 'important');
       careSec.classList.add('hidden');
     }
   }
@@ -1658,7 +1655,7 @@ function renderStoreUI() {
 
   if (contractSec) {
     if (showContract) {
-      contractSec.style.display = 'block';
+      contractSec.style.removeProperty('display');
       contractSec.classList.remove('hidden');
       const cTitle = db.contractTitle || '定型化服務契約書';
       if (contractTitleEl) contractTitleEl.innerText = cTitle;
@@ -1667,7 +1664,7 @@ function renderStoreUI() {
         contractScrollArea.innerText = db.contractContent;
       }
     } else {
-      contractSec.style.display = 'none';
+      contractSec.style.setProperty('display', 'none', 'important');
       contractSec.classList.add('hidden');
       const hasAgreedInput = document.getElementById('hasAgreedContract');
       if (hasAgreedInput) hasAgreedInput.value = 'true';
@@ -1681,10 +1678,10 @@ function renderStoreUI() {
   const showCustType = parseBoolStrict(db.enableCustType, true);
   if (custTypeSec) {
     if (showCustType) {
-      custTypeSec.style.display = 'block';
+      custTypeSec.style.removeProperty('display');
       custTypeSec.classList.remove('hidden');
     } else {
-      custTypeSec.style.display = 'none';
+      custTypeSec.style.setProperty('display', 'none', 'important');
       custTypeSec.classList.add('hidden');
       const custTypeInput = document.getElementById('custType');
       if (custTypeInput) custTypeInput.value = 'old';
@@ -1697,15 +1694,25 @@ function renderStoreUI() {
   const emailSec = document.getElementById('emailSection');
   const showEmail = parseBoolStrict(db.enableEmailCopy, true);
   if (emailSec) {
-    emailSec.style.display = showEmail ? 'block' : 'none';
-    emailSec.classList.toggle('hidden', !showEmail);
+    if (!showEmail) {
+      emailSec.style.setProperty('display', 'none', 'important');
+      emailSec.classList.add('hidden');
+    } else {
+      emailSec.style.removeProperty('display');
+      emailSec.classList.remove('hidden');
+    }
   }
 
   const notesSec = document.getElementById('custNotesWrapper');
   const showNotes = parseBoolStrict(db.enableCustNotes, true);
   if (notesSec) {
-    notesSec.style.display = showNotes ? 'block' : 'none';
-    notesSec.classList.toggle('hidden', !showNotes);
+    if (!showNotes) {
+      notesSec.style.setProperty('display', 'none', 'important');
+      notesSec.classList.add('hidden');
+    } else {
+      notesSec.style.removeProperty('display');
+      notesSec.classList.remove('hidden');
+    }
   }
 
   // ----------------------------------------------------
@@ -1750,6 +1757,9 @@ function renderStoreUI() {
 }
 // ========================================================
 // 【完整版】前台介面與計價框智慧排列組合（無省略）
+// ========================================================
+// ========================================================
+// 【完整零省略版】前台介面與計價框智慧排列組合
 // ========================================================
 function recalcSmartCheckoutLayout() {
   const showPrice = parseBoolStrict(db.enableShowPrice, true);
@@ -1864,7 +1874,12 @@ function recalcSmartCheckoutLayout() {
       couponCodeSection.style.setProperty('display', 'none', 'important');
       couponCodeSection.classList.add('hidden');
       const couponInput = document.getElementById('couponCode');
+      const couponNotice = document.getElementById('couponNotice');
       if (couponInput) couponInput.value = '';
+      if (couponNotice) {
+        couponNotice.innerText = '';
+        couponNotice.classList.add('hidden');
+      }
       if (typeof activeCoupon !== 'undefined') activeCoupon = null;
     } else {
       couponCodeSection.style.removeProperty('display');
