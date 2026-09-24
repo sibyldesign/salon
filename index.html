@@ -1565,28 +1565,124 @@ function selectFrontPetByIndex(idx) {
   calculateBoardingDaysAndPrice();
   updateCheckoutSummary();
 }
-  function promptAddNewPetProfile() {
-    document.getElementById('petName').value = '';
-    document.getElementById('petBreed').value = '';
-    document.getElementById('petWeight').value = '';
-    document.getElementById('petAge').value = '';
-    document.getElementById('petPersonality').value = '';
-    document.getElementById('petAssetBadge').classList.add('hidden');
-    document.getElementById('petName').focus();
+  // ========================================================
+// 【多毛孩動態向下追加引擎】毛孩 1 + 毛孩 2 獨立項目與照片上傳
+// ========================================================
+let frontPetBlocksCount = 1;
 
-    const chkCard = document.getElementById('chk-use-package');
-    if (chkCard) { chkCard.disabled = true; chkCard.checked = false; }
+function promptAddNewPetProfile() {
+  frontPetBlocksCount++;
+  const container = document.getElementById('petProfileSection');
+  const petIndex = frontPetBlocksCount;
 
-    Swal.fire({
-      title: '填寫新毛孩資料',
-      text: '請填寫寶貝資訊，送單後將自動建立於您的名下。',
-      icon: 'info',
-      timer: 1500,
-      showConfirmButton: false
-    });
-    updateCheckoutSummary();
+  // 動態生成該毛孩專屬的服務項目勾選 HTML
+  const mainSvcs = (db.services || []).filter(s => !s.isAddon);
+  const addonSvcs = (db.services || []).filter(s => s.isAddon);
+
+  const svcOptionsHtml = `
+    <div class="mt-2 p-2.5 bg-white rounded-xl border border-brand-200 space-y-1.5">
+      <label class="block font-bold text-brand-900 text-xs">為毛孩 ${petIndex} 挑選施作項目：</label>
+      <div class="grid grid-cols-1 gap-1.5">
+        ${mainSvcs.map(s => `
+          <label class="flex items-center justify-between p-2 rounded-lg border border-brand-100 bg-brand-50/40 text-xs cursor-pointer">
+            <span class="flex items-center gap-1.5"><input type="checkbox" class="pet-${petIndex}-svc" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()"> ${s.name}</span>
+            <span class="font-mono font-bold text-brand-600">NT$ ${s.price}</span>
+          </label>
+        `).join('')}
+      </div>
+      <div class="pt-1 border-t border-brand-100 flex flex-wrap gap-1.5">
+        ${addonSvcs.map(a => `
+          <label class="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-brand-200 text-[11px] cursor-pointer">
+            <input type="checkbox" class="pet-${petIndex}-addon" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
+            <span class="text-brand-400 font-bold">[加購]</span><span>${a.name} (+NT$ ${a.price})</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  const newBlockHtml = `
+    <div id="pet-block-${petIndex}" class="p-4 rounded-2xl bg-brand-50/90 border-2 border-brand-200 space-y-3 mt-4 transition">
+      <div class="flex justify-between items-center border-b border-brand-200 pb-2">
+        <span class="font-bold text-brand-900 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-paw text-theme-primary"></i> 毛孩 ${petIndex} 身分檔案
+        </span>
+        <button type="button" onclick="removePetBlock(${petIndex})" class="text-rose-600 font-bold text-xs hover:text-rose-800">
+          <i class="fa-solid fa-trash-can mr-1"></i> 移除此毛孩
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-xs">毛孩姓名 *</label>
+          <input type="text" id="petName_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold" placeholder="例: 圓圓">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-xs">品種 / 分類 *</label>
+          <input type="text" id="petBreed_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold" placeholder="例: 柴犬 / 貴賓">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-xs">體重 (kg) *</label>
+          <input type="number" step="0.1" id="petWeight_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold font-mono" placeholder="kg" oninput="updateCheckoutSummary()">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-xs">年齡 (歲)</label>
+          <input type="number" id="petAge_${petIndex}" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold font-mono" placeholder="歲">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-xs">性別</label>
+          <select id="petGender_${petIndex}" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold">
+            <option value="公(已結紮)">公 (已結紮)</option>
+            <option value="公(未結紮)">公 (未結紮)</option>
+            <option value="母(已結紮)">母 (已結紮)</option>
+            <option value="母(未結紮)">母 (未結紮)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 上傳毛孩照片 (選填) -->
+      <div>
+        <label class="block font-bold text-brand-700 mb-1 text-[11px]">上傳毛孩照片 (選填，自動存入雲端檔案)：</label>
+        <div class="flex items-center gap-2">
+          <input type="file" id="petPhotoFile_${petIndex}" accept="image/*" class="text-xs flex-1">
+          <input type="hidden" id="petPhotoUrl_${petIndex}">
+        </div>
+      </div>
+
+      <div>
+        <label class="block font-bold text-brand-700 mb-1 text-xs">日常照護與性格備註：</label>
+        <textarea id="petPersonality_${petIndex}" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none leading-relaxed" placeholder="例如：怕吹風機、親人等..."></textarea>
+      </div>
+
+      ${svcOptionsHtml}
+    </div>
+  `;
+
+  // 插入於新增按鈕容器之前
+  const btnContainer = container.querySelector('.pt-1.text-center');
+  if (btnContainer) {
+    btnContainer.insertAdjacentHTML('beforebegin', newBlockHtml);
   }
 
+  Swal.fire({
+    title: `已新增毛孩 ${petIndex}！`,
+    text: `請於下方填寫第二隻毛孩資料並挑選施作項目。`,
+    icon: 'success',
+    timer: 1200,
+    showConfirmButton: false
+  });
+}
+
+function removePetBlock(idx) {
+  const block = document.getElementById(`pet-block-${idx}`);
+  if (block) {
+    block.remove();
+    updateCheckoutSummary();
+  }
+}
   async function syncCurrentPetToDatabase(phone, ownerName) {
     const petName = document.getElementById('petName')?.value.trim();
     if (!petName || !phone) return;
@@ -2657,6 +2753,8 @@ function updateCheckoutSummary() {
   const summaryRange = document.getElementById('summary-service-range');
   if (!summaryItems || !summaryRange) return;
 
+  // 1. 計算選取項目的基準金額 (移除預估字樣)
+  const selectedServiceNames = [];
   if (checkedBoxes.length === 0) {
     summaryItems.innerHTML = '<div>(尚未選擇項目)</div>';
     summaryRange.innerText = showPrice ? 'NT$ 0' : '現場確認';
@@ -2667,21 +2765,23 @@ function updateCheckoutSummary() {
       const itemPrice = num ? Number(num[0]) : 0;
       mainTotal += itemPrice;
       const isAddon = cb.getAttribute('data-isaddon') === 'true';
+      selectedServiceNames.push({ name: cb.value, price: itemPrice, isAddon });
+
       breakdownHtml += `
-        <div class="flex justify-between items-center">
-          <span>(${isAddon ? '加購' : '項目'}：${cb.value})</span>
-          <span class="font-mono">${showPrice ? `${isAddon ? '+' : ''}NT$ ${rawPriceStr}` : '現場確認'}</span>
+        <div class="flex justify-between items-center py-0.5">
+          <span>${isAddon ? '<span class="text-[10px] text-brand-400 bg-brand-100 px-1 py-0.2 rounded mr-1">加購</span>' : ''}${cb.value}</span>
+          <span class="font-mono font-bold">${showPrice ? `NT$ ${rawPriceStr}` : '現場確認'}</span>
         </div>`;
     });
     summaryItems.innerHTML = breakdownHtml;
-    summaryRange.innerText = showPrice ? `預估 NT$ ${mainTotal.toLocaleString()}` : '依現場評估';
+    summaryRange.innerText = showPrice ? `NT$ ${mainTotal.toLocaleString()}` : '依現場評估';
   }
 
-  // 加購項目計算
+  // 2. 加購方案 (儲值金方案 / 包卡方案)
   const pkgSel = document.getElementById('addon-package-select');
   const walSel = document.getElementById('addon-wallet-select');
-  const addonPkgFee = (showPackages && pkgSel) ? Number(pkgSel.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
-  const addonWalFee = (showWallet && walSel) ? Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
+  const addonPkgFee = (showPackages && pkgSel && pkgSel.value !== 'none') ? Number(pkgSel.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
+  const addonWalFee = (showWallet && walSel && walSel.value !== 'none') ? Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
   const totalAddon = addonPkgFee + addonWalFee;
 
   const rowAddon = document.getElementById('row-addon-plan-fee');
@@ -2691,7 +2791,7 @@ function updateCheckoutSummary() {
     if (addonTotalEl) addonTotalEl.innerText = totalAddon.toLocaleString();
   }
 
-  // 折抵計算 (互斥邏輯)
+  // 3. 智慧包卡抵扣 (嚴格校驗：僅能抵扣相同名稱之綁定項目，禁止染髮扣剪髮)
   const usePkg = showPackages && document.getElementById('chk-use-package')?.checked;
   const useWallet = showWallet && document.getElementById('chk-use-wallet')?.checked;
   
@@ -2700,33 +2800,70 @@ function updateCheckoutSummary() {
   const pkgNoticeBox = document.getElementById('box-package-remain-notice');
 
   if (usePkg && mainTotal > 0) {
-    deductAmount = mainTotal;
-    deductText = `使用包卡扣抵 1 堂 (-$${mainTotal.toLocaleString()})`;
-    if (pkgNoticeBox) {
-      pkgNoticeBox.classList.remove('hidden');
-      const remTimes = Math.max(0, (memberData.packages?.[0]?.remaining_times || 1) - 1);
-      document.getElementById('text-remain-package-times').innerText = remTimes;
+    const userPkgs = memberData.packages || [];
+    // 尋找顧客持有的包卡是否與勾選項目相符
+    let matchedItemPrice = 0;
+    let matchedPkgName = '';
+
+    for (let svc of selectedServiceNames) {
+      if (svc.isAddon) continue; // 加購項目不參與主包卡抵扣
+      const foundPkg = userPkgs.find(p => (p.service_name === svc.name || svc.name.includes(p.service_name)) && p.remaining_times > 0);
+      if (foundPkg) {
+        matchedItemPrice = svc.price;
+        matchedPkgName = foundPkg.service_name;
+        break;
+      }
+    }
+
+    if (matchedItemPrice > 0) {
+      deductAmount = matchedItemPrice;
+      deductText = `使用【${matchedPkgName}】包卡扣抵 1 堂 (-NT$ ${matchedItemPrice.toLocaleString()})`;
+      if (pkgNoticeBox) {
+        pkgNoticeBox.classList.remove('hidden');
+        const remTimes = Math.max(0, (userPkgs[0]?.remaining_times || 1) - 1);
+        document.getElementById('text-remain-package-times').innerText = remTimes;
+      }
+    } else {
+      // 勾選不相符項目防呆警告
+      document.getElementById('chk-use-package').checked = false;
+      Swal.fire({
+        title: '無法使用包卡抵扣',
+        text: '您目前選擇的項目，與名下包卡綁定之服務項目不符，無法抵扣。',
+        icon: 'warning'
+      });
+      if (pkgNoticeBox) pkgNoticeBox.classList.add('hidden');
     }
   } else {
     if (pkgNoticeBox) pkgNoticeBox.classList.add('hidden');
   }
 
+  // 4. 【修復圖 1 儲值抵扣】現場新購儲值金或已有儲值金，正確折抵並試算打折
   if (useWallet && !usePkg && mainTotal > 0) {
-    const discountedMain = Math.round(mainTotal * (memberData.discountPercent || 1));
-    if (memberData.walletBalance >= discountedMain) {
-      deductAmount = mainTotal;
-      deductText = `儲值金全額扣抵 (-$${discountedMain.toLocaleString()})`;
+    let effectiveDiscount = memberData.discountPercent || 1;
+    // 若當次有新購儲值金方案，優先採用新方案的優惠折數
+    if (addonWalFee > 0 && walSel) {
+      const newPlanDiscount = Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-discount') || 1);
+      if (newPlanDiscount < effectiveDiscount) effectiveDiscount = newPlanDiscount;
+    }
+
+    const discountedMain = Math.round(mainTotal * effectiveDiscount);
+    const availableBalance = (memberData.walletBalance || 0) + addonWalFee;
+
+    if (availableBalance >= discountedMain) {
+      deductAmount = mainTotal - (mainTotal - discountedMain); // 扣抵金額
+      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，全額自儲值金扣除 (項目折後: $${discountedMain.toLocaleString()})`;
     } else {
-      deductAmount = memberData.walletBalance;
-      deductText = `儲值金餘額折抵 (-$${memberData.walletBalance.toLocaleString()})`;
+      deductAmount = availableBalance;
+      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，扣抵儲值餘額 $${availableBalance.toLocaleString()} (不足現場補差價)`;
     }
   }
 
+  // 5. 折扣碼抵扣
   if (activeCoupon && !usePkg && !useWallet && mainTotal > 0) {
     deductAmount = activeCoupon.discount_type === 'cash' 
       ? Number(activeCoupon.discount_value || 0)
       : Math.round(mainTotal * (1 - Number(activeCoupon.discount_value || 1)));
-    deductText = `折扣碼【${activeCoupon.code}】折抵 (-$${deductAmount.toLocaleString()})`;
+    deductText = `折扣碼【${activeCoupon.code}】折抵 (-NT$ ${deductAmount.toLocaleString()})`;
   }
 
   const rowDeduct = document.getElementById('row-deduct-detail');
@@ -2735,21 +2872,22 @@ function updateCheckoutSummary() {
     document.getElementById('summary-deduct-text').innerText = deductText;
   }
 
-  // 訂金折抵
+  // 6. 【修復圖 2 訂金未扣除漏洞】訂金實質從應付金額中扣除
   const custTypeVal = document.getElementById('custType')?.value || 'old';
   const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
   let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
+  
   const rowDeposit = document.getElementById('rowDepositDeduct');
   if (rowDeposit) {
     rowDeposit.style.display = depositDeduct > 0 ? 'flex' : 'none';
     document.getElementById('summaryDepositDeduct').innerText = depositDeduct.toLocaleString();
   }
 
-  // 現場最終實付
+  // 7. 計算現場預估應付金額：(基準項目 - 折扣) + 加購方案 - 已收訂金
   let finalTotal = Math.max(0, (mainTotal - deductAmount) + totalAddon - depositDeduct);
   const finalTotalEl = document.getElementById('summary-final-total');
   if (finalTotalEl) {
-    finalTotalEl.innerText = showPrice ? `NT$ ${finalTotal.toLocaleString()}` : '現場評估確認';
+    finalTotalEl.innerText = showPrice ? `預估 NT$ ${finalTotal.toLocaleString()}` : '現場確認';
   }
 }
 
@@ -2773,27 +2911,47 @@ function updateCheckoutSummary() {
     updateCheckoutSummary();
   }
 
-  function applyCouponCode() {
-    const code = document.getElementById('couponCode').value.trim().toUpperCase();
-    const notice = document.getElementById('couponNotice');
-    if (!code) return;
+  // 套用或取消折扣碼
+function applyCouponCode() {
+  const btn = document.getElementById('btnCouponApply');
+  const codeInput = document.getElementById('couponCode');
+  const notice = document.getElementById('couponNotice');
 
-    directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}&code=eq.${code}&is_active=eq.true`).then(res => {
-      if (res && res.length > 0) {
-        document.getElementById('chk-use-package').checked = false;
-        document.getElementById('chk-use-wallet').checked = false;
-        activeCoupon = res[0];
-        notice.innerText = `✓ 折扣碼【${code}】已套用 (已停用方案扣抵)`;
-        notice.className = 'text-[11px] text-emerald-600 font-bold block';
-        updateCheckoutSummary();
-      } else {
-        activeCoupon = null;
-        notice.innerText = '此代碼無效或已過期';
-        notice.className = 'text-[11px] text-red-500 font-bold block';
-        updateCheckoutSummary();
-      }
-    });
+  // 若已套用，點擊變為「取消套用」
+  if (activeCoupon) {
+    activeCoupon = null;
+    codeInput.value = '';
+    codeInput.disabled = false;
+    btn.innerText = '套用';
+    btn.className = 'px-5 py-2.5 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition shrink-0';
+    notice.innerText = '已取消套用折扣碼';
+    notice.className = 'text-[11px] text-gray-500 font-bold pt-0.5 block';
+    updateCheckoutSummary();
+    return;
   }
+
+  const code = codeInput.value.trim().toUpperCase();
+  if (!code) return;
+
+  directSupabaseFetch(`coupons?store_id=eq.${CURRENT_STORE_ID}&code=eq.${code}&is_active=eq.true`).then(res => {
+    if (res && res.length > 0) {
+      document.getElementById('chk-use-package').checked = false;
+      document.getElementById('chk-use-wallet').checked = false;
+      activeCoupon = res[0];
+      codeInput.disabled = true;
+      btn.innerText = '取消套用';
+      btn.className = 'px-5 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition shrink-0';
+      notice.innerText = `✓ 已套用折扣碼【${code}】`;
+      notice.className = 'text-[11px] text-emerald-600 font-bold block pt-0.5';
+      updateCheckoutSummary();
+    } else {
+      activeCoupon = null;
+      notice.innerText = '此代碼無效或已過期';
+      notice.className = 'text-[11px] text-rose-500 font-bold block pt-0.5';
+      updateCheckoutSummary();
+    }
+  });
+}
 
   function openContractReadModal() {
     const modal = document.getElementById('contractModal');
@@ -3130,114 +3288,122 @@ async function checkCustomerBenefitsByPhone() {
   }
 
   function calculateBoardingDaysAndPrice() {
-    if (activeBookingSubMode !== 'boarding') return;
+  if (activeBookingSubMode !== 'boarding') return;
 
-    const inDateVal = document.getElementById('hotelCheckInDate')?.value;
-    const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
-    const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
-    const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '18:00';
-    const weightVal = Number(document.getElementById('petWeight')?.value || 5);
+  const inDateVal = document.getElementById('hotelCheckInDate')?.value;
+  const outDateVal = document.getElementById('hotelCheckOutDate')?.value;
+  const inTimeVal = document.getElementById('hotelCheckInTime')?.value || '10:00';
+  const outTimeVal = document.getElementById('hotelCheckOutTime')?.value || '18:00';
+  const weightVal = Number(document.getElementById('petWeight')?.value || 5);
 
-    if (!inDateVal || !outDateVal) return;
+  if (!inDateVal || !outDateVal) return;
 
-    const diffMs = new Date(outDateVal) - new Date(inDateVal);
-    const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-    const nightsBadge = document.getElementById('displayStayNightsBadge');
-    if (nightsBadge) nightsBadge.innerText = `共 ${nights} 晚`;
+  const diffMs = new Date(outDateVal) - new Date(inDateVal);
+  const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
+  const nightsBadge = document.getElementById('displayStayNightsBadge');
+  if (nightsBadge) nightsBadge.innerText = `共 ${nights} 晚`;
 
-    let baseRoomMin = 700, baseRoomMax = 900;
-    let tierName = "小型犬獨立房";
-    let sizeKey = 'small';
+  let baseRoomMin = 700, baseRoomMax = 900;
+  let tierName = "小型犬獨立房";
+  let sizeKey = 'small';
 
-    if (weightVal >= 21) {
-      baseRoomMin = 1300; baseRoomMax = 1600; tierName = "大型犬旗艦房"; sizeKey = 'large';
-    } else if (weightVal >= 10) {
-      baseRoomMin = 900; baseRoomMax = 1200; tierName = "中型犬舒適房"; sizeKey = 'medium';
-    }
-
-    const roomMinTotal = baseRoomMin * nights;
-    const roomMaxTotal = baseRoomMax * nights;
-
-    const mealRates = db.boardingMealRates || {};
-    let unitMealPrice = 75;
-    if (typeof mealRates[sizeKey] === 'number') unitMealPrice = mealRates[sizeKey];
-    else if (Array.isArray(mealRates[sizeKey])) unitMealPrice = mealRates[sizeKey][0] || 75;
-    else {
-      if (weightVal >= 21) unitMealPrice = 140;
-      else if (weightVal >= 10) unitMealPrice = 100;
-    }
-
-    const mealRadio = document.querySelector('input[name="mealPlanOption"]:checked');
-    const mealType = mealRadio ? mealRadio.getAttribute('data-type') : 'SELF';
-    const mealName = mealRadio ? mealRadio.getAttribute('data-name') : '自備飼料';
-
-    let actualMealCount = 0;
-    let totalMealFee = 0;
-    let mealExplainStr = "";
-
-    if (mealType !== 'SELF') {
-      const checkInDt = new Date(`${inDateVal}T${inTimeVal}:00`);
-      const checkOutDt = new Date(`${outDateVal}T${outTimeVal}:00`);
-      let cur = new Date(checkInDt.getFullYear(), checkInDt.getMonth(), checkInDt.getDate());
-      const endD = new Date(checkOutDt.getFullYear(), checkOutDt.getMonth(), checkOutDt.getDate());
-
-      while (cur <= endD) {
-        const y = cur.getFullYear(), m = cur.getMonth(), d = cur.getDate();
-        const breakfastDt = new Date(y, m, d, 9, 0, 0);
-        const dinnerDt = new Date(y, m, d, 18, 0, 0);
-
-        if (breakfastDt >= checkInDt && breakfastDt <= checkOutDt) actualMealCount++;
-        if (dinnerDt >= checkInDt && dinnerDt <= checkOutDt) actualMealCount++;
-        cur.setDate(cur.getDate() + 1);
-      }
-
-      if (mealType === 'ONE') actualMealCount = Math.max(1, Math.ceil(actualMealCount / 2));
-      totalMealFee = actualMealCount * unitMealPrice;
-      mealExplainStr = `${mealName} (經時段核算共 ${actualMealCount} 餐，每餐 NT$ ${unitMealPrice}，餐費小計 +NT$ ${totalMealFee})`;
-
-      const explainBox = document.getElementById('hotelMealCountExplain');
-      if (explainBox) {
-        explainBox.innerText = `🥣 ${mealExplainStr}`;
-        explainBox.classList.remove('hidden');
-      }
-    } else {
-      document.getElementById('hotelMealCountExplain')?.classList.add('hidden');
-    }
-
-    const hasInBath = document.getElementById('chkHotelBathCheckin')?.checked;
-    const hasOutBath = document.getElementById('chkHotelBathCheckout')?.checked;
-    let bathInMin = 0, bathInMax = 0, bathOutMin = 0, bathOutMax = 0;
-
-    if (hasInBath) {
-      bathInMin = weightVal >= 21 ? 900 : (weightVal >= 10 ? 700 : 500);
-      bathInMax = weightVal >= 21 ? 1200 : (weightVal >= 10 ? 900 : 700);
-    }
-    if (hasOutBath) {
-      bathOutMin = weightVal >= 21 ? 1000 : (weightVal >= 10 ? 800 : 600);
-      bathOutMax = weightVal >= 21 ? 1500 : (weightVal >= 10 ? 1100 : 900);
-    }
-
-    const totalBathMin = bathInMin + bathOutMin;
-    const totalBathMax = bathInMax + bathOutMax;
-    const isShuttle = document.getElementById('chkNeedShuttle')?.checked;
-
-    const totalEstMin = roomMinTotal + totalMealFee + totalBathMin;
-    const totalEstMax = roomMaxTotal + totalMealFee + totalBathMax;
-
-    const breakdownBox = document.getElementById('summary-items-breakdown');
-    if (breakdownBox) {
-      breakdownBox.innerHTML = `
-        <div class="flex justify-between"><span>• ${tierName} (${nights} 晚)：</span><span class="font-mono">NT$ ${roomMinTotal.toLocaleString()} ~ ${roomMaxTotal.toLocaleString()}</span></div>
-        ${mealExplainStr ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplainStr}</span></div>` : ''}
-        ${hasInBath ? `<div class="flex justify-between text-blue-700"><span>• 入住清潔洗護：</span><span class="font-mono">+NT$ ${bathInMin} ~${bathInMax}</span></div>` : ''}
-        ${hasOutBath ? `<div class="flex justify-between text-purple-700"><span>• 退宿造型美容：</span><span class="font-mono">+NT$ ${bathOutMin} ~${bathOutMax}</span></div>` : ''}
-        ${isShuttle ? `<div class="text-emerald-800 font-bold">• 專車到府接送：車資現場依里程實收</div>` : ''}
-      `;
-    }
-
-    document.getElementById('summary-service-range').innerText = (totalEstMax > totalEstMin) ? `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
-    document.getElementById('summary-final-total').innerText = (totalEstMax > totalEstMin) ? `NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `NT$ ${totalEstMin.toLocaleString()}`;
+  if (weightVal >= 21) {
+    baseRoomMin = 1300; baseRoomMax = 1600; tierName = "大型犬旗艦房"; sizeKey = 'large';
+  } else if (weightVal >= 10) {
+    baseRoomMin = 900; baseRoomMax = 1200; tierName = "中型犬舒適房"; sizeKey = 'medium';
   }
+
+  const roomMinTotal = baseRoomMin * nights;
+  const roomMaxTotal = baseRoomMax * nights;
+
+  // 單餐計價
+  const mealRates = db.boardingMealRates || {};
+  let unitMealPrice = 75;
+  if (typeof mealRates[sizeKey] === 'number') unitMealPrice = mealRates[sizeKey];
+  else if (Array.isArray(mealRates[sizeKey])) unitMealPrice = mealRates[sizeKey][0] || 75;
+  else {
+    if (weightVal >= 21) unitMealPrice = 140;
+    else if (weightVal >= 10) unitMealPrice = 100;
+  }
+
+  const mealRadio = document.querySelector('input[name="mealPlanOption"]:checked');
+  const mealType = mealRadio ? mealRadio.getAttribute('data-type') : 'SELF';
+  const mealName = mealRadio ? mealRadio.getAttribute('data-name') : '自備飼料';
+
+  let actualMealCount = 0;
+  let totalMealFee = 0;
+  let mealExplainStr = "";
+
+  if (mealType !== 'SELF') {
+    const checkInDt = new Date(`${inDateVal}T${inTimeVal}:00`);
+    const checkOutDt = new Date(`${outDateVal}T${outTimeVal}:00`);
+    let cur = new Date(checkInDt.getFullYear(), checkInDt.getMonth(), checkInDt.getDate());
+    const endD = new Date(checkOutDt.getFullYear(), checkOutDt.getMonth(), checkOutDt.getDate());
+
+    while (cur <= endD) {
+      const y = cur.getFullYear(), m = cur.getMonth(), d = cur.getDate();
+      const breakfastDt = new Date(y, m, d, 9, 0, 0);
+      const dinnerDt = new Date(y, m, d, 18, 0, 0);
+
+      if (breakfastDt >= checkInDt && breakfastDt <= checkOutDt) actualMealCount++;
+      if (dinnerDt >= checkInDt && dinnerDt <= checkOutDt) actualMealCount++;
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    if (mealType === 'ONE') actualMealCount = Math.max(1, Math.ceil(actualMealCount / 2));
+    totalMealFee = actualMealCount * unitMealPrice;
+    mealExplainStr = `${mealName} (經時段核算共 ${actualMealCount} 餐，每餐 NT$ ${unitMealPrice}，餐費小計 +NT$ ${totalMealFee})`;
+
+    const explainBox = document.getElementById('hotelMealCountExplain');
+    if (explainBox) {
+      explainBox.innerHTML = `<i class="fa-solid fa-utensils mr-1"></i> ${mealExplainStr}`;
+      explainBox.classList.remove('hidden');
+    }
+  } else {
+    document.getElementById('hotelMealCountExplain')?.classList.add('hidden');
+  }
+
+  // 附加清潔洗澡
+  const hasInBath = document.getElementById('chkHotelBathCheckin')?.checked;
+  const hasOutBath = document.getElementById('chkHotelBathCheckout')?.checked;
+  let bathInMin = 0, bathInMax = 0, bathOutMin = 0, bathOutMax = 0;
+
+  if (hasInBath) {
+    bathInMin = weightVal >= 21 ? 900 : (weightVal >= 10 ? 700 : 500);
+    bathInMax = weightVal >= 21 ? 1200 : (weightVal >= 10 ? 900 : 700);
+  }
+  if (hasOutBath) {
+    bathOutMin = weightVal >= 21 ? 1000 : (weightVal >= 10 ? 800 : 600);
+    bathOutMax = weightVal >= 21 ? 1500 : (weightVal >= 10 ? 1100 : 900);
+  }
+
+  const totalBathMin = bathInMin + bathOutMin;
+  const totalBathMax = bathInMax + bathOutMax;
+  const isShuttle = document.getElementById('chkNeedShuttle')?.checked;
+
+  // 扣除訂金 (修復圖 2 在住宿模式的漏洞)
+  const custTypeVal = document.getElementById('custType')?.value || 'old';
+  const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
+  let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
+
+  const totalEstMin = Math.max(0, (roomMinTotal + totalMealFee + totalBathMin) - depositDeduct);
+  const totalEstMax = Math.max(0, (roomMaxTotal + totalMealFee + totalBathMax) - depositDeduct);
+
+  const breakdownBox = document.getElementById('summary-items-breakdown');
+  if (breakdownBox) {
+    breakdownBox.innerHTML = `
+      <div class="flex justify-between"><span>• ${tierName} (${nights} 晚)：</span><span class="font-mono">NT$ ${roomMinTotal.toLocaleString()} ~ ${roomMaxTotal.toLocaleString()}</span></div>
+      ${mealExplainStr ? `<div class="flex justify-between text-amber-800"><span>• ${mealExplainStr}</span></div>` : ''}
+      ${hasInBath ? `<div class="flex justify-between text-blue-700"><span>• 入住清潔洗護：</span><span class="font-mono">+NT$ ${bathInMin} ~${bathInMax}</span></div>` : ''}
+      ${hasOutBath ? `<div class="flex justify-between text-purple-700"><span>• 退宿造型美容：</span><span class="font-mono">+NT$ ${bathOutMin} ~${bathOutMax}</span></div>` : ''}
+      ${isShuttle ? `<div class="text-emerald-800 font-bold">• 專車到府接送：車資現場依里程實收</div>` : ''}
+      ${depositDeduct > 0 ? `<div class="flex justify-between text-rose-600 font-bold"><span>• 預付訂金折抵：</span><span class="font-mono">-NT$ ${depositDeduct.toLocaleString()}</span></div>` : ''}
+    `;
+  }
+
+  document.getElementById('summary-service-range').innerText = `NT$ ${(roomMinTotal + totalMealFee + totalBathMin).toLocaleString()} ~ ${(roomMaxTotal + totalMealFee + totalBathMax).toLocaleString()}`;
+  document.getElementById('summary-final-total').innerText = (totalEstMax > totalEstMin) ? `預估 NT$ ${totalEstMin.toLocaleString()} ~ ${totalEstMax.toLocaleString()}` : `預估 NT$ ${totalEstMin.toLocaleString()}`;
+}
 
   async function loadApprovedReviews() {
     try {
@@ -3524,14 +3690,19 @@ document.getElementById('bookForm').onsubmit = async function(e) {
         });
       } else {
         Swal.fire({
-          title: '🎉 預約申請已成功送出！',
-          text: isReportedDeposit ? `已登記您的訂金後五碼【${quickDepositLast5}】，店家確認排程後將第一時間與您聯繫❤️` : '店家確認排程後會立即與您聯繫確認❤️',
-          icon: 'success',
-          confirmButtonColor: '#8C7355'
-        }).then(() => {
-          document.getElementById('booking-ui').style.display = 'none';
-          document.getElementById('success-screen').classList.remove('hidden');
-        });
+        title: '預約申請已成功送出！',
+        text: isReportedDeposit ? `已收到您的訂金後五碼【${quickDepositLast5}】，店家確認後將第一時間與您聯繫！` : '店家確認排程後將第一時間與您聯繫確認！',
+        icon: 'success',
+        confirmButtonColor: '#8C7355',
+        confirmButtonText: '完成並返回'
+      }).then(() => {
+        // 刪除原本跳轉首頁的錯誤代碼，改為回上一頁或重新刷新本預約頁
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.reload();
+        }
+      });
       }
     } catch (err) {
       Swal.fire('預約傳送失敗', err.message, 'error');
