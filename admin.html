@@ -161,54 +161,62 @@
       <div id="shift-content-area"></div>
     </div>
 
-    <!-- 分頁 3. 寵物住宿與房況甘特 (page-boarding-schedule) -->
-    <div id="page-boarding-schedule" class="page space-y-4 full-admin-only" style="display: none;">
-      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center pb-2 border-b border-brand-100">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-hotel text-brand-500"></i> 寵物度假住宿即時房況圖
-          </span>
-          <input type="date" id="boarding-view-date" class="p-1.5 bg-brand-50 border border-brand-200 rounded-xl text-xs font-bold font-mono" onchange="renderBoardingRoomStatus()">
-        </div>
-        <div class="grid grid-cols-3 gap-2 text-center text-xs">
-          <div class="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-200">
-            <div class="text-[10px] text-emerald-700 font-bold">今日在宿毛孩</div>
-            <div class="text-base font-black text-emerald-900 mt-0.5 font-mono" id="boarding-active-count">0 隻</div>
-          </div>
-          <div class="p-2.5 bg-amber-50 rounded-2xl border border-amber-200">
-            <div class="text-[10px] text-amber-700 font-bold">今日預定退宿</div>
-            <div class="text-base font-black text-amber-900 mt-0.5 font-mono" id="boarding-checkout-count">0 隻</div>
-          </div>
-          <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200">
-            <div class="text-[10px] text-brand-600 font-bold">目前空房率</div>
-            <div class="text-base font-black text-brand-900 mt-0.5 font-mono" id="boarding-vacancy-rate">100%</div>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1" id="boarding-room-grid"></div>
-      </div>
+    <!-- 分頁 3. 寵物度假住宿即時房況圖 (page-boarding-schedule) -->
+<div id="page-boarding-schedule" class="page space-y-4 full-admin-only" style="display: none;">
+  <div class="bg-white p-4 md:p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3.5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-brand-100 gap-2">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-hotel text-brand-500"></i> 寵物度假住宿即時房況圖
+      </span>
+      <span class="text-[10.5px] text-brand-400 font-medium">點擊下方日期可即時切換當日房況</span>
+    </div>
 
-      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center pb-2 border-b border-brand-100">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-bowl-food text-brand-500"></i> 今日放飯供餐照護核對清單
-          </span>
-          <span class="text-[10px] text-brand-400 font-medium">判斷毛孩體型與自備食料</span>
-        </div>
-        <div class="space-y-2 text-xs" id="boarding-care-checklist"></div>
-      </div>
+    <!-- 橫排滑動日期按鈕列 (與排班一致，自動標註週幾與公休狀態) -->
+    <div class="flex gap-2 overflow-x-auto pb-2 border-b border-dashed border-brand-200 no-scrollbar" id="boarding-date-scroll-area"></div>
+    <input type="hidden" id="boarding-view-date">
 
-      <!-- 今日專車接送調度清單 (自動提取地址、趟次與導航按鈕) -->
-      <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="flex justify-between items-center pb-2 border-b border-brand-100">
-          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-van-shuttle text-[#8C7355]"></i> 今日專車到府接送調度清單
-          </span>
-          <span class="text-[10px] text-brand-400 font-medium">支援一鍵開啟 Google 導航</span>
-        </div>
-        <div class="space-y-2 text-xs" id="boarding-shuttle-checklist"></div>
+    <!-- 3 大房況指標卡 -->
+    <div class="grid grid-cols-3 gap-2 text-center text-xs pt-1">
+      <div class="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-2xs">
+        <div class="text-[10px] text-emerald-700 font-bold">今日在宿毛孩</div>
+        <div class="text-base font-black text-emerald-900 mt-0.5 font-mono" id="boarding-active-count">0 隻</div>
+      </div>
+      <div class="p-2.5 bg-amber-50 rounded-2xl border border-amber-200 shadow-2xs">
+        <div class="text-[10px] text-amber-700 font-bold">今日預定退宿</div>
+        <div class="text-base font-black text-amber-900 mt-0.5 font-mono" id="boarding-checkout-count">0 隻</div>
+      </div>
+      <div class="p-2.5 bg-brand-50 rounded-2xl border border-brand-200 shadow-2xs">
+        <div class="text-[10px] text-brand-600 font-bold">目前空房率</div>
+        <div class="text-base font-black text-brand-900 mt-0.5 font-mono" id="boarding-vacancy-rate">100%</div>
       </div>
     </div>
 
+    <!-- 房間狀態九宮格 (點擊可查看毛孩照護履歷或辦理退宿結單) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1" id="boarding-room-grid"></div>
+  </div>
+
+  <!-- 今日放飯供餐照護核對清單 -->
+  <div class="bg-white p-4 md:p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex justify-between items-center pb-2 border-b border-brand-100">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-bowl-food text-brand-500"></i> 今日放飯供餐照護核對清單
+      </span>
+      <span class="text-[10px] text-brand-400 font-medium">區分早 09:00 與 晚 18:00 供餐</span>
+    </div>
+    <div class="space-y-2 text-xs" id="boarding-care-checklist"></div>
+  </div>
+
+  <!-- 今日專車接送調度清單 (含地址點擊開啟 Google 導航與一鍵複製) -->
+  <div class="bg-white p-4 md:p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+    <div class="flex justify-between items-center pb-2 border-b border-brand-100">
+      <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-van-shuttle text-[#8C7355]"></i> 今日專車到府接送調度清單
+      </span>
+      <span class="text-[10px] text-brand-400 font-medium">點擊地址可直開 Google 導航</span>
+    </div>
+    <div class="space-y-2 text-xs" id="boarding-shuttle-checklist"></div>
+  </div>
+</div>
     <!-- 分頁 4. 名單總覽 (page-customer) -->
     <div id="page-customer" class="page space-y-4 full-admin-only" style="display: none;">
       <!-- 新進審核專區 -->
@@ -643,27 +651,31 @@
         </div>
 
         <!-- 4-2. 寵物住宿專屬多段時段與旗艦照護設定 (僅在 mode 3 顯示) -->
+        <!-- 4-2. 寵物住宿專屬多段時段 (依真實排班開班，禁止自由鍵入) -->
         <div id="quick-hotel-range-box" class="space-y-3 p-4 bg-amber-50/80 rounded-2xl border border-amber-200 hidden text-xs">
           <div class="font-bold text-amber-950 flex items-center justify-between border-b border-amber-200 pb-1.5">
             <span class="flex items-center gap-1"><i class="fa-solid fa-hotel text-amber-600"></i> 住宿起訖排程與照護加購：</span>
-            <span class="text-[10px] text-amber-800">後台代客建檔</span>
+            <span class="text-[10px] text-amber-800">時段已連動排班表</span>
           </div>
 
-          <!-- 入住退房時段獨立換行 -->
-          <div class="grid grid-cols-1 gap-2.5">
-            <div>
-              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">入住日期與抵達時間：</label>
-              <div class="flex gap-1.5">
-                <input type="date" id="quick-hotel-checkin-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
-                <input type="time" id="quick-hotel-checkin-time" value="10:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+          <!-- 入住退房時段動態按鈕列 -->
+          <div class="space-y-3">
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2">
+              <label class="block font-bold text-gray-800 text-[11px]">入住日期與進場時間（依排班）：</label>
+              <input type="date" id="quick-hotel-checkin-date" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 font-mono text-xs font-bold" onchange="calcAdminQuickHotelSlots('in'); calcAdminQuickHotelFees();">
+              <div class="grid grid-cols-4 gap-1.5 pt-1" id="admin-quick-hotel-in-slots">
+                <div class="col-span-full text-center py-2 text-gray-400">請先選取入住日期</div>
               </div>
+              <input type="hidden" id="quick-hotel-checkin-time" value="10:00">
             </div>
-            <div>
-              <label class="block font-bold text-gray-800 mb-0.5 text-[11px]">退房日期與接回時間：</label>
-              <div class="flex gap-1.5">
-                <input type="date" id="quick-hotel-checkout-date" class="w-2/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
-                <input type="time" id="quick-hotel-checkout-time" value="18:00" class="w-1/3 p-2 bg-white rounded-xl border border-gray-200 font-mono text-xs" onchange="calcAdminQuickHotelFees()">
+
+            <div class="p-3 bg-white rounded-2xl border border-brand-200 space-y-2">
+              <label class="block font-bold text-gray-800 text-[11px]">退房日期與接回時間（依排班）：</label>
+              <input type="date" id="quick-hotel-checkout-date" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 font-mono text-xs font-bold" onchange="calcAdminQuickHotelSlots('out'); calcAdminQuickHotelFees();">
+              <div class="grid grid-cols-4 gap-1.5 pt-1" id="admin-quick-hotel-out-slots">
+                <div class="col-span-full text-center py-2 text-gray-400">請先選取退房日期</div>
               </div>
+              <input type="hidden" id="quick-hotel-checkout-time" value="18:00">
             </div>
           </div>
 
@@ -1475,68 +1487,68 @@
         </div>
       </div>
 
-      <!-- 寵物住宿鮮食餐費率設定 (改為以每餐計價) -->
-        <div class="space-y-3 pt-2 border-t border-brand-100">
-          <div class="flex justify-between items-center">
-            <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
-              <i class="fa-solid fa-bowl-food text-amber-600"></i> 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價)：
-            </span>
-            <span class="text-[10px] text-amber-800 font-medium">支援小/中/大型犬 × 1/2/3餐差異價格</span>
+      <!-- 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價，嚴格單餐計價) -->
+      <div class="space-y-3 pt-2 border-t border-brand-100">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
+            <i class="fa-solid fa-bowl-food text-amber-600"></i> 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價)：
+          </span>
+          <span class="text-[10px] text-amber-800 font-medium">每格皆為「單餐價格 (元/餐)」</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
+          <!-- 小型犬/貓 -->
+          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+            <span class="font-bold text-brand-900 block text-[11px]">小型犬 / 貓咪 (&lt;10kg)</span>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+              <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="80">
+            </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="75">
+            </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="70">
+            </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
-            <!-- 小型犬/貓 -->
-            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-              <span class="font-bold text-brand-900 block text-[11px]">小型犬 / 貓咪 (&lt;10kg)</span>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="80">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="150">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日三餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="220">
-              </div>
+          <!-- 中型犬 -->
+          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+            <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+              <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="100">
             </div>
-
-            <!-- 中型犬 -->
-            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-              <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="100">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="180">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日三餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="260">
-              </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="90">
             </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="85">
+            </div>
+          </div>
 
-            <!-- 大型犬 -->
-            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-              <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="120">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日兩餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="220">
-              </div>
-              <div>
-                <label class="text-[9.5px] text-gray-500">一日三餐 (元/餐)</label>
-                <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="320">
-              </div>
+          <!-- 大型犬 -->
+          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+            <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+              <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="120">
+            </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="110">
+            </div>
+            <div>
+              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+              <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="105">
             </div>
           </div>
         </div>
+      </div>
       
       <!-- 5. 品牌外觀與 LOGO 上傳 (按鈕防跑版) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
@@ -1950,7 +1962,54 @@ const THEME_PALETTES = {
     `).join('');
   }
 
-  function openAddCustomQuestionModal() {
+  // 渲染住宿橫排滑動日期按鈕 (與排班分頁一致，帶週幾與公休阻斷)
+function renderBoardingDateButtons() {
+  const dates = backendData.scheduleDates || [];
+  const scrollArea = document.getElementById('boarding-date-scroll-area');
+  if (!scrollArea) return;
+
+  const currentViewDate = document.getElementById('boarding-view-date')?.value || (dates[0] ? dates[0].date.replace(/\//g, '-') : '');
+  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
+  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
+  const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+  scrollArea.innerHTML = dates.map(d => {
+    const dObj = new Date(d.date);
+    const dayOfWeek = dObj.getDay();
+    const weekStr = weekDays[dayOfWeek];
+    const dHyphen = d.date.replace(/\//g, '-');
+    const isWeeklyOff = weeklyOff.includes(dayOfWeek);
+    const isCustomOff = customOff.includes(d.date) || customOff.includes(dHyphen);
+    const isOff = isWeeklyOff || isCustomOff;
+    const isSelected = (dHyphen === currentViewDate);
+
+    if (isOff) {
+      return `
+        <div class="shrink-0 px-3 py-1.5 rounded-xl text-center border text-xs font-bold bg-gray-100 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed select-none" onclick="Swal.fire('門市公休', '${d.date} (${weekStr}) 為公休日，無法辦理住宿進退房', 'info')">
+          <div class="text-[9px]">${weekStr} (公休)</div>
+          <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${
+        isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+      }" onclick="selectBoardingDateBtn('${dHyphen}')">
+        <div class="text-[9.5px] opacity-70">${weekStr}</div>
+        <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectBoardingDateBtn(dHyphen) {
+  document.getElementById('boarding-view-date').value = dHyphen;
+  renderBoardingDateButtons();
+  renderBoardingRoomStatus();
+}
+    
+    function openAddCustomQuestionModal() {
     Swal.fire({
       title: '新增毛孩問卷問題',
       html: `
@@ -1977,21 +2036,42 @@ const THEME_PALETTES = {
   }
     
     // 後台住宿費用即時計算
+  // 後台住宿費用即時計算
   function calcAdminQuickHotelFees() {
     const inDate = document.getElementById('quick-hotel-checkin-date')?.value;
     const outDate = document.getElementById('quick-hotel-checkout-date')?.value;
     if (!inDate || !outDate) return;
 
+    // 1. 【關鍵修正】先算出晚數 nights，後續運算才能使用！
     const diffMs = new Date(outDate) - new Date(inDate);
     const nights = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
 
-    const roomPrice = Number(document.getElementById('quick-hotel-room-tier')?.options[document.getElementById('quick-hotel-room-tier').selectedIndex]?.getAttribute('data-price') || 800);
-    const mealPricePerDay = Number(document.getElementById('quick-hotel-meal-plan')?.options[document.getElementById('quick-hotel-meal-plan').selectedIndex]?.getAttribute('data-price') || 0);
+    // 2. 後台代客新增：動態抓取單餐單價核算
+    const mealPlanType = document.getElementById('quick-hotel-meal-plan')?.value || 'SELF';
+    let mealUnitPrice = 0;
+    if (mealPlanType !== 'SELF') {
+      const petSizeVal = document.getElementById('quick-pet-size')?.value || '小型犬';
+      let sizeKey = 'small';
+      if (petSizeVal.includes('大')) sizeKey = 'large';
+      else if (petSizeVal.includes('中')) sizeKey = 'medium';
 
+      const rates = backendData.settings?.boardingMealRates || {};
+      const sizeRates = rates[sizeKey] || (sizeKey === 'large' ? [120, 110, 105] : (sizeKey === 'medium' ? [100, 90, 85] : [80, 75, 70]));
+
+      if (mealPlanType === 'ONE') mealUnitPrice = sizeRates[0];
+      else if (mealPlanType === 'TWO') mealUnitPrice = sizeRates[1];
+      else if (mealPlanType === 'THREE') mealUnitPrice = sizeRates[2];
+    }
+
+    // 住宿期間預估餐數 = 晚數 x 每日餐數
+    const mealsPerDay = (mealPlanType === 'THREE') ? 3 : (mealPlanType === 'TWO' ? 2 : (mealPlanType === 'ONE' ? 1 : 0));
+    const totalMealEst = nights * mealsPerDay * mealUnitPrice;
+
+    const roomPrice = Number(document.getElementById('quick-hotel-room-tier')?.options[document.getElementById('quick-hotel-room-tier').selectedIndex]?.getAttribute('data-price') || 800);
     const bathIn = document.getElementById('quick-bath-checkin')?.checked ? 600 : 0;
     const bathOut = document.getElementById('quick-bath-checkout')?.checked ? 800 : 0;
 
-    const totalHotelEst = (roomPrice * nights) + (mealPricePerDay * nights) + bathIn + bathOut;
+    const totalHotelEst = (roomPrice * nights) + totalMealEst + bathIn + bathOut;
 
     document.getElementById('quick-disp-base').innerText = `$${totalHotelEst}`;
     calcAdminQuickSummary();
@@ -2001,7 +2081,10 @@ const THEME_PALETTES = {
     const pet = adminCustomerPets[idx];
     if (!pet) return;
     document.getElementById('quick-pet-name').value = pet.name || '';
-    document.getElementById('admin-pet-balance-display').innerText = `目前該毛孩剩餘包卡：${pet.package_balance || 0} 次，儲值金：$${pet.wallet_balance || 0} 元`;
+    const infoEl = document.getElementById('admin-pet-balance-info');
+    if (infoEl) {
+      infoEl.innerText = `目前該毛孩剩餘包卡：${pet.package_balance || 0} 次，儲值金：$${pet.wallet_balance || 0} 元`;
+    }
   }
     
     // 色票預覽渲染函式
@@ -2414,7 +2497,12 @@ if (dispStoreId && CURRENT_STORE_ID) {
 
     handleIndustryModeChange(backendData.settings.industryMode);
 
-    // 房型等級與供餐選項防呆保底
+    // 解決排班重整變全關：將 Supabase 儲存的班表寫回全域變數 shiftSlotStates
+    if (sCfg.staff_schedules && typeof sCfg.staff_schedules === 'object') {
+      shiftSlotStates = JSON.parse(JSON.stringify(sCfg.staff_schedules));
+    }
+        
+        // 房型等級與供餐選項防呆保底
     if (sCfg.hotel_room_tiers && Array.isArray(sCfg.hotel_room_tiers) && sCfg.hotel_room_tiers.length > 0) {
       adminRoomTiers = sCfg.hotel_room_tiers;
     }
@@ -2440,6 +2528,7 @@ if (dispStoreId && CURRENT_STORE_ID) {
     renderBoardingRoomStatus();
     renderBoardingCareChecklist();
     initSlotsLiveUrl();
+    renderBoardingDateButtons();
   } catch (err) {
     console.error("同步失敗:", err);
   }
@@ -2459,7 +2548,7 @@ if (dispStoreId && CURRENT_STORE_ID) {
       if (pageId === 'pets') loadAdminPetsPageData();
       if (pageId === 'calendar') renderCalendar();
       if (pageId === 'shift') renderShift();
-      if (pageId === 'boarding-schedule') { renderBoardingRoomStatus(); renderBoardingCareChecklist(); }
+      if (pageId === 'boarding-schedule') { renderBoardingDateButtons(); renderBoardingRoomStatus(); renderBoardingCareChecklist(); }
       if (pageId === 'customer') renderCustomer();
       if (pageId === 'inventory') renderInventoryList();
       if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
@@ -3044,9 +3133,25 @@ function renderSingleCardHTML(a) {
   const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
   const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '歷史訂單';
 
+  // 契約簽署時間嚴格轉換，絕不顯示「存證留存」
+  // 1. 取得完整簽約時間戳記 (彈窗正本專用)
+  let finalSignedTime = '';
+  if (a.signature_url) {
+    const rawTime = a.signed_at || a.created_at;
+    if (rawTime) {
+      const sD = new Date(rawTime);
+      if (!isNaN(sD.getTime())) {
+        const pad = n => String(n).padStart(2, '0');
+        finalSignedTime = `${sD.getFullYear()}/${pad(sD.getMonth() + 1)}/${pad(sD.getDate())} ${pad(sD.getHours())}:${pad(sD.getMinutes())}:${pad(sD.getSeconds())}`;
+      }
+    }
+  }
+
+  // 2. 底部操作按鈕：純淨「檢視契約」，不帶雜亂時間
   const signBtnHtml = a.signature_url ? `
-    <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
-      ✓ 檢視契約
+    <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${finalSignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition flex items-center gap-1">
+      <i class="fa-solid fa-file-contract"></i>
+      <span>檢視契約</span>
     </button>
   ` : `
     <button type="button" onclick="openLiveSignaturePad('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-lg font-bold text-xs shadow-xs transition flex items-center gap-1">
@@ -3098,7 +3203,7 @@ function renderSingleCardHTML(a) {
       <!-- 照護明細區 (含專車接送點擊導航與複製) -->
       ${careDetailsHtml}
 
-      <!-- 通訊與契約 (顯眼放大 LINE 暱稱 + 下單時間 + 簽約時間) -->
+      <!-- 通訊與契約 -->
       <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1.5">
         <div class="flex justify-between items-center">
           <span class="flex items-center gap-1.5 font-bold text-brand-900 text-xs">
@@ -3111,9 +3216,9 @@ function renderSingleCardHTML(a) {
         <div class="text-[11px] text-gray-500 font-mono">顧客 Email：${parsedEmail || '未留信箱'}</div>
         ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客特殊需求備註：${a.customer_notes}</div>` : ''}
         ${a.signature_url ? `
-          <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold text-[11px]">
-            <span>✓ 已簽署定型化契約 (簽署時間：${friendlySignedTime || '存證留存'})</span>
-            <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline">檢視正本</button>
+          <div class="text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold text-[11px] flex items-center gap-1">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+            <span>已簽署定型化服務契約</span>
           </div>
         ` : ''}
       </div>
@@ -3170,34 +3275,34 @@ function renderSingleCardHTML(a) {
 
     // 檢視數位定型化契約存證正本
     function viewDigitalContract(name, sigUrl, signedTime) {
-      const s = backendData.settings || {};
-      Swal.fire({
-        title: s.contractTitle || '定型化服務契約存證正本',
-        html: `
-          <div class="text-left text-xs space-y-3 font-sans max-h-[70vh] overflow-y-auto pr-1">
-            <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 text-[11.5px] leading-relaxed whitespace-pre-wrap">
-              ${s.contractContent || DEFAULT_MOHW_BEAUTY_CONTRACT}
-            </div>
-            <div class="p-3 bg-white rounded-xl border border-brand-200 text-center space-y-2">
-              <div class="flex justify-between items-center text-[11px] font-bold text-brand-900 border-b pb-1">
-                <span>立約人：${name}</span>
-                <span class="font-mono text-gray-500">簽署時間：${signedTime || '存證留存'}</span>
-              </div>
-              <div class="p-2 border border-dashed border-brand-300 rounded-lg bg-brand-50/50">
-                <img src="${sigUrl}" class="max-h-24 mx-auto object-contain" alt="親筆數位簽名">
-              </div>
-              <div class="flex items-center gap-1.5 pt-1">
-                <a href="${sigUrl}" target="_blank" class="px-3 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-xs">開啟原圖</a>
-                <input type="text" readonly value="${sigUrl}" class="flex-1 p-1 text-[10px] border border-brand-200 rounded font-mono text-gray-400 truncate" onclick="this.select()">
-                <button onclick="navigator.clipboard.writeText('${sigUrl}'); Swal.fire('已複製簽名網址！', '', 'success')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold text-xs">複製網址</button>
-              </div>
-            </div>
+  const s = backendData.settings || {};
+  Swal.fire({
+    title: s.contractTitle || '定型化服務契約存證正本',
+    html: `
+      <div class="text-left text-xs space-y-3 font-sans max-h-[70vh] overflow-y-auto pr-1">
+        <div class="p-3 bg-brand-50 rounded-xl border border-brand-200 text-[11.5px] leading-relaxed whitespace-pre-wrap">
+          ${s.contractContent || DEFAULT_MOHW_BEAUTY_CONTRACT}
+        </div>
+        <div class="p-3 bg-white rounded-xl border border-brand-200 text-center space-y-2">
+          <div class="flex justify-between items-center text-[11px] font-bold text-brand-900 border-b pb-1">
+            <span>立約人：${name}</span>
+            <span class="font-mono text-emerald-800">簽署時間：${signedTime}</span>
           </div>
-        `,
-        confirmButtonText: '關閉檢視',
-        confirmButtonColor: '#8C7355'
-      });
-    }
+          <div class="p-2 border border-dashed border-brand-300 rounded-lg bg-brand-50/50">
+            <img src="${sigUrl}" class="max-h-24 mx-auto object-contain" alt="親筆數位簽名">
+          </div>
+          <div class="flex items-center gap-1.5 pt-1">
+            <a href="${sigUrl}" target="_blank" class="px-3 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-xs">開啟原圖</a>
+            <input type="text" readonly value="${sigUrl}" class="flex-1 p-1 text-[10px] border border-brand-200 rounded font-mono text-gray-400 truncate" onclick="this.select()">
+            <button onclick="navigator.clipboard.writeText('${sigUrl}'); Swal.fire('已複製簽名網址！', '', 'success')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold text-xs">複製網址</button>
+          </div>
+        </div>
+      </div>
+    `,
+    confirmButtonText: '關閉檢視',
+    confirmButtonColor: '#8C7355'
+  });
+}
 
     // 解決核心痛點：後台下單現場手寫 Canvas 簽署板覆蓋
     // 現場手寫簽名：前置信箱驗證補填 + 簽署存證 + 自動寄發副本
@@ -3714,8 +3819,13 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
 
   const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
   if (!shiftSlotStates[staffKey]) {
-    shiftSlotStates[staffKey] = {};
-    slots.forEach(t => shiftSlotStates[staffKey][t] = false);
+    const savedSchedules = backendData.settings?.staffSchedules || {};
+    if (savedSchedules[staffKey]) {
+      shiftSlotStates[staffKey] = { ...savedSchedules[staffKey] };
+    } else {
+      shiftSlotStates[staffKey] = {};
+      slots.forEach(t => shiftSlotStates[staffKey][t] = false);
+    }
   }
 
   content.innerHTML = `
@@ -4002,44 +4112,60 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
     }
 
     async function uploadAndSavePortfolio() {
-      const cat = document.getElementById('work-cat').value.trim();
-      const title = document.getElementById('work-title').value.trim();
-      const link = document.getElementById('work-link').value.trim();
-      const file = document.getElementById('work-file').files[0];
+  const cat = document.getElementById('work-cat').value.trim();
+  const title = document.getElementById('work-title').value.trim();
+  const link = document.getElementById('work-link').value.trim();
+  const file = document.getElementById('work-file').files[0];
 
-      if (!title || !file) return Swal.fire('作品標題與照片為必填', '', 'warning');
+  if (!title || !file) return Swal.fire('作品標題與照片為必填', '', 'warning');
+  Swal.showLoading();
+  try {
+    const url = await uploadToSupabaseStorage(file, 'portfolio');
+    await directSupabaseUpsert('portfolios', {
+      store_id: CURRENT_STORE_ID,
+      category: cat || '作品精選',
+      title: title,
+      link: link,
+      img_url: url
+    }, 'id');
+    document.getElementById('work-cat').value = '';
+    document.getElementById('work-title').value = '';
+    document.getElementById('work-link').value = '';
+    document.getElementById('work-file').value = '';
+    fetchDataAndRender();
+    Swal.fire('作品已發布成功！', '', 'success');
+  } catch(e) {
+    Swal.fire('發布失敗', e.message, 'error');
+  }
+}
 
-      Swal.showLoading();
-      try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-          const base64Data = reader.result.split(',')[1];
-          const formData = new FormData();
-          formData.append("image", base64Data);
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-          const data = await res.json();
-          if (data.success) {
-            await directSupabaseUpsert('portfolios', {
-              store_id: CURRENT_STORE_ID,
-              category: cat || '作品精選',
-              title: title,
-              link: link,
-              img_url: data.data.url
-            }, 'id');
-            document.getElementById('work-cat').value = '';
-            document.getElementById('work-title').value = '';
-            document.getElementById('work-link').value = '';
-            document.getElementById('work-file').value = '';
-            fetchDataAndRender();
-            Swal.fire('作品已發布成功！', '', 'success');
-          }
-        };
-      } catch (e) {
-        Swal.fire('發布失敗', e.message, 'error');
-      }
-    }
+    // ========================================================
+// 【Supabase Storage 核心直傳】全面淘汰 ImgBB
+// ========================================================
+async function uploadToSupabaseStorage(file, folder = 'general') {
+  if (!file) return '';
+  const fileExt = file.name.split('.').pop();
+  const cleanExt = fileExt ? fileExt.toLowerCase() : 'jpg';
+  const fileName = `${CURRENT_STORE_ID}/${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${cleanExt}`;
+  
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/store_assets/${fileName}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': file.type || 'image/jpeg'
+    },
+    body: file
+  });
 
+  if (!res.ok) {
+    const errText = await res.text();
+    console.error('Storage Upload Error:', errText);
+    throw new Error('圖片上傳至雲端儲存失敗，請確認 Storage 權限設定');
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/store_assets/${fileName}`;
+}
+    
     // ==========================================
     // 11. 進銷存管理 (自建分類 ＆ 現場外帶扣庫)
     // ==========================================
@@ -4050,6 +4176,14 @@ let invSelectedCategories = [];
 function renderInventoryList() {
   const container = document.getElementById('inventory-items-container');
   if (!container) return;
+  if (allInventoryItems.length === 0) {
+    allInventoryItems = [
+      { id: 'inv-1', category: '洗護消耗品', categories: ['洗護消耗品'], name: '深層草本舒緩洗劑 (4000ml)', current_stock: 6, safe_stock: 2, unit: '桶', cost_price: 1200, retail_price: 1800 },
+      { id: 'inv-2', category: '技術耗材', categories: ['技術耗材'], name: '日系高光染膏/植萃精油 (條)', current_stock: 18, safe_stock: 5, unit: '條', cost_price: 220, retail_price: 450 },
+      { id: 'inv-3', category: '零售外帶品', categories: ['零售外帶品'], name: '毛鱗片鎖色深層修護滴劑 (100ml)', current_stock: 12, safe_stock: 3, unit: '瓶', cost_price: 380, retail_price: 780 },
+      { id: 'inv-4', category: '工具雜項', categories: ['工具雜項'], name: '加厚吸水純棉免洗毛巾 (100入)', current_stock: 15, safe_stock: 5, unit: '包', cost_price: 260, retail_price: 0 }
+    ];
+  }
 
   const allCats = Array.from(new Set(allInventoryItems.flatMap(i => Array.isArray(i.categories) ? i.categories : [i.category || '技術耗材'])));
   
@@ -4226,75 +4360,68 @@ function renderShiftDateButtons() {
     }
 
     function openAddProductModal() {
-      const existingCats = Array.from(new Set([...customInventoryCategories, ...allInventoryItems.map(i => i.category)]));
-      const catOptions = existingCats.map(c => `<option value="${c}">${c}</option>`).join('');
+  const existingCats = Array.from(new Set(allInventoryItems.flatMap(i => Array.isArray(i.categories) ? i.categories : [i.category])));
+  const catCheckboxes = existingCats.map(c => `
+    <label class="inline-flex items-center gap-1.5 p-1.5 bg-brand-50 border rounded-lg text-xs cursor-pointer">
+      <input type="checkbox" class="swal-inv-new-cat accent-[#8C7355]" value="${c}">
+      <span>${c}</span>
+    </label>
+  `).join('');
 
-      Swal.fire({
-        title: '新增品項/技術耗材主檔',
-        html: `
-          <div class="text-left text-xs space-y-2.5">
-            <div>
-              <label class="font-bold">品項名稱：</label>
-              <input id="inv-name" class="swal2-input text-xs" placeholder="例: 草本深層洗劑">
-            </div>
-            <div>
-              <label class="font-bold">選擇分類（或輸入自建分類）：</label>
-              <select id="inv-cat-select" class="swal2-input text-xs" onchange="document.getElementById('inv-custom-cat').value = this.value">
-                ${catOptions}
-                <option value="__NEW__">+ 自建新分類</option>
-              </select>
-              <input id="inv-custom-cat" class="swal2-input text-xs mt-1" placeholder="輸入自建分類名稱" value="${existingCats[0]}">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="font-bold">初始庫存：</label>
-                <input type="number" id="inv-stock" class="swal2-input text-xs" value="10">
-              </div>
-              <div>
-                <label class="font-bold">安全存量：</label>
-                <input type="number" id="inv-safe" class="swal2-input text-xs" value="5">
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="font-bold">單位 (如: 瓶/包/條)：</label>
-                <input id="inv-unit" class="swal2-input text-xs" value="瓶">
-              </div>
-              <div>
-                <label class="font-bold">進貨成本 (NT$)：</label>
-                <input type="number" id="inv-cost" class="swal2-input text-xs" value="200">
-              </div>
-            </div>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '確定建立品項',
-        confirmButtonColor: '#8C7355',
-        preConfirm: () => {
-          const name = document.getElementById('inv-name').value.trim();
-          const customCat = document.getElementById('inv-custom-cat').value.trim();
-          if (!name) return Swal.showValidationMessage('請輸入品項名稱');
-          return {
-            id: 'inv-' + Date.now(),
-            name,
-            category: customCat || '技術耗材',
-            current_stock: Number(document.getElementById('inv-stock').value || 0),
-            safe_stock: Number(document.getElementById('inv-safe').value || 5),
-            unit: document.getElementById('inv-unit').value.trim() || '件',
-            cost_price: Number(document.getElementById('inv-cost').value || 0)
-          };
-        }
-      }).then(r => {
-        if (r.isConfirmed && r.value) {
-          allInventoryItems.unshift(r.value);
-          if (!customInventoryCategories.includes(r.value.category)) {
-            customInventoryCategories.push(r.value.category);
-          }
-          Swal.fire('品項建立成功！', '', 'success');
-          renderInventoryList();
-        }
-      });
+  Swal.fire({
+    title: '新增品項/耗材主檔',
+    html: `
+      <div class="text-left text-xs space-y-3">
+        <div>
+          <label class="font-bold block mb-1">品項名稱 *</label>
+          <input id="inv-new-name" class="swal2-input text-xs" placeholder="例如：胜肽深層修護髮膜">
+        </div>
+        <div>
+          <label class="font-bold block mb-1">勾選適用分類 (可多選)：</label>
+          <div class="flex flex-wrap gap-1.5">${catCheckboxes}</div>
+          <input id="inv-new-custom-cat" class="swal2-input text-xs mt-1.5" placeholder="或輸入新分類名稱">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold block mb-1">進貨成本 (NT$)</label><input type="number" id="inv-new-cost" class="swal2-input text-xs font-mono" value="0"></div>
+          <div><label class="font-bold block mb-1 text-emerald-800">門市零售價 (NT$)</label><input type="number" id="inv-new-retail" class="swal2-input text-xs font-mono font-bold" value="0"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold block mb-1">目前現存庫存</label><input type="number" id="inv-new-stock" class="swal2-input text-xs font-mono" value="10"></div>
+          <div><label class="font-bold block mb-1">安全存量警示</label><input type="number" id="inv-new-safe" class="swal2-input text-xs font-mono" value="3"></div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定建立品項',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => {
+      const name = document.getElementById('inv-new-name').value.trim();
+      const selected = Array.from(document.querySelectorAll('.swal-inv-new-cat:checked')).map(cb => cb.value);
+      const custom = document.getElementById('inv-new-custom-cat').value.trim();
+      if (custom && !selected.includes(custom)) selected.push(custom);
+      if (!name) return Swal.showValidationMessage('請輸入品項名稱');
+      if (selected.length === 0) selected.push('技術耗材');
+
+      return {
+        id: 'inv-' + Date.now(),
+        name,
+        category: selected[0],
+        categories: selected,
+        cost_price: Number(document.getElementById('inv-new-cost').value || 0),
+        retail_price: Number(document.getElementById('inv-new-retail').value || 0),
+        current_stock: Number(document.getElementById('inv-new-stock').value || 0),
+        safe_stock: Number(document.getElementById('inv-new-safe').value || 3),
+        unit: '件'
+      };
     }
+  }).then(async r => {
+    if (r.isConfirmed && r.value) {
+      allInventoryItems.unshift(r.value);
+      renderInventoryList();
+      Swal.fire('品項建立成功！', '', 'success');
+    }
+  });
+}
 
     function promptStockAdjust(itemId) {
       const it = allInventoryItems.find(i => i.id === itemId);
@@ -4660,18 +4787,81 @@ function renderShiftDateButtons() {
       calcAdminQuickSlots();
     }
 
-    function calcAdminQuickSlots() {
-      const dStr = document.getElementById('quick-date')?.value;
-      const grid = document.getElementById('admin-quick-slot-grid');
-      if (!grid || !dStr) return;
+    // 動態調用當日排班時段 (排除休息時段與公休日)
+function calcAdminQuickSlots() {
+  const dStr = document.getElementById('quick-date')?.value;
+  const grid = document.getElementById('admin-quick-slot-grid');
+  const staffId = document.getElementById('quick-staff-id')?.value || 'all';
+  if (!grid) return;
 
-      const times = ["10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
-      grid.innerHTML = times.map(t => `
-        <button type="button" class="quick-slot-btn py-1.5 text-center rounded-xl border border-brand-200 bg-white font-bold text-xs hover:border-[#8C7355]" onclick="selectAdminQuickSlot('${t}', this)">
+  if (!dStr) {
+    grid.innerHTML = '<div class="col-span-full text-center py-3 text-brand-400">請先選取預約日期</div>';
+    return;
+  }
+
+  const dSlash = dStr.replace(/-/g, '/');
+  const dObj = new Date(dStr);
+  const dayOfWeek = dObj.getDay();
+  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
+  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
+
+  if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dStr)) {
+    grid.innerHTML = '<div class="col-span-full text-center py-3 text-rose-500 font-bold bg-rose-50 rounded-xl">該日為門市公休日，無法排程</div>';
+    document.getElementById('quick-time').value = '';
+    return;
+  }
+
+  // 產生營業時段清單
+  const start = backendData.settings?.shiftStartTime || '09:00';
+  const end = backendData.settings?.shiftEndTime || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || 30);
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  const slots = [];
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+    let hh = Math.floor(m / 60); let mm = m % 60;
+    slots.push((hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm));
+  }
+
+  const schedules = backendData.settings?.staffSchedules || {};
+  let html = '';
+  let availableCount = 0;
+
+  slots.forEach(t => {
+    let isOpen = false;
+    if (staffId !== 'all') {
+      const staffKey = `${staffId}_${dSlash}`;
+      isOpen = (schedules[staffKey] && schedules[staffKey][t] === true);
+    } else {
+      const allStoreKey = `all_${dSlash}`;
+      if (schedules[allStoreKey] && schedules[allStoreKey][t] === true) {
+        isOpen = true;
+      } else {
+        const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+        for (let s of staffList) {
+          const key = `${s.id}_${dSlash}`;
+          if (schedules[key] && schedules[key][t] === true) {
+            isOpen = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (isOpen) {
+      availableCount++;
+      html += `
+        <button type="button" class="quick-slot-btn py-2 text-center rounded-xl border border-brand-200 bg-white font-bold text-xs hover:border-[#8C7355] transition" onclick="selectAdminQuickSlot('${t}', this)">
           ${t}
         </button>
-      `).join('');
+      `;
     }
+  });
+
+  grid.innerHTML = (availableCount > 0) 
+    ? html 
+    : '<div class="col-span-full text-center py-3 text-rose-500 font-bold bg-rose-50 rounded-xl">該日該專員無開放排班時段</div>';
+}
 
     function selectAdminQuickSlot(t, el) {
       document.querySelectorAll('.quick-slot-btn').forEach(b => b.className = "quick-slot-btn py-1.5 text-center rounded-xl border border-brand-200 bg-white font-bold text-xs hover:border-[#8C7355]");
@@ -5940,7 +6130,10 @@ async function saveStoreSettings() {
   backendData.settings.theme_color = selectedTheme;
 
   // 2. 組裝資料庫 Payload
-  const settingsPayload = {
+  // ========================================================
+// 【完整設定保存 Payload】settingsPayload — 解決登出消失與欄位漏存
+// ========================================================
+const settingsPayload = {
   store_id: CURRENT_STORE_ID,
   display_title: storeTitle,
   display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
@@ -5976,25 +6169,24 @@ async function saveStoreSettings() {
   hotel_room_tiers: adminRoomTiers,
   hotel_meal_options: adminMealOptions,
 
-  // 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價，嚴格以餐計費)
+  // 3. 寵物住宿鮮食餐費率設定 (嚴格單餐計價備援值)
   boarding_meal_rates: {
     small: [
       Number(document.getElementById('cfg-meal-small-1')?.value || 80),
-      Number(document.getElementById('cfg-meal-small-2')?.value || 150),
-      Number(document.getElementById('cfg-meal-small-3')?.value || 220)
+      Number(document.getElementById('cfg-meal-small-2')?.value || 75),
+      Number(document.getElementById('cfg-meal-small-3')?.value || 70)
     ],
     medium: [
       Number(document.getElementById('cfg-meal-med-1')?.value || 100),
-      Number(document.getElementById('cfg-meal-med-2')?.value || 180),
-      Number(document.getElementById('cfg-meal-med-3')?.value || 260)
+      Number(document.getElementById('cfg-meal-med-2')?.value || 90),
+      Number(document.getElementById('cfg-meal-med-3')?.value || 85)
     ],
     large: [
       Number(document.getElementById('cfg-meal-large-1')?.value || 120),
-      Number(document.getElementById('cfg-meal-large-2')?.value || 220),
-      Number(document.getElementById('cfg-meal-large-3')?.value || 320)
+      Number(document.getElementById('cfg-meal-large-2')?.value || 110),
+      Number(document.getElementById('cfg-meal-large-3')?.value || 105)
     ]
   },
-
   // 4. 營運工時與專員算薪
   shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
   shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
@@ -6136,30 +6328,20 @@ async function saveStoreSettings() {
     }
 
     async function handlePromoUpload(idx, input) {
-      const file = input.files[0];
-      if (!file) return;
-      Swal.showLoading();
-      try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-          const base64Data = reader.result.split(',')[1];
-          const formData = new FormData();
-          formData.append("image", base64Data);
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-          const data = await res.json();
-          if (data.success) {
-            promoImgsArray[idx] = data.data.url;
-            const imgsText = document.getElementById('cfg-promo-imgs-text');
-            if (imgsText) imgsText.value = promoImgsArray.filter(Boolean).join('\n');
-            renderUploadSlots();
-            Swal.fire({ title: '說明圖已更新！', icon: 'success', timer: 800, showConfirmButton: false });
-          }
-        };
-      } catch(e) {
-        Swal.fire('上傳失敗', e.message, 'error');
-      }
-    }
+  const file = input.files[0];
+  if (!file) return;
+  Swal.showLoading();
+  try {
+    const url = await uploadToSupabaseStorage(file, 'promo');
+    promoImgsArray[idx] = url;
+    const imgsText = document.getElementById('cfg-promo-imgs-text');
+    if (imgsText) imgsText.value = promoImgsArray.filter(Boolean).join('\n');
+    renderUploadSlots();
+    Swal.fire({ title: '說明圖已更新！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch(e) {
+    Swal.fire('上傳失敗', e.message, 'error');
+  }
+}
 
     function deletePromoImg(idx, e) {
       if (e) e.stopPropagation();
@@ -6329,25 +6511,23 @@ async function saveStoreSettings() {
     }
 
     async function uploadLogoImgBB() {
-      const file = document.getElementById('logo-file-input').files[0];
-      if (!file) return Swal.fire('請先選擇 LOGO 圖檔', '', 'warning');
-      Swal.showLoading();
-      try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-          const base64Data = reader.result.split(',')[1];
-          const formData = new FormData();
-          formData.append("image", base64Data);
-          const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: "POST", body: formData });
-          const data = await res.json();
-          if (data.success) {
-            document.getElementById('cfg-logo').value = data.data.url;
-            Swal.fire('LOGO 上傳成功！', '', 'success');
-          }
-        };
-      } catch(e) { Swal.fire('上傳失敗', e.message, 'error'); }
+  const file = document.getElementById('logo-file-input').files[0];
+  if (!file) return Swal.fire('請先選擇 LOGO 圖檔', '', 'warning');
+  Swal.showLoading();
+  try {
+    const url = await uploadToSupabaseStorage(file, 'logo');
+    document.getElementById('cfg-logo').value = url;
+    const previewBox = document.getElementById('logo-preview-box');
+    const previewImg = document.getElementById('logo-preview-img');
+    if (previewBox && previewImg) {
+      previewImg.src = url;
+      previewBox.classList.remove('hidden');
     }
+    Swal.fire('LOGO 上傳成功！', '', 'success');
+  } catch(e) { 
+    Swal.fire('上傳失敗', e.message, 'error'); 
+  }
+}
 
     function openOwnerLineBindModal() {
       Swal.fire({
@@ -6704,28 +6884,36 @@ async function loadAdminPetsPageData() {
       custMap[c.phone] = c;
     });
 
-    allAdminPetsCache = (petsRes || []).map(p => {
-      const parent = custMap[p.customer_phone] || {};
-      return {
-        id: p.id,
-        name: p.name || '未命名寶貝',
-        breed: p.breed || '一般品種',
-        weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
-        age: p.age_str ? `${p.age_str} 歲` : '未記錄',
-        gender: p.species || p.gender || '未記錄',
-        chipId: p.coat_type || '無晶片紀錄',
-        photoUrl: p.photo_url || p.avatar_url || '',
-        notes: p.notes || '',
-        // 完整帶回家長資料
-        parentPhone: p.customer_phone || '',
-        parentName: parent.name || '家長',
-        parentEmail: parent.email || '',
-        parentNotes: parent.notes || '',
-        packageBalance: Number(p.package_balance || 0),
-        walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
-        updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
-      };
-    });
+    // 修正家長真實姓名與手機關聯 (杜絕顯示為「家長：家長」)
+  allAdminPetsCache = (petsRes || []).map(p => {
+    const parent = custMap[p.customer_phone] || {};
+    // 優先順序：顧客檔姓名 > 訂單紀錄姓名 > 聯絡人
+    let realParentName = parent.name || '';
+    if (!realParentName) {
+      const bMatch = (backendData.appointments || []).find(b => b.phone === p.customer_phone);
+      if (bMatch) realParentName = bMatch.name;
+    }
+    if (!realParentName) realParentName = '顧客';
+
+    return {
+      id: p.id,
+      name: p.name || '未命名寶貝',
+      breed: p.breed || '一般品種',
+      weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
+      age: p.age_str ? `${p.age_str} 歲` : '未記錄',
+      gender: p.species || p.gender || '未記錄',
+      chipId: p.coat_type || '無晶片紀錄',
+      photoUrl: p.photo_url || '',
+      notes: p.notes || '',
+      parentPhone: p.customer_phone || '',
+      parentName: realParentName, // 正確帶入家長姓名
+      parentLineName: parent.line_name || '',
+      parentEmail: parent.email || '',
+      packageBalance: Number(p.package_balance || 0),
+      walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
+      updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
+    };
+  });
 
     if (badge) badge.innerText = `${allAdminPetsCache.length} 隻毛孩`;
     renderAdminPetsCards(allAdminPetsCache);
@@ -6749,7 +6937,87 @@ function filterAdminPetsList(kw) {
   renderAdminPetsCards(filtered);
 }
 
-function renderAdminPetsCards(list) {
+// 後台代客新增：住宿進退房時段 100% 依據排班表開班，禁止隨意填寫
+function calcAdminQuickHotelSlots(type) {
+  const dateInput = document.getElementById(type === 'in' ? 'quick-hotel-checkin-date' : 'quick-hotel-checkout-date');
+  const slotGrid = document.getElementById(type === 'in' ? 'admin-quick-hotel-in-slots' : 'admin-quick-hotel-out-slots');
+  const dStr = dateInput?.value;
+  if (!slotGrid || !dStr) return;
+
+  const dSlash = dStr.replace(/-/g, '/');
+  const dObj = new Date(dStr);
+  const dayOfWeek = dObj.getDay();
+  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
+  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
+
+  // 公休日直接鎖定
+  if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dStr)) {
+    slotGrid.innerHTML = '<div class="col-span-full text-center py-2 text-rose-500 font-bold bg-rose-50 rounded-xl">該日為門市公休日，無法辦理住宿進退房</div>';
+    document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value = '';
+    return;
+  }
+
+  const start = backendData.settings?.shiftStartTime || '09:00';
+  const end = backendData.settings?.shiftEndTime || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || 30);
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  const slots = [];
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+    let hh = Math.floor(m / 60); let mm = m % 60;
+    slots.push((hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm));
+  }
+
+  const schedules = backendData.settings?.staffSchedules || {};
+  let html = '';
+  let availableCount = 0;
+  const currentVal = document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value;
+
+  slots.forEach(t => {
+    let isOpen = false;
+    const allStoreKey = `all_${dSlash}`;
+    if (schedules[allStoreKey] && schedules[allStoreKey][t] === true) {
+      isOpen = true;
+    } else {
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      for (let s of staffList) {
+        const key = `${s.id}_${dSlash}`;
+        if (schedules[key] && schedules[key][t] === true) {
+          isOpen = true;
+          break;
+        }
+      }
+    }
+
+    if (isOpen) {
+      availableCount++;
+      const isSelected = (t === currentVal);
+      html += `
+        <button type="button" class="py-1.5 rounded-xl border text-xs font-bold font-mono transition ${
+          isSelected ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800 hover:border-brand-400'
+        }" onclick="selectAdminQuickHotelTime('${type}', '${t}', this)">
+          ${t}
+        </button>
+      `;
+    }
+  });
+
+  slotGrid.innerHTML = (availableCount > 0)
+    ? html
+    : '<div class="col-span-full text-center py-2 text-rose-500 font-bold bg-rose-50 rounded-xl">該日門市無排班開班</div>';
+}
+
+function selectAdminQuickHotelTime(type, timeStr, btn) {
+  document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value = timeStr;
+  const container = document.getElementById(type === 'in' ? 'admin-quick-hotel-in-slots' : 'admin-quick-hotel-out-slots');
+  container.querySelectorAll('button').forEach(b => {
+    b.className = "py-1.5 rounded-xl border text-xs font-bold font-mono transition bg-white border-brand-200 text-brand-800 hover:border-brand-400";
+  });
+  btn.className = "py-1.5 rounded-xl border text-xs font-bold font-mono transition bg-[#8C7355] text-white border-[#8C7355]";
+  calcAdminQuickHotelFees();
+}
+    
+    function renderAdminPetsCards(list) {
   const container = document.getElementById('pets-card-container');
   if (!container) return;
 
@@ -6810,8 +7078,7 @@ function renderAdminPetsCards(list) {
   `).join('');
 }
     
-    // 三種商業模式動態切換排程欄位
-  function toggleQuickIndustryMode() {
+    function toggleQuickIndustryMode() {
     const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
     const petBox = document.getElementById('quick-pet-fields-box');
     const singleTimeBox = document.getElementById('quick-single-time-box');
@@ -6829,7 +7096,24 @@ function renderAdminPetsCards(list) {
       if (petBox) petBox.classList.remove('hidden');
       if (singleTimeBox) singleTimeBox.classList.add('hidden');
       if (hotelRangeBox) hotelRangeBox.classList.remove('hidden');
+
+      // 自動預設入住為今日、退房為明日，並即時撈取排班時段
+      const inDateEl = document.getElementById('quick-hotel-checkin-date');
+      const outDateEl = document.getElementById('quick-hotel-checkout-date');
+      if (inDateEl && !inDateEl.value) {
+        inDateEl.value = new Date().toISOString().split('T')[0];
+      }
+      if (outDateEl && !outDateEl.value) {
+        const tmr = new Date();
+        tmr.setDate(tmr.getDate() + 1);
+        outDateEl.value = tmr.toISOString().split('T')[0];
+      }
+      calcAdminQuickHotelSlots('in');
+      calcAdminQuickHotelSlots('out');
+      calcAdminQuickHotelFees();
     }
+    calcAdminQuickSlots();
+    calcAdminQuickSummary();
   }
   </script>
 </body>
