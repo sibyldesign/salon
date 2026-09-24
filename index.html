@@ -1527,12 +1527,12 @@ async function checkPhoneAndLoadBenefits(el) {
   // ========================================================
 // 2. 切換毛孩時帶入該毛孩全部履歷與個別包卡資產
 // ========================================================
+// 切換毛孩展示 (全站禁用 Emoji，改用質感圖示)
 function selectFrontPetByIndex(idx) {
   const p = userPetProfiles[idx];
   if (!p) return;
   currentPetIndex = idx;
 
-  // 帶入該毛孩基本欄位
   const setField = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.value = (val !== undefined && val !== null) ? val : '';
@@ -1547,14 +1547,15 @@ function selectFrontPetByIndex(idx) {
     setField('petGender', p.species);
   }
 
-  // 徽章展示該毛孩專屬資產
+  // 替換原圖 4 的排版：以質感 SVG 膠囊展示資產，全無 Emoji
   const badge = document.getElementById('petAssetBadge');
   if (badge) {
-    badge.innerText = `🐾 ${p.name} 專屬：剩餘包卡 ${p.package_balance || 0} 堂 / 儲值金 $${p.wallet_balance || 0}`;
+    badge.innerHTML = `<i class="fa-solid fa-paw mr-1"></i> ${p.name} 專屬：剩餘包卡 <b>${p.package_balance || 0}</b> 堂 / 儲值金 <b>$${p.wallet_balance || 0}</b>`;
+    badge.className = 'text-[11px] text-emerald-800 bg-emerald-100/80 px-2.5 py-1 rounded-xl font-bold font-mono inline-flex items-center';
     badge.classList.remove('hidden');
   }
 
-  // 若該毛孩或該會員有包卡，啟用包卡扣抵按鈕
+  // 防呆判斷：名下無包卡則禁用勾選框
   const chkCard = document.getElementById('chk-use-package');
   if (chkCard) {
     const hasCard = (Number(p.package_balance || 0) > 0) || (memberData.packages && memberData.packages.length > 0);
@@ -2735,6 +2736,9 @@ function calculateTimesLocally() {
   // ========================================================
 // 【前台修復 4】即時金額試算與互斥折抵核心
 // ========================================================
+// ========================================================
+// 【修復圖 2】精確計價公式：加購儲值金並使用，現場僅收加購儲值金
+// ========================================================
 function updateCheckoutSummary() {
   if (activeBookingSubMode === 'boarding') {
     calculateBoardingDaysAndPrice();
@@ -2749,15 +2753,11 @@ function updateCheckoutSummary() {
   let breakdownHtml = '';
   const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
 
-  const summaryItems = document.getElementById('summary-items-breakdown');
-  const summaryRange = document.getElementById('summary-service-range');
-  if (!summaryItems || !summaryRange) return;
-
-  // 1. 計算選取項目的基準金額 (移除預估字樣)
-  const selectedServiceNames = [];
+  // 1. 累加所有主項目與加購項目金額 (已移除「預估」字樣)
+  const selectedServiceList = [];
   if (checkedBoxes.length === 0) {
-    summaryItems.innerHTML = '<div>(尚未選擇項目)</div>';
-    summaryRange.innerText = showPrice ? 'NT$ 0' : '現場確認';
+    document.getElementById('summary-items-breakdown').innerHTML = '<div>(尚未選擇項目)</div>';
+    document.getElementById('summary-service-range').innerText = showPrice ? 'NT$ 0' : '現場確認';
   } else {
     checkedBoxes.forEach(cb => {
       const rawPriceStr = cb.getAttribute('data-price') || '0';
@@ -2765,7 +2765,7 @@ function updateCheckoutSummary() {
       const itemPrice = num ? Number(num[0]) : 0;
       mainTotal += itemPrice;
       const isAddon = cb.getAttribute('data-isaddon') === 'true';
-      selectedServiceNames.push({ name: cb.value, price: itemPrice, isAddon });
+      selectedServiceList.push({ name: cb.value, price: itemPrice, isAddon });
 
       breakdownHtml += `
         <div class="flex justify-between items-center py-0.5">
@@ -2773,11 +2773,11 @@ function updateCheckoutSummary() {
           <span class="font-mono font-bold">${showPrice ? `NT$ ${rawPriceStr}` : '現場確認'}</span>
         </div>`;
     });
-    summaryItems.innerHTML = breakdownHtml;
-    summaryRange.innerText = showPrice ? `NT$ ${mainTotal.toLocaleString()}` : '依現場評估';
+    document.getElementById('summary-items-breakdown').innerHTML = breakdownHtml;
+    document.getElementById('summary-service-range').innerText = showPrice ? `NT$ ${mainTotal.toLocaleString()}` : '依現場評估';
   }
 
-  // 2. 加購方案 (儲值金方案 / 包卡方案)
+  // 2. 加購方案 (包卡費用 / 儲值金方案費用)
   const pkgSel = document.getElementById('addon-package-select');
   const walSel = document.getElementById('addon-wallet-select');
   const addonPkgFee = (showPackages && pkgSel && pkgSel.value !== 'none') ? Number(pkgSel.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0) : 0;
@@ -2787,26 +2787,25 @@ function updateCheckoutSummary() {
   const rowAddon = document.getElementById('row-addon-plan-fee');
   if (rowAddon) {
     rowAddon.style.display = totalAddon > 0 ? 'flex' : 'none';
-    const addonTotalEl = document.getElementById('summary-addon-total');
-    if (addonTotalEl) addonTotalEl.innerText = totalAddon.toLocaleString();
+    document.getElementById('summary-addon-total').innerText = totalAddon.toLocaleString();
   }
 
-  // 3. 智慧包卡抵扣 (嚴格校驗：僅能抵扣相同名稱之綁定項目，禁止染髮扣剪髮)
+  // 3. 方案折抵邏輯
   const usePkg = showPackages && document.getElementById('chk-use-package')?.checked;
   const useWallet = showWallet && document.getElementById('chk-use-wallet')?.checked;
-  
+
   let deductAmount = 0;
   let deductText = '無折抵';
-  const pkgNoticeBox = document.getElementById('box-package-remain-notice');
+  let outOfPocketService = mainTotal; // 項目實付 (折後)
 
+  // A. 包卡抵扣 (嚴格校驗服務名稱相符，禁止染髮扣剪髮)
   if (usePkg && mainTotal > 0) {
     const userPkgs = memberData.packages || [];
-    // 尋找顧客持有的包卡是否與勾選項目相符
     let matchedItemPrice = 0;
     let matchedPkgName = '';
 
-    for (let svc of selectedServiceNames) {
-      if (svc.isAddon) continue; // 加購項目不參與主包卡抵扣
+    for (let svc of selectedServiceList) {
+      if (svc.isAddon) continue;
       const foundPkg = userPkgs.find(p => (p.service_name === svc.name || svc.name.includes(p.service_name)) && p.remaining_times > 0);
       if (foundPkg) {
         matchedItemPrice = svc.price;
@@ -2817,52 +2816,47 @@ function updateCheckoutSummary() {
 
     if (matchedItemPrice > 0) {
       deductAmount = matchedItemPrice;
+      outOfPocketService = Math.max(0, mainTotal - matchedItemPrice);
       deductText = `使用【${matchedPkgName}】包卡扣抵 1 堂 (-NT$ ${matchedItemPrice.toLocaleString()})`;
-      if (pkgNoticeBox) {
-        pkgNoticeBox.classList.remove('hidden');
-        const remTimes = Math.max(0, (userPkgs[0]?.remaining_times || 1) - 1);
-        document.getElementById('text-remain-package-times').innerText = remTimes;
-      }
+      document.getElementById('box-package-remain-notice')?.classList.remove('hidden');
+      document.getElementById('text-remain-package-times').innerText = Math.max(0, (userPkgs[0]?.remaining_times || 1) - 1);
     } else {
-      // 勾選不相符項目防呆警告
       document.getElementById('chk-use-package').checked = false;
-      Swal.fire({
-        title: '無法使用包卡抵扣',
-        text: '您目前選擇的項目，與名下包卡綁定之服務項目不符，無法抵扣。',
-        icon: 'warning'
-      });
-      if (pkgNoticeBox) pkgNoticeBox.classList.add('hidden');
+      Swal.fire('無法使用包卡', '所選項目與名下包卡服務項目不符', 'warning');
     }
-  } else {
-    if (pkgNoticeBox) pkgNoticeBox.classList.add('hidden');
   }
 
-  // 4. 【修復圖 1 儲值抵扣】現場新購儲值金或已有儲值金，正確折抵並試算打折
+  // B. 儲值金折抵 (核心修復圖 2：項目折後由儲值金支付，不重複累加)
   if (useWallet && !usePkg && mainTotal > 0) {
     let effectiveDiscount = memberData.discountPercent || 1;
-    // 若當次有新購儲值金方案，優先採用新方案的優惠折數
     if (addonWalFee > 0 && walSel) {
       const newPlanDiscount = Number(walSel.options[walSel.selectedIndex]?.getAttribute('data-discount') || 1);
       if (newPlanDiscount < effectiveDiscount) effectiveDiscount = newPlanDiscount;
     }
 
-    const discountedMain = Math.round(mainTotal * effectiveDiscount);
-    const availableBalance = (memberData.walletBalance || 0) + addonWalFee;
+    const discountedPrice = Math.round(mainTotal * effectiveDiscount);
+    const discountCut = mainTotal - discountedPrice;
+    const totalWalletAvailable = (memberData.walletBalance || 0) + addonWalFee;
 
-    if (availableBalance >= discountedMain) {
-      deductAmount = mainTotal - (mainTotal - discountedMain); // 扣抵金額
-      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，全額自儲值金扣除 (項目折後: $${discountedMain.toLocaleString()})`;
+    if (totalWalletAvailable >= discountedPrice) {
+      // 儲值金足以全額扣抵項目
+      deductAmount = mainTotal;
+      outOfPocketService = 0; // 項目由儲值金全扣，項目自付額為 0
+      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，全額由儲值金扣除 (項目折後: $${discountedPrice.toLocaleString()})`;
     } else {
-      deductAmount = availableBalance;
-      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，扣抵儲值餘額 $${availableBalance.toLocaleString()} (不足現場補差價)`;
+      // 儲值金不足全扣
+      deductAmount = discountCut + totalWalletAvailable;
+      outOfPocketService = discountedPrice - totalWalletAvailable;
+      deductText = `儲值享 ${Math.round(effectiveDiscount * 100) / 10} 折，扣抵儲值金 $${totalWalletAvailable.toLocaleString()} (差額 $${outOfPocketService.toLocaleString()} 現場補付)`;
     }
   }
 
-  // 5. 折扣碼抵扣
+  // C. 折扣碼折抵
   if (activeCoupon && !usePkg && !useWallet && mainTotal > 0) {
     deductAmount = activeCoupon.discount_type === 'cash' 
       ? Number(activeCoupon.discount_value || 0)
       : Math.round(mainTotal * (1 - Number(activeCoupon.discount_value || 1)));
+    outOfPocketService = Math.max(0, mainTotal - deductAmount);
     deductText = `折扣碼【${activeCoupon.code}】折抵 (-NT$ ${deductAmount.toLocaleString()})`;
   }
 
@@ -2872,7 +2866,7 @@ function updateCheckoutSummary() {
     document.getElementById('summary-deduct-text').innerText = deductText;
   }
 
-  // 6. 【修復圖 2 訂金未扣除漏洞】訂金實質從應付金額中扣除
+  // 4. 訂金抵扣 (從應付總額中扣減)
   const custTypeVal = document.getElementById('custType')?.value || 'old';
   const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && custTypeVal === 'new'));
   let depositDeduct = (isNeedDeposit && db.depositAmount > 0) ? Number(db.depositAmount) : 0;
@@ -2883,12 +2877,10 @@ function updateCheckoutSummary() {
     document.getElementById('summaryDepositDeduct').innerText = depositDeduct.toLocaleString();
   }
 
-  // 7. 計算現場預估應付金額：(基準項目 - 折扣) + 加購方案 - 已收訂金
-  let finalTotal = Math.max(0, (mainTotal - deductAmount) + totalAddon - depositDeduct);
-  const finalTotalEl = document.getElementById('summary-final-total');
-  if (finalTotalEl) {
-    finalTotalEl.innerText = showPrice ? `預估 NT$ ${finalTotal.toLocaleString()}` : '現場確認';
-  }
+  // 5. 現場預估應付金額 = (項目自付額 + 加購方案費用) - 已付訂金
+  // 在圖 2 的狀況：outOfPocketService 是 0，totalAddon 是 3000，deposit 是 0，算出來嚴格等於 3,000 元！
+  let finalPay = Math.max(0, (outOfPocketService + totalAddon) - depositDeduct);
+  document.getElementById('summary-final-total').innerText = showPrice ? `預估 NT$ ${finalPay.toLocaleString()}` : '現場確認';
 }
 
   function handleDeductMethodChange(type) {
