@@ -470,13 +470,24 @@
           </select>
         </div>
 
-        <!-- 耗材複選勾選框與用量填寫區 -->
+        <!-- 服務類別 Group A/B 插單教學小說明 -->
+        <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 text-xs space-y-1 text-amber-950">
+          <div class="font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-info text-amber-600"></i> 服務分組智慧插單說明：
+          </div>
+          <p class="leading-relaxed text-[11px] text-amber-900/90">
+            • <b>Group A (等待期技術類)</b>：適用燙髮、染髮、敷泥SPA等。顧客於藥水靜置等待期間，系統<b>允許自動插單剪髮</b>，將門市坪效翻倍！<br>
+            • <b>Group B (全程專屬類)</b>：適用剪髮、做臉、光療美甲、全身造型等。系統<b>100% 絕對鎖定</b>，防止設計師時段撞期乾等。
+          </p>
+        </div>
+
+        <!-- 耗材複選與大容量產品留空說明 -->
         <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
           <div class="font-bold text-brand-800 text-[11px] flex items-center justify-between">
             <span class="flex items-center gap-1">
-              <i class="fa-solid fa-flask text-[#8C7355]"></i> 施作此項目自動消耗之庫存材料 (可複選勾選)：
+              <i class="fa-solid fa-flask text-[#8C7355]"></i> 施作此項目自動消耗之庫存材料 (可複選)：
             </span>
-            <span class="text-[10px] text-brand-400">完工結單時自動出庫扣料</span>
+            <span class="text-[10px] text-brand-400">大容量洗劑可留空，或填寫單次扣除量 (例: 50ml)</span>
           </div>
           <div id="svc-material-checkboxes-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
         </div>
@@ -3983,57 +3994,184 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
     // ==========================================
     // 11. 進銷存管理 (自建分類 ＆ 現場外帶扣庫)
     // ==========================================
-    async function renderInventoryList() {
-      const container = document.getElementById('inventory-items-container');
-      const catSelect = document.getElementById('inv-filter-category');
-      if (!container) return;
+    let invCurrentPage = 1;
+const invPageSize = 10;
+let invSelectedCategories = [];
 
-      if (allInventoryItems.length === 0) {
-        allInventoryItems = [
-          { id: 'inv-1', category: '洗護消耗品', name: '草本舒緩洗劑 (4000ml)', current_stock: 4, safe_stock: 5, unit: '桶', cost_price: 1200 },
-          { id: 'inv-2', category: '技術耗材', name: '日系染膏/精油萃取原液', current_stock: 14, safe_stock: 8, unit: '條', cost_price: 220 },
-          { id: 'inv-3', category: '零售外帶品', name: '全能修護深層滴劑 (100ml)', current_stock: 8, safe_stock: 3, unit: '瓶', cost_price: 450 },
-          { id: 'inv-4', category: '工具雜項', name: '加厚吸水免洗毛巾 (100入)', current_stock: 15, safe_stock: 10, unit: '包', cost_price: 350 }
-        ];
-      }
+function renderInventoryList() {
+  const container = document.getElementById('inventory-items-container');
+  if (!container) return;
 
-      if (catSelect) {
-        const currentVal = catSelect.value;
-        const allCats = Array.from(new Set([...customInventoryCategories, ...allInventoryItems.map(i => i.category)]));
-        catSelect.innerHTML = '<option value="ALL">全部分類 (技術耗材與零售外帶)</option>' + allCats.map(c => `<option value="${c}">${c}</option>`).join('');
-        catSelect.value = currentVal || 'ALL';
-      }
+  // 1. 取得所有既有分類供標籤列點選
+  const allCats = Array.from(new Set(allInventoryItems.flatMap(i => Array.isArray(i.categories) ? i.categories : [i.category || '技術耗材'])));
+  
+  // 渲染多標籤複選過濾列
+  let catFilterHtml = `
+    <div class="flex flex-wrap gap-1.5 pb-2 border-b border-brand-100">
+      <button type="button" onclick="toggleInvCategoryFilter('ALL')" class="px-2.5 py-1 rounded-full text-xs font-bold transition ${invSelectedCategories.length === 0 ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-800'}">全部分類</button>
+      ${allCats.map(c => `
+        <button type="button" onclick="toggleInvCategoryFilter('${c}')" class="px-2.5 py-1 rounded-full text-xs font-bold transition ${invSelectedCategories.includes(c) ? 'bg-brand-500 text-white' : 'bg-brand-100 text-brand-800'}">${c}</button>
+      `).join('')}
+    </div>
+  `;
 
-      const filterCat = catSelect ? catSelect.value : 'ALL';
-      let filtered = allInventoryItems;
-      if (filterCat !== 'ALL') filtered = filtered.filter(it => it.category === filterCat);
-      if (isLowStockFilterActive) filtered = filtered.filter(it => Number(it.current_stock) <= Number(it.safe_stock));
+  // 2. 執行過濾
+  let filtered = allInventoryItems;
+  if (invSelectedCategories.length > 0) {
+    filtered = filtered.filter(it => {
+      const itemCats = Array.isArray(it.categories) ? it.categories : [it.category];
+      return itemCats.some(c => invSelectedCategories.includes(c));
+    });
+  }
+  if (isLowStockFilterActive) {
+    filtered = filtered.filter(it => Number(it.current_stock) <= Number(it.safe_stock));
+  }
 
-      container.innerHTML = filtered.map(it => {
-        const isAlert = Number(it.current_stock) <= Number(it.safe_stock);
-        return `
-          <div class="p-3.5 bg-white rounded-2xl border ${isAlert ? 'border-amber-300 bg-amber-50/30' : 'border-brand-200'} shadow-2xs flex justify-between items-center text-xs">
-            <div>
-              <div class="flex items-center gap-1.5 font-bold text-brand-900">
-                <span class="text-sm">${it.name}</span>
-                <span class="px-2 py-0.2 rounded-md text-[9.5px] bg-brand-100 text-brand-700">${it.category}</span>
-              </div>
-              <div class="text-[11px] text-brand-400 mt-0.5">安全存量: ${it.safe_stock} ${it.unit} | 進價: $${it.cost_price || 0}</div>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="text-right">
-                <div class="font-black text-sm font-mono ${isAlert ? 'text-rose-600' : 'text-emerald-700'}">${it.current_stock} ${it.unit}</div>
-                ${isAlert ? '<span class="text-[9px] text-rose-500 font-bold">低於安全存量</span>' : '<span class="text-[9px] text-emerald-600">存量正常</span>'}
-              </div>
-              <button onclick="promptStockAdjust('${it.id}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-xs transition">
-                進貨 / 零售帶走
-              </button>
-            </div>
+  // 3. 分頁計算 (一頁 10 個)
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / invPageSize) || 1;
+  if (invCurrentPage > totalPages) invCurrentPage = totalPages;
+  if (invCurrentPage < 1) invCurrentPage = 1;
+
+  const pageItems = filtered.slice((invCurrentPage - 1) * invPageSize, invCurrentPage * invPageSize);
+
+  let itemsHtml = pageItems.map(it => {
+    const isAlert = Number(it.current_stock) <= Number(it.safe_stock);
+    const catBadges = (Array.isArray(it.categories) ? it.categories : [it.category || '通用']).map(c => `<span class="px-1.5 py-0.2 bg-brand-100 text-brand-800 rounded text-[9.5px] font-bold">${c}</span>`).join(' ');
+
+    return `
+      <div class="p-3.5 bg-white rounded-2xl border ${isAlert ? 'border-amber-300 bg-amber-50/20' : 'border-brand-200'} shadow-2xs flex justify-between items-center text-xs">
+        <div>
+          <div class="flex items-center gap-1.5 font-bold text-brand-900">
+            <span class="text-sm">${it.name}</span>
+            ${catBadges}
           </div>
-        `;
-      }).join('');
-    }
+          <div class="text-[11px] text-brand-500 font-mono mt-0.5">
+            進價: NT$ ${it.cost_price || 0} ｜ <b>零售售價: NT$ ${it.retail_price || 0}</b> ｜ 安全存量: ${it.safe_stock} ${it.unit}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="text-right">
+            <div class="font-black text-sm font-mono ${isAlert ? 'text-rose-600' : 'text-emerald-700'}">${it.current_stock} ${it.unit}</div>
+            <span class="text-[9px] ${isAlert ? 'text-rose-500 font-bold' : 'text-emerald-600'}">${isAlert ? '庫存不足' : '正常'}</span>
+          </div>
+          <button type="button" onclick="editProductModal('${it.id}')" class="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg font-bold text-xs">修改</button>
+          <button type="button" onclick="promptStockAdjust('${it.id}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-xs">進出庫</button>
+        </div>
+      </div>
+    `;
+  }).join('');
 
+  // 分頁按鈕
+  let paginationHtml = `
+    <div class="flex justify-between items-center pt-2 text-xs text-gray-500">
+      <span>第 ${invCurrentPage} / ${totalPages} 頁 (共 ${total} 樣品項)</span>
+      <div class="flex gap-1">
+        <button type="button" class="px-2.5 py-1 bg-white border rounded font-bold disabled:opacity-40" ${invCurrentPage <= 1 ? 'disabled' : ''} onclick="invCurrentPage--; renderInventoryList();">上一頁</button>
+        <button type="button" class="px-2.5 py-1 bg-white border rounded font-bold disabled:opacity-40" ${invCurrentPage >= totalPages ? 'disabled' : ''} onclick="invCurrentPage++; renderInventoryList();">下一頁</button>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = catFilterHtml + `<div class="space-y-2 mt-2">${itemsHtml || '<div class="text-center py-6 text-gray-400">尚無符合之耗材品項</div>'}</div>` + paginationHtml;
+}
+
+    // 再次完整編輯品項 (名稱、分類複選、進價、零售價、安全存量)
+function editProductModal(itemId) {
+  const it = allInventoryItems.find(i => i.id === itemId);
+  if (!it) return;
+
+  Swal.fire({
+    title: `編輯品項主檔【${it.name}】`,
+    html: `
+      <div class="text-left text-xs space-y-2.5">
+        <div><label class="font-bold">品項名稱：</label><input id="edit-inv-name" class="swal2-input text-xs" value="${it.name}"></div>
+        <div><label class="font-bold">分類標籤 (逗號分隔複選)：</label><input id="edit-inv-cats" class="swal2-input text-xs" value="${(it.categories || [it.category]).join(', ')}"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">進貨成本 (NT$)：</label><input type="number" id="edit-inv-cost" class="swal2-input text-xs" value="${it.cost_price || 0}"></div>
+          <div><label class="font-bold">門市零售價 (NT$)：</label><input type="number" id="edit-inv-retail" class="swal2-input text-xs font-bold text-emerald-700" value="${it.retail_price || 0}"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">安全存量：</label><input type="number" id="edit-inv-safe" class="swal2-input text-xs" value="${it.safe_stock || 5}"></div>
+          <div><label class="font-bold">計量單位：</label><input id="edit-inv-unit" class="swal2-input text-xs" value="${it.unit || '件'}"></div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '儲存修改',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => ({
+      name: document.getElementById('edit-inv-name').value.trim(),
+      categories: document.getElementById('edit-inv-cats').value.split(/[,，]/).map(c => c.trim()).filter(Boolean),
+      cost_price: Number(document.getElementById('edit-inv-cost').value || 0),
+      retail_price: Number(document.getElementById('edit-inv-retail').value || 0),
+      safe_stock: Number(document.getElementById('edit-inv-safe').value || 5),
+      unit: document.getElementById('edit-inv-unit').value.trim() || '件'
+    })
+  }).then(r => {
+    if (r.isConfirmed && r.value.name) {
+      Object.assign(it, r.value);
+      it.category = it.categories[0] || '通用';
+      renderInventoryList();
+      Swal.fire('品項已更新！', '', 'success');
+    }
+  });
+}
+    
+    
+    
+    function toggleInvCategoryFilter(cat) {
+  if (cat === 'ALL') {
+    invSelectedCategories = [];
+  } else {
+    const idx = invSelectedCategories.indexOf(cat);
+    if (idx !== -1) invSelectedCategories.splice(idx, 1);
+    else invSelectedCategories.push(cat);
+  }
+  invCurrentPage = 1;
+  renderInventoryList();
+}
+    
+    // ========================================================
+// 【排班與住宿橫排日期按鈕】帶（週幾）＋門市公休智慧阻斷
+// ========================================================
+function renderShiftDateButtons() {
+  const dates = backendData.scheduleDates || [];
+  const scrollArea = document.getElementById('shift-scroll-area');
+  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
+  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
+  const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+  if (scrollArea) {
+    let html = `<div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-700'}" onclick="selectShiftDate('ALL')">全部日期</div>`;
+    
+    dates.forEach(d => {
+      const dObj = new Date(d.date);
+      const dayOfWeek = dObj.getDay();
+      const weekStr = weekDays[dayOfWeek];
+      const isWeeklyOff = weeklyOff.includes(dayOfWeek);
+      const isCustomOff = customOff.includes(d.date) || customOff.includes(d.date.replace(/\//g, '-'));
+      const isStoreOff = isWeeklyOff || isCustomOff;
+
+      if (isStoreOff) {
+        // 門市公休：強制反灰鎖定，不可排班
+        html += `
+          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center border text-xs font-bold bg-gray-100 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed select-none" title="門市公休日，禁止排班">
+            <div class="text-[9.5px]">${weekStr} (公休)</div>
+            <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+          </div>`;
+      } else {
+        html += `
+          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectShiftDate('${d.date}')">
+            <div class="text-[9.5px] opacity-70">${weekStr}</div>
+            <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+          </div>`;
+      }
+    });
+    scrollArea.innerHTML = html;
+  }
+}
+    
     function toggleLowStockFilter() {
       isLowStockFilterActive = !isLowStockFilterActive;
       const btn = document.getElementById('btn-low-stock');
@@ -5782,6 +5920,8 @@ async function saveStoreSettings() {
     contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+    promo_imgs: promoImgsArray.filter(Boolean),
+    pet_profile_questions: customQuestionsList,
     front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
     enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
 
@@ -6224,29 +6364,29 @@ async function saveStoreSettings() {
     }
 
     // 20. 查詢分頁：日期區間多狀態全檢索 (未輸入客人資料直接查出該區間全部卡片)
-  async function executeDateRangeSearch() {
-    const sD = document.getElementById('search-start-date')?.value;
-    const eD = document.getElementById('search-end-date')?.value;
-    const kw = document.getElementById('search-keyword')?.value.trim();
+  // 查詢分頁：日期區間多狀態全檢索 (未輸入姓名電話查出該區間所有狀態)
+async function executeDateRangeSearch() {
+  const sD = document.getElementById('search-start-date')?.value;
+  const eD = document.getElementById('search-end-date')?.value;
+  const kw = document.getElementById('search-keyword')?.value.trim();
 
-    if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
-    Swal.showLoading();
+  if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
+  Swal.showLoading();
 
-    try {
-      // 日期區間為必備條件
-      let endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.asc&select=*`;
-      
-      // 關鍵優化：未輸入關鍵字時直接略過 or 條件，查出該區間所有狀態訂單
-      if (kw) {
-        endpoint += `&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)`;
-      }
-
-      const records = await directSupabaseFetch(endpoint);
-      renderSearchResults(records, kw ? `關鍵字「${kw}」且區間【${sD} ~ ${eD}】` : `區間【${sD} ~ ${eD}】全狀態`);
-    } catch(e) {
-      Swal.fire('搜尋失敗', e.message, 'error');
+  try {
+    // 包含所有狀態（待確認、已確認、已結單、已取消、婉拒）
+    let endpoint = `bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${sD}T00:00:00+08:00&appointment_time=lte.${eD}T23:59:59+08:00&order=appointment_time.desc&select=*`;
+    
+    if (kw) {
+      endpoint += `&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)`;
     }
+
+    const records = await directSupabaseFetch(endpoint);
+    renderSearchResults(records, kw ? `關鍵字「${kw}」且區間【${sD} ~ ${eD}】` : `區間【${sD} ~ ${eD}】全狀態`);
+  } catch(e) {
+    Swal.fire('搜尋失敗', e.message, 'error');
   }
+}
     function searchTodayAppts() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('search-start-date').value = today;
@@ -6254,39 +6394,81 @@ async function saveStoreSettings() {
       executeDateRangeSearch();
     }
 
-    function renderSearchResults(records, titleText) {
-      Swal.close();
-      const area = document.getElementById('search-results-area');
-      if (!records || records.length === 0) {
-        area.innerHTML = `<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無 ${titleText} 之紀錄</div>`;
-        return;
-      }
-      const formatted = records.map(b => {
-        const d = new Date(b.appointment_time);
-        const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
-        return {
-          id: b.id,
-          date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
-          time: timeStr,
-          name: b.customer_name,
-          phone: b.customer_phone,
-          customer_type: b.customer_type || 'old',
-          customer_notes: b.customer_notes || '',
-          lineName: b.line_name || '',
-          service: b.service_names || '',
-          price: Number(b.price) || 0,
-          finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
-          notes: b.notes || '',
-          staffId: b.staff_id || 'all',
-          staffName: b.staff_name || '不指定',
-          status: b.status || '待確認',
-          signature_url: b.signature_url || '',
-          signed_at: b.signed_at || '',
-          created_at: b.created_at || ''
-        };
+    // 渲染搜尋結果 (新增「刪除訂單」按鈕，讓管理者能清理無效資料)
+function renderSearchResults(records, titleText) {
+  Swal.close();
+  const area = document.getElementById('search-results-area');
+  if (!records || records.length === 0) {
+    area.innerHTML = `<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無 ${titleText} 之紀錄</div>`;
+    return;
+  }
+
+  const formatted = records.map(b => {
+    const d = new Date(b.appointment_time);
+    const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+    return {
+      id: b.id,
+      date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
+      time: timeStr,
+      name: b.customer_name,
+      phone: b.customer_phone,
+      customer_type: b.customer_type || 'old',
+      customer_notes: b.customer_notes || '',
+      lineName: b.line_name || '',
+      service: b.service_names || '',
+      price: Number(b.price) || 0,
+      finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
+      notes: b.notes || '',
+      staffId: b.staff_id || 'all',
+      staffName: b.staff_name || '不指定',
+      status: b.status || '待確認',
+      signature_url: b.signature_url || '',
+      signed_at: b.signed_at || '',
+      created_at: b.created_at || ''
+    };
+  });
+
+  area.innerHTML = `
+    <div class="text-xs font-bold text-brand-900 mb-2 px-1 flex justify-between items-center">
+      <span><i class="fa-solid fa-magnifying-glass mr-1"></i> ${titleText} 共 ${formatted.length} 筆紀錄：</span>
+      <span class="text-[10px] text-gray-400">含所有狀態訂單</span>
+    </div>
+    <div class="space-y-3">
+      ${formatted.map(a => `
+        <div class="relative">
+          ${renderSingleCardHTML(a)}
+          <div class="mt-1 flex justify-end px-2">
+            <button type="button" onclick="deleteBookingPermanently('${a.id}', '${a.name}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-[10.5px] border border-rose-200 transition">
+              <i class="fa-solid fa-trash-can mr-1"></i> 永久刪除此訂單
+            </button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// 永久刪除訂單函式
+async function deleteBookingPermanently(id, name) {
+  Swal.fire({
+    title: `確定永久刪除此訂單？`,
+    text: `顧客：${name}。刪除後該筆紀錄將從資料庫完全抹除，無法復原！`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#e11d48',
+    confirmButtonText: '確定刪除'
+  }).then(async r => {
+    if (r.isConfirmed) {
+      await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
       });
-      area.innerHTML = `<div class="text-xs font-bold text-brand-900 mb-1 px-1">🔍 ${titleText} 共 ${formatted.length} 筆紀錄：</div>` + formatted.map(a => renderSingleCardHTML(a)).join('');
+      Swal.fire('訂單已刪除', '', 'success');
+      executeDateRangeSearch();
+      fetchDataAndRender();
     }
+  });
+}
 
     // ==========================================
     // 21. 手動更新與登出
