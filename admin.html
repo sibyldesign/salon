@@ -2874,10 +2874,7 @@ function editPetProfileDirect(petId, petName, phone) {
   }
     
     // ========================================================
-// 【深度重構版】預約卡片渲染：強烈凸顯毛孩名字、備註欄淨空不預填
-// ========================================================
-// ========================================================
-// 【後台修復】預約卡片渲染：純美業模式 100% 隱藏毛孩膠囊與履歷
+// 【後台卡片完整版】renderSingleCardHTML(a) — 完整不省略
 // ========================================================
 function renderSingleCardHTML(a) {
   const staffColor = getStaffColor(a.staffId, a.staffName);
@@ -2911,7 +2908,7 @@ function renderSingleCardHTML(a) {
     if (namePart) petName = namePart;
   }
 
-  // C. 提取接送
+  // C. 提取專車接送
   const shuttleMatch = cleanUserNote.match(/【(?:專車接送|需要接送):\s*([^】]+)】/);
   if (shuttleMatch) {
     shuttleText = shuttleMatch[1].trim();
@@ -2950,9 +2947,27 @@ function renderSingleCardHTML(a) {
     .replace(/^[\s|]+|[\s|]+$/g, '')
     .trim();
 
-  // 2. 組裝照護明細卡片 (純美業模式下若無特殊接送排程則完全不顯示)
+  // 2. 組裝專車接送：點擊地址進入 Google 導航 ＋ 一鍵複製地址
+  let shuttleAddressHtml = '';
+  if (shuttleText) {
+    const pureAddr = shuttleText.replace(/【|】|需要接送:|專車接送:|\([^)]*\)/g, '').trim();
+    shuttleAddressHtml = `
+      <div class="p-2.5 bg-emerald-50/80 rounded-xl border border-emerald-200 flex justify-between items-center text-xs mt-1">
+        <div class="font-bold text-emerald-950 truncate flex items-center gap-1.5">
+          <i class="fa-solid fa-van-shuttle text-emerald-700"></i>
+          接送地址：<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="underline hover:text-emerald-700 truncate font-mono">${pureAddr}</a>
+        </div>
+        <div class="flex items-center gap-1.5 shrink-0 ml-2">
+          <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pureAddr)}" target="_blank" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg font-bold text-[10.5px] shadow-2xs">導航</a>
+          <button type="button" onclick="navigator.clipboard.writeText('${pureAddr}'); Swal.fire('已複製地址！', '', 'success')" class="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-800 rounded-lg font-bold text-[10.5px]">複製</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. 組裝照護明細卡片 (美業模式自動不顯示)
   let careDetailsHtml = '';
-  if (isPetMode && (petDetailsStr || shuttleText || stayScheduleText || roomTierText || mealPlanText || bathAddons.length > 0)) {
+  if (isPetMode && (petDetailsStr || shuttleAddressHtml || stayScheduleText || roomTierText || mealPlanText || bathAddons.length > 0)) {
     careDetailsHtml = `
       <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-1.5 text-xs">
         <div class="font-bold text-amber-950 flex items-center justify-between border-b border-amber-200/60 pb-1">
@@ -2964,12 +2979,12 @@ function renderSingleCardHTML(a) {
         ${roomTierText ? `<div class="text-amber-900 font-bold">• 預約房型：<span class="text-brand-900 font-medium">${roomTierText}</span></div>` : ''}
         ${mealPlanText ? `<div class="text-amber-900 font-bold">• 供餐方案：<span class="text-brand-900 font-medium">${mealPlanText}</span></div>` : ''}
         ${bathAddons.length > 0 ? `<div class="text-blue-700 font-bold">• 附加美容：<span>${bathAddons.join(' ＋ ')}</span></div>` : ''}
-        ${shuttleText ? `<div class="text-emerald-800 font-bold">• 專車接送：${shuttleText}</div>` : ''}
+        ${shuttleAddressHtml}
       </div>
     `;
   }
 
-  // 3. 訂金狀態判定與醒目卡片
+  // 4. 訂金狀態判定與醒目卡片
   const isDepositConfirmed = (a.deposit_confirmed === true || rawNotes.includes('訂金已核對'));
   const hasLast5 = Boolean((a.depositLast5 || a.deposit_last5) && String(a.depositLast5 || a.deposit_last5).trim() !== '');
   const reportedLast5 = a.depositLast5 || a.deposit_last5 || '';
@@ -3012,7 +3027,7 @@ function renderSingleCardHTML(a) {
       </div>`;
   }
 
-  // 4. 【核心關鍵】：毛孩膠囊標籤僅在寵美模式（pet_grooming / pet_hotel）且「真有毛孩名字」時才產生，美業模式 100% 不出現！
+  // 5. 毛孩膠囊 (美業模式 100% 隱藏)
   let petBadgeHtml = '';
   if (isPetMode && petName && petName !== '未指定毛孩') {
     petBadgeHtml = `
@@ -3027,6 +3042,7 @@ function renderSingleCardHTML(a) {
   const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
   const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
   const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
+  const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '歷史訂單';
 
   const signBtnHtml = a.signature_url ? `
     <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition">
@@ -3041,7 +3057,7 @@ function renderSingleCardHTML(a) {
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
       
-      <!-- 頂部資訊列：美業模式下純淨展示時間與顧客，不殘留毛孩膠囊 -->
+      <!-- 頂部資訊列 -->
       <div class="flex justify-between items-start">
         <div class="space-y-1">
           <div class="flex flex-wrap items-center gap-2">
@@ -3079,29 +3095,30 @@ function renderSingleCardHTML(a) {
         <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
       </div>
 
-      <!-- 照護明細區 (美業模式自動為空隱藏) -->
+      <!-- 照護明細區 (含專車接送點擊導航與複製) -->
       ${careDetailsHtml}
 
-      <!-- 通訊與契約 -->
-      <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1">
-          <div class="flex justify-between items-center">
-            <span class="flex items-center gap-1.5 font-bold text-brand-900 text-xs">
-              <i class="fa-brands fa-line text-emerald-600 text-sm"></i>
-              LINE：<b class="text-brand-800 text-xs">${a.lineName || '未填寫'}</b>
-              ${a.lineName ? `<button type="button" onclick="navigator.clipboard.writeText('${a.lineName}'); Swal.fire('已複製 LINE 暱稱！', '', 'success')" class="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-bold hover:bg-emerald-200 ml-1">複製</button>` : ''}
-            </span>
-            <span class="text-gray-500">信箱：<b>${parsedEmail || '未填寫'}</b></span>
-          </div>
+      <!-- 通訊與契約 (顯眼放大 LINE 暱稱 + 下單時間 + 簽約時間) -->
+      <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1.5">
+        <div class="flex justify-between items-center">
+          <span class="flex items-center gap-1.5 font-bold text-brand-900 text-xs">
+            <i class="fa-brands fa-line text-emerald-600 text-base"></i>
+            LINE 暱稱：<span class="text-sm text-brand-900 bg-white px-2 py-0.5 rounded-lg border border-brand-200 font-bold">${a.lineName || '未填寫'}</span>
+            ${a.lineName ? `<button type="button" onclick="navigator.clipboard.writeText('${a.lineName}'); Swal.fire('已複製 LINE 暱稱！', '', 'success')" class="text-[10.5px] px-2 py-0.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded font-bold transition ml-1">複製</button>` : ''}
+          </span>
+          <span class="text-gray-400 font-mono text-[10px]"><i class="fa-regular fa-clock mr-1"></i>下單：${friendlyCreatedTime}</span>
+        </div>
+        <div class="text-[11px] text-gray-500 font-mono">顧客 Email：${parsedEmail || '未留信箱'}</div>
         ${a.customer_notes ? `<div class="text-amber-900 font-medium">顧客特殊需求備註：${a.customer_notes}</div>` : ''}
         ${a.signature_url ? `
-          <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold">
-            <span>✓ 已簽署定型化服務契約</span>
-            <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline text-[10.5px]">檢視正本</button>
+          <div class="flex justify-between items-center text-emerald-700 pt-1.5 border-t border-brand-200/60 font-bold text-[11px]">
+            <span>✓ 已簽署定型化契約 (簽署時間：${friendlySignedTime || '存證留存'})</span>
+            <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${friendlySignedTime}')" class="text-blue-600 underline">檢視正本</button>
           </div>
         ` : ''}
       </div>
 
-      <!-- 純淨備註欄 -->
+      <!-- 純淨備註欄 (完全不預填系統資料) -->
       <div class="w-full flex items-center gap-2 pt-1">
         <input type="text" id="admin-note-${a.id}" placeholder="點此輸入店內內部筆記..." value="${cleanUserNote}" class="flex-1 min-w-0 p-2.5 text-xs border border-brand-200 rounded-xl bg-white outline-none focus:border-brand-500 font-medium">
         <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
@@ -5924,69 +5941,95 @@ async function saveStoreSettings() {
 
   // 2. 組裝資料庫 Payload
   const settingsPayload = {
-    store_id: CURRENT_STORE_ID,
-    display_title: storeTitle,
-    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
-    logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
-    enable_logo: getCheck('cfg-toggle-logo'),
-    store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
-    address: document.getElementById('cfg-address')?.value.trim() || '',
-    business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
-    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
-    care_text: document.getElementById('cfg-care')?.value.trim() || '',
-    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
-    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
-    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
-    promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
-    line_url: document.getElementById('cfg-line')?.value.trim() || '',
-    ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
-    map_url: document.getElementById('cfg-map')?.value.trim() || '',
-    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
-    contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
-    contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
-    promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
-    promo_imgs: promoImgsArray.filter(Boolean),
-    pet_profile_questions: customQuestionsList,
-    front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
-    enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
+  store_id: CURRENT_STORE_ID,
+  display_title: storeTitle,
+  display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
+  logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
+  enable_logo: getCheck('cfg-toggle-logo'),
+  store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
+  address: document.getElementById('cfg-address')?.value.trim() || '',
+  business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
+  booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
+  care_text: document.getElementById('cfg-care')?.value.trim() || '',
+  deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
+  deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
+  deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
+  promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
+  line_url: document.getElementById('cfg-line')?.value.trim() || '',
+  ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
+  map_url: document.getElementById('cfg-map')?.value.trim() || '',
+  line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
+  contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
+  contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
+  promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
 
-    theme_color: selectedTheme,
-    industry_mode: selectedMode,
+  // 1. 圖片、題庫與行前叮嚀 (完整寫入資料庫 JSON 欄位)
+  promo_imgs: promoImgsArray.filter(Boolean),
+  pet_profile_questions: customQuestionsList,
+  front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
+  enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
 
-    shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
-    shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
-    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
-    commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
-    designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
+  theme_color: selectedTheme,
+  industry_mode: selectedMode,
 
-    // 20+ 個 Feature Flags 精確儲存 (false 也能確實寫入)
-    enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
-    enable_deposit: getCheck('cfg-toggle-deposit'),
-    enable_staff_select: getCheck('cfg-toggle-staff-select'),
-    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
-    enable_cust_type: getCheck('cfg-toggle-custtype'),
-    enable_show_price: getCheck('cfg-toggle-show-price'),
-    enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
-    enable_wallet: getCheck('cfg-toggle-wallet'),
-    enable_packages: getCheck('cfg-toggle-packages'),
-    enable_coupons: getCheck('cfg-toggle-coupons'),
-    enable_reviews: getCheck('cfg-toggle-reviews'),
-    enable_portfolio: getCheck('cfg-toggle-portfolio'),
-    enable_care: getCheck('cfg-toggle-care'),
-    enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
-    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
-    enable_email_copy: getCheck('cfg-toggle-email'),
-    enable_carousel: getCheck('cfg-toggle-carousel'),
-    enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
-    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
-    enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
-    enable_contract: getCheck('cfg-toggle-contract'),
-    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
-    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
-    enable_flex_menu: getCheck('cfg-toggle-flex-menu'),
+  // 2. 住宿房型與供餐選項主檔 (防止被覆蓋消失)
+  hotel_room_tiers: adminRoomTiers,
+  hotel_meal_options: adminMealOptions,
 
-    updated_at: new Date().toISOString()
-  };
+  // 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價，嚴格以餐計費)
+  boarding_meal_rates: {
+    small: [
+      Number(document.getElementById('cfg-meal-small-1')?.value || 80),
+      Number(document.getElementById('cfg-meal-small-2')?.value || 150),
+      Number(document.getElementById('cfg-meal-small-3')?.value || 220)
+    ],
+    medium: [
+      Number(document.getElementById('cfg-meal-med-1')?.value || 100),
+      Number(document.getElementById('cfg-meal-med-2')?.value || 180),
+      Number(document.getElementById('cfg-meal-med-3')?.value || 260)
+    ],
+    large: [
+      Number(document.getElementById('cfg-meal-large-1')?.value || 120),
+      Number(document.getElementById('cfg-meal-large-2')?.value || 220),
+      Number(document.getElementById('cfg-meal-large-3')?.value || 320)
+    ]
+  },
+
+  // 4. 營運工時與專員算薪
+  shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
+  shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
+  shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
+  commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
+  designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
+
+  // 5. 20+ 個 Feature Flags 精確儲存 (false 能確實寫入)
+  enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
+  enable_deposit: getCheck('cfg-toggle-deposit'),
+  enable_staff_select: getCheck('cfg-toggle-staff-select'),
+  enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
+  enable_cust_type: getCheck('cfg-toggle-custtype'),
+  enable_show_price: getCheck('cfg-toggle-show-price'),
+  enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
+  enable_wallet: getCheck('cfg-toggle-wallet'),
+  enable_packages: getCheck('cfg-toggle-packages'),
+  enable_coupons: getCheck('cfg-toggle-coupons'),
+  enable_reviews: getCheck('cfg-toggle-reviews'),
+  enable_portfolio: getCheck('cfg-toggle-portfolio'),
+  enable_care: getCheck('cfg-toggle-care'),
+  enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
+  enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
+  enable_email_copy: getCheck('cfg-toggle-email'),
+  enable_carousel: getCheck('cfg-toggle-carousel'),
+  enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
+  enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
+  enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
+  enable_contract: getCheck('cfg-toggle-contract'),
+  enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
+  enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
+  enable_flex_menu: getCheck('cfg-toggle-flex-menu'),
+
+  updated_at: new Date().toISOString()
+};
 
   try {
     // 1. 同步更新 stores 主表
@@ -6716,51 +6759,52 @@ function renderAdminPetsCards(list) {
   }
 
   container.innerHTML = list.map(p => `
-    <div class="p-4 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-2.5 text-xs hover:border-[#8C7355] transition">
-      <!-- 頂部：毛孩名稱大標、品種、家長聯絡 -->
-      <div class="flex justify-between items-start border-b border-brand-100 pb-2">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="text-base font-black text-amber-950 flex items-center gap-1">
-              🐾 ${p.name}
-            </span>
-            <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10.5px] font-bold">${p.breed}</span>
-            <span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-md text-[10.5px] font-bold">${p.gender}</span>
+    <div class="p-4 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-3 text-xs hover:border-[#8C7355] transition">
+      <div class="flex justify-between items-start border-b border-brand-100 pb-3">
+        <div class="flex items-center gap-3.5">
+          <!-- 專屬毛孩大照片框 -->
+          <div class="w-16 h-16 rounded-2xl overflow-hidden bg-brand-50 border border-brand-200 shrink-0 flex items-center justify-center">
+            ${p.photoUrl ? `<img src="${p.photoUrl}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-paw text-brand-300 text-2xl"></i>`}
           </div>
-          <div class="text-[11px] text-brand-500 mt-1 flex items-center gap-2">
-            <span>家長：<b>${p.parentName}</b></span>
-            <span class="font-mono">(${p.parentPhone})</span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-base font-black text-amber-950">${p.name}</span>
+              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10.5px] font-bold">${p.breed}</span>
+              <span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-md text-[10.5px] font-bold">${p.gender}</span>
+            </div>
+            <!-- 完整帶回家長全資料 -->
+            <div class="text-[11.5px] text-brand-700 mt-1 space-y-0.5">
+              <div>家長姓名：<b>${p.parentName}</b> ｜ 電話：<span class="font-mono font-bold">${p.parentPhone}</span></div>
+              <div class="text-gray-500 font-mono">LINE 暱稱：<b class="text-brand-900">${p.parentLineName || '未綁定'}</b> ${p.parentEmail ? `｜ 信箱：${p.parentEmail}` : ''}</div>
+            </div>
           </div>
         </div>
-        <div class="text-right">
-          <button type="button" onclick="editPetProfileDirect('${p.id}', '${p.name}', '${p.parentPhone}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-lg text-[11px] font-bold transition">
-            編輯履歷
-          </button>
-        </div>
+        <button type="button" onclick="editPetProfileDirect('${p.id}', '${p.name}', '${p.parentPhone}')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-xl text-xs font-bold transition">
+          編輯履歷
+        </button>
       </div>
 
-      <!-- 資產展示：包卡堂數與儲值金 -->
+      <!-- 資產展示 -->
       <div class="grid grid-cols-2 gap-2 p-2 bg-brand-50/80 rounded-xl border border-brand-200/60 font-mono text-center">
         <div class="p-1.5 bg-white rounded-lg border border-brand-100">
-          <div class="text-[10px] text-gray-500 font-sans">剩餘包卡點數</div>
+          <div class="text-[10px] text-gray-500">剩餘包卡點數</div>
           <div class="text-sm font-black text-emerald-700">${p.packageBalance} 次</div>
         </div>
         <div class="p-1.5 bg-white rounded-lg border border-brand-100">
-          <div class="text-[10px] text-gray-500 font-sans">專屬儲值金餘額</div>
+          <div class="text-[10px] text-gray-500">專屬儲值金餘額</div>
           <div class="text-sm font-black text-[#8C7355]">NT$ ${p.walletBalance.toLocaleString()}</div>
         </div>
       </div>
 
-      <!-- 生理指標 -->
-      <div class="grid grid-cols-3 gap-1 text-[11px] text-brand-800 bg-brand-50/40 p-2 rounded-xl">
+      <!-- 體況與醫療紀錄 -->
+      <div class="grid grid-cols-3 gap-2 text-[11px] text-brand-800 bg-brand-50/40 p-2.5 rounded-xl font-mono">
         <div>體重：<b>${p.weight}</b></div>
         <div>年齡：<b>${p.age}</b></div>
         <div class="truncate">晶片：<b>${p.chipId}</b></div>
       </div>
 
-      <!-- 性格與日常照護備註 -->
       <div class="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[11.5px] leading-relaxed text-amber-950 whitespace-pre-wrap">
-        <b>照護/性格/健康標籤：</b>\n${p.notes || '無特殊照護備註'}
+        <b>健康與照護叮嚀：</b>\n${p.notes || '無特殊習慣備註'}
       </div>
     </div>
   `).join('');
