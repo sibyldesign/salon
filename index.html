@@ -315,30 +315,24 @@
           </div>
 
           <!-- 訂金匯款帳號說明與後五碼快速回報專區 (依後台設定動態展開) -->
-          <div id="quickDepositLast5Box" class="hidden mt-2.5 p-3 bg-amber-100/70 rounded-2xl border border-amber-300 space-y-2 text-xs">
-            <div class="flex items-center justify-between font-bold text-amber-950">
-              <span class="flex items-center gap-1.5">
-                <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
-              </span>
-              <span id="quickDepositAmountLabel" class="text-theme-primary font-black">NT$ 0</span>
-            </div>
-            
-            <div id="quickDepositBankInfo" class="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11px] text-amber-900/90 whitespace-pre-line leading-relaxed font-mono font-medium select-all"></div>
-            
-            <div>
-              <label for="depositLast5Input" class="block mb-1 text-[11px] font-bold text-amber-950">如已完成匯款，可直接填寫帳號後五碼 (選填)：</label>
-              <input 
-                type="text" 
-                id="depositLast5Input" 
-                maxlength="5" 
-                placeholder="例如：12345" 
-                inputmode="numeric"
-                pattern="[0-9]*"
-                class="w-full p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none transition focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-              >
-            </div>
-          </div>
-        </div>
+          <div id="quickDepositLast5Box" class="hidden mt-2.5 p-3.5 bg-amber-50 rounded-2xl border border-amber-300 space-y-2 text-xs">
+  <div class="flex items-center justify-between font-bold text-amber-950">
+    <span class="flex items-center gap-1.5">
+      <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
+    </span>
+    <span class="text-theme-primary font-black" id="quickDepositAmountLabel">NT$ 0</span>
+  </div>
+  <div id="quickDepositBankInfo" class="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11px] text-amber-900 whitespace-pre-line leading-relaxed font-mono font-medium select-all"></div>
+  <div>
+    <label class="block font-bold text-amber-950 mb-1 text-[11px]">轉帳完成請在此填寫帳號末五碼：</label>
+    <div class="flex gap-2">
+      <input type="text" id="depositLast5Input" maxlength="5" placeholder="例如：12345" class="flex-1 p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none">
+      <button type="button" onclick="submitQuickDepositLast5()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
+        送出後五碼
+      </button>
+    </div>
+  </div>
+</div>
 
         <!-- 2. 預約人姓名 -->
         <div>
@@ -773,15 +767,17 @@
         <!-- 【動態卡片 C】活動促銷折扣碼（受後台 enable_coupons 控制） -->
         <!-- ======================================================== -->
         <div id="section-marketing-coupon" class="my-4 p-4 rounded-3xl bg-brand-50/80 border border-brand-200 shadow-xs space-y-2 text-xs">
-          <label class="block font-bold text-brand-800 flex items-center gap-1.5">
-            <i class="fa-solid fa-tag text-rose-500"></i> 活動促銷折扣碼
-          </label>
-          <div class="flex gap-2">
-            <input type="text" id="couponCode" placeholder="輸入折扣代碼 (例如：VIP88)" class="flex-1 px-3.5 py-2.5 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-white font-mono font-bold">
-            <button type="button" onclick="applyCouponCode()" class="px-5 py-2.5 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition shrink-0 shadow-2xs">套用</button>
-          </div>
-          <div id="couponNotice" class="text-[11px] text-emerald-600 hidden font-bold pt-0.5"></div>
-        </div>
+  <label class="block font-bold text-brand-800 flex items-center gap-1.5">
+    <i class="fa-solid fa-tag text-theme-primary"></i> 活動促銷折扣碼
+  </label>
+  <div class="flex gap-2">
+    <input type="text" id="couponCode" placeholder="輸入折扣代碼 (例如：VIP88)" class="flex-1 px-3.5 py-2.5 rounded-xl border border-brand-200 text-xs uppercase outline-none bg-white font-mono font-bold">
+    <button type="button" id="btnCouponApply" onclick="applyCouponCode()" class="px-5 py-2.5 bg-brand-200 hover:bg-brand-300 text-brand-800 rounded-xl text-xs font-bold transition shrink-0 shadow-2xs">
+      套用
+    </button>
+  </div>
+  <div id="couponNotice" class="text-[11px] hidden font-bold pt-0.5"></div>
+</div>
         
         <!-- 10. 預算計價試算 -->
         <div id="checkoutSummaryBox" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 space-y-3.5 text-xs shadow-xs">
@@ -1567,75 +1563,83 @@ function selectFrontPetByIndex(idx) {
   updateCheckoutSummary();
 }
   // ========================================================
-// 【多毛孩動態向下追加引擎】毛孩 1 + 毛孩 2 獨立項目與照片上傳
+// 【多毛孩動態向下追加引擎】毛孩 1 + 毛孩 2 格式完全一致 + Supabase Storage 直傳
 // ========================================================
 let frontPetBlocksCount = 1;
 
 function promptAddNewPetProfile() {
   frontPetBlocksCount++;
-  const container = document.getElementById('petProfileSection');
+  const container = document.getElementById('additionalPetsContainer') || document.getElementById('petProfileSection');
   const petIndex = frontPetBlocksCount;
 
-  // 動態生成該毛孩專屬的服務項目勾選 HTML
+  // 動態生成該毛孩專屬的服務項目與加購勾選清單
   const mainSvcs = (db.services || []).filter(s => !s.isAddon);
   const addonSvcs = (db.services || []).filter(s => s.isAddon);
 
   const svcOptionsHtml = `
-    <div class="mt-2 p-2.5 bg-white rounded-xl border border-brand-200 space-y-1.5">
-      <label class="block font-bold text-brand-900 text-xs">為毛孩 ${petIndex} 挑選施作項目：</label>
+    <div class="mt-2.5 p-3 bg-brand-50/60 rounded-2xl border border-brand-200/80 space-y-2">
+      <label class="block font-bold text-brand-900 text-xs flex items-center gap-1">
+        <i class="fa-solid fa-scissors text-theme-primary"></i> 為毛孩 ${petIndex} 挑選施作項目：
+      </label>
       <div class="grid grid-cols-1 gap-1.5">
         ${mainSvcs.map(s => `
-          <label class="flex items-center justify-between p-2 rounded-lg border border-brand-100 bg-brand-50/40 text-xs cursor-pointer">
-            <span class="flex items-center gap-1.5"><input type="checkbox" class="pet-${petIndex}-svc" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()"> ${s.name}</span>
-            <span class="font-mono font-bold text-brand-600">NT$ ${s.price}</span>
+          <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
+            <span class="flex items-center gap-2 font-medium">
+              <input type="checkbox" class="pet-${petIndex}-svc rounded" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
+              <span>${s.name}</span>
+            </span>
+            <span class="font-mono font-bold text-brand-700">NT$ ${s.price}</span>
           </label>
         `).join('')}
       </div>
-      <div class="pt-1 border-t border-brand-100 flex flex-wrap gap-1.5">
-        ${addonSvcs.map(a => `
-          <label class="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-brand-200 text-[11px] cursor-pointer">
-            <input type="checkbox" class="pet-${petIndex}-addon" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
-            <span class="text-brand-400 font-bold">[加購]</span><span>${a.name} (+NT$ ${a.price})</span>
-          </label>
-        `).join('')}
-      </div>
+      ${addonSvcs.length > 0 ? `
+        <div class="pt-1.5 border-t border-brand-100 flex flex-wrap gap-1.5">
+          ${addonSvcs.map(a => `
+            <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 text-[11px] cursor-pointer hover:bg-brand-50/50 transition">
+              <input type="checkbox" class="pet-${petIndex}-addon rounded" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
+              <span class="text-[10px] text-brand-400 font-bold bg-brand-100 px-1 py-0.2 rounded">[加購]</span>
+              <span class="font-medium">${a.name} (+NT$ ${a.price})</span>
+            </label>
+          `).join('')}
+        </div>
+      ` : ''}
     </div>
   `;
 
   const newBlockHtml = `
-    <div id="pet-block-${petIndex}" class="p-4 rounded-2xl bg-brand-50/90 border-2 border-brand-200 space-y-3 mt-4 transition">
-      <div class="flex justify-between items-center border-b border-brand-200 pb-2">
+    <div id="pet-block-${petIndex}" class="p-4 rounded-3xl bg-white border-2 border-brand-200 space-y-3 mt-4 shadow-2xs transition">
+      <div class="flex justify-between items-center border-b border-brand-100 pb-2">
         <span class="font-bold text-brand-900 text-xs flex items-center gap-1.5">
           <i class="fa-solid fa-paw text-theme-primary"></i> 毛孩 ${petIndex} 身分檔案
         </span>
-        <button type="button" onclick="removePetBlock(${petIndex})" class="text-rose-600 font-bold text-xs hover:text-rose-800">
-          <i class="fa-solid fa-trash-can mr-1"></i> 移除此毛孩
+        <button type="button" onclick="removePetBlock(${petIndex})" class="text-rose-600 font-bold text-xs hover:text-rose-800 flex items-center gap-1">
+          <i class="fa-solid fa-trash-can"></i> 移除此毛孩
         </button>
       </div>
 
       <div class="grid grid-cols-2 gap-2">
         <div>
           <label class="block font-bold text-brand-700 mb-1 text-xs">毛孩姓名 *</label>
-          <input type="text" id="petName_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold" placeholder="例: 圓圓">
+          <input type="text" id="petName_${petIndex}" required class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs font-bold outline-none" placeholder="例: 圓圓">
         </div>
         <div>
           <label class="block font-bold text-brand-700 mb-1 text-xs">品種 / 分類 *</label>
-          <input type="text" id="petBreed_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold" placeholder="例: 柴犬 / 貴賓">
+          <input type="text" id="petBreed_${petIndex}" required class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs font-bold outline-none" placeholder="例: 柴犬 / 貴賓">
         </div>
       </div>
 
       <div class="grid grid-cols-3 gap-2">
         <div>
           <label class="block font-bold text-brand-700 mb-1 text-xs">體重 (kg) *</label>
-          <input type="number" step="0.1" id="petWeight_${petIndex}" required class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold font-mono" placeholder="kg" oninput="updateCheckoutSummary()">
+          <input type="number" step="0.1" id="petWeight_${petIndex}" required class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" placeholder="kg" oninput="updateCheckoutSummary()">
         </div>
         <div>
           <label class="block font-bold text-brand-700 mb-1 text-xs">年齡 (歲)</label>
-          <input type="number" id="petAge_${petIndex}" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold font-mono" placeholder="歲">
+          <input type="number" id="petAge_${petIndex}" class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs font-bold font-mono outline-none" placeholder="歲">
         </div>
         <div>
           <label class="block font-bold text-brand-700 mb-1 text-xs">性別</label>
-          <select id="petGender_${petIndex}" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none font-bold">
+          <select id="petGender_${petIndex}" class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs font-bold outline-none">
             <option value="公(已結紮)">公 (已結紮)</option>
             <option value="公(未結紮)">公 (未結紮)</option>
             <option value="母(已結紮)">母 (已結紮)</option>
@@ -1644,37 +1648,74 @@ function promptAddNewPetProfile() {
         </div>
       </div>
 
-      <!-- 上傳毛孩照片 (選填) -->
+      <!-- 上傳毛孩照片 (Supabase Storage 直傳) -->
       <div>
         <label class="block font-bold text-brand-700 mb-1 text-[11px]">上傳毛孩照片 (選填，自動存入雲端檔案)：</label>
         <div class="flex items-center gap-2">
-          <input type="file" id="petPhotoFile_${petIndex}" accept="image/*" class="text-xs flex-1">
+          <input type="file" accept="image/*" class="text-xs flex-1" onchange="handlePetPhotoSupabaseUpload(this, 'petPhotoUrl_${petIndex}')">
           <input type="hidden" id="petPhotoUrl_${petIndex}">
         </div>
       </div>
 
       <div>
         <label class="block font-bold text-brand-700 mb-1 text-xs">日常照護與性格備註：</label>
-        <textarea id="petPersonality_${petIndex}" rows="2" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none leading-relaxed" placeholder="例如：怕吹風機、親人等..."></textarea>
+        <textarea id="petPersonality_${petIndex}" rows="2" class="w-full p-2.5 bg-brand-50/50 rounded-xl border border-brand-200 text-xs outline-none leading-relaxed" placeholder="例如：怕吹風機、親人等..."></textarea>
+      </div>
+
+      <!-- 照護健康問卷 -->
+      <div class="grid grid-cols-2 gap-2 pt-1 border-t border-brand-100">
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-[11px]">疫苗施打年份：</label>
+          <input type="text" id="petVaccineYear_${petIndex}" class="w-full p-2 bg-brand-50/50 rounded-xl border border-brand-200 text-xs outline-none" placeholder="例: 2026/05">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-700 mb-1 text-[11px]">定期驅蟲月份：</label>
+          <input type="text" id="petDewormDate_${petIndex}" class="w-full p-2 bg-brand-50/50 rounded-xl border border-brand-200 text-xs outline-none" placeholder="例: 8月">
+        </div>
+      </div>
+      <div>
+        <label class="block font-bold text-brand-700 mb-1 text-[11px]">重大病史與過敏體質：</label>
+        <input type="text" id="petAllergy_${petIndex}" class="w-full p-2 bg-brand-50/50 rounded-xl border border-brand-200 text-xs outline-none" placeholder="無則填無">
       </div>
 
       ${svcOptionsHtml}
     </div>
   `;
 
-  // 插入於新增按鈕容器之前
-  const btnContainer = container.querySelector('.pt-1.text-center');
-  if (btnContainer) {
-    btnContainer.insertAdjacentHTML('beforebegin', newBlockHtml);
+  const addBox = document.getElementById('additionalPetsContainer');
+  if (addBox) {
+    addBox.insertAdjacentHTML('beforeend', newBlockHtml);
   }
 
   Swal.fire({
     title: `已新增毛孩 ${petIndex}！`,
-    text: `請於下方填寫第二隻毛孩資料並挑選施作項目。`,
+    text: `請於下方填寫寶貝資訊並挑選獨立施作項目。`,
     icon: 'success',
     timer: 1200,
     showConfirmButton: false
   });
+}
+
+function removePetBlock(idx) {
+  const block = document.getElementById(`pet-block-${idx}`);
+  if (block) {
+    block.remove();
+    updateCheckoutSummary();
+  }
+}
+
+// 前台照片上傳直傳 Supabase Storage (不經由 ImgBB)
+async function handlePetPhotoSupabaseUpload(inputEl, targetHiddenId) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  Swal.showLoading();
+  try {
+    const publicUrl = await uploadToSupabaseStorage(file, 'pets');
+    document.getElementById(targetHiddenId).value = publicUrl;
+    Swal.fire({ title: '照片上傳成功！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch (err) {
+    Swal.fire('照片上傳失敗', err.message, 'error');
+  }
 }
 
 function removePetBlock(idx) {
@@ -2909,7 +2950,6 @@ function applyCouponCode() {
   const codeInput = document.getElementById('couponCode');
   const notice = document.getElementById('couponNotice');
 
-  // 若已套用，點擊變為「取消套用」
   if (activeCoupon) {
     activeCoupon = null;
     codeInput.value = '';
@@ -2933,7 +2973,7 @@ function applyCouponCode() {
       codeInput.disabled = true;
       btn.innerText = '取消套用';
       btn.className = 'px-5 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-bold transition shrink-0';
-      notice.innerText = `✓ 已套用折扣碼【${code}】`;
+      notice.innerText = `已套用折扣碼【${code}】`;
       notice.className = 'text-[11px] text-emerald-600 font-bold block pt-0.5';
       updateCheckoutSummary();
     } else {
@@ -2945,6 +2985,80 @@ function applyCouponCode() {
   });
 }
 
+  // C. 毛孩照片上傳處理 (上傳至 ImgBB 並記錄網址)
+async function handlePetPhotoUpload(inputEl, targetHiddenId) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append("image", file);
+
+  try {
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=56cc9473cd6512942296b1fbeb5149de`, {
+      method: "POST",
+      body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById(targetHiddenId).value = data.data.url;
+      Swal.fire({ title: '照片上傳成功！', icon: 'success', timer: 800, showConfirmButton: false });
+    }
+  } catch(e) {
+    console.warn("照片上傳失敗:", e);
+  }
+}
+  
+  // A. 前台未付訂金，再次輸入手機補填後五碼直接送出
+async function submitQuickDepositLast5() {
+  const phone = document.getElementById('phone')?.value.trim().replace(/[^0-9]/g, '');
+  const last5 = document.getElementById('depositLast5Input')?.value.trim();
+
+  if (!phone || phone.length < 8) return Swal.fire('請先輸入完整手機號碼', '', 'warning');
+  if (!last5 || last5.length !== 5) return Swal.fire('請填寫正確的 5 碼帳號末碼', '', 'warning');
+
+  Swal.showLoading();
+  try {
+    // 查詢該手機最新一筆待確認或已確認預約
+    const bookings = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1`);
+    if (!bookings || bookings.length === 0) {
+      return Swal.fire('查無預約紀錄', '請先完成預約送單，再回填匯款末五碼。', 'info');
+    }
+
+    const targetBooking = bookings[0];
+    await directSupabasePatch('bookings', `id=eq.${targetBooking.id}`, {
+      deposit_reported: true,
+      deposit_last5: last5
+    });
+
+    Swal.fire({
+      title: '末五碼回報成功！',
+      text: `已為您送出帳號末五碼【${last5}】，店家確認入帳後將立即排程通知您。`,
+      icon: 'success',
+      confirmButtonColor: '#8C7355'
+    });
+  } catch (err) {
+    Swal.fire('送出失敗', err.message, 'error');
+  }
+}
+  
+  // 通用 Supabase Storage 上傳函式 (徹底淘汰 ImgBB)
+async function uploadToSupabaseStorage(file, folder = 'uploads') {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${CURRENT_STORE_ID}/${folder}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+  
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/store_assets/${fileName}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'Content-Type': file.type
+    },
+    body: file
+  });
+
+  if (!res.ok) throw new Error('圖片上傳至雲端儲存失敗，請確認 Storage 權限設定');
+  return `${SUPABASE_URL}/storage/v1/object/public/store_assets/${fileName}`;
+}
+  
   function openContractReadModal() {
     const modal = document.getElementById('contractModal');
     const scrollBox = document.getElementById('contractScrollArea');
@@ -3486,6 +3600,25 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   let tVal = "";
   const emailVal = document.getElementById('email')?.value.trim() || '';
 
+  // 收集毛孩 1 與 毛孩 2 的完整資料與各自所選項目
+    if (db.industryType !== 'beauty') {
+      for (let i = 1; i <= frontPetBlocksCount; i++) {
+        const pName = document.getElementById(i === 1 ? 'petName' : `petName_${i}`)?.value.trim();
+        if (!pName) continue;
+
+        const pBreed = document.getElementById(i === 1 ? 'petBreed' : `petBreed_${i}`)?.value.trim();
+        const pWeight = document.getElementById(i === 1 ? 'petWeight' : `petWeight_${i}`)?.value.trim();
+        const pAge = document.getElementById(i === 1 ? 'petAge' : `petAge_${i}`)?.value.trim();
+        const pGender = document.getElementById(i === 1 ? 'petGender' : `petGender_${i}`)?.value;
+        const pNotes = document.getElementById(i === 1 ? 'petPersonality' : `petPersonality_${i}`)?.value.trim();
+
+        // 收集該毛孩專屬勾選的服務項目
+        const pSvcs = Array.from(document.querySelectorAll(i === 1 ? '#service-grid input:checked' : `.pet-${i}-svc:checked, .pet-${i}-addon:checked`)).map(cb => cb.value).join(', ');
+
+        notesArray.push(`【毛孩${i}: ${pName} / ${pBreed} / ${pWeight}kg / ${pAge}歲 / ${pGender} / 項目: ${pSvcs || '現場確認'} / 性格備註: ${pNotes}】`);
+      }
+    }
+  
   if (activeBookingSubMode === 'boarding') {
     const inDate = document.getElementById('hotelCheckInDate')?.value;
     const inTime = document.getElementById('hotelCheckInTime')?.value;
