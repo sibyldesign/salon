@@ -490,6 +490,7 @@
               <i class="fa-solid fa-plus text-xs"></i> 登記名下另一隻新毛孩
             </button>
           </div>
+      </div>
 
         <!-- 門市專屬接送服務 -->
         <div id="shuttleServiceSection" class="my-3.5 p-4 bg-white rounded-2xl border border-brand-200 shadow-2xs space-y-2.5 text-xs hidden">
@@ -1179,6 +1180,9 @@
   // ========================================================
 // 【修復圖 1】全營運模式前台元件顯隱精確配置
 // ========================================================
+// ========================================================
+// 【修復圖 1】全營運模式前台元件顯隱精確配置
+// ========================================================
 function applyIndustryModeUI(mode) {
   const modeSelector = document.getElementById('serviceModeSelector');
   const petProfileSec = document.getElementById('petProfileSection');
@@ -1187,11 +1191,13 @@ function applyIndustryModeUI(mode) {
   const calPickerSec = document.getElementById('calendarPickerSection');
   const timePickerSec = document.getElementById('timePickerSection');
   const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
+  const shuttleSec = document.getElementById('shuttleServiceSection');
 
   if (mode === 'beauty') {
-    // 1. 純美業模式：展示日曆、時段、美業服務項目清單；徹底隱藏毛孩與住宿
+    // 1. 純美業模式：展示專員、日曆、時段、美業服務項目清單；徹底隱藏毛孩、接送與住宿
     if (modeSelector) modeSelector.classList.add('hidden');
     if (petProfileSec) petProfileSec.classList.add('hidden');
+    if (shuttleSec) shuttleSec.classList.add('hidden');
     if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
     if (boardingSec) boardingSec.classList.add('hidden');
     
@@ -1249,7 +1255,6 @@ function applyIndustryModeUI(mode) {
     }
   }
 }
-
   window.onload = async function() {
     try {
       await resolveStoreIdAndInitLiff();
@@ -1578,13 +1583,16 @@ async function checkPhoneAndLoadBenefits(el) {
   updateCheckoutSummary();
 }
 
-  function selectFrontPetByIndex(idx) {
+  // ========================================================
+// 【修復】毛孩選取切換（支援 ADD_NEW_PET 完全清空重設）
+// ========================================================
+function selectFrontPetByIndex(idx) {
   const setField = (id, val) => {
     const el = document.getElementById(id);
     if (el) el.value = (val !== undefined && val !== null) ? val : '';
   };
 
-  // 1. 若使用者切換為「＋ 登記名下新毛孩」，完整清空欄位供填寫
+  // 1. 若選擇「＋ 登記名下新毛孩」，完整清空輸入框以供填寫新毛孩
   if (idx === 'ADD_NEW_PET') {
     currentPetIndex = -1;
     setField('petName', '');
@@ -1618,7 +1626,7 @@ async function checkPhoneAndLoadBenefits(el) {
     return;
   }
 
-  // 2. 正常選取既有名下毛孩
+  // 2. 正常選取名下毛孩
   const p = userPetProfiles[idx];
   if (!p) return;
   currentPetIndex = Number(idx);
@@ -1638,7 +1646,7 @@ async function checkPhoneAndLoadBenefits(el) {
     setField('petGender', p.species);
   }
 
-  // 美化橫排單行資產膠囊標籤
+  // 資產標籤膠囊更新
   const badge = document.getElementById('petAssetBadge');
   if (badge) {
     const pkgTimes = Number(p.package_balance || 0);
@@ -1648,7 +1656,7 @@ async function checkPhoneAndLoadBenefits(el) {
     badge.classList.remove('hidden');
   }
 
-  // 智慧防呆：名下無包卡或無儲值金強制反灰
+  // 智慧防呆：名下無包卡或儲值金反灰鎖定
   const chkPkg = document.getElementById('chk-use-package');
   if (chkPkg) {
     const hasPkg = (Number(p.package_balance || 0) > 0) || ((memberData.packages || []).length > 0);
@@ -3374,6 +3382,9 @@ function checkPhoneLength(el) {
 }
 
 // 【補齊】輸入電話自動帶入全部資料 (個人資料 + 毛孩檔案 + 包卡儲值資產)
+// ========================================================
+// 【修復】輸入電話帶入資料（支援切換「＋ 登記新毛孩」）
+// ========================================================
 async function checkCustomerBenefitsByPhone() {
   const phoneInput = document.getElementById('phone');
   if (!phoneInput) return;
@@ -3388,7 +3399,6 @@ async function checkCustomerBenefitsByPhone() {
       directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`)
     ]);
 
-    // 1. 自動帶入顧客基本資料與身份切換
     const nameInput = document.getElementById('name');
     const lineInput = document.getElementById('lineName');
     const emailInput = document.getElementById('email');
@@ -3418,7 +3428,6 @@ async function checkCustomerBenefitsByPhone() {
     }
     memberData.packages = pkgs || [];
 
-    // 自動切換「舊朋友」或「新朋友」
     if (isFoundOldCust) {
       const oldBtn = document.querySelector('.type-btn[onclick*="\'old\'"]');
       if (oldBtn) setType('old', oldBtn);
@@ -3428,19 +3437,14 @@ async function checkCustomerBenefitsByPhone() {
       }
     }
 
-    // 2. 顯示儲值金與包卡卡片
+    // 顯示儲值卡與包卡提示
     const walletBalEl = document.getElementById('displayWalletBalance');
     const walletCard = document.getElementById('memberWalletCard');
-    const statusBadge = document.getElementById('memberStatusBadge');
     const dispPkgs = document.getElementById('displayPackagesList');
 
     if (memberData.walletBalance > 0 || (pkgs && pkgs.length > 0)) {
       if (walletBalEl) walletBalEl.innerText = memberData.walletBalance.toLocaleString();
       if (walletCard) walletCard.classList.remove('hidden');
-      if (statusBadge) {
-        statusBadge.innerText = "VIP 熟客已登入";
-        statusBadge.classList.remove('hidden');
-      }
       if (dispPkgs) {
         if (pkgs && pkgs.length > 0) {
           dispPkgs.innerHTML = `<i class="fa-solid fa-ticket text-emerald-600"></i> 名下可用包卡：` + 
@@ -3454,7 +3458,7 @@ async function checkCustomerBenefitsByPhone() {
       if (walletCard) walletCard.classList.add('hidden');
     }
 
-    // 3. 毛孩名冊下拉選單與履歷帶入（加入「＋ 登記新毛孩」支援）
+    // 毛孩名冊下拉選單：加入「＋ 登記名下新毛孩」選項
     userPetProfiles = pets || [];
     const multiBox = document.getElementById('multiPetSelectBlock');
     const dropdown = document.getElementById('multiPetDropdown');
@@ -3464,7 +3468,6 @@ async function checkCustomerBenefitsByPhone() {
       userPetProfiles.forEach((p, idx) => {
         optHtml += `<option value="${idx}" ${idx === 0 ? 'selected' : ''}>🐾 ${p.name} (${p.breed || '一般'}) - 包卡: ${p.package_balance || 0}堂 / 儲值: $${p.wallet_balance || 0}</option>`;
       });
-      // 關鍵新增：提供不施作名下舊毛孩、直接填寫新毛孩的選項
       optHtml += `<option value="ADD_NEW_PET" class="text-theme-primary font-bold">＋ 登記名下新毛孩 (本次不施作現有毛孩)</option>`;
 
       if (dropdown) dropdown.innerHTML = optHtml;
@@ -3815,16 +3818,19 @@ async function checkCustomerBenefitsByPhone() {
   }
 }
 
+// ========================================================
+// 【修復】預約送單事件（徹底消除 notesArray 變數順序與純美業報錯）
+// ========================================================
 document.getElementById('bookForm').onsubmit = async function(e) {
   e.preventDefault();
 
   let sVal = "";
   let dValRaw = "";
   let tVal = "";
-  let notesArray = []; // 【核心修正】宣告於最頂部，保證下方所有分支安全讀寫！
+  let notesArray = []; // 【關鍵防護】最頂部宣告，防止 TDZ ReferenceError
   const emailVal = document.getElementById('email')?.value.trim() || '';
 
-  // 1. 蒐集毛孩身分與施作項目（純美業 beauty 模式安全跳過）
+  // 1. 蒐集毛孩資料 (純美業 beauty 模式嚴格跳過)
   if (db.industryType !== 'beauty') {
     for (let i = 1; i <= frontPetBlocksCount; i++) {
       const pName = document.getElementById(i === 1 ? 'petName' : `petName_${i}`)?.value.trim();
@@ -3836,7 +3842,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       const pGender = document.getElementById(i === 1 ? 'petGender' : `petGender_${i}`)?.value || '';
       const pNotes = document.getElementById(i === 1 ? 'petPersonality' : `petPersonality_${i}`)?.value.trim() || '';
 
-      // 抓取該毛孩專屬勾選的服務項目
       const pSvcs = Array.from(document.querySelectorAll(i === 1 ? '#service-grid input:checked, .pet-1-svc:checked, .pet-1-addon:checked' : `.pet-${i}-svc:checked, .pet-${i}-addon:checked`)).map(cb => cb.value).join(', ');
 
       notesArray.push(`【毛孩${i}: ${pName} / ${pBreed} / ${pWeight}kg / ${pAge}歲 / ${pGender} / 項目: ${pSvcs || '現場確認'} / 性格備註: ${pNotes}】`);
@@ -3872,7 +3877,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     if (document.getElementById('chkHotelBathCheckin')?.checked) notesArray.push('【加購: 入住清潔洗澡】');
     if (document.getElementById('chkHotelBathCheckout')?.checked) notesArray.push('【加購: 退房深層美容】');
   } else {
-    // 美業模式與美容洗澡模式
     const selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
     sVal = selectedBoxes.map(el => el.value).join(', ');
     dValRaw = document.getElementById('date')?.value;
@@ -3915,7 +3919,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   if (activeCoupon) notesArray.push(`【折扣碼: ${activeCoupon.code}】`);
   if (emailVal) notesArray.push(`Email: ${emailVal}`);
 
-  // 自訂問答收集
+  // 自訂題庫答案打包
   document.querySelectorAll('#customQuestionsContainer input[data-custom-q]').forEach(inp => {
     if (inp.value.trim()) {
       notesArray.push(`【${inp.getAttribute('data-custom-q')}: ${inp.value.trim()}】`);
@@ -3963,7 +3967,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const resData = await res.json();
     const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
-    // 自動同步客戶主檔與毛孩主檔
+    // 自動同步客戶主檔
     await directSupabaseUpsert('customers', {
       store_id: CURRENT_STORE_ID,
       phone: phoneVal,
@@ -3975,7 +3979,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       await syncCurrentPetToDatabase(phoneVal, nameVal);
     }
 
-    // 觸發後端推播通知 (不阻塞前端)
+    // 觸發背景推播通知 (不阻塞送單畫面)
     try {
       fetch(API_URL, {
         method: "POST",
