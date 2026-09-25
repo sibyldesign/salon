@@ -2345,7 +2345,18 @@ if (dispStoreId && CURRENT_STORE_ID) {
     promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
     while (promoImgsArray.length < 7) promoImgsArray.push("");
 
-    // 【關鍵核心修復】：精確抓取後台儲存的色系，絕不被覆蓋
+    // 【核心修復】自訂題庫與行前叮嚀重整不消失
+    customQuestionsList = (sCfg.pet_profile_questions && Array.isArray(sCfg.pet_profile_questions))
+      ? sCfg.pet_profile_questions
+      : [];
+    renderAdminCustomQuestions();
+
+    const stayNoticeInput = document.getElementById('cfg-stay-notice-content');
+    if (stayNoticeInput && sCfg.front_stay_notice) {
+      stayNoticeInput.value = sCfg.front_stay_notice;
+    }
+        
+        // 【關鍵核心修復】：精確抓取後台儲存的色系，絕不被覆蓋
     const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
     const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || "pet_hotel";
 
@@ -4255,22 +4266,42 @@ function renderInventoryList() {
 }
 
     // 再次完整編輯品項 (名稱、分類複選、進價、零售價、安全存量)
+// ========================================================
+// 【庫存修改升級】分類支援複選勾選與自訂新分類
+// ========================================================
 function editProductModal(itemId) {
   const it = allInventoryItems.find(i => i.id === itemId);
   if (!it) return;
+
+  const currentItemCats = Array.isArray(it.categories) ? it.categories : [it.category || '技術耗材'];
+  const allExistingCats = Array.from(new Set(allInventoryItems.flatMap(i => Array.isArray(i.categories) ? i.categories : [i.category])));
+
+  const catCheckboxesHtml = allExistingCats.map(c => {
+    const isChecked = currentItemCats.includes(c);
+    return `
+      <label class="inline-flex items-center gap-1.5 p-1.5 bg-brand-50 border rounded-lg text-xs cursor-pointer">
+        <input type="checkbox" class="swal-edit-cat accent-[#8C7355]" value="${c}" ${isChecked ? 'checked' : ''}>
+        <span>${c}</span>
+      </label>
+    `;
+  }).join('');
 
   Swal.fire({
     title: `編輯品項主檔【${it.name}】`,
     html: `
       <div class="text-left text-xs space-y-2.5">
         <div><label class="font-bold">品項名稱：</label><input id="edit-inv-name" class="swal2-input text-xs" value="${it.name}"></div>
-        <div><label class="font-bold">分類標籤 (逗號分隔複選)：</label><input id="edit-inv-cats" class="swal2-input text-xs" value="${(it.categories || [it.category]).join(', ')}"></div>
-        <div class="grid grid-cols-2 gap-2">
-          <div><label class="font-bold">進貨成本 (NT$)：</label><input type="number" id="edit-inv-cost" class="swal2-input text-xs" value="${it.cost_price || 0}"></div>
-          <div><label class="font-bold">門市零售價 (NT$)：</label><input type="number" id="edit-inv-retail" class="swal2-input text-xs font-bold text-emerald-700" value="${it.retail_price || 0}"></div>
+        <div>
+          <label class="font-bold block mb-1">所屬分類 (可複選)：</label>
+          <div class="flex flex-wrap gap-1.5">${catCheckboxesHtml}</div>
+          <input id="edit-inv-new-cat" class="swal2-input text-xs mt-1.5" placeholder="或輸入新增其他分類名稱">
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <div><label class="font-bold">安全存量：</label><input type="number" id="edit-inv-safe" class="swal2-input text-xs" value="${it.safe_stock || 5}"></div>
+          <div><label class="font-bold">進貨成本 (NT$)：</label><input type="number" id="edit-inv-cost" class="swal2-input text-xs font-mono" value="${it.cost_price || 0}"></div>
+          <div><label class="font-bold text-emerald-800">門市零售價 (NT$)：</label><input type="number" id="edit-inv-retail" class="swal2-input text-xs font-mono font-bold" value="${it.retail_price || 0}"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="font-bold">安全存量：</label><input type="number" id="edit-inv-safe" class="swal2-input text-xs font-mono" value="${it.safe_stock || 5}"></div>
           <div><label class="font-bold">計量單位：</label><input id="edit-inv-unit" class="swal2-input text-xs" value="${it.unit || '件'}"></div>
         </div>
       </div>
@@ -4278,20 +4309,28 @@ function editProductModal(itemId) {
     showCancelButton: true,
     confirmButtonText: '儲存修改',
     confirmButtonColor: '#8C7355',
-    preConfirm: () => ({
-      name: document.getElementById('edit-inv-name').value.trim(),
-      categories: document.getElementById('edit-inv-cats').value.split(/[,，]/).map(c => c.trim()).filter(Boolean),
-      cost_price: Number(document.getElementById('edit-inv-cost').value || 0),
-      retail_price: Number(document.getElementById('edit-inv-retail').value || 0),
-      safe_stock: Number(document.getElementById('edit-inv-safe').value || 5),
-      unit: document.getElementById('edit-inv-unit').value.trim() || '件'
-    })
-  }).then(r => {
+    preConfirm: () => {
+      const selectedCats = Array.from(document.querySelectorAll('.swal-edit-cat:checked')).map(cb => cb.value);
+      const customCat = document.getElementById('edit-inv-new-cat').value.trim();
+      if (customCat && !selectedCats.includes(customCat)) selectedCats.push(customCat);
+      if (selectedCats.length === 0) selectedCats.push('技術耗材');
+
+      return {
+        name: document.getElementById('edit-inv-name').value.trim(),
+        categories: selectedCats,
+        category: selectedCats[0],
+        cost_price: Number(document.getElementById('edit-inv-cost').value || 0),
+        retail_price: Number(document.getElementById('edit-inv-retail').value || 0),
+        safe_stock: Number(document.getElementById('edit-inv-safe').value || 5),
+        unit: document.getElementById('edit-inv-unit').value.trim() || '件'
+      };
+    }
+  }).then(async r => {
     if (r.isConfirmed && r.value.name) {
       Object.assign(it, r.value);
-      it.category = it.categories[0] || '通用';
+      await directSupabasePatch('inventory_items', `id=eq.${it.id}`, r.value);
       renderInventoryList();
-      Swal.fire('品項已更新！', '', 'success');
+      Swal.fire('品項主檔已更新！', '', 'success');
     }
   });
 }
