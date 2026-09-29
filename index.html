@@ -1183,6 +1183,30 @@
 // ========================================================
 // 【修復圖 1】全營運模式前台元件顯隱精確配置
 // ========================================================
+// ========================================================
+// 【修復】題庫動態渲染器（解決後台儲存題目、前台不顯示問題）
+// ========================================================
+function renderCustomPetQuestions() {
+  const container = document.getElementById('customQuestionsContainer');
+  if (!container) return;
+  const questions = db.pet_profile_questions || [];
+  if (!Array.isArray(questions) || questions.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  container.innerHTML = questions.map((q, idx) => `
+    <div class="space-y-1">
+      <label class="block font-bold text-brand-700 text-[11px]">
+        ${q.title} ${q.required ? '<span class="text-rose-600 font-bold">*</span>' : '<span class="text-brand-400 font-normal">(選填)</span>'}：
+      </label>
+      <input type="text" data-custom-q="${q.title}" ${q.required ? 'required' : ''} class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs outline-none" placeholder="${q.placeholder || ''}">
+    </div>
+  `).join('');
+}
+
+// ========================================================
+// 【修復】三模式 UI 顯隱加固（解決住宿模式多餘欄位與美業資產顯示）
+// ========================================================
 function applyIndustryModeUI(mode) {
   const modeSelector = document.getElementById('serviceModeSelector');
   const petProfileSec = document.getElementById('petProfileSection');
@@ -1191,68 +1215,56 @@ function applyIndustryModeUI(mode) {
   const calPickerSec = document.getElementById('calendarPickerSection');
   const timePickerSec = document.getElementById('timePickerSection');
   const stayNoticeWrapper = document.getElementById('frontStayNoticeWrapper');
+  const stayNoticeContent = document.getElementById('frontStayNoticeContent');
+  const pet1SvcBlock = document.getElementById('pet1-services-block');
   const shuttleSec = document.getElementById('shuttleServiceSection');
 
+  if (stayNoticeContent && db.front_stay_notice) {
+    stayNoticeContent.innerText = db.front_stay_notice;
+  }
+
   if (mode === 'beauty') {
-    // 1. 純美業模式：展示專員、日曆、時段、美業服務項目清單；徹底隱藏毛孩、接送與住宿
+    // 1. 純美業模式
     if (modeSelector) modeSelector.classList.add('hidden');
     if (petProfileSec) petProfileSec.classList.add('hidden');
     if (shuttleSec) shuttleSec.classList.add('hidden');
     if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
-    if (boardingSec) boardingSec.classList.add('hidden');
-    
-    if (groomingSec) {
-      groomingSec.classList.remove('hidden');
-      groomingSec.style.display = 'block';
-    }
-    if (calPickerSec) {
-      calPickerSec.classList.remove('hidden');
-      calPickerSec.style.display = 'block';
-    }
-    if (timePickerSec) {
-      timePickerSec.classList.remove('hidden');
-      timePickerSec.style.display = 'block';
-    }
+    if (boardingSec) { boardingSec.classList.add('hidden'); boardingSec.style.setProperty('display', 'none', 'important'); }
+    if (pet1SvcBlock) { pet1SvcBlock.classList.add('hidden'); pet1SvcBlock.style.setProperty('display', 'none', 'important'); }
+
+    if (groomingSec) { groomingSec.classList.remove('hidden'); groomingSec.style.removeProperty('display'); }
+    if (calPickerSec) { calPickerSec.classList.remove('hidden'); calPickerSec.style.removeProperty('display'); }
+    if (timePickerSec) { timePickerSec.classList.remove('hidden'); timePickerSec.style.removeProperty('display'); }
   } else if (mode === 'pet_grooming') {
-    // 2. 寵物純美容模式：施作項目移入毛孩卡片內部，日曆上方服務區塊隱藏
+    // 2. 寵物純美容模式
     if (modeSelector) modeSelector.classList.add('hidden');
     if (petProfileSec) petProfileSec.classList.remove('hidden');
-    if (stayNoticeWrapper) stayNoticeWrapper.classList.add('hidden');
-    if (boardingSec) boardingSec.classList.add('hidden');
-    if (groomingSec) groomingSec.classList.add('hidden');
-    if (calPickerSec) {
-      calPickerSec.classList.remove('hidden');
-      calPickerSec.style.display = 'block';
+    if (boardingSec) { boardingSec.classList.add('hidden'); boardingSec.style.setProperty('display', 'none', 'important'); }
+    if (groomingSec) { groomingSec.classList.add('hidden'); groomingSec.style.setProperty('display', 'none', 'important'); }
+    if (pet1SvcBlock) { pet1SvcBlock.classList.remove('hidden'); pet1SvcBlock.style.removeProperty('display'); }
+
+    if (stayNoticeWrapper) {
+      const showNotice = parseBoolStrict(db.enable_front_stay_notice, true) && Boolean(db.front_stay_notice);
+      stayNoticeWrapper.classList.toggle('hidden', !showNotice);
     }
-    if (timePickerSec) {
-      timePickerSec.classList.remove('hidden');
-      timePickerSec.style.display = 'block';
-    }
+    if (calPickerSec) { calPickerSec.classList.remove('hidden'); calPickerSec.style.removeProperty('display'); }
+    if (timePickerSec) { timePickerSec.classList.remove('hidden'); timePickerSec.style.removeProperty('display'); }
     setupPetExtendedFields();
   } else {
-    // 3. 寵美＋住宿旗艦版
+    // 3. 寵美＋住宿旗艦版 (pet_hotel)
     if (modeSelector) modeSelector.classList.remove('hidden');
     if (petProfileSec) petProfileSec.classList.remove('hidden');
-    if (stayNoticeWrapper) stayNoticeWrapper.classList.remove('hidden');
     setupPetExtendedFields();
 
-    if (activeBookingSubMode === 'boarding') {
-      if (groomingSec) groomingSec.classList.add('hidden');
-      if (boardingSec) boardingSec.classList.remove('hidden');
-      if (calPickerSec) calPickerSec.classList.add('hidden');
-      if (timePickerSec) timePickerSec.classList.add('hidden');
-    } else {
-      if (groomingSec) groomingSec.classList.add('hidden');
-      if (boardingSec) boardingSec.classList.add('hidden');
-      if (calPickerSec) {
-        calPickerSec.classList.remove('hidden');
-        calPickerSec.style.display = 'block';
-      }
-      if (timePickerSec) {
-        timePickerSec.classList.remove('hidden');
-        timePickerSec.style.display = 'block';
-      }
+    if (stayNoticeWrapper) {
+      const showNotice = parseBoolStrict(db.enable_front_stay_notice, true) && Boolean(db.front_stay_notice);
+      stayNoticeWrapper.classList.toggle('hidden', !showNotice);
     }
+
+    if (groomingSec) { groomingSec.classList.add('hidden'); groomingSec.style.setProperty('display', 'none', 'important'); }
+
+    // 依據目前選中的子模式切換
+    switchBookingSubMode(activeBookingSubMode || 'grooming');
   }
 }
   window.onload = async function() {
@@ -1330,6 +1342,9 @@ function applyIndustryModeUI(mode) {
       businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
       bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
       careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
+        pet_profile_questions: sCfg.pet_profile_questions || [],
+front_stay_notice: sCfg.front_stay_notice || '',
+enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
       ig: sCfg.ig_url || "#",
       line: sCfg.line_url || "#",
       map: sCfg.map_url || "#",
@@ -2337,62 +2352,117 @@ function recalcSmartCheckoutLayout() {
   }
 
   function switchBookingSubMode(mode) {
-    activeBookingSubMode = mode;
-    const btnGrooming = document.getElementById('btnModeGrooming');
-    const btnBoarding = document.getElementById('btnModeBoarding');
-    const groomingSec = document.getElementById('groomingServiceSection');
-    const boardingSec = document.getElementById('boardingConfigSection');
-    const calPickerSec = document.getElementById('calendarPickerSection');
-    const timePickerSec = document.getElementById('timePickerSection');
+  activeBookingSubMode = mode;
+  const btnGrooming = document.getElementById('btnModeGrooming');
+  const btnBoarding = document.getElementById('btnModeBoarding');
+  const groomingSec = document.getElementById('groomingServiceSection');
+  const boardingSec = document.getElementById('boardingConfigSection');
+  const calPickerSec = document.getElementById('calendarPickerSection');
+  const timePickerSec = document.getElementById('timePickerSection');
+  const pet1SvcBlock = document.getElementById('pet1-services-block');
+  const addPetBtnWrapper = document.querySelector('button[onclick*="promptAddNewPetProfile"]')?.parentElement;
 
-    if (mode === 'boarding') {
-      if (btnBoarding) {
-        btnBoarding.style.backgroundColor = '';
-        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
-      }
-      if (btnGrooming) {
-        btnGrooming.style.backgroundColor = 'transparent';
-        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
-      }
-      if (groomingSec) groomingSec.classList.add('hidden');
-      if (boardingSec) boardingSec.classList.remove('hidden');
-      if (calPickerSec) calPickerSec.classList.add('hidden');
-      if (timePickerSec) timePickerSec.classList.add('hidden');
-
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      if (!document.getElementById('hotelCheckInDate').value) {
-        document.getElementById('hotelCheckInDate').value = today.toISOString().split('T')[0];
-      }
-      if (!document.getElementById('hotelCheckOutDate').value) {
-        document.getElementById('hotelCheckOutDate').value = tomorrow.toISOString().split('T')[0];
-      }
-
-      renderHotelInCalendar();
-      renderHotelOutCalendar();
-      renderHotelTimeGrid('in', document.getElementById('hotelCheckInDate').value);
-      renderHotelTimeGrid('out', document.getElementById('hotelCheckOutDate').value);
-      calculateBoardingDaysAndPrice();
-    } else {
-      if (btnGrooming) {
-        btnGrooming.style.backgroundColor = '';
-        btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
-      }
-      if (btnBoarding) {
-        btnBoarding.style.backgroundColor = 'transparent';
-        btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
-      }
-      if (groomingSec) groomingSec.classList.remove('hidden');
-      if (boardingSec) boardingSec.classList.add('hidden');
-      if (calPickerSec) calPickerSec.classList.remove('hidden');
-      if (timePickerSec) timePickerSec.classList.remove('hidden');
-
-      renderFrontCalendar();
-      updateCheckoutSummary();
+  if (mode === 'boarding') {
+    // 按鈕樣式切換
+    if (btnBoarding) {
+      btnBoarding.style.backgroundColor = '';
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
     }
+    if (btnGrooming) {
+      btnGrooming.style.backgroundColor = 'transparent';
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+    }
+
+    // 1. 徹底隱藏毛孩卡片內的項目選購
+    if (pet1SvcBlock) {
+      pet1SvcBlock.classList.add('hidden');
+      pet1SvcBlock.style.setProperty('display', 'none', 'important');
+    }
+    if (addPetBtnWrapper) {
+      addPetBtnWrapper.classList.add('hidden');
+      addPetBtnWrapper.style.setProperty('display', 'none', 'important');
+    }
+    if (groomingSec) {
+      groomingSec.classList.add('hidden');
+      groomingSec.style.setProperty('display', 'none', 'important');
+    }
+
+    // 2. 顯示住宿專屬設定
+    if (boardingSec) {
+      boardingSec.classList.remove('hidden');
+      boardingSec.style.removeProperty('display');
+    }
+
+    // 3. 徹底隱藏單日日曆與時段（同時消除 class 與 style.display）
+    if (calPickerSec) {
+      calPickerSec.classList.add('hidden');
+      calPickerSec.style.setProperty('display', 'none', 'important');
+    }
+    if (timePickerSec) {
+      timePickerSec.classList.add('hidden');
+      timePickerSec.style.setProperty('display', 'none', 'important');
+    }
+
+    // 住宿日期預設
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const inDateEl = document.getElementById('hotelCheckInDate');
+    const outDateEl = document.getElementById('hotelCheckOutDate');
+    if (inDateEl && !inDateEl.value) {
+      inDateEl.value = today.toISOString().split('T')[0];
+    }
+    if (outDateEl && !outDateEl.value) {
+      outDateEl.value = tomorrow.toISOString().split('T')[0];
+    }
+
+    renderHotelInCalendar();
+    renderHotelOutCalendar();
+    renderHotelTimeGrid('in', inDateEl?.value || today.toISOString().split('T')[0]);
+    renderHotelTimeGrid('out', outDateEl?.value || tomorrow.toISOString().split('T')[0]);
+    calculateBoardingDaysAndPrice();
+  } else {
+    // 切換回精緻洗護美容
+    if (btnGrooming) {
+      btnGrooming.style.backgroundColor = '';
+      btnGrooming.className = "py-2.5 rounded-xl text-xs font-bold transition bg-theme-primary text-white shadow-sm flex items-center justify-center gap-1.5";
+    }
+    if (btnBoarding) {
+      btnBoarding.style.backgroundColor = 'transparent';
+      btnBoarding.className = "py-2.5 rounded-xl text-xs font-bold transition text-brand-800 hover:bg-brand-50 flex items-center justify-center gap-1.5";
+    }
+
+    // 1. 隱藏住宿設定
+    if (boardingSec) {
+      boardingSec.classList.add('hidden');
+      boardingSec.style.setProperty('display', 'none', 'important');
+    }
+
+    // 2. 恢復顯示毛孩 1 施作項目
+    if (pet1SvcBlock) {
+      pet1SvcBlock.classList.remove('hidden');
+      pet1SvcBlock.style.removeProperty('display');
+    }
+    if (addPetBtnWrapper) {
+      addPetBtnWrapper.classList.remove('hidden');
+      addPetBtnWrapper.style.removeProperty('display');
+    }
+
+    // 3. 恢復顯示單日日曆與時段
+    if (calPickerSec) {
+      calPickerSec.classList.remove('hidden');
+      calPickerSec.style.removeProperty('display');
+    }
+    if (timePickerSec) {
+      timePickerSec.classList.remove('hidden');
+      timePickerSec.style.removeProperty('display');
+    }
+
+    renderFrontCalendar();
+    updateCheckoutSummary();
   }
+}
 
   let hotelInYear = new Date().getFullYear();
   let hotelInMonth = new Date().getMonth();
@@ -2750,67 +2820,63 @@ function renderHotelTimeGrid(type, dateStr) {
     calculateTimesLocally();
   }
 
-  // 單日美容/純美業模式：100% 依據排班表開班
-// ========================================================
-// 【完整版】前台時段運算 — 100% 依排班開班 + Group A/B 防衝堂（無省略）
+  // ========================================================
+// 【核心修復】跨模式時段運算器（相容美業與毛孩卡片內勾選項）
 // ========================================================
 function calculateTimesLocally() {
-  const sStr = document.getElementById('service')?.value || '';
   const dStr = document.getElementById('date')?.value || '';
   const staffId = document.getElementById('staffId')?.value || 'all';
   const grid = document.getElementById('timePillGrid');
   if (!grid) return;
-  
+
+  // 關鍵同步：同時抓取美業服務清單與毛孩卡片內勾選的所有項目
+  const allChecked = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
+  const sStr = allChecked.map(cb => cb.value).join(', ');
+  const svcHidden = document.getElementById('service');
+  if (svcHidden) svcHidden.value = sStr;
+
   if (!sStr || !dStr) {
     grid.innerHTML = '<div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>';
     return;
   }
 
-  // 1. 解析勾選項目總時長及是否包含 Group B（全程專屬類服務）
-  const checkedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked'));
+  // 計算總時長與 Group_B 互斥
   let totalDuration = 0;
   let hasGroupB = false;
 
-  checkedBoxes.forEach(cb => {
+  allChecked.forEach(cb => {
     totalDuration += Number(cb.getAttribute('data-duration') || 60);
     const sName = cb.value;
     const foundSvc = (db.services || []).find(s => s.name === sName || s.service_name === sName);
     const svcType = foundSvc ? (foundSvc.type || foundSvc.service_type) : cb.getAttribute('data-type');
-    if (svcType === 'Group_B') {
-      hasGroupB = true;
-    }
+    if (svcType === 'Group_B') hasGroupB = true;
   });
   if (totalDuration === 0) totalDuration = 60;
 
-  // 2. 生成當日所有網格時間點 (分鐘數)
+  // 後續 slots 運算與排班核對保持不變...
   const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
   const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
   const interval = Number(db.shiftInterval || 30);
   const startMin = sH * 60 + sM;
   const endMin = eH * 60 + eM;
   const defaultSlots = [];
-  for (let m = startMin; m <= endMin; m += interval) {
-    defaultSlots.push(m);
-  }
+  for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
 
-  // 3. 取得當日既有預約進行衝突與容量核對
   const targetDateFormatted = dStr.replace(/\//g, '-');
   const dayAppts = (db.futureBookings || []).filter(a => {
     return a.appointment_time && 
            a.appointment_time.startsWith(targetDateFormatted) && 
            (staffId === 'all' || a.staff_id === staffId || a.staffId === staffId) &&
-           a.status !== '已取消' && 
-           a.status !== '婉拒';
+           a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 4. 當前時間與緩衝時間檢查（避免顧客約到過去或即刻時段）
   const now = new Date();
   const todaySlash = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
   const isToday = (dStr === todaySlash);
   const currentMinutesNow = now.getHours() * 60 + now.getMinutes();
   const bufferMinutes = (Number(db.bookingBufferHours) || 1) * 60;
-
   const schedules = db.staffSchedules || {};
+
   let html = '';
   let openCount = 0;
 
@@ -2820,22 +2886,16 @@ function calculateTimesLocally() {
     const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
 
     let isShiftOpen = false;
-
-    // 核心規則：100% 依據排班表開班（必須明確為 true）
     if (staffId !== 'all') {
       const staffKey = `${staffId}_${dStr}`;
-      if (schedules[staffKey] && schedules[staffKey][timeFormatted] === true) {
-        isShiftOpen = true;
-      }
+      if (schedules[staffKey] && schedules[staffKey][timeFormatted] === true) isShiftOpen = true;
     } else {
       const allStoreKey = `all_${dStr}`;
       if (schedules[allStoreKey] && schedules[allStoreKey][timeFormatted] === true) {
         isShiftOpen = true;
       } else {
-        const staffList = (db.staffList || []).filter(s => s.id !== 'all');
-        for (let s of staffList) {
-          const key = `${s.id}_${dStr}`;
-          if (schedules[key] && schedules[key][timeFormatted] === true) {
+        for (let s of (db.staffList || []).filter(st => st.id !== 'all')) {
+          if (schedules[`${s.id}_${dStr}`] && schedules[`${s.id}_${dStr}`][timeFormatted] === true) {
             isShiftOpen = true;
             break;
           }
@@ -2844,64 +2904,43 @@ function calculateTimesLocally() {
     }
 
     if (!isShiftOpen) return;
-
-    // 檢查條件 A：預約當日時間緩衝過濾
     if (isToday && (t < (currentMinutesNow + bufferMinutes))) return;
-
-    // 檢查條件 B：施作時長超出營業時間過濾
     if (t + totalDuration > endMin + interval) return;
 
-    // 檢查條件 C：既有預約衝突與 Group A/B 容量管制
     let conflict = false;
     let concurrentCount = 0;
 
     for (let a of dayAppts) {
       const aDate = new Date(a.appointment_time);
       const aStart = aDate.getHours() * 60 + aDate.getMinutes();
-      
-      // 計算既有預約的服務時長與類別
       let aDuration = 60;
       let aIsGroupB = false;
       if (a.service_names) {
-        const names = a.service_names.split(',').map(s => s.trim());
-        names.forEach(n => {
-          const matchedSvc = (db.services || []).find(s => (s.name === n || s.service_name === n));
-          if (matchedSvc) {
-            aDuration = Math.max(aDuration, Number(matchedSvc.duration || matchedSvc.duration_minutes || 60));
-            if ((matchedSvc.type || matchedSvc.service_type) === 'Group_B') aIsGroupB = true;
+        a.service_names.split(',').forEach(n => {
+          const match = (db.services || []).find(s => s.name === n.trim());
+          if (match) {
+            aDuration = Math.max(aDuration, Number(match.duration || 60));
+            if (match.type === 'Group_B') aIsGroupB = true;
           }
         });
       }
       const aEnd = aStart + aDuration;
-
-      // 判斷兩筆時段是否有交集：Math.max(start1, start2) < Math.min(end1, end2)
       if (Math.max(t, aStart) < Math.min(t + totalDuration, aEnd)) {
         concurrentCount++;
-        // 若任一筆包含 Group B，專員為 1 對 1 專屬服務，完全互斥
-        if (hasGroupB || aIsGroupB) {
-          conflict = true;
-          break;
-        }
-        // 若皆為 Group A，最多容納 2 位客人重疊施作
-        if (concurrentCount >= 2) {
-          conflict = true;
-          break;
-        }
+        if (hasGroupB || aIsGroupB) { conflict = true; break; }
+        if (concurrentCount >= 2) { conflict = true; break; }
       }
     }
 
     if (conflict) return;
 
-    // 檢查皆通過，渲染時段膠囊按鈕
     openCount++;
     const currentSelectedTime = document.getElementById('time')?.value || '';
     const isSelected = (timeFormatted === currentSelectedTime);
 
     html += `
       <div class="time-pill py-2.5 text-center text-xs font-bold rounded-full border transition cursor-pointer shadow-xs ${
-        isSelected 
-          ? 'selected bg-theme-primary text-white border-theme-primary shadow-md' 
-          : 'bg-white hover:bg-brand-50 text-brand-900 border-brand-200'
+        isSelected ? 'selected bg-theme-primary text-white border-theme-primary shadow-md' : 'bg-white hover:bg-brand-50 text-brand-900 border-brand-200'
       }" onclick="selectTimePill('${timeFormatted}', this)">
         ${timeFormatted}
       </div>`;
