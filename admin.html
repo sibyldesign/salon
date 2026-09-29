@@ -320,6 +320,33 @@
       </div>
     </div>
 
+    <!-- 庫存異動紀錄與出入庫日誌 (新需求追加) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 mt-4 text-xs">
+        <div class="flex justify-between items-center border-b border-brand-100 pb-2">
+          <span class="font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-clock-rotate-left text-brand-500"></i> 技術耗材 BOM 扣減與現場出入庫歷史日誌
+          </span>
+          <span class="text-[10px] text-brand-400">結單扣料與手動異動即時記錄</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b text-brand-400">
+                <th class="py-2 px-1">時間</th>
+                <th class="py-2 px-1">品項名稱</th>
+                <th class="py-2 px-1">異動類別</th>
+                <th class="py-2 px-1">數量</th>
+                <th class="py-2 px-1">異動後存量</th>
+                <th class="py-2 px-1">關聯對象/備註</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-logs-tbody" class="divide-y divide-brand-100 font-mono">
+              <tr><td colspan="6" class="text-center py-4 text-gray-400">尚無出入庫日誌紀錄</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     <!-- 分頁 6. 業績統計 (page-revenue) -->
     <div id="page-revenue" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4">
@@ -3008,6 +3035,9 @@ function editPetProfileDirect(petId, petName, phone) {
     // ========================================================
 // 【後台卡片完整版】renderSingleCardHTML(a) — 完整不省略
 // ========================================================
+// ========================================================
+// 【完整重構版】renderSingleCardHTML(a) — 零省略、功能全整合
+// ========================================================
 function renderSingleCardHTML(a) {
   const staffColor = getStaffColor(a.staffId, a.staffName);
   const rawNotes = a.notes || '';
@@ -3023,6 +3053,7 @@ function renderSingleCardHTML(a) {
   let roomTierText = '';
   let mealPlanText = '';
   let bathAddons = [];
+  let addonTags = [];
 
   // A. 提取 Email
   if (cleanUserNote.includes('Email:')) {
@@ -3032,7 +3063,7 @@ function renderSingleCardHTML(a) {
   }
 
   // B. 提取毛孩身分 (僅在寵物模式運作)
-  const petMatch = cleanUserNote.match(/【毛孩:\s*([^】]+)】/);
+  const petMatch = cleanUserNote.match(/【毛孩(?:\d*):\s*([^】]+)】/);
   if (petMatch) {
     petDetailsStr = petMatch[1].trim();
     cleanUserNote = cleanUserNote.replace(petMatch[0], '');
@@ -3040,14 +3071,31 @@ function renderSingleCardHTML(a) {
     if (namePart) petName = namePart;
   }
 
-  // C. 提取專車接送
+  // C. 提取現場加購方案標籤 (包卡 / 儲值)
+  const pkgBuyMatch = cleanUserNote.match(/【現場加購包卡:[^】]+】/);
+  if (pkgBuyMatch) {
+    addonTags.push(`<span class="px-2 py-0.5 bg-blue-100 text-blue-800 rounded font-bold">${pkgBuyMatch[0].replace(/【|】/g, '')}</span>`);
+    cleanUserNote = cleanUserNote.replace(pkgBuyMatch[0], '');
+  }
+  const topupBuyMatch = cleanUserNote.match(/【現場加購儲值:[^】]+】/);
+  if (topupBuyMatch) {
+    addonTags.push(`<span class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-bold">${topupBuyMatch[0].replace(/【|】/g, '')}</span>`);
+    cleanUserNote = cleanUserNote.replace(topupBuyMatch[0], '');
+  }
+  const generalAddonMatch = cleanUserNote.match(/【現場加購:[^】]+】/);
+  if (generalAddonMatch) {
+    addonTags.push(`<span class="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-bold">${generalAddonMatch[0].replace(/【|】/g, '')}</span>`);
+    cleanUserNote = cleanUserNote.replace(generalAddonMatch[0], '');
+  }
+
+  // D. 提取專車接送
   const shuttleMatch = cleanUserNote.match(/【(?:專車接送|需要接送):\s*([^】]+)】/);
   if (shuttleMatch) {
     shuttleText = shuttleMatch[1].trim();
     cleanUserNote = cleanUserNote.replace(shuttleMatch[0], '');
   }
 
-  // D. 提取住宿細項
+  // E. 提取住宿細項
   const stayMatch = cleanUserNote.match(/【住宿排程:\s*([^】]+)】/);
   if (stayMatch) {
     stayScheduleText = stayMatch[1].trim();
@@ -3074,7 +3122,7 @@ function renderSingleCardHTML(a) {
 
   // 清除財務與加購標籤，淨化手寫備註框
   cleanUserNote = cleanUserNote
-    .replace(/【(?:現場加購|現場儲值|使用包卡扣抵|使用儲值扣抵|折扣碼|訂金已核對)[^】]*】/g, '')
+    .replace(/【(?:現場加購|現場儲值|使用包卡扣抵|使用儲值扣抵|折扣碼|訂金已核對|現場預算試算)[^】]*】/g, '')
     .replace(/\|\s*\|/g, '|')
     .replace(/^[\s|]+|[\s|]+$/g, '')
     .trim();
@@ -3116,16 +3164,28 @@ function renderSingleCardHTML(a) {
     `;
   }
 
-  // 4. 訂金狀態判定與醒目卡片
+  // 4. 【核心修復】訂金狀態判定（依照後台設定正確判斷新舊客）
+  const isDepEnabled = (backendData.settings?.enableDeposit === true);
+  const depMode = backendData.settings?.depositMode || 'all';
+  const isTargetCust = isDepEnabled && (depMode === 'all' || (depMode === 'new_only' && a.customer_type === 'new'));
+
   const isDepositConfirmed = (a.deposit_confirmed === true || rawNotes.includes('訂金已核對'));
-  const hasLast5 = Boolean((a.depositLast5 || a.deposit_last5) && String(a.depositLast5 || a.deposit_last5).trim() !== '');
   const reportedLast5 = a.depositLast5 || a.deposit_last5 || '';
-  
-  let depositStatusBadge = '';
+  const hasLast5 = Boolean(reportedLast5 && String(reportedLast5).trim() !== '');
+
+  let depositBadgeHtml = '';
   let cardBorderClass = 'border-brand-200';
 
-  if (isDepositConfirmed) {
-    depositStatusBadge = `
+  if (!isTargetCust) {
+    depositBadgeHtml = `
+      <div class="p-2 bg-brand-50 rounded-xl border border-brand-200 flex justify-between items-center text-xs">
+        <span class="text-brand-700 font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-check text-brand-500"></i> ${a.customer_type === 'old' && depMode === 'new_only' ? '熟客預約 (依設定免收訂金)' : '免收訂金'}
+        </span>
+        <span class="text-[10px] text-brand-600 bg-brand-100 px-2 py-0.5 rounded-md font-bold">免訂金</span>
+      </div>`;
+  } else if (isDepositConfirmed) {
+    depositBadgeHtml = `
       <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
         <span class="text-emerald-800 font-bold flex items-center gap-1.5">
           <i class="fa-solid fa-circle-check text-emerald-600"></i> ✓ 訂金已核對無誤 ${reportedLast5 ? `(帳號末五碼: <b class="font-mono text-emerald-900 font-bold">${reportedLast5}</b>)` : ''}
@@ -3134,7 +3194,7 @@ function renderSingleCardHTML(a) {
       </div>`;
   } else if (hasLast5) {
     cardBorderClass = 'border-amber-400 bg-amber-50/20';
-    depositStatusBadge = `
+    depositBadgeHtml = `
       <div class="p-2.5 bg-amber-50 rounded-xl border-2 border-amber-300 flex justify-between items-center text-xs shadow-2xs">
         <div>
           <span class="text-amber-950 font-black flex items-center gap-1.5 text-xs">
@@ -3148,7 +3208,7 @@ function renderSingleCardHTML(a) {
         </button>
       </div>`;
   } else {
-    depositStatusBadge = `
+    depositBadgeHtml = `
       <div class="p-2 bg-rose-50 rounded-xl border border-rose-200 flex justify-between items-center text-xs">
         <span class="text-rose-800 font-bold flex items-center gap-1 text-[11px]">
           <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> 尚未收到訂金回報 (未填後五碼)
@@ -3159,25 +3219,18 @@ function renderSingleCardHTML(a) {
       </div>`;
   }
 
-  // 5. 毛孩膠囊 (美業模式 100% 隱藏)
-  let petBadgeHtml = '';
-  if (isPetMode && petName && petName !== '未指定毛孩') {
-    petBadgeHtml = `
-      <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black rounded-xl shadow-xs transition flex items-center gap-1 transform hover:scale-105" title="查看毛孩履歷">
-        <i class="fa-solid fa-paw"></i>
-        <span>${petName}</span>
-        <span class="text-[9px] bg-white/30 px-1 py-0.2 rounded font-normal ml-0.5">履歷 ➔</span>
-      </button>
-    `;
+  // 5. 【核心修復】預估費用展示：杜絕字串拼接天文數字
+  let priceDisplay = `NT$ ${a.price.toLocaleString()}`;
+  const estRangeMatch = rawNotes.match(/【現場預算試算:\s*([^】]+)】/);
+  if (estRangeMatch) {
+    priceDisplay = estRangeMatch[1].replace(/現場預估應付金額：?/g, '').trim();
   }
 
   const rawPhone = String(a.phone || '').trim().replace(/[^0-9]/g, '');
   const intlPhone = rawPhone.startsWith('0') ? '886' + rawPhone.slice(1) : rawPhone;
-  const friendlySignedTime = a.signed_at ? formatFriendlyTime(a.signed_at) : '';
   const friendlyCreatedTime = a.created_at ? formatFriendlyTime(a.created_at) : '歷史訂單';
 
-  // 契約簽署時間嚴格轉換，絕不顯示「存證留存」
-  // 1. 取得完整簽約時間戳記 (彈窗正本專用)
+  // 6. 契約簽署時間
   let finalSignedTime = '';
   if (a.signature_url) {
     const rawTime = a.signed_at || a.created_at;
@@ -3190,7 +3243,6 @@ function renderSingleCardHTML(a) {
     }
   }
 
-  // 2. 底部操作按鈕：純淨「檢視契約」，不帶雜亂時間
   const signBtnHtml = a.signature_url ? `
     <button type="button" onclick="viewDigitalContract('${a.name}', '${a.signature_url}', '${finalSignedTime}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg font-bold text-xs transition flex items-center gap-1">
       <i class="fa-solid fa-file-contract"></i>
@@ -3213,12 +3265,17 @@ function renderSingleCardHTML(a) {
               <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
             </span>
             <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
-            ${petBadgeHtml}
           </div>
 
-          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5 pt-0.5">
+          <div class="font-bold text-brand-900 text-sm flex items-center gap-2 pt-0.5">
             <span>${a.name}</span>
             <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
+            <!-- 【關鍵新增】在家長名字旁新增毛孩履歷按鈕 -->
+            ${(isPetMode && petName) ? `
+              <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
+                <i class="fa-solid fa-paw text-[10px]"></i> ${petName} 履歷
+              </button>
+            ` : ''}
           </div>
         </div>
 
@@ -3230,17 +3287,18 @@ function renderSingleCardHTML(a) {
             <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
             <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
           </select>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
         </div>
       </div>
 
       <!-- 訂金狀態提示 -->
-      ${depositStatusBadge}
+      ${depositBadgeHtml}
 
-      <!-- 預約項目與費用 -->
+      <!-- 預約項目與費用 (明確顯示加購方案與合理金額) -->
       <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
         <div class="font-bold text-brand-900 font-sans">預約項目：${a.service || '無指定項目'}</div>
-        <div class="text-brand-600 font-bold">預估費用：NT$ ${a.price} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: ${a.finalPrice}元)</span>` : ''}</div>
+        <div class="text-brand-600 font-bold">預估費用：${priceDisplay} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: NT$ ${a.finalPrice.toLocaleString()})</span>` : ''}</div>
+        ${addonTags.length > 0 ? `<div class="pt-1 flex flex-wrap gap-1 font-sans">${addonTags.join('')}</div>` : ''}
       </div>
 
       <!-- 照護明細區 (含專車接送點擊導航與複製) -->
@@ -3266,7 +3324,7 @@ function renderSingleCardHTML(a) {
         ` : ''}
       </div>
 
-      <!-- 純淨備註欄 (完全不預填系統資料) -->
+      <!-- 純淨內部備註欄 (完全抽離毛孩資訊，供老闆填寫內部筆記) -->
       <div class="w-full flex items-center gap-2 pt-1">
         <input type="text" id="admin-note-${a.id}" placeholder="點此輸入店內內部筆記..." value="${cleanUserNote}" class="flex-1 min-w-0 p-2.5 text-xs border border-brand-200 rounded-xl bg-white outline-none focus:border-brand-500 font-medium">
         <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
@@ -3672,43 +3730,45 @@ function getBookingDepositDisplay(a) {
     // ==========================================
     // 住宿房況：水平日期膠囊 ＋ 可點擊互動房間卡片
   function renderBoardingRoomStatus() {
-    const container = document.getElementById('boarding-room-grid');
-    if (!container) return;
+  const container = document.getElementById('boarding-room-grid');
+  if (!container) return;
 
-    const totalRooms = Number(backendData.settings.totalHotelRooms || 8);
-    const occupiedAppts = (backendData.appointments || []).filter(a => {
-      return (a.service || '').includes('住宿') && a.status !== '已取消' && a.status !== '婉拒';
-    });
+  const totalRooms = Number(backendData.settings?.totalHotelRooms || 8);
+  const occupiedAppts = (backendData.appointments || []).filter(a => {
+    return (a.service || '').includes('住宿') && a.status !== '已取消' && a.status !== '婉拒';
+  });
 
-    let html = '';
-    for (let i = 1; i <= totalRooms; i++) {
-      const roomNo = `R${String(i).padStart(2, '0')}`;
-      const appt = occupiedAppts[i - 1];
-      const isOccupied = Boolean(appt);
+  let html = '';
+  for (let i = 1; i <= totalRooms; i++) {
+    const roomNo = `R${String(i).padStart(2, '0')}`;
+    const appt = occupiedAppts[i - 1];
+    const isOccupied = Boolean(appt);
 
-      let cleanNotes = appt ? (appt.notes || '') : '';
-      let bathTag = '';
-      if (cleanNotes.includes('入住清潔洗澡')) bathTag += '<span class="px-1 bg-blue-100 text-blue-800 rounded">入洗</span> ';
-      if (cleanNotes.includes('退房深層美容')) bathTag += '<span class="px-1 bg-purple-100 text-purple-800 rounded">退房</span>';
-
-      html += `
-        <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}', ${isOccupied ? `'${appt.id}', '${appt.name}'` : 'null'})">
-          <div class="flex justify-between items-center pb-1 border-b ${isOccupied ? 'border-amber-200' : 'border-gray-100'}">
-            <span class="font-bold font-mono">${roomNo}</span>
-            <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${isOccupied ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'}">
-              ${isOccupied ? '在宿中' : '空房'}
-            </span>
-          </div>
-          <div class="mt-1.5 space-y-0.5">
-            <div class="font-bold truncate text-brand-900">${isOccupied ? appt.name : '可排入'}</div>
-            <div class="text-[10px] text-gray-500 font-mono">${isOccupied ? `${appt.date}` : '已消毒'}</div>
-            ${bathTag ? `<div class="text-[9.5px] pt-0.5 font-bold">${bathTag}</div>` : ''}
-          </div>
-        </div>
-      `;
+    let realPetName = '未註記毛孩';
+    if (appt) {
+      // 從 notes 解析真正的毛孩名字，絕不拿 appt.name（家長名字）頂替
+      const match = (appt.notes || '').match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
+      if (match && match[1]) realPetName = match[1].trim();
+      else if (appt.pet_name) realPetName = appt.pet_name;
     }
-    container.innerHTML = html;
+
+    html += `
+      <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}', ${isOccupied ? `'${appt.id}', '${realPetName}'` : 'null, null'})">
+        <div class="flex justify-between items-center pb-1 border-b ${isOccupied ? 'border-amber-200' : 'border-gray-100'}">
+          <span class="font-bold font-mono">${roomNo}</span>
+          <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${isOccupied ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'}">
+            ${isOccupied ? '在宿中' : '空房'}
+          </span>
+        </div>
+        <div class="mt-1.5 space-y-0.5">
+          <div class="font-bold truncate text-brand-900">${isOccupied ? `🐾 ${realPetName}` : '可排入'}</div>
+          <div class="text-[10px] text-gray-500 font-mono">${isOccupied ? `家長: ${appt.name}` : '已消毒'}</div>
+        </div>
+      </div>
+    `;
   }
+  container.innerHTML = html;
+}
 
   function selectBoardingDate(dStr) {
     document.getElementById('boarding-view-date').value = dStr.replace(/\//g, '-');
@@ -3719,13 +3779,15 @@ function getBookingDepositDisplay(a) {
 function handleRoomCardClick(roomNo, bookingId, petName) {
   if (bookingId) {
     const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    if (!appt) return;
+
     Swal.fire({
       title: `🏨 房號 ${roomNo} 在宿管理`,
       html: `
-        <div class="text-left text-xs space-y-2 bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950">
-          <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName}</b></div>
-          <div>家長資訊：<b>${appt ? appt.name : ''}</b> <span class="font-mono">(${appt ? appt.phone : ''})</span></div>
-          <div>入住排程：<b>${appt ? `${appt.date}${appt.time}` : ''}</b></div>
+        <div class="text-left text-xs space-y-2 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950 font-sans">
+          <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName || '寶貝'}</b></div>
+          <div>家長資訊：<b>${appt.name}</b> <span class="font-mono text-gray-600">(${appt.phone})</span></div>
+          <div>入住排程：<b class="font-mono">${appt.date} ${appt.time}</b></div>
         </div>
       `,
       showCancelButton: true,
@@ -3736,9 +3798,9 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
       confirmButtonColor: '#8C7355',
       denyButtonColor: '#10B981'
     }).then(r => {
-      if (r.isConfirmed && appt) {
+      if (r.isConfirmed) {
         openPetProfileModal(appt.phone, petName);
-      } else if (r.isDenied && appt) {
+      } else if (r.isDenied) {
         openCheckoutModal(appt.id, appt.name, appt.phone, appt.service, appt.price);
       }
     });
@@ -4384,6 +4446,42 @@ function renderInventoryList() {
   container.innerHTML = catFilterHtml + `<div class="space-y-2 mt-2">${itemsHtml || '<div class="text-center py-6 text-gray-400">尚無符合之耗材品項</div>'}</div>` + paginationHtml;
 }
 
+    let inventoryLogsCache = JSON.parse(localStorage.getItem(`inv_logs_${CURRENT_STORE_ID}`) || '[]');
+
+function logInventoryChange(itemName, type, qtyChange, afterStock, note) {
+  const logItem = {
+    time: new Date().toLocaleString(),
+    name: itemName,
+    type: type, // '結單自動扣料' | '現場零售' | '店內耗損' | '進貨入庫'
+    change: qtyChange,
+    after: afterStock,
+    note: note || ''
+  };
+  inventoryLogsCache.unshift(logItem);
+  if (inventoryLogsCache.length > 50) inventoryLogsCache.pop();
+  localStorage.setItem(`inv_logs_${CURRENT_STORE_ID}`, JSON.stringify(inventoryLogsCache));
+  renderInventoryLogs();
+}
+
+function renderInventoryLogs() {
+  const tbody = document.getElementById('inventory-logs-tbody');
+  if (!tbody) return;
+  if (inventoryLogsCache.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-gray-400">尚無出入庫日誌紀錄</td></tr>';
+    return;
+  }
+  tbody.innerHTML = inventoryLogsCache.map(l => `
+    <tr class="hover:bg-brand-50/50">
+      <td class="py-2 px-1 text-[10.5px] text-gray-500">${l.time}</td>
+      <td class="py-2 px-1 font-bold text-brand-900 font-sans">${l.name}</td>
+      <td class="py-2 px-1"><span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${l.change < 0 ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}">${l.type}</span></td>
+      <td class="py-2 px-1 font-black ${l.change < 0 ? 'text-rose-600' : 'text-emerald-700'}">${l.change > 0 ? '+' + l.change : l.change}</td>
+      <td class="py-2 px-1 font-bold">${l.after}</td>
+      <td class="py-2 px-1 text-[11px] text-gray-600 font-sans">${l.note}</td>
+    </tr>
+  `).join('');
+}
+    
     // 再次完整編輯品項 (名稱、分類複選、進價、零售價、安全存量)
 // ========================================================
 // 【庫存修改升級】分類支援複選勾選與自訂新分類
@@ -4641,87 +4739,120 @@ function renderShiftDateButtons() {
     // ==========================================
     // 12. 完工結單對帳核算 (BOM 複選材料自動出庫 + 專車接送車資動態連動)
     // ==========================================
-    async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle = false) {
-      currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
-      document.getElementById('chk-modal-name').innerText = name;
-      document.getElementById('chk-modal-phone').innerText = phone;
-      document.getElementById('chk-modal-service').innerText = service;
-      document.getElementById('chk-modal-base-price').innerText = `NT$ ${price.toLocaleString()}`;
-      document.getElementById('check_custom_base_price').value = price || 0;
-      document.getElementById('chk-modal-final-price').value = price || 0;
+    // ========================================================
+// 【完整版】openCheckoutModal — 含 BOM 耗材預告與資產帶入
+// ========================================================
+// ========================================================
+// 【最佳化整理版】openCheckoutModal — 結單對帳彈窗初始化
+// ========================================================
+async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle = false) {
+  // 1. 記錄當前結單預約物件
+  currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
+  
+  // 2. DOM 元素快速繫結
+  const modalName = document.getElementById('chk-modal-name');
+  const modalPhone = document.getElementById('chk-modal-phone');
+  const modalService = document.getElementById('chk-modal-service');
+  const modalBasePrice = document.getElementById('chk-modal-base-price');
+  const customBasePrice = document.getElementById('check_custom_base_price');
+  const modalFinalPrice = document.getElementById('chk-modal-final-price');
 
-      // 接送車資輸入列動態顯隱
-      const shuttleBox = document.getElementById('checkoutShuttleFeeRow');
-      const shuttleInput = document.getElementById('check_shuttle_fee');
-      if (shuttleBox) shuttleBox.classList.toggle('hidden', !isNeedShuttle);
-      if (shuttleInput) shuttleInput.value = isNeedShuttle ? 200 : 0;
+  if (modalName) modalName.innerText = name;
+  if (modalPhone) modalPhone.innerText = phone;
+  if (modalService) modalService.innerText = service;
+  if (modalBasePrice) modalBasePrice.innerText = `NT$ ${Number(price || 0).toLocaleString()}`;
+  if (customBasePrice) customBasePrice.value = price || 0;
+  if (modalFinalPrice) modalFinalPrice.value = price || 0;
 
-      const svcObj = (backendData.services || []).find(s => (service || '').includes(s.name));
-      const bomSection = document.getElementById('checkoutBOMSection');
-      const bomList = document.getElementById('checkoutBOMList');
+  // 3. 專車接送車資輸入列動態顯隱
+  const shuttleBox = document.getElementById('checkoutShuttleFeeRow');
+  const shuttleInput = document.getElementById('check_shuttle_fee');
+  if (shuttleBox) shuttleBox.classList.toggle('hidden', !isNeedShuttle);
+  if (shuttleInput) shuttleInput.value = isNeedShuttle ? 200 : 0;
 
-      if (bomSection && bomList) {
-        if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
-          bomSection.classList.remove('hidden');
-          bomList.innerHTML = svcObj.materials.map(m => `<div>• 關聯耗材：<b>${m.name}</b> (預計出庫 -${m.dosage})</div>`).join('');
-        } else {
-          bomSection.classList.add('hidden');
-        }
-      }
+  // 4. 【BOM 耗材預告區塊】動態顯示關聯技術耗材
+  const svcObj = (backendData.services || []).find(s => (service || '').includes(s.name));
+  const bomSection = document.getElementById('checkoutBOMSection');
+  const bomList = document.getElementById('checkoutBOMList');
 
-      let cardPoints = 0;
-      let walletBal = 0;
-      let discountRate = 1;
-
-      try {
-        const [pkgs, custs] = await Promise.all([
-          directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
-          directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
-        ]);
-
-        if (pkgs && pkgs.length > 0) {
-          const matched = pkgs.find(p => service.includes(p.service_name)) || pkgs[0];
-          cardPoints = matched.remaining_times || 0;
-          document.getElementById('optUseCardDeductText').innerText = `使用【${matched.service_name}】扣點 (剩餘 ${cardPoints} 點)`;
-        }
-        if (custs && custs.length > 0) {
-          walletBal = Number(custs[0].wallet_balance || 0);
-          discountRate = Number(custs[0].member_discount || 1);
-          document.getElementById('optUseDepositText').innerText = `使用已有儲值金 (餘額 $${walletBal}，享 ${discountRate * 10} 折)`;
-          document.getElementById('optUseDepositText').setAttribute('data-rate', discountRate);
-        }
-      } catch(e) {}
-
-      document.getElementById('checkModalCurrentCard').innerText = `${cardPoints} 點`;
-      document.getElementById('checkModalCurrentDeposit').innerText = `$${walletBal}`;
-
-      const retailSelect = document.getElementById('checkoutRetailSelect');
-      if (retailSelect) {
-        const retailItems = allInventoryItems.filter(it => it.category === '零售外帶品');
-        retailSelect.innerHTML = '<option value="none" data-price="0">不加購零售產品</option>' +
-          retailItems.map(it => `<option value="${it.id}" data-price="350">${it.name} (+NT$ 350)</option>`).join('');
-      }
-
-      const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
-      const topupGroup = document.getElementById('topupBuyOptionsGroup');
-      if (pkgGroup) {
-        pkgGroup.innerHTML = (backendData.settings?.packageRules || []).map(p => `
-          <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times}">
-            + 購買【${p.name}】(+NT$ ${p.price}，含 ${p.times} 點)
-          </option>
-        `).join('');
-      }
-      if (topupGroup) {
-        topupGroup.innerHTML = (backendData.settings?.walletRules || []).map(w => `
-          <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount}">
-            + 購買【${w.name}】(+NT$ ${w.price}，入帳 $${w.price + (w.bonus || 0)})
-          </option>
-        `).join('');
-      }
-
-      recalcCheckoutTotal();
-      document.getElementById('checkoutModal').classList.remove('hidden');
+  if (bomSection && bomList) {
+    if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
+      bomSection.classList.remove('hidden');
+      bomList.innerHTML = svcObj.materials.map(m => `<div>• 關聯耗材：<b>${m.name}</b> (預計出庫 -${m.dosage})</div>`).join('');
+    } else {
+      bomSection.classList.add('hidden');
     }
+  }
+
+  let cardPoints = 0;
+  let walletBal = 0;
+  let discountRate = 1;
+
+  // 5. 非同步平行撈取顧客包卡與儲值金資產
+  try {
+    const [pkgs, custs] = await Promise.all([
+      directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+    ]);
+
+    if (pkgs && pkgs.length > 0) {
+      const matched = pkgs.find(p => service.includes(p.service_name)) || pkgs[0];
+      cardPoints = matched.remaining_times || 0;
+      const optCard = document.getElementById('optUseCardDeductText');
+      if (optCard) optCard.innerText = `使用【${matched.service_name}】扣點 (剩餘 ${cardPoints} 點)`;
+    }
+
+    if (custs && custs.length > 0) {
+      walletBal = Number(custs[0].wallet_balance || 0);
+      discountRate = Number(custs[0].member_discount || 1);
+      const optDep = document.getElementById('optUseDepositText');
+      if (optDep) {
+        optDep.innerText = `使用已有儲值金 (餘額 $${walletBal.toLocaleString()}，享 ${discountRate * 10} 折)`;
+        optDep.setAttribute('data-rate', discountRate);
+      }
+    }
+  } catch (e) {
+    console.warn("載入顧客資產異常:", e);
+  }
+
+  // 6. 渲染目前資產 UI
+  const curCardEl = document.getElementById('checkModalCurrentCard');
+  const curDepEl = document.getElementById('checkModalCurrentDeposit');
+  if (curCardEl) curCardEl.innerText = `${cardPoints} 點`;
+  if (curDepEl) curDepEl.innerText = `$${walletBal.toLocaleString()}`;
+
+  // 7. 渲染零售外帶品選單
+  const retailSelect = document.getElementById('checkoutRetailSelect');
+  if (retailSelect) {
+    const retailItems = allInventoryItems.filter(it => (Array.isArray(it.categories) ? it.categories.includes('零售外帶品') : it.category === '零售外帶品'));
+    retailSelect.innerHTML = '<option value="none" data-price="0">不加購零售產品</option>' +
+      retailItems.map(it => `<option value="${it.id}" data-price="${it.retail_price || 350}">${it.name} (+NT$ ${Number(it.retail_price || 350).toLocaleString()})</option>`).join('');
+  }
+
+  // 8. 渲染現場新購方案下拉選單 (包卡與儲值)
+  const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
+  const topupGroup = document.getElementById('topupBuyOptionsGroup');
+  
+  if (pkgGroup) {
+    pkgGroup.innerHTML = (backendData.settings?.packageRules || []).map(p => `
+      <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times || 10}">
+        + 購買【${p.name}】(+NT$ ${Number(p.price).toLocaleString()}，含 ${p.times || 10} 點)
+      </option>
+    `).join('');
+  }
+
+  if (topupGroup) {
+    topupGroup.innerHTML = (backendData.settings?.walletRules || []).map(w => `
+      <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount || 1}">
+        + 購買【${w.name}】(+NT$ ${Number(w.price).toLocaleString()}，入帳 $${(w.price + (w.bonus || 0)).toLocaleString()})
+      </option>
+    `).join('');
+  }
+
+  // 9. 觸發即時金額重算並展開彈窗
+  recalcCheckoutTotal();
+  document.getElementById('checkoutModal').classList.remove('hidden');
+}
 
     function closeCheckoutModal() {
       document.getElementById('checkoutModal').classList.add('hidden');
