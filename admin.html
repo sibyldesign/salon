@@ -3476,7 +3476,85 @@ function renderSingleCardHTML(a) {
       if (signCtx && signCanvas) signCtx.clearRect(0, 0, signCanvas.width, signCanvas.height);
     }
 
+    // ========================================================
+// 【修復】卡片訂金狀態判定（依照後台設定正確判斷新舊客）
+// ========================================================
+function getBookingDepositDisplay(a) {
+  const isDepositEnabled = (backendData.settings?.enableDeposit === true);
+  const depositMode = backendData.settings?.depositMode || 'all';
+  const isTargetCust = isDepositEnabled && (depositMode === 'all' || (depositMode === 'new_only' && a.customer_type === 'new'));
+
+  const isDepositConfirmed = (a.deposit_confirmed === true || (a.notes || '').includes('訂金已核對'));
+  const reportedLast5 = a.depositLast5 || a.deposit_last5 || '';
+  const hasLast5 = Boolean(reportedLast5 && String(reportedLast5).trim() !== '');
+
+  // 1. 若該顧客依規則不需付訂金（例如：設定為僅新客收訂金，而此人為熟客）
+  if (!isTargetCust) {
+    return {
+      statusBadge: `
+        <div class="p-2 bg-brand-50 rounded-xl border border-brand-200 flex justify-between items-center text-xs">
+          <span class="text-brand-700 font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-check text-brand-500"></i> ${a.customer_type === 'old' && depositMode === 'new_only' ? '熟客預約（依設定免收訂金）' : '本單免收訂金'}
+          </span>
+          <span class="text-[10px] text-brand-600 bg-brand-100 px-2 py-0.5 rounded-md font-bold">免訂金</span>
+        </div>`,
+      isWarning: false
+    };
+  }
+
+  // 2. 需要付訂金且已核銷
+  if (isDepositConfirmed) {
+    return {
+      statusBadge: `
+        <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-200 flex justify-between items-center text-xs">
+          <span class="text-emerald-800 font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-check text-emerald-600"></i> ✓ 訂金已核對無誤 ${reportedLast5 ? `(帳號末五碼: <b class="font-mono text-emerald-900 font-bold">${reportedLast5}</b>)` : ''}
+          </span>
+          <span class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md font-bold">已入帳</span>
+        </div>`,
+      isWarning: false
+    };
+  }
+
+  // 3. 需要付訂金且已回報後五碼
+  if (hasLast5) {
+    return {
+      statusBadge: `
+        <div class="p-2.5 bg-amber-50 rounded-xl border-2 border-amber-300 flex justify-between items-center text-xs shadow-2xs">
+          <div>
+            <span class="text-amber-950 font-black flex items-center gap-1.5 text-xs">
+              <i class="fa-solid fa-bell text-amber-600 animate-pulse"></i> 客人已回報匯款末五碼：
+              <span class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-lg font-mono text-sm tracking-widest font-black">${reportedLast5}</span>
+            </span>
+            <div class="text-[10px] text-amber-800 mt-0.5">請確認網銀款項後點擊核銷按鈕</div>
+          </div>
+          <button type="button" onclick="confirmDepositPayment('${a.id}', '${a.name}', '${reportedLast5}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1 shrink-0">
+            <i class="fa-solid fa-check"></i> 確認入帳
+          </button>
+        </div>`,
+      isWarning: true
+    };
+  }
+
+  // 4. 需要付訂金但未付
+  return {
+    statusBadge: `
+      <div class="p-2 bg-rose-50 rounded-xl border border-rose-200 flex justify-between items-center text-xs">
+        <span class="text-rose-800 font-bold flex items-center gap-1 text-[11px]">
+          <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> 尚未收到訂金回報 (未填後五碼)
+        </span>
+        <button type="button" onclick="promptManualInputLast5('${a.id}', '${a.name}')" class="text-[10.5px] text-rose-700 underline font-bold hover:text-rose-900">
+          手動補登
+        </button>
+      </div>`,
+    isWarning: true
+  };
+}
+    
     // 4. 名單總覽 (嚴格過濾：過期預約任何狀態皆自動消失)
+  // ==========================================
+  // 4. 名單總覽 (嚴格過濾：過期單自動歸檔，訂金依新舊客精準分流)
+  // ==========================================
   function renderCustomer() {
     const appts = backendData.appointments || [];
     const filter = document.getElementById('filter-status')?.value || 'ALL';
@@ -3514,8 +3592,17 @@ function renderSingleCardHTML(a) {
         : '<div class="text-center text-xs text-amber-800/70 py-3 font-medium">目前無待審核預約</div>';
     }
 
-    // 訂金警戒專區 (過期自動消失)
-    const unpaidDep = activeAppts.filter(a => a.status !== '已取消' && a.status !== '已結單' && !a.deposit_confirmed && !(a.notes || '').includes('訂金已核對'));
+    // 訂金警戒專區：僅篩選「依設定必須付訂金，但未確認入帳」之有效預約
+    const isDepEnabled = (backendData.settings?.enableDeposit === true);
+    const depMode = backendData.settings?.depositMode || 'all';
+
+    const unpaidDep = activeAppts.filter(a => {
+      if (a.status === '已取消' || a.status === '已結單') return false;
+      if (!isDepEnabled) return false;
+      if (depMode === 'new_only' && a.customer_type !== 'new') return false; // 熟客直接放行，不進警戒區
+      return !a.deposit_confirmed && !(a.notes || '').includes('訂金已核對');
+    });
+
     const unpaidBadge = document.getElementById('unpaid-deposit-badge');
     const unpaidBox = document.getElementById('unpaid-deposit-container');
     if (unpaidBadge) unpaidBadge.innerText = `${unpaidDep.length} 筆`;
@@ -3528,7 +3615,7 @@ function renderSingleCardHTML(a) {
           </div>
           <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">未付訂金</span>
         </div>
-      `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已核對訂金</div>';
+      `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已核對訂金或為免收訂金</div>';
     }
   }
 
@@ -4640,65 +4727,235 @@ function renderShiftDateButtons() {
       document.getElementById('checkoutModal').classList.add('hidden');
     }
 
-    function recalcCheckoutTotal() {
-      const base = Number(document.getElementById('check_custom_base_price')?.value || 0);
-      const useMethod = document.getElementById('check_discount_use_select')?.value;
-      const newBuyOption = document.getElementById('check_new_buy_select')?.options[document.getElementById('check_new_buy_select').selectedIndex];
-      const retailOpt = document.getElementById('checkoutRetailSelect')?.options[document.getElementById('checkoutRetailSelect').selectedIndex];
+    // ========================================================
+// 【核心重構】結單對帳金額計算器（支援現場加購包卡/儲值之當下使用與餘額預覽）
+// ========================================================
+function recalcCheckoutTotal() {
+  const base = Number(document.getElementById('check_custom_base_price')?.value || 0);
+  const useMethod = document.getElementById('check_discount_use_select')?.value;
+  const newBuySelect = document.getElementById('check_new_buy_select');
+  const newBuyOpt = newBuySelect?.options[newBuySelect.selectedIndex];
+  const retailOpt = document.getElementById('checkoutRetailSelect')?.options[document.getElementById('checkoutRetailSelect').selectedIndex];
 
-      let disc = 0;
-      let depDeduct = 0;
-      let addPrice = Number(newBuyOption?.getAttribute('data-price') || 0) + Number(retailOpt?.getAttribute('data-price') || 0);
+  // 1. 解析名下已有資產
+  let curCard = parseInt(document.getElementById('checkModalCurrentCard')?.innerText) || 0;
+  let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit')?.innerText.replace(/[^0-9]/g, '')) || 0;
+  let baseDiscountRate = Number(document.getElementById('optUseDepositText')?.getAttribute('data-rate') || 1);
 
-      let curCard = parseInt(document.getElementById('checkModalCurrentCard')?.innerText) || 0;
-      let curDeposit = parseInt(document.getElementById('checkModalCurrentDeposit')?.innerText.replace(/[^0-9]/g, '')) || 0;
+  // 2. 解析現場新購方案
+  const buyType = newBuyOpt?.value; // 'new_pkg' | 'new_topup' | 'none'
+  const newBuyPrice = Number(newBuyOpt?.getAttribute('data-price') || 0);
+  const retailPrice = Number(retailOpt?.getAttribute('data-price') || 0);
 
-      if (useMethod === 'useCard' && curCard > 0) {
-        disc = base;
-        curCard = Math.max(0, curCard - 1);
-      } else if (useMethod === 'useDeposit' && curDeposit > 0) {
-        const rate = Number(document.getElementById('optUseDepositText')?.getAttribute('data-rate') || 1);
-        const discounted = Math.round(base * rate);
-        disc = base - discounted;
-        if (curDeposit >= discounted) {
-          depDeduct = discounted;
-          curDeposit -= discounted;
-        } else {
-          depDeduct = curDeposit;
-          curDeposit = 0;
-        }
-      }
+  let newPkgName = "";
+  let newPkgTimes = 0;
+  let newTopupName = "";
+  let newTopupAdd = 0;
+  let newTopupDiscount = 1;
 
-      const shuttleFee = Number(document.getElementById('check_shuttle_fee')?.value || 0);
-  let finalPay = Math.max(0, base - disc - depDeduct) + addPrice + shuttleFee;
+  if (buyType === 'new_pkg') {
+    newPkgName = newBuyOpt.getAttribute('data-name') || '';
+    newPkgTimes = Number(newBuyOpt.getAttribute('data-times') || 0);
+  } else if (buyType === 'new_topup') {
+    newTopupName = newBuyOpt.getAttribute('data-name') || '';
+    newTopupAdd = Number(newBuyOpt.getAttribute('data-add') || newBuyPrice);
+    newTopupDiscount = Number(newBuyOpt.getAttribute('data-discount') || 1);
+  }
 
-      document.getElementById('check_display_orig').innerText = `$${base}`;
-      document.getElementById('check_display_disc').innerText = `-$${disc}`;
-      document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
-      document.getElementById('check_display_add').innerText = `+$${addPrice}`;
-      document.getElementById('check_display_final').innerText = `$${finalPay.toLocaleString()}`;
-      document.getElementById('chk-modal-final-price').value = finalPay;
+  // 3. 計算合計可用包卡與儲值
+  const totalAvailableCards = curCard + newPkgTimes;
+  const totalAvailableDeposit = curDeposit + newTopupAdd;
+  const effectiveDiscount = (buyType === 'new_topup' && newTopupDiscount < baseDiscountRate) ? newTopupDiscount : baseDiscountRate;
 
-      document.getElementById('check_display_after_card').innerText = `• 剩餘包卡點數：${curCard} 點`;
-      document.getElementById('check_display_after_deposit').innerText = `• 剩餘儲值金：$${curDeposit.toLocaleString()}`;
+  // 動態更新下拉選單文字，讓管理者明確知道是否可當下使用
+  const optCardText = document.getElementById('optUseCardDeductText');
+  const optDepText = document.getElementById('optUseDepositText');
+  if (optCardText) {
+    optCardText.innerText = totalAvailableCards > 0 
+      ? `使用【包卡點數扣抵】(現有 ${curCard} 點 + 現場新購 ${newPkgTimes} 點，共 ${totalAvailableCards} 點)` 
+      : '使用【包卡點數扣抵】(無可用點數)';
+  }
+  if (optDepText) {
+    optDepText.innerText = totalAvailableDeposit > 0 
+      ? `使用儲值金扣抵 (現有 $${curDeposit} + 現場新購 $${newTopupAdd}，享 ${Math.round(effectiveDiscount * 100) / 10} 折)` 
+      : '使用儲值金扣抵 (無可用餘額)';
+  }
+
+  // 4. 計算折抵金額與扣抵
+  let disc = 0;
+  let depDeduct = 0;
+  let afterCardPoints = totalAvailableCards;
+  let afterDepositBalance = totalAvailableDeposit;
+
+  if (useMethod === 'useCard' && totalAvailableCards > 0) {
+    disc = base; // 包卡折抵主項目全部費用
+    afterCardPoints = totalAvailableCards - 1; // 當下扣 1 點
+  } else if (useMethod === 'useDeposit' && totalAvailableDeposit > 0) {
+    const discountedBase = Math.round(base * effectiveDiscount);
+    disc = base - discountedBase; // 折扣折抵金額
+    if (totalAvailableDeposit >= discountedBase) {
+      depDeduct = discountedBase; // 儲值全額扣抵
+      afterDepositBalance = totalAvailableDeposit - discountedBase;
+    } else {
+      depDeduct = totalAvailableDeposit;
+      afterDepositBalance = 0;
     }
+  }
 
-    async function submitFinalCheckoutAction() {
-      const finalPrice = Number(document.getElementById('chk-modal-final-price').value || 0);
-      await directSupabasePatch('bookings', `id=eq.${currentCheckoutBookingObj.id}`, { status: '已結單', final_price: finalPrice });
+  // 5. 現場應收金額計算
+  const outOfPocketService = Math.max(0, base - disc - depDeduct);
+  const totalAddonPlanFee = newBuyPrice + retailPrice;
+  const shuttleFee = Number(document.getElementById('check_shuttle_fee')?.value || 0);
 
-      const svcObj = (backendData.services || []).find(s => (currentCheckoutBookingObj.service || '').includes(s.name));
-      if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
-        svcObj.materials.forEach(m => {
-          const invItem = allInventoryItems.find(it => it.name === m.name);
-          if (invItem) invItem.current_stock = Math.max(0, invItem.current_stock - 1);
+  const finalPay = outOfPocketService + totalAddonPlanFee + shuttleFee;
+
+  // 6. 渲染結單對帳框
+  document.getElementById('check_display_orig').innerText = `$${base}`;
+  document.getElementById('check_display_disc').innerText = `-$${disc}`;
+  document.getElementById('check_display_dep_deduct').innerText = `-$${depDeduct}`;
+  document.getElementById('check_display_add').innerText = `+$${totalAddonPlanFee + shuttleFee}`;
+  document.getElementById('check_display_final').innerText = `NT$ ${finalPay.toLocaleString()}`;
+  document.getElementById('chk-modal-final-price').value = finalPay;
+
+  // 結單後剩餘明細預估展示
+  const afterCardEl = document.getElementById('check_display_after_card');
+  const afterDepEl = document.getElementById('check_display_after_deposit');
+  if (afterCardEl) {
+    afterCardEl.innerHTML = `• 結單後剩餘包卡：<b>${afterCardPoints}</b> 點 ${useMethod === 'useCard' ? '<span class="text-rose-600">(本次已抵用 1 點)</span>' : ''}`;
+  }
+  if (afterDepEl) {
+    afterDepEl.innerHTML = `• 結單後剩餘儲值：<b>NT$ ${afterDepositBalance.toLocaleString()}</b> ${depDeduct > 0 ? `<span class="text-rose-600">(本次已扣除 $${depDeduct})</span>` : ''}`;
+  }
+}
+
+// ========================================================
+// 【核心重構】結單送出動作（多表即時寫入、歷史記錄入庫）
+// ========================================================
+async function submitFinalCheckoutAction() {
+  const finalPrice = Number(document.getElementById('chk-modal-final-price').value || 0);
+  const base = Number(document.getElementById('check_custom_base_price')?.value || 0);
+  const useMethod = document.getElementById('check_discount_use_select')?.value;
+  const newBuyOpt = document.getElementById('check_new_buy_select')?.options[document.getElementById('check_new_buy_select').selectedIndex];
+  const shuttleFee = Number(document.getElementById('check_shuttle_fee')?.value || 0);
+
+  const phone = currentCheckoutBookingObj.phone;
+  const custName = currentCheckoutBookingObj.name;
+  const bookingId = currentCheckoutBookingObj.id;
+
+  Swal.fire({ title: '正在完工結單並更新顧客主檔...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+  try {
+    let appendNotes = [];
+    const buyType = newBuyOpt?.value;
+
+    // A. 處理「現場加購包卡」
+    if (buyType === 'new_pkg') {
+      const pName = newBuyOpt.getAttribute('data-name');
+      const pPrice = Number(newBuyOpt.getAttribute('data-price') || 0);
+      const pTimes = Number(newBuyOpt.getAttribute('data-times') || 10);
+      const isUseNow = (useMethod === 'useCard');
+      const remainingTimes = isUseNow ? (pTimes - 1) : pTimes;
+
+      // 寫入/更新 customer_packages
+      await directSupabaseUpsert('customer_packages', {
+        store_id: CURRENT_STORE_ID,
+        phone: phone,
+        customer_name: custName,
+        service_name: pName,
+        total_times: pTimes,
+        remaining_times: remainingTimes,
+        updated_at: new Date().toISOString()
+      }, 'id');
+
+      appendNotes.push(`【現場加購包卡: ${pName} +$${pPrice} (${pTimes}點)${isUseNow ? ' ｜ 當下扣抵 1 點' : ''}】`);
+    } else if (useMethod === 'useCard') {
+      // 僅使用既有包卡扣點
+      const pkgs = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`);
+      if (pkgs && pkgs.length > 0) {
+        await directSupabasePatch('customer_packages', `id=eq.${pkgs[0].id}`, {
+          remaining_times: Math.max(0, pkgs[0].remaining_times - 1)
         });
+        appendNotes.push(`【使用包卡扣抵 1 點】`);
+      }
+    }
+
+    // B. 處理「現場加購儲值金」
+    if (buyType === 'new_topup') {
+      const wName = newBuyOpt.getAttribute('data-name');
+      const wPrice = Number(newBuyOpt.getAttribute('data-price') || 0);
+      const wAdd = Number(newBuyOpt.getAttribute('data-add') || wPrice);
+      const wDisc = Number(newBuyOpt.getAttribute('data-discount') || 1);
+
+      const custRes = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`);
+      let currentWallet = (custRes && custRes.length > 0) ? Number(custRes[0].wallet_balance || 0) : 0;
+      let totalWallet = currentWallet + wAdd;
+
+      let deductAmount = 0;
+      if (useMethod === 'useDeposit') {
+        const discountedService = Math.round(base * wDisc);
+        deductAmount = Math.min(totalWallet, discountedService);
+        totalWallet -= deductAmount;
+        appendNotes.push(`【現場加購儲值: ${wName} +$${wPrice} ｜ 享 ${Math.round(wDisc * 100) / 10} 折當下扣除 $${deductAmount}】`);
+      } else {
+        appendNotes.push(`【現場加購儲值: ${wName} +$${wPrice}】`);
       }
 
-      closeCheckoutModal();
-      Swal.fire('完工結單成功！', `實收 NT$ ${finalPrice}，耗材已自動扣庫`, 'success');
-      fetchDataAndRender();
+      // 更新 customers 表
+      await directSupabaseUpsert('customers', {
+        store_id: CURRENT_STORE_ID,
+        phone: phone,
+        name: custName,
+        wallet_balance: totalWallet,
+        member_discount: wDisc,
+        updated_at: new Date().toISOString()
+      }, 'store_id,phone');
+    } else if (useMethod === 'useDeposit') {
+      // 僅使用既有儲值扣抵
+      const custRes = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`);
+      if (custRes && custRes.length > 0) {
+        const c = custRes[0];
+        const discRate = Number(c.member_discount || 1);
+        const discountedService = Math.round(base * discRate);
+        const deductAmt = Math.min(Number(c.wallet_balance || 0), discountedService);
+        const newBal = Math.max(0, Number(c.wallet_balance || 0) - deductAmt);
+
+        await directSupabasePatch('customers', `id=eq.${c.id}`, { wallet_balance: newBal });
+        appendNotes.push(`【使用儲值扣抵: -$${deductAmt} (享 ${Math.round(discRate * 100) / 10} 折)】`);
+      }
     }
+
+    if (shuttleFee > 0) appendNotes.push(`【專車接送車資: +$${shuttleFee}】`);
+
+    // C. 寫入 bookings 結單狀態與明細備註
+    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    const mergedNotes = `${appt ? appt.notes : ''} ${appendNotes.join(' ')}`.trim();
+
+    await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+      status: '已結單',
+      final_price: finalPrice,
+      notes: mergedNotes
+    });
+
+    closeCheckoutModal();
+    Swal.fire({
+      title: '完工結單對帳成功！',
+      html: `
+        <div class="text-left text-xs bg-brand-50 p-3 rounded-2xl border border-brand-200 text-brand-900 space-y-1">
+          <div>• 顧客姓名：<b>${custName}</b> (${phone})</div>
+          <div>• 現場實收：<b class="text-emerald-700 text-sm font-mono">NT$ ${finalPrice.toLocaleString()}</b></div>
+          <div class="text-[11px] text-gray-500 pt-1">${appendNotes.join('<br>')}</div>
+        </div>
+      `,
+      icon: 'success'
+    });
+
+    // 重新載入所有最新資料（同步更新行銷管理、業績統計與日曆）
+    fetchDataAndRender();
+    loadMarketingCenter();
+  } catch (err) {
+    Swal.fire('結單失敗', err.message, 'error');
+  }
+}
 
     function cancelBooking(id, name) {
       Swal.fire({
