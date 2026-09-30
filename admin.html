@@ -2129,7 +2129,7 @@ function renderTransactionsList() {
     const apptMs = new Date(a.date.replace(/\//g, '-')).getTime();
     const isArchived = (nowMs - apptMs) >= fortyFiveDaysMs;
     const matchTxn = (a.notes || '').match(/【交易流水號:\s*([^】]+)】/);
-    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-LEGACY-${String(a.id).substring(0,6)}`);
+    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-${a.date.replace(/\//g,'')}-${String(a.id).substring(0,4).toUpperCase()}`);
 
     return { ...a, txnNo, isArchived };
   });
@@ -2152,7 +2152,7 @@ function renderTransactionsList() {
       <td class="py-2.5 px-2 text-gray-500 font-sans text-[11px]">${t.date} ${t.time}</td>
       <td class="py-2.5 px-2 font-bold font-sans">${t.name} <span class="text-gray-400 font-normal">(${t.phone})</span></td>
       <td class="py-2.5 px-2 font-sans truncate max-w-[140px]">${t.service}</td>
-      <td class="py-2.5 px-2 font-black text-emerald-700">NT$ ${Number(t.finalPrice).toLocaleString()}</td>
+      <td class="py-2.5 px-2 font-black text-emerald-700 font-mono">NT$ ${Number(t.finalPrice).toLocaleString()}</td>
       <td class="py-2.5 px-2 font-sans text-[10.5px] text-gray-500 truncate max-w-[180px]">${t.notes}</td>
       <td class="py-2.5 px-2 text-right font-sans">
         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.isArchived ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-800'}">
@@ -2161,6 +2161,33 @@ function renderTransactionsList() {
       </td>
     </tr>
   `).join('');
+}
+
+// 補齊 CSV 匯出引擎（自帶 UTF-8 BOM，Excel 打開不亂碼）
+function exportTransactionsCSV() {
+  const finalized = (backendData.appointments || []).filter(a => a.status === '已結單');
+  if (finalized.length === 0) {
+    return Swal.fire('尚無結單資料', '目前沒有已結單之財務流水帳可供匯出。', 'info');
+  }
+
+  let csvContent = "\uFEFF流水帳編號,結單日期,時間,顧客姓名,聯絡電話,服務項目,實收金額,備註與方案抵扣\n";
+
+  finalized.forEach(a => {
+    const matchTxn = (a.notes || '').match(/【交易流水號:\s*([^】]+)】/);
+    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-${a.id}`);
+    const cleanNotes = (a.notes || '').replace(/[\r\n,]/g, ' ');
+    csvContent += `"${txnNo}","${a.date}","${a.time}","${a.name}","${a.phone}","${a.service}",${a.finalPrice},"${cleanNotes}"\n`;
+  });
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `門市財務流水帳對帳清冊_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  Swal.fire({ title: 'CSV 對帳報表已匯出！', icon: 'success', timer: 1200, showConfirmButton: false });
 }
     
     // 渲染住宿橫排滑動日期按鈕 (與排班分頁一致，帶週幾與公休阻斷)
@@ -2540,16 +2567,81 @@ function previewSelectedThemeColor(themeKey) {
       fetchDataAndRender();
     }
 
+    // ========================================================
+// 【修復 4】後台專用：顧客黑名單一鍵切換與代客預約防呆
+// ========================================================
+async function toggleCustomerBlacklist(phone, name, currentStatus) {
+  const actionText = currentStatus ? '解除黑名單' : '列入黑名單';
+  const confirm = await Swal.fire({
+    title: `確定要將【${name}】${actionText}？`,
+    text: currentStatus 
+      ? '解除後，該顧客將恢復正常線上填單預約資格。' 
+      : '列入後，該顧客輸入手機送單時，系統將委婉阻斷並顯示預約已滿。',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: `確定${actionText}`,
+    confirmButtonColor: currentStatus ? '#10B981' : '#E11D48',
+    cancelButtonText: '取消'
+  });
+
+  if (confirm.isConfirmed) {
+    Swal.showLoading();
+    try {
+      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`, {
+        is_blacklisted: !currentStatus
+      });
+      Swal.fire({ title: `已成功${actionText}！`, icon: 'success', timer: 1000, showConfirmButton: false });
+      renderCustomer();
+    } catch (e) {
+      Swal.fire('更新失敗', e.message, 'error');
+    }
+  }
+}
+
+// 升級代客新增快查：偵測到黑名單客群時顯著警告
+async function adminQuickCheckCustomer(phoneVal) {
+  const phone = (phoneVal || '').trim().replace(/[^0-9]/g, '');
+  const hint = document.getElementById('admin-quick-member-hint');
+  if (phone.length >= 8) {
+    const [bookings, custs] = await Promise.all([
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
+    ]);
+    
+    // 黑名單即時阻斷與警示
+    if (custs && custs.length > 0 && custs[0].is_blacklisted === true) {
+      if (hint) {
+        hint.innerHTML = `<span class="text-rose-600 font-black animate-pulse"><i class="fa-solid fa-ban"></i> ⚠️【黑名單警示】此顧客已被門市列入黑名單！</span>`;
+      }
+      return;
+    }
+
+    if (bookings && bookings.length > 0) {
+      document.getElementById('quick-name').value = bookings[0].customer_name || '';
+      if (bookings[0].line_name) document.getElementById('quick-line').value = bookings[0].line_name;
+      if (hint) hint.innerText = `✓ 已帶入舊客檔案：${bookings[0].customer_name}`;
+    } else if (custs && custs.length > 0) {
+      document.getElementById('quick-name').value = custs[0].name || '';
+      if (hint) hint.innerText = `✓ 已帶入會員檔案：${custs[0].name} (餘額 $${custs[0].wallet_balance || 0})`;
+    } else {
+      if (hint) hint.innerText = `此號碼為新朋友`;
+    }
+  }
+}
+    
     // ==========================================
     // 3. 全域資料載入與同步 (完整支援住宿、色系、指定獎金與 20+ 模組)
     // ==========================================
-    async function fetchDataAndRender() {
+    // ========================================================
+// 【最高階工程師加固版】fetchDataAndRender() — 零漏洞完整版
+// ========================================================
+async function fetchDataAndRender() {
   const dispStoreId = document.getElementById('disp-current-store-id');
-if (dispStoreId && CURRENT_STORE_ID) {
-  dispStoreId.innerText = `ID: ${CURRENT_STORE_ID}`;
-}
-      
-      try {
+  if (dispStoreId && CURRENT_STORE_ID) {
+    dispStoreId.innerText = `ID: ${CURRENT_STORE_ID}`;
+  }
+  
+  try {
     let [stores, settings, services, portfolios, bookings] = await Promise.all([
       directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
@@ -2557,46 +2649,49 @@ if (dispStoreId && CURRENT_STORE_ID) {
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
       directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
     ]);
-        // 在 fetchDataAndRender 內部補上公告拉取：
-        try {
-          const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&is_maintenance=eq.false&order=created_at.desc`);
-          const banner = document.getElementById('system-announcement-banner');
-          const contentEl = document.getElementById('announcement-content');
 
-          if (Array.isArray(announcements) && announcements.length > 0) {
-            // 只顯示廣播目標為 salon 或 ALL 的公告
-            const matched = announcements.find(a => a.target_scope === 'salon' || a.target_scope === 'ALL' || !a.target_scope);
-            if (matched && matched.content) {
-              contentEl.innerText = matched.content;
-              banner.classList.remove('hidden');
-            } else {
-              banner.classList.add('hidden');
-            }
-          } else {
-            banner.classList.add('hidden');
-          }
-        } catch(e) {}
+    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+
+    // 1. 【停權與過期嚴格阻斷】
+    if (sInfo.plan_status === 'locked' || sInfo.plan_status === 'expired') {
+      sessionStorage.clear();
+      const screen = document.getElementById('admin-maintenance-screen');
+      const titleEl = document.getElementById('admin-lock-title');
+      const descEl = document.getElementById('admin-maintenance-desc');
+      if (screen) {
+        screen.classList.remove('hidden');
+        if (titleEl) titleEl.innerText = sInfo.plan_status === 'locked' ? '門市已被總管暫時鎖定' : '系統授權已過期';
+        if (descEl) descEl.innerText = `貴店【${sInfo.store_name}】目前已被總管中心執行前後台同步停權，暫停所有管理與預約操作。`;
+      }
+      document.getElementById('main-content').style.display = 'none';
+      document.getElementById('bottom-nav').style.display = 'none';
+      return;
+    }
+
+    backendData.storeInfo = sInfo;
+
+    // 2. 【公告拉取與廣播】
+    try {
+      const announcements = await directSupabaseFetch(`system_announcements?is_active=eq.true&is_maintenance=eq.false&order=created_at.desc`);
+      const banner = document.getElementById('system-announcement-banner');
+      const contentEl = document.getElementById('announcement-content');
+
+      if (Array.isArray(announcements) && announcements.length > 0) {
+        const matched = announcements.find(a => a.target_scope === 'salon' || a.target_scope === 'ALL' || !a.target_scope);
+        if (matched && matched.content) {
+          contentEl.innerText = matched.content;
+          banner.classList.remove('hidden');
+        } else {
+          banner.classList.add('hidden');
+        }
+      } else {
+        banner.classList.add('hidden');
+      }
+    } catch(e) {}
 
     const sCfg = (settings && settings.length > 0) ? settings[0] : {};
-    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
-        if (sInfo.plan_status === 'locked' || sInfo.plan_status === 'expired') {
-          sessionStorage.clear();
-          const screen = document.getElementById('admin-maintenance-screen');
-          const titleEl = document.getElementById('admin-lock-title');
-          const descEl = document.getElementById('admin-maintenance-desc');
-          if (screen) {
-            screen.classList.remove('hidden');
-            if (titleEl) titleEl.innerText = sInfo.plan_status === 'locked' ? '門市已被總管暫時鎖定' : '系統授權已過期';
-            if (descEl) descEl.innerText = `貴店【${sInfo.store_name}】目前已被總管中心執行前後台同步停權，暫停所有管理與預約操作。`;
-          }
-          document.getElementById('main-content').style.display = 'none';
-          document.getElementById('bottom-nav').style.display = 'none';
-          return; // 終止後續所有渲染！
-        }
-
-        backendData.storeInfo = sInfo; // 供權限裁切使用
-
-    // 1. 公休日計算
+    
+    // 3. 【公休日計算】
     const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
     customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
     
@@ -2613,7 +2708,6 @@ if (dispStoreId && CURRENT_STORE_ID) {
     promoImgsArray = (sCfg.promo_imgs && Array.isArray(sCfg.promo_imgs)) ? sCfg.promo_imgs : new Array(7).fill("");
     while (promoImgsArray.length < 7) promoImgsArray.push("");
 
-    // 【核心修復】自訂題庫與行前叮嚀重整不消失
     customQuestionsList = (sCfg.pet_profile_questions && Array.isArray(sCfg.pet_profile_questions))
       ? sCfg.pet_profile_questions
       : [];
@@ -2623,12 +2717,11 @@ if (dispStoreId && CURRENT_STORE_ID) {
     if (stayNoticeInput && sCfg.front_stay_notice) {
       stayNoticeInput.value = sCfg.front_stay_notice;
     }
-        
-        // 【關鍵核心修復】：精確抓取後台儲存的色系，絕不被覆蓋
+    
+    // 4. 【關鍵修正】：rawMode 優先取 sInfo.industry_mode，fallback 嚴格修正為 'beauty'（不再預設為 pet_hotel）
     const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
-    const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || "pet_hotel";
+    const rawMode = sInfo.industry_mode || sInfo.industryMode || sInfo.industry_type || sCfg.industry_mode || sCfg.industryMode || 'beauty';
 
-    // 同步鎖定在本地
     localStorage.setItem('zy_cached_theme', rawTheme);
 
     const mealRatesCfg = sCfg.boarding_meal_rates || {};
@@ -2665,7 +2758,8 @@ if (dispStoreId && CURRENT_STORE_ID) {
           signed_at: b.signed_at || '',
           created_at: b.created_at || '',
           pet_type: b.pet_type || '小型犬',
-          self_food: b.self_food !== false
+          self_food: b.self_food !== false,
+          transaction_no: b.transaction_no || '' // 【關鍵補齊】：流水號精準映射
         };
       }) : [],
 
@@ -2714,7 +2808,7 @@ if (dispStoreId && CURRENT_STORE_ID) {
         careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
         reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
         
-        // 雙欄位完全鎖死
+        // 模式與色系鎖定
         themeColor: rawTheme,
         theme_color: rawTheme,
         industryMode: rawMode,
@@ -2774,16 +2868,12 @@ if (dispStoreId && CURRENT_STORE_ID) {
       }
     };
 
+    // 5. 【強制執行】：動態模式佈局切換 ＆ 買斷版模組嚴格閘道
     handleIndustryModeChange(backendData.settings.industryMode);
+    applyLifetimeModulesStrictGating(backendData.storeInfo);
 
-    // 解決排班重整變全關：將 Supabase 儲存的班表寫回全域變數 shiftSlotStates
-    if (sCfg.staff_schedules && typeof sCfg.staff_schedules === 'object') {
-      shiftSlotStates = JSON.parse(JSON.stringify(sCfg.staff_schedules));
-    }
-        
-        if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
-        
-        // 房型等級與供餐選項防呆保底
+    if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
+    
     if (sCfg.hotel_room_tiers && Array.isArray(sCfg.hotel_room_tiers) && sCfg.hotel_room_tiers.length > 0) {
       adminRoomTiers = sCfg.hotel_room_tiers;
     }
@@ -2810,7 +2900,6 @@ if (dispStoreId && CURRENT_STORE_ID) {
     renderBoardingCareChecklist();
     initSlotsLiveUrl();
     renderBoardingDateButtons();
-    applyLifetimeModulesStrictGating(backendData.storeInfo);
   } catch (err) {
     console.error("同步失敗:", err);
   }
@@ -2850,23 +2939,43 @@ if (dispStoreId && CURRENT_STORE_ID) {
 
     // 商業營運型態切換：動態控制住宿與毛孩導覽鈕顯隱
 function handleIndustryModeChange(mode) {
+  const isPetGrooming = (mode === 'pet_grooming');
+  const isPetHotel = (mode === 'pet_hotel');
+  const isBeauty = (mode === 'beauty');
+
+  // 1. 底部分頁按鈕顯隱
   const navBoarding = document.getElementById('nav-btn-boarding');
   const navPets = document.getElementById('nav-btn-pets');
+  if (navBoarding) navBoarding.style.setProperty('display', isPetHotel ? 'flex' : 'none', 'important');
+  if (navPets) navPets.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'flex' : 'none', 'important');
+
+  // 2. 設定分頁內部寵物相關大卡片顯隱
   const hotelSettings = document.getElementById('section-pet-hotel-settings');
-  const petQuestionsManager = document.getElementById('section-pet-questions-manager');
+  const petQuestions = document.getElementById('section-pet-questions-manager');
+  if (hotelSettings) hotelSettings.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+  if (petQuestions) petQuestions.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'block' : 'none', 'important');
 
-  const isPetMode = (mode === 'pet_grooming' || mode === 'pet_hotel');
+  // 3. 代客預約 (page-add) 模式切換器自適應
+  const quickModeBox = document.querySelector('input[name="quick-industry-mode"]')?.closest('.p-3\\.5');
+  const petFieldsBox = document.getElementById('quick-pet-fields-box');
+  const hotelRangeBox = document.getElementById('quick-hotel-range-box');
+  const singleTimeBox = document.getElementById('quick-single-time-box');
 
-  if (navPets) navPets.style.display = isPetMode ? 'flex' : 'none';
-  if (petQuestionsManager) petQuestionsManager.style.display = isPetMode ? 'block' : 'none';
-
-  if (mode === 'pet_hotel') {
-    if (navBoarding) navBoarding.style.display = 'flex';
-    if (hotelSettings) hotelSettings.style.display = 'block';
+  if (isBeauty) {
+    if (quickModeBox) quickModeBox.style.setProperty('display', 'none', 'important');
+    if (petFieldsBox) petFieldsBox.classList.add('hidden');
+    if (hotelRangeBox) hotelRangeBox.classList.add('hidden');
+    if (singleTimeBox) singleTimeBox.classList.remove('hidden');
+    const beautyRadio = document.querySelector('input[name="quick-industry-mode"][value="beauty"]');
+    if (beautyRadio) beautyRadio.checked = true;
   } else {
-    if (navBoarding) navBoarding.style.display = 'none';
-    if (hotelSettings) hotelSettings.style.display = 'none';
+    if (quickModeBox) quickModeBox.style.removeProperty('display');
   }
+
+  // 4. 更新設定頁面底端的模式徽章
+  const modeBadge = document.getElementById('current-mode-display-badge');
+  const modeNames = { 'beauty': '純美業版', 'pet_grooming': '寵物純美容', 'pet_hotel': '寵物美容＋住宿' };
+  if (modeBadge) modeBadge.innerText = `當前：${modeNames[mode] || mode}`;
 }
 
     // ==========================================
@@ -3569,6 +3678,9 @@ function renderSingleCardHTML(a) {
           <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
             <i class="fa-brands fa-whatsapp text-xs"></i> 通訊
           </a>
+          <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}', false)" class="px-2 py-1 bg-stone-100 hover:bg-rose-50 text-stone-600 hover:text-rose-700 rounded-lg text-[10.5px] font-bold border border-stone-200 transition" title="黑名單設定">
+  <i class="fa-solid fa-user-slash text-[9px]"></i> 封鎖
+</button>
           ${signBtnHtml}
           ${isPetMode && petName ? `
             <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">提醒預約</button>
@@ -6411,53 +6523,65 @@ function applyLifetimeModulesStrictGating(storeInfo) {
   if (!storeInfo) return;
   const isLifetime = (storeInfo.plan_type === 'lifetime');
   const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
+  const s = backendData.settings || {};
 
-  // 1. 底部分頁導覽列按鈕 (data-admin-module) 隱藏
-  document.querySelectorAll('[data-admin-module]').forEach(el => {
-    const mod = el.getAttribute('data-admin-module');
-    if (isLifetime && !allowed.includes(mod)) {
-      el.style.setProperty('display', 'none', 'important');
-    } else {
-      el.style.removeProperty('display');
-    }
-  });
-
-  // 2. 設定分頁 (page-settings) 未選模組開關徹底隱形
-  const settingsModuleMap = {
-    'marketing_tools': ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons'],
-    'contract': ['#cfg-toggle-contract'],
-    'inventory': ['#cfg-toggle-bom'],
-    'revenue': ['#cfg-toggle-commission-calc'],
-    'audit': ['#cfg-toggle-deposit', '#cfg-toggle-audit-booking'],
-    'buffer': ['#cfg-buffer'],
-    'care': ['#cfg-toggle-care'],
-    'reviews': ['#cfg-toggle-reviews'],
-    'portfolio': ['#cfg-toggle-portfolio'],
-    'slots': ['#page-slots'],
-    'boarding': ['#section-pet-hotel-settings'],
-    'pets': ['#section-pet-questions-manager'],
-    'line_push': ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu']
+  // 17 大模組與後台 UI 選擇器對照表
+  const moduleUIMap = {
+    'services': { nav: ['[onclick*="\'services\'"]'], settings: ['#page-services'] },
+    'shift': { nav: ['[onclick*="\'shift\'"]'], settings: ['#cfg-shift-start', '#weekly-off-grid'] },
+    'audit': { nav: [], settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit'] },
+    'buffer': { nav: [], settings: ['#cfg-buffer'] },
+    'staff_sub': { nav: [], settings: ['#staff-manager-list', '#cfg-toggle-commission-calc'] },
+    'marketing_tools': { nav: ['[onclick*="\'marketing\'"]'], settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons'] },
+    'inventory': { nav: ['[onclick*="\'inventory\'"]'], settings: ['#svc-material-checkboxes-container'] },
+    'revenue': { nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'], settings: ['#page-revenue', '#page-transactions'] },
+    'care': { nav: ['[onclick*="\'care\'"]'], settings: ['#page-care', '#cfg-toggle-care'] },
+    'reviews': { nav: ['[onclick*="\'reviews\'"]'], settings: ['#page-reviews', '#cfg-toggle-reviews'] },
+    'portfolio': { nav: [], settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio'] },
+    'slots': { nav: ['[onclick*="\'slots\'"]'], settings: ['#page-slots'] },
+    'contract': { nav: [], settings: ['#cfg-toggle-contract', '#cfg-contract-content'] },
+    'pets': { nav: ['#nav-btn-pets'], settings: ['#section-pet-questions-manager'] },
+    'boarding': { nav: ['#nav-btn-boarding'], settings: ['#section-pet-hotel-settings'] },
+    'line_push': { nav: [], settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu'] }
   };
 
+  // 買斷版模式：未購買模組徹底隱藏
   if (isLifetime) {
-    Object.keys(settingsModuleMap).forEach(modId => {
-      const isAllowed = allowed.includes(modId);
-      const selectors = settingsModuleMap[modId];
-      selectors.forEach(sel => {
+    Object.keys(moduleUIMap).forEach(modKey => {
+      const isAllowed = allowed.includes(modKey);
+      const conf = moduleUIMap[modKey];
+
+      // 隱藏底部分頁鈕
+      conf.nav.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => {
+          el.style.setProperty('display', isAllowed ? '' : 'none', 'important');
+        });
+      });
+
+      // 隱藏設定開關及區塊
+      conf.settings.forEach(sel => {
         document.querySelectorAll(sel).forEach(targetEl => {
-          const container = targetEl.closest('label') || targetEl.closest('.bg-white') || targetEl;
-          if (!isAllowed) {
-            container.style.setProperty('display', 'none', 'important');
-          } else {
-            container.style.removeProperty('display');
-          }
+          const wrapper = targetEl.closest('label') || targetEl.closest('.bg-white') || targetEl;
+          wrapper.style.setProperty('display', isAllowed ? '' : 'none', 'important');
         });
       });
     });
 
-    // 買斷版禁止業主自行切換營運模式 (防止美業切到寵物住宿)
+    // 買斷版隱藏業主自行切換營運模式按鈕（避免美業自行切為住宿）
     const modeSwitchBox = document.getElementById('current-mode-display-badge')?.closest('.bg-amber-50\\/60');
     if (modeSwitchBox) modeSwitchBox.style.setProperty('display', 'none', 'important');
+  } else {
+    // 訂閱版：根據設定開關動態隱藏底部分頁（若整組關閉則分頁鈕消失）
+    const showMarketing = (s.enable_wallet || s.enable_packages || s.enable_coupons);
+    document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
+      el.style.setProperty('display', showMarketing ? '' : 'none', 'important');
+    });
+    document.querySelectorAll('[onclick*="\'reviews\'"]').forEach(el => {
+      el.style.setProperty('display', s.enable_reviews !== false ? '' : 'none', 'important');
+    });
+    document.querySelectorAll('[onclick*="\'care\'"]').forEach(el => {
+      el.style.setProperty('display', s.enable_care !== false ? '' : 'none', 'important');
+    });
   }
 }
     
