@@ -2568,32 +2568,85 @@ function previewSelectedThemeColor(themeKey) {
     }
 
     // ========================================================
-// 【修復 4】後台專用：顧客黑名單一鍵切換與代客預約防呆
+// 【黑名單雙向切換引擎】支援封鎖與解除封鎖 + 視窗詳細機制說明
 // ========================================================
-async function toggleCustomerBlacklist(phone, name, currentStatus) {
-  const actionText = currentStatus ? '解除黑名單' : '列入黑名單';
-  const confirm = await Swal.fire({
-    title: `確定要將【${name}】${actionText}？`,
-    text: currentStatus 
-      ? '解除後，該顧客將恢復正常線上填單預約資格。' 
-      : '列入後，該顧客輸入手機送單時，系統將委婉阻斷並顯示預約已滿。',
-    icon: 'warning',
+// ========================================================
+// 【黑名單終極雙向管理視窗】彈窗內含「封鎖」與「解除封鎖」雙按鈕與防呆說明
+// ========================================================
+async function toggleCustomerBlacklist(phone, name) {
+  const cleanPhone = String(phone).trim();
+  const isCurrentlyBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(cleanPhone);
+
+  const { isConfirmed, isDenied } = await Swal.fire({
+    title: `顧客黑名單管理 - ${name}`,
+    html: `
+      <div class="text-left text-xs space-y-3 p-3 bg-brand-50/70 rounded-2xl border border-brand-200 text-brand-900 leading-relaxed font-sans">
+        <!-- 目前狀態條 -->
+        <div class="flex justify-between items-center p-2.5 rounded-xl border ${isCurrentlyBlocked ? 'bg-rose-50 border-rose-300 text-rose-900' : 'bg-emerald-50 border-emerald-300 text-emerald-900'}">
+          <span class="font-bold">目前狀態：</span>
+          <span class="font-black text-xs px-2 py-0.5 rounded-full ${isCurrentlyBlocked ? 'bg-rose-200 text-rose-950 animate-pulse' : 'bg-emerald-200 text-emerald-950'}">
+            ${isCurrentlyBlocked ? '🔒 已列入黑名單 (封鎖中)' : '✓ 正常預約名單'}
+          </span>
+        </div>
+
+        <!-- 運作呈現形式小說明 -->
+        <div class="space-y-1.5 text-brand-800 text-[11.5px] border-t border-brand-200/70 pt-2">
+          <div class="font-bold flex items-center gap-1 text-amber-900">
+            <i class="fa-solid fa-circle-info text-amber-600"></i>
+            <span>功能運作與顧客端呈現形式：</span>
+          </div>
+          <p>• <b>前台委婉防禦</b>：被列入黑名單之顧客，於前台輸入手機時，系統將<b>委婉顯示「預約名額已滿，暫不開放填單」</b>，絕不提示已被封鎖，避免爭議糾紛。</p>
+          <p>• <b>後台代客防呆</b>：同仁手動建單輸入此號碼，系統立即彈出紅字警示，杜絕誤排。</p>
+          <p class="text-gray-500">• <b>防誤觸救援</b>：若為誤按或消費誤會已解開，隨時點擊下方<b>【解除黑名單】</b>即可一秒還原預約權限。</p>
+        </div>
+      </div>
+    `,
     showCancelButton: true,
-    confirmButtonText: `確定${actionText}`,
-    confirmButtonColor: currentStatus ? '#10B981' : '#E11D48',
-    cancelButtonText: '取消'
+    showDenyButton: true,
+    confirmButtonText: '🚫 設為黑名單 (封鎖)',
+    denyButtonText: '✓ 解除黑名單 (解封)',
+    cancelButtonText: '關閉離開',
+    confirmButtonColor: '#E11D48',  // 紅色：封鎖
+    denyButtonColor: '#10B981',     // 綠色：解除封鎖
+    cancelButtonColor: '#E5E7EB',
+    reverseButtons: false
   });
 
-  if (confirm.isConfirmed) {
+  // 1. 點擊了「設為黑名單 (封鎖)」
+  if (isConfirmed) {
+    if (isCurrentlyBlocked) {
+      return Swal.fire('提示', `顧客【${name}】本來就已經在黑名單中囉！`, 'info');
+    }
     Swal.showLoading();
     try {
-      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`, {
-        is_blacklisted: !currentStatus
+      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${cleanPhone}`, {
+        is_blacklisted: true
       });
-      Swal.fire({ title: `已成功${actionText}！`, icon: 'success', timer: 1000, showConfirmButton: false });
+      if (typeof blacklistedPhonesSet !== 'undefined') blacklistedPhonesSet.add(cleanPhone);
+      Swal.fire({ title: '已列入黑名單！', text: `顧客【${name}】已被封鎖，前台將無法送單。`, icon: 'success', timer: 1200, showConfirmButton: false });
       renderCustomer();
-    } catch (e) {
-      Swal.fire('更新失敗', e.message, 'error');
+      renderCalendar();
+    } catch(e) {
+      Swal.fire('設定失敗', e.message, 'error');
+    }
+  }
+
+  // 2. 點擊了「解除黑名單 (解封)」
+  if (isDenied) {
+    if (!isCurrentlyBlocked) {
+      return Swal.fire('提示', `顧客【${name}】目前為正常名單，並非黑名單。`, 'info');
+    }
+    Swal.showLoading();
+    try {
+      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${cleanPhone}`, {
+        is_blacklisted: false
+      });
+      if (typeof blacklistedPhonesSet !== 'undefined') blacklistedPhonesSet.delete(cleanPhone);
+      Swal.fire({ title: '已成功解除黑名單！', text: `顧客【${name}】已恢復正常預約權限。`, icon: 'success', timer: 1200, showConfirmButton: false });
+      renderCustomer();
+      renderCalendar();
+    } catch(e) {
+      Swal.fire('解封失敗', e.message, 'error');
     }
   }
 }
@@ -2632,9 +2685,6 @@ async function adminQuickCheckCustomer(phoneVal) {
     // ==========================================
     // 3. 全域資料載入與同步 (完整支援住宿、色系、指定獎金與 20+ 模組)
     // ==========================================
-    // ========================================================
-// 【最高階工程師加固版】fetchDataAndRender() — 零漏洞完整版
-// ========================================================
 async function fetchDataAndRender() {
   const dispStoreId = document.getElementById('disp-current-store-id');
   if (dispStoreId && CURRENT_STORE_ID) {
@@ -2642,13 +2692,19 @@ async function fetchDataAndRender() {
   }
   
   try {
-    let [stores, settings, services, portfolios, bookings] = await Promise.all([
+    let [stores, settings, services, portfolios, bookings, custsRes] = await Promise.all([
       directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`)
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`)
     ]);
+
+    // 建立最新黑名單電話快查集合
+    blacklistedPhonesSet = new Set(
+      (custsRes || []).filter(c => c.is_blacklisted === true).map(c => String(c.phone).trim())
+    );
 
     const sInfo = (stores && stores.length > 0) ? stores[0] : {};
 
@@ -3358,7 +3414,7 @@ function editPetProfileDirect(petId, petName, phone) {
   }
     
     // ========================================================
-// 【完整重構版】renderSingleCardHTML(a) — 零語法錯誤，標籤分明
+// 【完整無誤重構版】renderSingleCardHTML(a) — 零語法錯誤，標籤分明
 // ========================================================
 function renderSingleCardHTML(a) {
   const staffColor = getStaffColor(a.staffId, a.staffName);
@@ -3583,6 +3639,21 @@ function renderSingleCardHTML(a) {
     </button>
   `;
 
+  // ----------------------------------------------------
+  // 【關鍵修正位置】：在回傳 HTML 字串前完成變數運算
+  // ----------------------------------------------------
+  const isCustBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(String(a.phone).trim());
+
+  const blacklistBtnHtml = isCustBlocked ? `
+    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[10.5px] font-bold border border-rose-300 transition flex items-center gap-1 shadow-2xs" title="此客目前已被封鎖，點擊可開啟視窗解除">
+      <i class="fa-solid fa-ban text-[10px] text-rose-600"></i> 已封鎖
+    </button>
+  ` : `
+    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-lg text-[10.5px] font-bold border border-stone-200 transition flex items-center gap-1" title="點擊開啟黑名單管理">
+      <i class="fa-solid fa-user-slash text-[9px]"></i> 黑名單
+    </button>
+  `;
+  
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
       
@@ -3598,7 +3669,7 @@ function renderSingleCardHTML(a) {
 
           <div class="font-bold text-brand-900 text-sm flex items-center gap-2 pt-0.5">
             <span>${a.name}</span>
-            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
+            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>${isCustBlocked ? `<span class="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold border border-rose-200">已封鎖</span>` : ''}
             ${(isPetMode && petName) ? `
               <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
                 <i class="fa-solid fa-paw text-[10px]"></i> ${petName} 履歷
@@ -3678,9 +3749,7 @@ function renderSingleCardHTML(a) {
           <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
             <i class="fa-brands fa-whatsapp text-xs"></i> 通訊
           </a>
-          <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}', false)" class="px-2 py-1 bg-stone-100 hover:bg-rose-50 text-stone-600 hover:text-rose-700 rounded-lg text-[10.5px] font-bold border border-stone-200 transition" title="黑名單設定">
-  <i class="fa-solid fa-user-slash text-[9px]"></i> 封鎖
-</button>
+          ${blacklistBtnHtml}
           ${signBtnHtml}
           ${isPetMode && petName ? `
             <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">提醒預約</button>
@@ -7847,6 +7916,7 @@ function promptManualInputLast5(bookingId, customerName) {
 // 【毛孩履歷分頁】全域狀態與渲染邏輯
 // ========================================================
 let allAdminPetsCache = [];
+let blacklistedPhonesSet = new Set(); // 全域黑名單電話快查表
 
 // ========================================================
 // 【修復版】loadAdminPetsPageData — 跨表精準關聯家長 LINE 暱稱與姓名
