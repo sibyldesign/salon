@@ -1,4 +1,315 @@
-<script>
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sibyl SaaS 租戶營運總控中心</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#FAF6F0', 100: '#EFE6DC', 200: '#DFD1C0', 300: '#CBB8A1',
+              400: '#A68A68', 500: '#8C7355', 600: '#755F46', 700: '#5E4C38',
+              800: '#4A3B2C', 900: '#33271C',
+            }
+          },
+          fontFamily: { sans: ['Noto Sans TC', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brand-50 text-brand-900 antialiased pb-20 select-none">
+
+  <!-- 登入鎖定層 (預設密碼 888，無明文外露，Enter秒進) -->
+  <div id="super-lock" class="fixed inset-0 bg-brand-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white p-8 rounded-3xl shadow-sm border border-brand-200 text-center w-full max-w-xs space-y-4">
+      <div class="w-12 h-12 mx-auto bg-brand-100 rounded-2xl flex items-center justify-center text-brand-600 text-xl">
+        <i class="fa-solid fa-user-shield"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-brand-900">Sibyl SaaS 總管系統</h1>
+        <p class="text-xs text-brand-400 mt-0.5 font-mono">Master Operation Console</p>
+      </div>
+      <input type="password" id="super-key-input" onkeydown="if(event.key==='Enter') checkSuperKey()" class="w-full text-center text-xl tracking-[0.2em] py-2.5 rounded-xl border border-brand-200 focus:ring-2 focus:ring-brand-400 outline-none" placeholder="輸入管理金鑰" maxlength="12">
+      <button type="button" onclick="checkSuperKey()" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-md transition text-xs">
+        驗證進入
+      </button>
+    </div>
+  </div>
+
+  <!-- 頂部導覽列 -->
+  <header class="bg-white border-b border-brand-200 px-4 py-3 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 bg-brand-500 text-white rounded-lg flex items-center justify-center text-xs shadow-sm">
+          <i class="fa-solid fa-crown"></i>
+        </span>
+        <span class="font-bold text-sm text-brand-900">Sibyl 數位管家 | 租戶營運總控台</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="loadInitialData()" class="p-2 text-brand-500 hover:bg-brand-50 rounded-xl transition" title="重新整理">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button type="button" onclick="handleSuperLogout()" class="p-2 text-brand-400 hover:bg-brand-50 rounded-xl transition" title="登出">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 頂部切換標籤 (訂閱版、買斷版、公告與微頁 4 大分流) -->
+  <div class="max-w-5xl mx-auto px-4 pt-4">
+    <div class="flex gap-2 border-b border-brand-200 pb-2 overflow-x-auto no-scrollbar">
+      <button id="tab-btn-stores" onclick="switchSuperTab('stores')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-brand-500 text-white shadow-xs whitespace-nowrap">
+        <i class="fa-solid fa-store mr-1"></i> 全租戶店家名冊與開通狀態 (訂閱制)
+      </button>
+      <button id="tab-btn-lifetime" onclick="switchSuperTab('lifetime')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-purple-900 border border-purple-200 whitespace-nowrap">
+        <i class="fa-solid fa-gem text-purple-600 mr-1"></i> 💼 尊榮買斷版專區 (模式與模組)
+      </button>
+      <button id="tab-btn-announcement" onclick="switchSuperTab('announcement')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200 whitespace-nowrap">
+        <i class="fa-solid fa-bullhorn mr-1"></i> 全平台即時公告、維護鎖定與許願池
+      </button>
+      <button id="tab-btn-biolinks" onclick="switchSuperTab('biolinks')" class="px-4 py-2 rounded-2xl text-xs font-bold transition bg-white text-brand-700 border border-brand-200 whitespace-nowrap">
+        <i class="fa-solid fa-link mr-1"></i> 微頁名冊與密碼管理 (BioLink)
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-5xl mx-auto p-4 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- 分頁 1：全租戶名冊 (訂閱制，排他性獨立) -->
+    <!-- ========================================== -->
+    <div id="super-page-stores" class="space-y-4">
+      <div id="pending-activation-container"></div>
+      <div id="expiring-alert-container"></div>
+
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-users-rectangle text-brand-500"></i>
+          <span>訂閱制租戶店家名冊</span>
+        </h2>
+        <span id="store-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2 justify-between">
+        <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <button type="button" onclick="filterStores('ALL', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs whitespace-nowrap">全部店家</button>
+          <button type="button" onclick="filterStores('pending', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">待開通 (未付款)</button>
+          <button type="button" onclick="filterStores('active', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">運行中 (已開通)</button>
+          <button type="button" onclick="filterStores('locked', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已鎖定 (前後台封鎖)</button>
+          <button type="button" onclick="filterStores('expired', this)" class="store-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200 whitespace-nowrap">已過期</button>
+        </div>
+        <div class="relative w-full sm:w-64">
+          <input type="text" id="store-search-kw" oninput="currentPage = 1; renderStores();" placeholder="🔍 搜尋店名/電話/信箱/ID..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-brand-200 bg-white outline-none focus:ring-1 focus:ring-brand-400">
+          <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-brand-400 text-xs"></i>
+        </div>
+      </div>
+      
+      <div id="stores-container" class="space-y-3"></div>
+
+      <div id="pagination-controls" class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-brand-200 text-xs shadow-xs">
+        <div class="text-brand-500 text-[11px]" id="page-info-text">載入中...</div>
+        <div class="flex gap-1 items-center" id="page-buttons-container"></div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 分頁 2：尊榮買斷版專區 (獨立名冊、模式切換與雙向鎖定) -->
+    <!-- ========================================== -->
+    <div id="super-page-lifetime" class="space-y-4" style="display: none;">
+      <div class="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-5 rounded-3xl text-white shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-purple-500/40 text-purple-200 text-[10px] font-bold border border-purple-400/30">LIFETIME SUITE</span>
+            <h2 class="text-base font-bold">尊榮買斷版專屬營運中心</h2>
+          </div>
+          <p class="text-xs text-purple-200/80 mt-1">獨立管理買斷型品牌，全權切換三大營運模式、獨立配置 17 大功能模組與前後台雙向封鎖</p>
+        </div>
+        <button type="button" onclick="openCreateLifetimeStoreModal()" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5 shrink-0">
+          <i class="fa-solid fa-plus text-[10px]"></i> 開通新買斷店家
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-gem text-purple-600"></i>
+          <span>買斷版店家清單</span>
+        </h3>
+        <span id="lifetime-count-badge" class="text-xs px-2.5 py-0.5 bg-purple-100 text-purple-900 rounded-full font-bold">0 間買斷店家</span>
+      </div>
+
+      <div class="relative w-full">
+        <input type="text" id="lifetime-search-kw" oninput="renderLifetimeStores()" placeholder="🔍 搜尋買斷店名/負責人手機/Email/Slug..." class="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-brand-200 bg-white outline-none focus:ring-1 focus:ring-purple-400">
+        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-3 text-brand-400 text-xs"></i>
+      </div>
+
+      <div id="lifetime-stores-container" class="space-y-3"></div>
+      
+      <div id="lifetime-pagination-controls" class="flex items-center justify-between bg-white p-3.5 rounded-2xl border border-brand-200 text-xs shadow-xs mt-3">
+        <div class="text-brand-500 text-[11px]" id="lifetime-page-info-text">載入中...</div>
+        <div class="flex gap-1 items-center" id="lifetime-page-buttons-container"></div>
+      </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 分頁 3：全域公告、維護鎖定控制台與許願池 (完整補回開頭標籤) -->
+    <!-- ========================================== -->
+    <div id="super-page-announcement" class="space-y-6" style="display: none;">
+      
+      <!-- 多系統維護鎖定控制中心 (下拉選單式 + 即時狀態燈) -->
+      <section class="bg-white p-6 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b border-brand-100 pb-3">
+          <div>
+            <h2 class="text-sm font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-shield-halved text-brand-500"></i>
+              <span>產品系統服務維護鎖定控制台</span>
+            </h2>
+            <p class="text-[10px] text-brand-400 mt-0.5">可精準指定鎖定單一產品線（彈出全螢幕施工遮罩阻斷預約），其餘產品線維持正常運作</p>
+          </div>
+          <button type="button" onclick="loadMaintenanceMatrixStatus()" class="p-1.5 text-brand-500 hover:bg-brand-50 rounded-lg transition" title="重新整理狀態">
+            <i class="fa-solid fa-rotate-right text-xs"></i>
+          </button>
+        </div>
+
+        <!-- 3 大系統即時狀態看板 (美業、微頁、未來系統) -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5" id="maintenance-status-cards"></div>
+
+        <!-- 鎖定控制表單 -->
+        <div class="p-4 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-3 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">選擇要執行維護鎖定之系統：</label>
+              <select id="lock-target-scope" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 font-bold text-brand-900 outline-none">
+                <option value="salon">💇 美業沙龍預約排程系統 (salon.heysibyl.com)</option>
+                <option value="biolink">🔗 品牌個人微頁系統 (link.heysibyl.com)</option>
+                <option value="retail_course">🛍️ 線上商城與課程預約 (未來系統保留)</option>
+                <option value="ALL">⚠️ 全平台全系統 (全線緊急全面大封鎖)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">施工告示原因說明 (前台全螢幕遮罩展示)：</label>
+              <input type="text" id="lock-reason-input" value="系統目前正進行伺服器升級與維護施工，施工期間暫停在線預約，造成不便敬請見諒。" class="w-full p-2.5 bg-white rounded-xl border border-brand-200 text-xs outline-none">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap justify-between items-center pt-2 border-t border-brand-200/60 gap-2">
+            <span class="text-[10px] text-gray-500">提示：選取特定系統後，僅該系統前台會彈出遮罩，解除後 15 秒內自動恢復。</span>
+            <div class="flex gap-2">
+              <button type="button" onclick="executeSystemLockAction(false)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-xs transition flex items-center gap-1.5">
+                <i class="fa-solid fa-lock-open text-[10px]"></i> 解除所選系統鎖定
+              </button>
+              <button type="button" onclick="executeSystemLockAction(true)" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs transition flex items-center gap-1.5">
+                <i class="fa-solid fa-lock text-[10px]"></i> 啟動所選系統鎖定
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 跑馬燈公告發布 (支援產品版本分流) -->
+      <section class="bg-white p-6 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-3">
+          <h2 class="text-sm font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-bullhorn text-brand-500"></i>
+            <span>跑馬燈系統公告發布 (支援產品版本分流)</span>
+          </h2>
+          <span id="current-announcement-status" class="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-bold">載入中...</span>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-brand-800 mb-1">廣播目標受眾/系統版本：</label>
+            <select id="announcement-target-scope" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold text-brand-900 outline-none">
+              <option value="ALL">🌐 全平台全產品通用 (包含美業系統與品牌微頁)</option>
+              <option value="salon" selected>💇 美業沙龍預約排程系統 (僅 salon.heysibyl 可見)</option>
+              <option value="biolink">🔗 品牌個人微頁系統 (僅 link.heysibyl 可見)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-brand-800 mb-1">公告類別標記：</label>
+            <select id="announcement-category" class="w-full p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold text-brand-900 outline-none">
+              <option value="general">一般重要通知</option>
+              <option value="maintenance">例行優化升級 (不阻斷預約)</option>
+              <option value="promo">官方活動與促銷好康</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-brand-800">公告展示文字 (前後台 15 秒內即時同步)：</label>
+          <textarea id="announcement-input" rows="3" class="w-full p-3 text-xs rounded-xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed focus:ring-2 focus:ring-brand-400" placeholder="輸入公告內容..."></textarea>
+        </div>
+
+        <div class="flex gap-2 justify-end pt-1">
+          <button type="button" onclick="clearAnnouncement()" class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition">下架 / 清除公告</button>
+          <button type="button" onclick="publishAnnouncement()" class="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+            <i class="fa-solid fa-paper-plane text-[10px]"></i> 發布公告
+          </button>
+        </div>
+      </section>
+
+      <!-- 店家與微頁許願池回報區 (完整支援雙向讀取與文字呈現) -->
+      <section class="bg-white p-6 rounded-3xl border border-brand-200 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b border-brand-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 bg-amber-100 text-amber-700 rounded-lg flex items-center justify-center text-xs">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </span>
+            <div>
+              <h2 class="text-xs font-bold text-brand-900">數位管家 ╳ 租戶功能許願池</h2>
+              <p class="text-[10px] text-brand-400">收集來自美業沙龍系統與品牌微頁業主的功能反饋</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="wish-count-badge" class="text-[10px] px-2.5 py-0.5 bg-amber-100 text-amber-900 rounded-full font-bold">0 則許願</span>
+            <button type="button" onclick="loadWishes()" class="p-1.5 text-brand-500 hover:bg-brand-50 rounded-lg transition" title="重新整理">
+              <i class="fa-solid fa-rotate-right text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 來源分類篩選 -->
+        <div class="flex gap-2">
+          <button type="button" onclick="filterWishes('ALL', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-brand-500 text-white shadow-xs">全部</button>
+          <button type="button" onclick="filterWishes('biolink', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">品牌微頁 (link.heysibyl)</button>
+          <button type="button" onclick="filterWishes('salon', this)" class="wish-filter-btn px-3 py-1 rounded-xl text-xs font-bold bg-white text-brand-800 border border-brand-200">美業系統 (salon)</button>
+        </div>
+
+        <div id="wishes-container" class="space-y-2.5 text-xs">
+          <div class="text-center py-6 text-brand-400">讀取許願紀錄中...</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 分頁 4：微頁名冊與 PIN 碼管理 (BioLink) -->
+    <!-- ========================================== -->
+    <div id="super-page-biolinks" class="space-y-4" style="display: none;">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-address-card text-brand-500"></i>
+          <span>全平台微頁名冊 (link.heysibyl.com)</span>
+        </h2>
+        <div class="flex items-center gap-2">
+          <span id="biolink-count-badge" class="text-xs px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full font-bold">載入中...</span>
+          <button type="button" onclick="loadBioLinks()" class="p-1.5 text-brand-500 hover:bg-brand-50 rounded-lg transition" title="重新整理">
+            <i class="fa-solid fa-rotate-right text-xs"></i>
+          </button>
+        </div>
+      </div>
+      <div id="biolinks-container" class="space-y-3"></div>
+    </div>
+    
+  </main>
+  <script>
     const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
     const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
@@ -70,13 +381,13 @@
     let currentWishFilter = 'ALL';
 
     // ==========================================
-    // 登入驗證引擎 (密碼 888，解鎖後自 DOM 徹底拔除遮罩)
+    // 登入驗證引擎 (密碼 888/8888，解鎖後自 DOM 徹底拔除遮罩)
     // ==========================================
     function checkSuperKey() {
       const inputEl = document.getElementById('super-key-input');
       const lockEl = document.getElementById('super-lock');
       let val = (inputEl ? inputEl.value : '').trim();
-      if (!val) val = SUPER_KEY; // 若空白自動以 888 嘗試
+      if (!val) val = SUPER_KEY;
 
       if (val === SUPER_KEY || val === '8888') {
         if (lockEl) lockEl.remove();
@@ -173,7 +484,7 @@
       }
     }
 
-    // 前後台同步雙向鎖定執行器
+    // 前後台同步雙向鎖定執行器 (以 storeId 查找，徹底解決店名單引號報錯)
     async function toggleStoreLockById(storeId) {
       const s = allStores.find(item => item.id === storeId);
       if (!s) return;
@@ -185,8 +496,8 @@
       const confirm = await Swal.fire({
         title: `確定要${actionText}【${s.store_name}】？`,
         text: isNowLocked 
-          ? '解鎖後，該店前台預約與後台管理將立即恢復正常運作。' 
-          : '鎖定後，前台預約阻斷，且店家登入後台將立即觸發全螢幕停權遮罩，前後台同步鎖死！',
+          ? '解鎖後，該店前台顧客預約與後台管理將立即恢復正常運作。' 
+          : '鎖定後，前台預約將阻斷，且店家登入後台將立即觸發全螢幕停權遮罩，前後台同步鎖死！',
         icon: isNowLocked ? 'question' : 'warning',
         showCancelButton: true,
         confirmButtonText: `確定${actionText}`,
@@ -216,7 +527,7 @@
       }
     }
 
-    // 渲染分頁 1：訂閱版名冊
+    // 渲染分頁 1：訂閱版名冊 (嚴格排除 lifetime，提供修改手機與信箱功能)
     function renderStores() {
       const kw = (document.getElementById('store-search-kw')?.value || '').trim().toLowerCase();
       const container = document.getElementById('stores-container');
@@ -339,6 +650,7 @@
                 <a href="${adminUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">後台</a>
                 <a href="${prettyUrl}" target="_blank" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold transition">前台</a>
                 ${lockBtnHtml}
+                <!-- 點擊彈出截圖中包含 +30天/+90天/+1年之開通彈窗 -->
                 <button type="button" onclick="manualActivateStore('${s.id}', 30)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-xs transition">+30天</button>
                 <button type="button" onclick="manualActivateStore('${s.id}', 365)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">+1年</button>
                 <button type="button" onclick="manualActivateStore('${s.id}', 365)" class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-xs transition">開通/續約</button>
@@ -349,7 +661,7 @@
       }).join('');
     }
 
-    // 渲染分頁 2：尊榮買斷版專區
+    // 渲染分頁 2：尊榮買斷版專區 (模式切換、色系、模組開關與專屬前後台雙鎖)
     function renderLifetimeStores() {
       const container = document.getElementById('lifetime-stores-container');
       if (!container) return;
@@ -480,7 +792,9 @@
                   <i class="fa-solid fa-sliders text-[10px]"></i> 17 大模組開關配置
                 </button>
                 ${lockBtnHtml}
-                <button type="button" onclick="deleteStorePrompt('${s.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl font-bold transition">刪除</button>
+                <button type="button" onclick="deleteStorePrompt('${s.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl font-bold transition">
+                  刪除
+                </button>
               </div>
             </div>
           </div>
@@ -506,7 +820,7 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 手動開通 / 展延彈窗
+    // 手動開通 / 展延彈窗 (100% 復原截圖)
     async function manualActivateStore(storeId, defaultDays = 365) {
       const s = allStores.find(item => item.id === storeId);
       const storeName = s ? s.store_name : storeId;
@@ -589,7 +903,7 @@
       if (el) el.value = d.toISOString().split('T')[0];
     }
 
-    // 開通新買斷店家
+    // 開通新買斷店家 (店名、信箱必填，其他選填)
     async function openCreateLifetimeStoreModal() {
       const modeSelectHtml = INDUSTRY_MODE_OPTIONS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
       const themeSelectHtml = THEME_OPTIONS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
@@ -869,6 +1183,7 @@
       if (val !== undefined) { await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${id}`, { method: "PATCH", headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ owner_line_uid: val.trim() }) }); loadStores(); }
     }
 
+    // 刪除店家
     function deleteStorePrompt(id) {
       const s = allStores.find(item => item.id === id);
       Swal.fire({
@@ -877,7 +1192,7 @@
         icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: '確定刪除', cancelButtonText: '取消'
       }).then(async r => {
         if (r.isConfirmed) {
-          await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, { method: "DELETE", headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` } });
+          await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${id}`, { method: "DELETE", headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` } });
           Swal.fire('已成功刪除', '', 'success');
           loadStores();
         }
@@ -1054,7 +1369,7 @@
     }
 
     // ========================================================
-    // 【許願池修復版】：完整相容所有欄位名稱，保證顯示許願內容！
+    // 【許願池修復版】：完整相容 6 種欄位名稱，絕不空白！
     // ========================================================
     function filterWishes(type, btn) {
       currentWishFilter = type;
@@ -1078,7 +1393,6 @@
         if (resFeedbacks.ok) {
           const list1 = await resFeedbacks.json();
           list1.forEach(item => {
-            // 完整相容 content, feedback, message, text, suggestion, notes
             const realContent = item.content || item.feedback || item.message || item.text || item.suggestion || item.notes || '';
             allWishesList.push({
               id: item.id,
@@ -1100,7 +1414,6 @@
         if (resWishes.ok) {
           const list2 = await resWishes.json();
           list2.forEach(item => {
-            // 完整相容 wish_text, content, feedback, message, text
             const realContent = item.wish_text || item.content || item.feedback || item.message || item.text || item.notes || '';
             allWishesList.push({
               id: item.id,
