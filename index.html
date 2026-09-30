@@ -2768,37 +2768,56 @@ function renderHotelTimeGrid(type, dateStr) {
     updateCheckoutSummary();
   }
 
-  function renderFrontCalendar() {
-    const grid = document.getElementById('cal-grid');
-    document.getElementById('cal-month-year').innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
-    const headers = ['日', '一', '二', '三', '四', '五', '六'];
-    let html = headers.map(h => `<div class="bg-brand-50 py-2 text-[11px] font-bold text-brand-400">${h}</div>`).join('');
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    for (let i = 0; i < firstDay; i++) html += `<div class="bg-white py-3"></div>`;
-    
-    const selectedDate = document.getElementById('date').value;
-    const now = new Date();
-    const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // ========================================================
+// 【視覺優化】前台日曆：公休日淺灰底色 ＋ 清楚文字區隔
+// ========================================================
+function renderFrontCalendar() {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+  document.getElementById('cal-month-year').innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
+  const headers = ['日', '一', '二', '三', '四', '五', '六'];
+  let html = headers.map(h => `<div class="bg-brand-50 py-2 text-[11px] font-bold text-brand-400">${h}</div>`).join('');
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) html += `<div class="bg-white py-3"></div>`;
+  
+  const selectedDate = document.getElementById('date').value;
+  const now = new Date();
+  const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    for (let i = 1; i <= daysInMonth; i++) {
-      let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
-      let thisCellDate = new Date(currentYear, currentMonth, i);
-      let isPast = (thisCellDate < todayZero);
-      let isAvailable = !isPast && (db.availableDates.length === 0 || db.availableDates.includes(dStr));
-      let isActive = (dStr === selectedDate);
-      
-      if (isAvailable) {
-        html += `
-          <div class="py-2.5 text-xs font-bold cursor-pointer transition ${isActive ? 'bg-theme-primary text-white font-extrabold shadow-inner rounded-xl' : 'bg-white text-gray-900 hover:bg-brand-100 rounded-xl'}" onclick="selectDate('${dStr}')">
-            ${i}
-          </div>`;
-      } else {
-        html += `<div class="bg-brand-50/50 py-2.5 text-xs text-gray-300 cursor-not-allowed select-none">${i}</div>`;
-      }
+  for (let i = 1; i <= daysInMonth; i++) {
+    let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
+    let thisCellDate = new Date(currentYear, currentMonth, i);
+    let isPast = (thisCellDate < todayZero);
+    let isAvailable = !isPast && (db.availableDates.length === 0 || db.availableDates.includes(dStr));
+    let isActive = (dStr === selectedDate);
+    
+    if (isAvailable) {
+      // 正常可預約營業日
+      html += `
+        <div class="py-2.5 text-xs font-bold cursor-pointer transition ${
+          isActive 
+            ? 'bg-theme-primary text-white font-extrabold shadow-inner rounded-xl' 
+            : 'bg-white text-gray-900 hover:bg-brand-100 rounded-xl'
+        }" onclick="selectDate('${dStr}')">
+          ${i}
+        </div>`;
+    } else {
+      // 【公休日 / 過去日】：顯著淺灰底色 + 劃線 + 休字區隔
+      const isStoreOff = !isPast; // 未來但不可選，代表門市公休
+      html += `
+        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none transition ${
+          isStoreOff 
+            ? 'bg-gray-100/90 text-gray-400 border border-dashed border-gray-200' 
+            : 'bg-brand-50/40 text-gray-300 opacity-60'
+        }">
+          <span class="${isStoreOff ? 'line-through text-[11px]' : ''}">${i}</span>
+          ${isStoreOff ? '<span class="text-[8.5px] scale-90 font-bold text-rose-500">休</span>' : ''}
+        </div>`;
     }
-    grid.innerHTML = html;
   }
+  grid.innerHTML = html;
+}
 
   function changeMonth(dir) {
     currentMonth += dir;
@@ -3938,7 +3957,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     }
   }
 
-  // 3. 【核心防呆】：住宿起訖日 與 美容項目時段 嚴格阻斷
+  // 3. 【核心防呆】：住宿起訖日 與 美容項目時段 嚴格阻斷 (附加美容獨立成項目，不污染備註)
   if (activeBookingSubMode === 'boarding') {
     const inDate = document.getElementById('hotelCheckInDate')?.value;
     const inTime = document.getElementById('hotelCheckInTime')?.value;
@@ -3950,11 +3969,25 @@ document.getElementById('bookForm').onsubmit = async function(e) {
 
     dValRaw = inDate;
     tVal = inTime || '10:00';
-    sVal = `寵物度假住宿 (${inDate} ${inTime} ~ ${outDate} ${outTime})`;
 
+    const diffNights = Math.max(1, Math.round((new Date(outDate) - new Date(inDate)) / (1000 * 60 * 60 * 24)));
     const roomTier = document.querySelector('input[name="hotelRoomTier"]:checked')?.getAttribute('data-name') || '套房';
     const mealOpt = document.querySelector('input[name="mealPlanOption"]:checked')?.getAttribute('data-name') || '自備飼料';
-    notesArray.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房 ｜ 房型: ${roomTier} ｜ 供餐: ${mealOpt}】`);
+
+    // 關鍵重構：將附加洗護正式列入施作項目清單 (service_names)
+    let serviceItemsList = [`寵物度假住宿 (${diffNights}晚 - ${roomTier})`];
+    
+    if (document.getElementById('chkHotelBathCheckin')?.checked) {
+      const inSvc = document.getElementById('hotelBathInServiceSelect')?.value || '進房基礎清潔洗護';
+      serviceItemsList.push(`入住洗護: ${inSvc}`);
+    }
+    if (document.getElementById('chkHotelBathCheckout')?.checked) {
+      const outSvc = document.getElementById('hotelBathOutServiceSelect')?.value || '退房深層造型美容';
+      serviceItemsList.push(`退房美容: ${outSvc}`);
+    }
+
+    sVal = serviceItemsList.join(' ＋ ');
+    notesArray.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房 ｜ 供餐: ${mealOpt}】`);
   } else {
     // 美業與純美容：【嚴格防呆】必須選項目、選日期、選時段
     const selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
