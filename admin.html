@@ -3303,11 +3303,20 @@ function renderSingleCardHTML(a) {
       <!-- 訂金狀態提示 -->
       ${depositBadgeHtml}
 
-      <!-- 預約項目與費用 (明確顯示加購方案與合理金額) -->
-      <div class="p-2.5 bg-brand-50 rounded-xl space-y-1 font-mono">
-        <div class="font-bold text-brand-900 font-sans">預約項目：${a.service || '無指定項目'}</div>
-        <div class="text-brand-600 font-bold">預估費用：${priceDisplay} ${a.status === '已結單' ? `<span class="text-emerald-700 font-black">(實收: NT$ ${Number(a.finalPrice).toLocaleString()})</span>` : ''}</div>
-        ${addonTags.length > 0 ? `<div class="pt-1 flex flex-wrap gap-1 font-sans">${addonTags.join('')}</div>` : ''}
+      <!-- 預約項目與費用 (結構化清楚呈現：主項目、加購、使用方案抵扣) -->
+      <div class="p-3 bg-brand-50 rounded-2xl space-y-1.5 font-mono text-xs border border-brand-200/70">
+        <div class="font-bold text-brand-900 font-sans flex items-start gap-1">
+          <i class="fa-solid fa-scissors text-brand-500 mt-0.5"></i>
+          <span class="leading-relaxed">施作項目：<b>${a.service || '無指定項目'}</b></span>
+        </div>
+        <div class="flex justify-between items-center text-brand-700 font-bold border-t border-brand-200/50 pt-1">
+          <span>預估費用：${priceDisplay}</span>${a.status === '已結單' ? `<span class="text-emerald-700 font-black font-sans text-xs bg-emerald-100 px-2 py-0.5 rounded-lg">實收: NT$ ${Number(a.finalPrice).toLocaleString()}</span>` : ''}
+        </div>
+        ${addonTags.length > 0 ? `
+          <div class="pt-1 border-t border-brand-200/50 flex flex-wrap gap-1 font-sans">
+            ${addonTags.join('')}
+          </div>
+        ` : ''}
       </div>
 
       <!-- 照護明細區 (含專車接送點擊導航與複製) -->
@@ -4739,14 +4748,8 @@ function renderShiftDateButtons() {
       });
     }
 
-    // ==========================================
-    // 12. 完工結單對帳核算 (BOM 複選材料自動出庫 + 專車接送車資動態連動)
-    // ==========================================
     // ========================================================
-// 【完整版】openCheckoutModal — 含 BOM 耗材預告與資產帶入
-// ========================================================
-// ========================================================
-// 【最佳化整理版】openCheckoutModal — 結單對帳彈窗初始化
+// 【修復語法順序版】openCheckoutModal — 結單對帳彈窗初始化
 // ========================================================
 async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle = false) {
   // 1. 記錄當前結單預約物件
@@ -4759,6 +4762,8 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
   const modalBasePrice = document.getElementById('chk-modal-base-price');
   const customBasePrice = document.getElementById('check_custom_base_price');
   const modalFinalPrice = document.getElementById('chk-modal-final-price');
+  const pkgGroup = document.getElementById('pkgBuyOptionsGroup'); // 【提前定義】
+  const topupGroup = document.getElementById('topupBuyOptionsGroup'); // 【提前定義】
 
   if (modalName) modalName.innerText = name;
   if (modalPhone) modalPhone.innerText = phone;
@@ -4767,39 +4772,53 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
   if (customBasePrice) customBasePrice.value = price || 0;
   if (modalFinalPrice) modalFinalPrice.value = price || 0;
 
-  // 自動預選顧客在前台預約時指定的加購方案或扣抵
-    const currentNotes = (currentCheckoutBookingObj.service || '') + ' ' + ((backendData.appointments || []).find(a => a.id === id)?.notes || '');
-    
-    // 自動預選新購包卡
-    if (currentNotes.includes('現場加購包卡') && pkgGroup) {
-      const opt = Array.from(pkgGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
-      if (opt) {
-        document.getElementById('check_new_buy_select').value = 'new_pkg';
-        opt.selected = true;
-      }
-    }
-    // 自動預選新購儲值
-    if (currentNotes.includes('現場加購儲值') && topupGroup) {
-      const opt = Array.from(topupGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
-      if (opt) {
-        document.getElementById('check_new_buy_select').value = 'new_topup';
-        opt.selected = true;
-      }
-    }
-    // 自動預選抵扣方式
-    if (currentNotes.includes('使用包卡扣抵')) {
-      document.getElementById('check_discount_use_select').value = 'useCard';
-    } else if (currentNotes.includes('使用儲值扣抵')) {
-      document.getElementById('check_discount_use_select').value = 'useDeposit';
-    }
+  // 3. 渲染現場新購方案下拉選單 (包卡與儲值)
+  if (pkgGroup) {
+    pkgGroup.innerHTML = (backendData.settings?.packageRules || []).map(p => `
+      <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times || 10}">
+        + 購買【${p.name}】(+NT$ ${Number(p.price).toLocaleString()}，含 ${p.times || 10} 點)
+      </option>
+    `).join('');
+  }
+
+  if (topupGroup) {
+    topupGroup.innerHTML = (backendData.settings?.walletRules || []).map(w => `
+      <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount || 1}">
+        + 購買【${w.name}】(+NT$ ${Number(w.price).toLocaleString()}，入帳 $${(w.price + (w.bonus || 0)).toLocaleString()})
+      </option>
+    `).join('');
+  }
+
+  // 4. 自動預選顧客在前台預約時指定的加購方案或扣抵
+  const currentNotes = (currentCheckoutBookingObj.service || '') + ' ' + ((backendData.appointments || []).find(a => a.id === id)?.notes || '');
   
-  // 3. 專車接送車資輸入列動態顯隱
+  if (currentNotes.includes('現場加購包卡') && pkgGroup) {
+    const opt = Array.from(pkgGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
+    if (opt) {
+      document.getElementById('check_new_buy_select').value = 'new_pkg';
+      opt.selected = true;
+    }
+  }
+  if (currentNotes.includes('現場加購儲值') && topupGroup) {
+    const opt = Array.from(topupGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
+    if (opt) {
+      document.getElementById('check_new_buy_select').value = 'new_topup';
+      opt.selected = true;
+    }
+  }
+  if (currentNotes.includes('使用包卡扣抵')) {
+    document.getElementById('check_discount_use_select').value = 'useCard';
+  } else if (currentNotes.includes('使用儲值扣抵')) {
+    document.getElementById('check_discount_use_select').value = 'useDeposit';
+  }
+
+  // 5. 專車接送車資輸入列動態顯隱
   const shuttleBox = document.getElementById('checkoutShuttleFeeRow');
   const shuttleInput = document.getElementById('check_shuttle_fee');
   if (shuttleBox) shuttleBox.classList.toggle('hidden', !isNeedShuttle);
   if (shuttleInput) shuttleInput.value = isNeedShuttle ? 200 : 0;
 
-  // 4. 【BOM 耗材預告區塊】動態顯示關聯技術耗材
+  // 6. 【BOM 耗材預告區塊】動態顯示關聯技術耗材
   const svcObj = (backendData.services || []).find(s => (service || '').includes(s.name));
   const bomSection = document.getElementById('checkoutBOMSection');
   const bomList = document.getElementById('checkoutBOMList');
@@ -4817,7 +4836,7 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
   let walletBal = 0;
   let discountRate = 1;
 
-  // 5. 非同步平行撈取顧客包卡與儲值金資產
+  // 7. 非同步平行撈取顧客包卡與儲值金資產
   try {
     const [pkgs, custs] = await Promise.all([
       directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
@@ -4844,13 +4863,13 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
     console.warn("載入顧客資產異常:", e);
   }
 
-  // 6. 渲染目前資產 UI
+  // 8. 渲染目前資產 UI
   const curCardEl = document.getElementById('checkModalCurrentCard');
   const curDepEl = document.getElementById('checkModalCurrentDeposit');
   if (curCardEl) curCardEl.innerText = `${cardPoints} 點`;
   if (curDepEl) curDepEl.innerText = `$${walletBal.toLocaleString()}`;
 
-  // 7. 渲染零售外帶品選單
+  // 9. 渲染零售外帶品選單
   const retailSelect = document.getElementById('checkoutRetailSelect');
   if (retailSelect) {
     const retailItems = allInventoryItems.filter(it => (Array.isArray(it.categories) ? it.categories.includes('零售外帶品') : it.category === '零售外帶品'));
@@ -4858,27 +4877,7 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
       retailItems.map(it => `<option value="${it.id}" data-price="${it.retail_price || 350}">${it.name} (+NT$ ${Number(it.retail_price || 350).toLocaleString()})</option>`).join('');
   }
 
-  // 8. 渲染現場新購方案下拉選單 (包卡與儲值)
-  const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
-  const topupGroup = document.getElementById('topupBuyOptionsGroup');
-  
-  if (pkgGroup) {
-    pkgGroup.innerHTML = (backendData.settings?.packageRules || []).map(p => `
-      <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times || 10}">
-        + 購買【${p.name}】(+NT$ ${Number(p.price).toLocaleString()}，含 ${p.times || 10} 點)
-      </option>
-    `).join('');
-  }
-
-  if (topupGroup) {
-    topupGroup.innerHTML = (backendData.settings?.walletRules || []).map(w => `
-      <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount || 1}">
-        + 購買【${w.name}】(+NT$ ${Number(w.price).toLocaleString()}，入帳 $${(w.price + (w.bonus || 0)).toLocaleString()})
-      </option>
-    `).join('');
-  }
-
-  // 9. 觸發即時金額重算並展開彈窗
+  // 10. 觸發即時金額重算並展開彈窗
   recalcCheckoutTotal();
   document.getElementById('checkoutModal').classList.remove('hidden');
 }
@@ -5116,6 +5115,32 @@ async function submitFinalCheckoutAction() {
     Swal.fire('結單失敗', err.message, 'error');
   }
 }
+
+    // D. 【資深工程師補丁】：執行技術耗材 BOM 自動出庫扣料與日誌記錄
+    const svcObj = (backendData.services || []).find(s => (currentCheckoutBookingObj.service || '').includes(s.name));
+    if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
+      svcObj.materials.forEach(m => {
+        const invItem = allInventoryItems.find(i => i.name === m.name);
+        if (invItem) {
+          invItem.current_stock = Math.max(0, invItem.current_stock - 1);
+          logInventoryChange(m.name, '結單自動扣料', -1, invItem.current_stock, `預約結單扣料: ${custName} (${svcObj.name})`);
+          directSupabasePatch('inventory_items', `id=eq.${invItem.id}`, { current_stock: invItem.current_stock }).catch(()=>{});
+        }
+      });
+    }
+
+    // E. 【資深工程師補丁】：執行現場零售外帶產品扣庫與日誌記錄
+    const retailSel = document.getElementById('checkoutRetailSelect');
+    if (retailSel && retailSel.value !== 'none') {
+      const retailId = retailSel.value;
+      const rItem = allInventoryItems.find(i => i.id === retailId);
+      if (rItem) {
+        rItem.current_stock = Math.max(0, rItem.current_stock - 1);
+        logInventoryChange(rItem.name, '現場零售', -1, rItem.current_stock, `結單現場外帶加購: ${custName}`);
+        directSupabasePatch('inventory_items', `id=eq.${rItem.id}`, { current_stock: rItem.current_stock }).catch(()=>{});
+        appendNotes.push(`【現場外帶零售: ${rItem.name} +$${rItem.retail_price || 0}】`);
+      }
+    }
 
     function cancelBooking(id, name) {
       Swal.fire({
@@ -7367,53 +7392,66 @@ function promptManualInputLast5(bookingId, customerName) {
 // ========================================================
 let allAdminPetsCache = [];
 
+// ========================================================
+// 【修復版】loadAdminPetsPageData — 跨表精準關聯家長 LINE 暱稱與姓名
+// ========================================================
 async function loadAdminPetsPageData() {
   const container = document.getElementById('pets-card-container');
   const badge = document.getElementById('pets-total-badge');
   if (container) container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400">正在同步毛孩照護履歷與家長主檔...</div>';
 
   try {
-    const [petsRes, custsRes] = await Promise.all([
+    const [petsRes, custsRes, bookingsRes] = await Promise.all([
       directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&order=updated_at.desc`),
-      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=*`)
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=*`),
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc&select=customer_phone,customer_name,line_name`)
     ]);
 
-    // 建立家長電話快查對照表 (完整涵蓋姓名、信箱、儲值金與會員備註)
+    // 建立家長顧客快查表
     const custMap = {};
-    (custsRes || []).forEach(c => {
-      custMap[c.phone] = c;
+    (custsRes || []).forEach(c => { custMap[c.phone] = c; });
+
+    // 建立最新預約卡片 LINE 與姓名快查表
+    const bookingMap = {};
+    (bookingsRes || []).forEach(b => {
+      const p = b.customer_phone;
+      if (p && !bookingMap[p]) {
+        bookingMap[p] = {
+          name: b.customer_name || '',
+          lineName: (b.line_name && !b.line_name.startsWith('U')) ? b.line_name : ''
+        };
+      }
     });
 
-    // 修正家長真實姓名與手機關聯 (杜絕顯示為「家長：家長」)
-  allAdminPetsCache = (petsRes || []).map(p => {
-    const parent = custMap[p.customer_phone] || {};
-    // 優先順序：顧客檔姓名 > 訂單紀錄姓名 > 聯絡人
-    let realParentName = parent.name || '';
-    if (!realParentName) {
-      const bMatch = (backendData.appointments || []).find(b => b.phone === p.customer_phone);
-      if (bMatch) realParentName = bMatch.name;
-    }
-    if (!realParentName) realParentName = '顧客';
+    allAdminPetsCache = (petsRes || []).map(p => {
+      const parent = custMap[p.customer_phone] || {};
+      const latestBooking = bookingMap[p.customer_phone] || {};
 
-    return {
-      id: p.id,
-      name: p.name || '未命名寶貝',
-      breed: p.breed || '一般品種',
-      weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
-      age: p.age_str ? `${p.age_str} 歲` : '未記錄',
-      gender: p.species || p.gender || '未記錄',
-      chipId: p.coat_type || '無晶片紀錄',
-      photoUrl: p.photo_url || '',
-      notes: p.notes || '',
-      parentPhone: p.customer_phone || '',
-      parentName: realParentName, // 正確帶入家長姓名
-      parentLineName: parent.line_name || '',
-      parentEmail: parent.email || '',
-      packageBalance: Number(p.package_balance || 0),
-      walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
-      updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
-    };
-  });
+      // 1. 家長真實姓名判定：顧客主檔 > 最新預約卡片 > 預設「顧客」
+      let realParentName = parent.name || latestBooking.name || '顧客';
+
+      // 2. 家長 LINE 暱稱判定：優先抓取最新預約卡片填寫之 LINE > 顧客檔
+      let realLineName = latestBooking.lineName || parent.line_name || '';
+
+      return {
+        id: p.id,
+        name: p.name || '未命名寶貝',
+        breed: p.breed || '一般品種',
+        weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
+        age: p.age_str ? `${p.age_str} 歲` : '未記錄',
+        gender: p.species || p.gender || '未記錄',
+        chipId: p.coat_type || '無晶片紀錄',
+        photoUrl: p.photo_url || '',
+        notes: p.notes || '',
+        parentPhone: p.customer_phone || '',
+        parentName: realParentName,
+        parentLineName: realLineName, // 成功關聯預約卡片 LINE 名稱
+        parentEmail: parent.email || '',
+        packageBalance: Number(p.package_balance || 0),
+        walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
+        updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
+      };
+    });
 
     if (badge) badge.innerText = `${allAdminPetsCache.length} 隻毛孩`;
     renderAdminPetsCards(allAdminPetsCache);
