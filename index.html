@@ -3955,6 +3955,17 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   if (!nameVal) return Swal.fire('請填寫預約人姓名', '', 'warning');
   if (!phoneVal || phoneVal.replace(/\D/g, '').length < 8) return Swal.fire('請填寫正確的手機號碼', '', 'warning');
 
+  // 在 bookForm.onsubmit 驗證完手機後加入：
+  // 終端黑名單阻斷校驗
+  const blacklistCheck = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}&is_blacklisted=eq.true`);
+  if (blacklistCheck && blacklistCheck.length > 0) {
+    return Swal.fire({
+      title: '預約名額已滿',
+      text: '抱歉，門市目前預約排程已滿，暫不開放線上填單，請直接致電門市洽詢。',
+      icon: 'info',
+      confirmButtonColor: '#8C7355'
+    });
+  }
   let sVal = "";
   let dValRaw = "";
   let tVal = "";
