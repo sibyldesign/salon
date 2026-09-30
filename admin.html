@@ -318,9 +318,8 @@
         </div>
         <div class="space-y-2" id="inventory-items-container"></div>
       </div>
-    </div>
 
-    <!-- 庫存異動紀錄與出入庫日誌 (新需求追加) -->
+      <!-- 【正確位置】：移入 page-inventory 內部最底端，切換到其他分頁時保證自動隱藏 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 mt-4 text-xs">
         <div class="flex justify-between items-center border-b border-brand-100 pb-2">
           <span class="font-bold text-brand-900 flex items-center gap-1.5">
@@ -346,6 +345,7 @@
           </table>
         </div>
       </div>
+    </div> <!-- #page-inventory 結束標籤 -->
 
     <!-- 分頁 6. 業績統計 (page-revenue) -->
     <div id="page-revenue" class="page space-y-4 full-admin-only" style="display: none;">
@@ -960,6 +960,55 @@
       </div>
     </div>
 
+    <!-- 分頁 16. 財務流水帳與歷史預約封存 (page-transactions) -->
+    <div id="page-transactions" class="page space-y-4 full-admin-only" style="display: none;" data-admin-module="revenue">
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 gap-2">
+          <div>
+            <h2 class="font-bold text-sm text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-file-invoice-dollar text-[#8C7355]"></i> 財務流水帳對帳清冊與 45 天歷史封存
+            </h2>
+            <p class="text-[10.5px] text-brand-400 mt-0.5">每筆結單皆自動產生全球唯一流水編號 (TXN)，滿 45 天之訂單自動封存歸檔</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="exportTransactionsCSV()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-file-csv"></i> 匯出對帳 CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- 搜尋與過濾 -->
+        <div class="flex gap-2">
+          <input type="text" id="txn-search-kw" oninput="renderTransactionsList()" placeholder="搜尋流水號 (TXN)、姓名、電話..." class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none">
+          <select id="txn-archive-filter" onchange="renderTransactionsList()" class="p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-white outline-none">
+            <option value="ACTIVE">近期 45 天內帳務</option>
+            <option value="ARCHIVED">滿 45 天已封存歷史帳務</option>
+            <option value="ALL">全部歷史紀錄</option>
+          </select>
+        </div>
+
+        <!-- 流水帳對帳表格 -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b text-brand-400 font-bold">
+                <th class="py-2 px-2">流水帳編號</th>
+                <th class="py-2 px-2">結單時間</th>
+                <th class="py-2 px-2">顧客姓名</th>
+                <th class="py-2 px-2">施作項目</th>
+                <th class="py-2 px-2">實收金額</th>
+                <th class="py-2 px-2">方案/折抵明細</th>
+                <th class="py-2 px-2 text-right">狀態</th>
+              </tr>
+            </thead>
+            <tbody id="txn-table-tbody" class="divide-y divide-brand-100 font-mono">
+              <tr><td colspan="7" class="text-center py-6 text-gray-400 font-sans">正在讀取流水帳資料...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
     <!-- 分頁 14. 方案與訂閱 (page-subscription) -->
     <div id="page-subscription" class="page space-y-4 full-admin-only" style="display: none;">
       <!-- 目前系統訂閱狀態 -->
@@ -1577,6 +1626,27 @@
         </div>
       </div>
       
+      <!-- 帳號安全與後台密碼修改 (補回功能) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <span class="font-bold text-brand-900 flex items-center gap-1.5 text-xs">
+            <i class="fa-solid fa-shield-halved text-brand-500"></i> 後台管理員登入安全與密碼 (PIN) 修改
+          </span>
+          <span class="text-[10px] text-brand-400 font-mono">Store Security</span>
+        </div>
+        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200/80 flex justify-between items-center">
+          <div>
+            <div class="font-bold text-brand-900">目前管理員解鎖密碼</div>
+            <div class="text-[11px] text-brand-500 mt-0.5 font-mono">
+              當前 PIN：<b class="text-brand-900 font-mono tracking-widest" id="disp-store-admin-pin">••••</b>
+            </div>
+          </div>
+          <button type="button" onclick="promptChangeAdminPin()" class="px-4 py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1.5">
+            <i class="fa-solid fa-key text-[10px]"></i> 修改登入密碼
+          </button>
+        </div>
+      </div>
+      
       <!-- 5. 品牌外觀與 LOGO 上傳 (按鈕防跑版) -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">品牌資料與前台外觀</span>
@@ -1737,6 +1807,9 @@
       </button>
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('subscription', this)">
         <i class="fa-solid fa-credit-card text-base"></i><span class="text-[10px] mt-1">方案</span>
+      </button>
+      <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" data-admin-module="revenue" onclick="switchPage('transactions', this)">
+        <i class="fa-solid fa-file-invoice text-base"></i><span class="text-[10px] mt-1">流水帳</span>
       </button>
       <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('settings', this)">
         <i class="fa-solid fa-gear text-base"></i><span class="text-[10px] mt-1">設定</span>
@@ -1989,7 +2062,95 @@ const THEME_PALETTES = {
     `).join('');
   }
 
-  // 渲染住宿橫排滑動日期按鈕 (與排班分頁一致，帶週幾與公休阻斷)
+  // ========================================================
+// 【補回】修改管理員後台 PIN 碼
+// ========================================================
+async function promptChangeAdminPin() {
+  const { value: newPin } = await Swal.fire({
+    title: '修改管理員後台登入密碼',
+    html: `
+      <div class="text-left text-xs space-y-2 p-1 text-brand-800">
+        <p class="text-gray-500 leading-relaxed">請輸入新的 4 ~ 8 位數字或英數字作為管理員後台解鎖密碼：</p>
+        <input type="password" id="swal-new-pin" maxlength="8" placeholder="請輸入新密碼 (例: 1234)" class="swal2-input text-center font-mono text-lg tracking-widest">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確認儲存新密碼',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消',
+    preConfirm: () => {
+      const pin = document.getElementById('swal-new-pin')?.value.trim();
+      if (!pin || pin.length < 4) {
+        Swal.showValidationMessage('密碼長度至少需 4 位！');
+        return false;
+      }
+      return pin;
+    }
+  });
+
+  if (newPin) {
+    Swal.showLoading();
+    try {
+      await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { admin_pin: newPin });
+      Swal.fire({ title: '管理員密碼已更新！', text: `下次登入請使用新密碼：${newPin}`, icon: 'success' });
+      fetchDataAndRender();
+    } catch (err) {
+      Swal.fire('修改失敗', err.message, 'error');
+    }
+  }
+}
+    
+    // 渲染財務流水帳與 45 天歷史歸檔
+function renderTransactionsList() {
+  const tbody = document.getElementById('txn-table-tbody');
+  if (!tbody) return;
+
+  const kw = (document.getElementById('txn-search-kw')?.value || '').trim().toLowerCase();
+  const filter = document.getElementById('txn-archive-filter')?.value || 'ACTIVE';
+  const nowMs = Date.now();
+  const fortyFiveDaysMs = 45 * 24 * 60 * 60 * 1000;
+
+  const finalizedList = (backendData.appointments || []).filter(a => a.status === '已結單');
+
+  let list = finalizedList.map(a => {
+    const apptMs = new Date(a.date.replace(/\//g, '-')).getTime();
+    const isArchived = (nowMs - apptMs) >= fortyFiveDaysMs;
+    const matchTxn = (a.notes || '').match(/【交易流水號:\s*([^】]+)】/);
+    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-LEGACY-${String(a.id).substring(0,6)}`);
+
+    return { ...a, txnNo, isArchived };
+  });
+
+  if (filter === 'ACTIVE') list = list.filter(t => !t.isArchived);
+  else if (filter === 'ARCHIVED') list = list.filter(t => t.isArchived);
+
+  if (kw) {
+    list = list.filter(t => t.txnNo.toLowerCase().includes(kw) || t.name.toLowerCase().includes(kw) || t.phone.includes(kw));
+  }
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-gray-400 font-sans">尚無符合之流水帳紀錄</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(t => `
+    <tr class="hover:bg-brand-50/50">
+      <td class="py-2.5 px-2 font-bold text-brand-900">${t.txnNo}</td>
+      <td class="py-2.5 px-2 text-gray-500 font-sans text-[11px]">${t.date} ${t.time}</td>
+      <td class="py-2.5 px-2 font-bold font-sans">${t.name} <span class="text-gray-400 font-normal">(${t.phone})</span></td>
+      <td class="py-2.5 px-2 font-sans truncate max-w-[140px]">${t.service}</td>
+      <td class="py-2.5 px-2 font-black text-emerald-700">NT$ ${Number(t.finalPrice).toLocaleString()}</td>
+      <td class="py-2.5 px-2 font-sans text-[10.5px] text-gray-500 truncate max-w-[180px]">${t.notes}</td>
+      <td class="py-2.5 px-2 text-right font-sans">
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.isArchived ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-800'}">
+          ${t.isArchived ? '已封存(>45天)' : '常態中'}
+        </span>
+      </td>
+    </tr>
+  `).join('');
+}
+    
+    // 渲染住宿橫排滑動日期按鈕 (與排班分頁一致，帶週幾與公休阻斷)
 function renderBoardingDateButtons() {
   const dates = backendData.scheduleDates || [];
   const scrollArea = document.getElementById('boarding-date-scroll-area');
