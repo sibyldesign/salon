@@ -2859,6 +2859,7 @@ async function fetchDataAndRender() {
         contractTitle: sCfg.contract_title || '美容定型化契約書',
         contractContent: sCfg.contract_content || DEFAULT_MOHW_BEAUTY_CONTRACT,
         staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定", pin: "8888" }],
+        staffSchedules: sCfg.staff_schedules || {},
         walletRules: sCfg.wallet_rules || [],
         packageRules: sCfg.package_rules || [],
         careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
@@ -4449,21 +4450,49 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
     function switchShiftStaff(id) { activeShiftStaffId = id; renderShift(); }
     function selectShiftDate(dStr) { currentShiftDate = dStr; renderShift(); }
     function toggleSlotState(staffKey, timeStr, btn) {
-      const newState = !(shiftSlotStates[staffKey][timeStr] === true);
-      shiftSlotStates[staffKey][timeStr] = newState;
-      btn.className = `px-4 py-1.5 rounded-full font-black text-xs transition border ${
-        newState 
-          ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' 
-          : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-      }`;
-      btn.innerText = newState ? '✓ 上班中 (開放預約)' : '✕ 已關閉 (休息)';
-      directSupabaseUpsert('store_settings', { store_id: CURRENT_STORE_ID, staff_schedules: shiftSlotStates }, 'store_id');
-    }
+  const newState = !(shiftSlotStates[staffKey][timeStr] === true);
+  shiftSlotStates[staffKey][timeStr] = newState;
+  btn.className = `px-4 py-1.5 rounded-full font-black text-xs transition border ${
+    newState 
+      ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' 
+      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+  }`;
+  btn.innerText = newState ? '✓ 上班中 (開放預約)' : '✕ 已關閉 (休息)';
+
+  // 同步更新記憶體與資料庫
+  if (!backendData.settings.staffSchedules) backendData.settings.staffSchedules = {};
+  backendData.settings.staffSchedules[staffKey] = { ...shiftSlotStates[staffKey] };
+  directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { 
+    staff_schedules: backendData.settings.staffSchedules 
+  });
+}
+    
     function toggleAllShift(staffKey, isOpen) {
-      Object.keys(shiftSlotStates[staffKey]).forEach(t => shiftSlotStates[staffKey][t] = isOpen);
-      renderShift();
-      directSupabaseUpsert('store_settings', { store_id: CURRENT_STORE_ID, staff_schedules: shiftSlotStates }, 'store_id');
-    }
+  if (!shiftSlotStates[staffKey]) shiftSlotStates[staffKey] = {};
+  const start = backendData.settings?.shiftStartTime || '09:00';
+  const end = backendData.settings?.shiftEndTime || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || 30);
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+  
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+    let hh = Math.floor(m / 60); let mm = m % 60;
+    const t = (hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm);
+    shiftSlotStates[staffKey][t] = isOpen;
+  }
+  
+  // 同步寫入記憶體
+  if (!backendData.settings.staffSchedules) backendData.settings.staffSchedules = {};
+  backendData.settings.staffSchedules[staffKey] = { ...shiftSlotStates[staffKey] };
+  
+  renderShift();
+  
+  // 關鍵寫入資料庫
+  directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { 
+    staff_schedules: backendData.settings.staffSchedules 
+  });
+  Swal.fire({ title: isOpen ? '已全開上班時段！' : '已全數設為公休！', icon: 'success', timer: 700, showConfirmButton: false });
+}
 
     // ==========================================
     // 9. 服務項目全欄位編輯與 BOM 耗材複選
