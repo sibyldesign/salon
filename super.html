@@ -994,38 +994,53 @@
 
     // 輔助函式：切換三大模式
     async function promptChangeStoreIndustryMode(storeId) {
-      const s = allStores.find(item => item.id === storeId);
-      if (!s) return;
-      const currentMode = s.industry_mode || 'beauty';
+  const s = allStores.find(item => item.id === storeId);
+  if (!s) return;
+  const currentMode = s.industry_mode || s.industry_type || 'beauty';
 
-      const optionsHtml = INDUSTRY_MODE_OPTIONS.map(m => `
-        <label class="flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${currentMode === m.id ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold' : 'border-gray-200 hover:bg-gray-50'}">
-          <input type="radio" name="swal-mode" value="${m.id}" ${currentMode === m.id ? 'checked' : ''} class="accent-purple-700 w-4 h-4">
-          <div class="text-left text-xs">
-            <div class="font-bold flex items-center gap-1.5"><i class="fa-solid ${m.icon}"></i> ${m.name.split(' (')[0]}</div>
-            <div class="text-[10px] text-gray-500 mt-0.5">${m.name.split(' (')[1] ? m.name.split(' (')[1].replace(')', '') : ''}</div>
-          </div>
-        </label>
-      `).join('');
+  const optionsHtml = INDUSTRY_MODE_OPTIONS.map(m => `
+    <label class="flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${currentMode === m.id ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold' : 'border-gray-200 hover:bg-gray-50'}">
+      <input type="radio" name="swal-mode" value="${m.id}" ${currentMode === m.id ? 'checked' : ''} class="accent-purple-700 w-4 h-4">
+      <div class="text-left text-xs">
+        <div class="font-bold flex items-center gap-1.5"><i class="fa-solid ${m.icon}"></i> ${m.name.split(' (')[0]}</div>
+        <div class="text-[10px] text-gray-500 mt-0.5">${m.name.split(' (')[1] ? m.name.split(' (')[1].replace(')', '') : ''}</div>
+      </div>
+    </label>
+  `).join('');
 
-      const { value: mode } = await Swal.fire({
-        title: `切換【${s.store_name}】營運模式`,
-        html: `<div class="space-y-2 p-1 text-left">${optionsHtml}</div>`,
-        showCancelButton: true, confirmButtonText: '確定切換', confirmButtonColor: '#6B21A8',
-        preConfirm: () => document.querySelector('input[name="swal-mode"]:checked')?.value
-      });
+  const { value: mode } = await Swal.fire({
+    title: `切換【${s.store_name}】營運模式`,
+    html: `<div class="space-y-2 p-1 text-left">${optionsHtml}</div>`,
+    showCancelButton: true,
+    confirmButtonText: '確定切換模式',
+    confirmButtonColor: '#6B21A8',
+    preConfirm: () => document.querySelector('input[name="swal-mode"]:checked')?.value
+  });
 
-      if (mode) {
-        Swal.showLoading();
-        await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+  if (mode) {
+    Swal.showLoading();
+    try {
+      // 【關鍵修復】：同時同步寫入 stores 與 store_settings 兩張表
+      await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+          method: "PATCH",
+          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ industry_type: mode, industry_mode: mode })
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}`, {
           method: "PATCH",
           headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({ industry_mode: mode })
-        });
-        Swal.fire('營運模式已更新！', '', 'success');
-        loadStores();
-      }
+        })
+      ]);
+
+      Swal.fire({ title: '營運模式已更新！', text: `店家與前台已同步切換為【${mode}】`, icon: 'success' });
+      loadStores();
+    } catch (e) {
+      Swal.fire('更新失敗', e.message, 'error');
     }
+  }
+}
 
     // 輔助函式：更換色系 (標配功能)
     async function promptChangeStoreTheme(storeId) {
