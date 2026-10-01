@@ -361,22 +361,36 @@
           </select>
         </div>
 
-        <!-- 自訂日期區間 -->
-        <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2 text-xs">
-          <div class="font-bold text-brand-800 flex items-center gap-1">
-            <i class="fa-solid fa-calendar-days text-brand-500"></i> 自訂統計區間：
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="block font-bold text-brand-700 mb-1 text-[11px]">開始日期</label>
-              <input type="date" id="rev-start-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white font-mono" onchange="renderRevenue()">
-            </div>
-            <div>
-              <label class="block font-bold text-brand-700 mb-1 text-[11px]">結束日期</label>
-              <input type="date" id="rev-end-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white font-mono" onchange="renderRevenue()">
-            </div>
-          </div>
-        </div>
+        <!-- 自訂日期區間與查詢按鈕 -->
+<div class="p-4 bg-brand-50 rounded-2xl border border-brand-200 space-y-3 text-xs">
+  <div class="flex justify-between items-center">
+    <div class="font-bold text-brand-800 flex items-center gap-1">
+      <i class="fa-solid fa-calendar-days text-brand-500"></i> 自訂統計區間：
+    </div>
+    <!-- 快捷按鈕 -->
+    <div class="flex gap-1">
+      <button type="button" onclick="setRevenueQuickDate('TODAY')" class="px-2 py-1 bg-white border border-brand-200 hover:bg-brand-100 rounded-lg font-bold text-[10.5px]">今日</button>
+      <button type="button" onclick="setRevenueQuickDate('THIS_WEEK')" class="px-2 py-1 bg-white border border-brand-200 hover:bg-brand-100 rounded-lg font-bold text-[10.5px]">本週</button>
+      <button type="button" onclick="setRevenueQuickDate('THIS_MONTH')" class="px-2 py-1 bg-white border border-brand-200 hover:bg-brand-100 rounded-lg font-bold text-[10.5px]">本月</button>
+      <button type="button" onclick="setRevenueQuickDate('ALL')" class="px-2 py-1 bg-white border border-brand-200 hover:bg-brand-100 rounded-lg font-bold text-[10.5px]">全部</button>
+    </div>
+  </div>
+  <div class="grid grid-cols-2 gap-2">
+    <div>
+      <label class="block font-bold text-brand-700 mb-1 text-[11px]">開始日期</label>
+      <input type="date" id="rev-start-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white font-mono">
+    </div>
+    <div>
+      <label class="block font-bold text-brand-700 mb-1 text-[11px]">結束日期</label>
+      <input type="date" id="rev-end-date" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white font-mono">
+    </div>
+  </div>
+  <!-- 核心新增：明確的查詢按鈕 -->
+  <button type="button" onclick="renderRevenue()" class="w-full py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 text-xs">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span>依設定條件查詢業績明細</span>
+  </button>
+</div>
 
         <!-- 4 核心指標 -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
@@ -1939,6 +1953,7 @@
   </div>
   <!-- ==================== 核心 JavaScript 商業邏輯 (接續處) ==================== -->
   <script>
+    
     // ==========================================
     // 1. 全域常數與環境狀態設定
     // ==========================================
@@ -1950,6 +1965,10 @@
     const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
     let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
     const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
+
+    // 【正確放置此處】：全域黑名單集合與電話正規化函式 (確保在所有渲染函式前就緒)
+    let blacklistedPhonesSet = new Set();
+    const getCleanPhone = p => String(p || '').replace(/\D/g, '');
 
     let backendData = { appointments: [], scheduleDates: [], services: [], portfolio: [], settings: {} };
     let currentShiftDate = 'ALL';
@@ -1971,7 +1990,7 @@
     let pendingSlotsList = [];
     let currentCheckoutBookingObj = null;
     let customInventoryCategories = ["洗護消耗品", "技術耗材", "零售外帶品", "毛孩零食玩具", "工具雜項"];
-
+    
     // 後台 8 大美學主題色票定義 (含背景、淺階底色、主色與公告色)
 const THEME_PALETTES = {
   latte:  { name: '大地燕麥暖棕', colors: ['#FDFBF7', '#F5ECE3', '#8C7355', '#3A3026'] },
@@ -2075,7 +2094,34 @@ const THEME_PALETTES = {
     `).join('');
   }
 
-  // ========================================================
+  function setRevenueQuickDate(type) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const formatYMD = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  if (type === 'TODAY') {
+    const todayStr = formatYMD(now);
+    document.getElementById('rev-start-date').value = todayStr;
+    document.getElementById('rev-end-date').value = todayStr;
+  } else if (type === 'THIS_WEEK') {
+    const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+    const lastDay = new Date(now.setDate(now.getDate() - now.getDay() + 6));
+    document.getElementById('rev-start-date').value = formatYMD(firstDay);
+    document.getElementById('rev-end-date').value = formatYMD(lastDay);
+  } else if (type === 'THIS_MONTH') {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    document.getElementById('rev-start-date').value = formatYMD(firstDay);
+    document.getElementById('rev-end-date').value = formatYMD(lastDay);
+  } else if (type === 'ALL') {
+    document.getElementById('rev-start-date').value = '';
+    document.getElementById('rev-end-date').value = '';
+    document.getElementById('rev-time-filter').value = 'ALL';
+  }
+  renderRevenue();
+}
+    
+    // ========================================================
 // 【補回】修改管理員後台 PIN 碼
 // ========================================================
 async function promptChangeAdminPin() {
@@ -2573,15 +2619,22 @@ function previewSelectedThemeColor(themeKey) {
 // ========================================================
 // 【黑名單終極雙向管理視窗】彈窗內含「封鎖」與「解除封鎖」雙按鈕與防呆說明
 // ========================================================
+// ========================================================
+// 【高階修復版】黑名單雙向管理：強制 UPSERT 確保 100% 寫入資料庫
+// ========================================================
+// ========================================================
+// 【修復版】黑名單管理視窗 (強制 UPSERT + 全介面即時重繪)
+// ========================================================
 async function toggleCustomerBlacklist(phone, name) {
-  const cleanPhone = String(phone).trim();
-  const isCurrentlyBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(cleanPhone);
+  const purePhone = getCleanPhone(phone);
+  if (!purePhone) return Swal.fire('無效的電話號碼', '', 'warning');
+
+  const isCurrentlyBlocked = blacklistedPhonesSet.has(purePhone);
 
   const { isConfirmed, isDenied } = await Swal.fire({
     title: `顧客黑名單管理 - ${name}`,
     html: `
       <div class="text-left text-xs space-y-3 p-3 bg-brand-50/70 rounded-2xl border border-brand-200 text-brand-900 leading-relaxed font-sans">
-        <!-- 目前狀態條 -->
         <div class="flex justify-between items-center p-2.5 rounded-xl border ${isCurrentlyBlocked ? 'bg-rose-50 border-rose-300 text-rose-900' : 'bg-emerald-50 border-emerald-300 text-emerald-900'}">
           <span class="font-bold">目前狀態：</span>
           <span class="font-black text-xs px-2 py-0.5 rounded-full ${isCurrentlyBlocked ? 'bg-rose-200 text-rose-950 animate-pulse' : 'bg-emerald-200 text-emerald-950'}">
@@ -2589,15 +2642,13 @@ async function toggleCustomerBlacklist(phone, name) {
           </span>
         </div>
 
-        <!-- 運作呈現形式小說明 -->
         <div class="space-y-1.5 text-brand-800 text-[11.5px] border-t border-brand-200/70 pt-2">
           <div class="font-bold flex items-center gap-1 text-amber-900">
             <i class="fa-solid fa-circle-info text-amber-600"></i>
-            <span>功能運作與顧客端呈現形式：</span>
+            <span>黑名單防禦機制：</span>
           </div>
-          <p>• <b>前台委婉防禦</b>：被列入黑名單之顧客，於前台輸入手機時，系統將<b>委婉顯示「預約名額已滿，暫不開放填單」</b>，絕不提示已被封鎖，避免爭議糾紛。</p>
-          <p>• <b>後台代客防呆</b>：同仁手動建單輸入此號碼，系統立即彈出紅字警示，杜絕誤排。</p>
-          <p class="text-gray-500">• <b>防誤觸救援</b>：若為誤按或消費誤會已解開，隨時點擊下方<b>【解除黑名單】</b>即可一秒還原預約權限。</p>
+          <p>• <b>前台防禦</b>：被封鎖之電話號碼於前台送單時，系統將委婉提示「預約額滿，暫不開放線上填單」，杜絕爭議衝突。</p>
+          <p>• <b>後台標註</b>：預約卡片名字旁將長駐醒目的 <b>【🚫 黑名單】</b> 警示標籤。</p>
         </div>
       </div>
     `,
@@ -2606,45 +2657,58 @@ async function toggleCustomerBlacklist(phone, name) {
     confirmButtonText: '🚫 設為黑名單 (封鎖)',
     denyButtonText: '✓ 解除黑名單 (解封)',
     cancelButtonText: '關閉離開',
-    confirmButtonColor: '#E11D48',  // 紅色：封鎖
-    denyButtonColor: '#10B981',     // 綠色：解除封鎖
-    cancelButtonColor: '#E5E7EB',
-    reverseButtons: false
+    confirmButtonColor: '#E11D48',
+    denyButtonColor: '#10B981',
+    cancelButtonColor: '#E5E7EB'
   });
 
-  // 1. 點擊了「設為黑名單 (封鎖)」
+  // A. 設為黑名單
   if (isConfirmed) {
-    if (isCurrentlyBlocked) {
-      return Swal.fire('提示', `顧客【${name}】本來就已經在黑名單中囉！`, 'info');
-    }
     Swal.showLoading();
     try {
-      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${cleanPhone}`, {
-        is_blacklisted: true
-      });
-      if (typeof blacklistedPhonesSet !== 'undefined') blacklistedPhonesSet.add(cleanPhone);
-      Swal.fire({ title: '已列入黑名單！', text: `顧客【${name}】已被封鎖，前台將無法送單。`, icon: 'success', timer: 1200, showConfirmButton: false });
+      await directSupabaseUpsert('customers', {
+        store_id: CURRENT_STORE_ID,
+        phone: purePhone,
+        name: name || '顧客',
+        is_blacklisted: true,
+        updated_at: new Date().toISOString()
+      }, 'store_id,phone');
+
+      blacklistedPhonesSet.add(purePhone);
+
+      Swal.fire({ title: '已列入黑名單！', text: `顧客【${name}】已被封鎖，卡片已加上警示標籤。`, icon: 'success', timer: 1200, showConfirmButton: false });
+      
+      // 【關鍵修復】：同步刷新所有可見區域之卡片
       renderCustomer();
       renderCalendar();
+      if (selectedCalendarDate) showApptsInCalendar(selectedCalendarDate);
+      if (document.getElementById('page-search')?.style.display !== 'none') executeDateRangeSearch();
     } catch(e) {
       Swal.fire('設定失敗', e.message, 'error');
     }
   }
 
-  // 2. 點擊了「解除黑名單 (解封)」
+  // B. 解除黑名單
   if (isDenied) {
-    if (!isCurrentlyBlocked) {
-      return Swal.fire('提示', `顧客【${name}】目前為正常名單，並非黑名單。`, 'info');
-    }
     Swal.showLoading();
     try {
-      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${cleanPhone}`, {
-        is_blacklisted: false
-      });
-      if (typeof blacklistedPhonesSet !== 'undefined') blacklistedPhonesSet.delete(cleanPhone);
-      Swal.fire({ title: '已成功解除黑名單！', text: `顧客【${name}】已恢復正常預約權限。`, icon: 'success', timer: 1200, showConfirmButton: false });
+      await directSupabaseUpsert('customers', {
+        store_id: CURRENT_STORE_ID,
+        phone: purePhone,
+        name: name || '顧客',
+        is_blacklisted: false,
+        updated_at: new Date().toISOString()
+      }, 'store_id,phone');
+
+      blacklistedPhonesSet.delete(purePhone);
+
+      Swal.fire({ title: '已解除黑名單！', text: `顧客【${name}】已恢復正常預約權限。`, icon: 'success', timer: 1200, showConfirmButton: false });
+      
+      // 【關鍵修復】：同步刷新所有可見區域之卡片
       renderCustomer();
       renderCalendar();
+      if (selectedCalendarDate) showApptsInCalendar(selectedCalendarDate);
+      if (document.getElementById('page-search')?.style.display !== 'none') executeDateRangeSearch();
     } catch(e) {
       Swal.fire('解封失敗', e.message, 'error');
     }
@@ -2701,9 +2765,11 @@ async function fetchDataAndRender() {
       directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`)
     ]);
 
-    // 建立最新黑名單電話快查集合
-    blacklistedPhonesSet = new Set(
-      (custsRes || []).filter(c => c.is_blacklisted === true).map(c => String(c.phone).trim())
+    // 在 fetchDataAndRender() 的 Promise.all 執行完成後替換以下這行：
+blacklistedPhonesSet = new Set(
+      (custsRes || [])
+        .filter(c => c.is_blacklisted === true)
+        .map(c => getCleanPhone(c.phone))
     );
 
     const sInfo = (stores && stores.length > 0) ? stores[0] : {};
@@ -2957,6 +3023,11 @@ async function fetchDataAndRender() {
     renderBoardingCareChecklist();
     initSlotsLiveUrl();
     renderBoardingDateButtons();
+    
+    // 【關鍵修復】：資料庫黑名單下載完畢後，立即重繪當日日曆卡片，消除時序競爭
+    if (selectedCalendarDate) {
+      showApptsInCalendar(selectedCalendarDate);
+    }
   } catch (err) {
     console.error("同步失敗:", err);
   }
@@ -3625,7 +3696,7 @@ function renderSingleCardHTML(a) {
       const sD = new Date(rawTime);
       if (!isNaN(sD.getTime())) {
         const pad = n => String(n).padStart(2, '0');
-        finalSignedTime = `${sD.getFullYear()}/${pad(sD.getMonth() + 1)}/${pad(sD.getDate())} ${pad(sD.getHours())}:${pad(sD.getMinutes())}:${pad(sD.getSeconds())}`;
+        finalSignedTime = `${sD.getFullYear()}/${pad(sD.getMonth() + 1)}/${pad(sD.getDate())}${pad(sD.getHours())}:${pad(sD.getMinutes())}:${pad(sD.getSeconds())}`;
       }
     }
   }
@@ -3640,37 +3711,44 @@ function renderSingleCardHTML(a) {
     </button>
   `;
 
-  // ----------------------------------------------------
-  // 【關鍵修正位置】：在回傳 HTML 字串前完成變數運算
-  // ----------------------------------------------------
-  const isCustBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(String(a.phone).trim());
+  // 核心比對：使用純數字電話進行 Set 快查
+  const pureCustPhone = getCleanPhone(a.phone);
+  const isCustBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(pureCustPhone);
 
   const blacklistBtnHtml = isCustBlocked ? `
-    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[10.5px] font-bold border border-rose-300 transition flex items-center gap-1 shadow-2xs" title="此客目前已被封鎖，點擊可開啟視窗解除">
+    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[10.5px] font-bold border border-rose-300 transition flex items-center gap-1 shadow-2xs" title="已列入黑名單，點擊可開啟視窗解除">
       <i class="fa-solid fa-ban text-[10px] text-rose-600"></i> 已封鎖
     </button>
   ` : `
-    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-lg text-[10.5px] font-bold border border-stone-200 transition flex items-center gap-1" title="點擊開啟黑名單管理">
+    <button type="button" onclick="toggleCustomerBlacklist('${a.phone}', '${a.name}')" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-lg text-[10.5px] font-bold border border-stone-200 transition flex items-center gap-1" title="點擊開啟黑名單管理視窗">
       <i class="fa-solid fa-user-slash text-[9px]"></i> 黑名單
     </button>
   `;
-  
+
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
       
       <!-- 頂部資訊列 -->
       <div class="flex justify-between items-start">
         <div class="space-y-1">
+          <!-- 時間與顧客類型標籤 -->
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2 py-0.5 rounded-lg border border-brand-200 font-mono tracking-wide">
-              <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date} ${a.time}
+              <i class="fa-solid fa-clock text-xs mr-1"></i>${a.date}${a.time}
             </span>
-            <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">${a.customer_type === 'new' ? '新客' : '熟客'}</span>
+            <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] rounded font-bold">
+              ${a.customer_type === 'new' ? '新客' : '熟客'}
+            </span>
           </div>
 
+          <!-- 顧客姓名、電話、黑名單標籤與毛孩履歷按鈕 -->
           <div class="font-bold text-brand-900 text-sm flex items-center gap-2 pt-0.5">
-            <span>${a.name}</span>
-            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>${isCustBlocked ? `<span class="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded text-[10px] font-bold border border-rose-200">已封鎖</span>` : ''}
+            <span class="${isCustBlocked ? 'text-rose-700 font-black' : ''}">${a.name}</span>
+            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>${isCustBlocked ? `
+              <span class="px-2 py-0.5 bg-rose-600 text-white rounded-md text-[10px] font-black tracking-wider shadow-xs animate-pulse inline-flex items-center gap-1">
+                <i class="fa-solid fa-ban text-[9px]"></i> 黑名單
+              </span>
+            ` : ''}
             ${(isPetMode && petName) ? `
               <button type="button" onclick="openPetProfileModal('${a.phone}', '${petName}')" class="px-2.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-2xs">
                 <i class="fa-solid fa-paw text-[10px]"></i> ${petName} 履歷
@@ -3678,6 +3756,21 @@ function renderSingleCardHTML(a) {
             ` : ''}
           </div>
         </div>
+
+        <!-- 狀態切換選單與專員標籤 (乾淨單一區塊) -->
+        <div class="flex flex-col items-end gap-1">
+          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
+            <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
+            <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
+            <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
+            <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
+            <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
+          </select>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid${staffColor.border};">
+            ${a.staffName}
+          </span>
+        </div>
+      </div>
 
         <div class="flex flex-col items-end gap-1">
           <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
@@ -3767,7 +3860,6 @@ function renderSingleCardHTML(a) {
       </div>
     </div>`;
 }
-
     function formatFriendlyTime(isoStr) {
       if (!isoStr) return '';
       try {
@@ -5420,6 +5512,9 @@ function generateTransactionId() {
   return `TXN-${ymd}-${rand}`;
 }
 
+// ==========================================
+// 完工結單送出 (整合包卡/儲值寫入流水帳、BOM扣庫、Sheets同步)
+// ==========================================
 async function submitFinalCheckoutAction() {
   if (!currentCheckoutBookingObj) return;
 
@@ -5435,15 +5530,17 @@ async function submitFinalCheckoutAction() {
   const serviceName = currentCheckoutBookingObj.service;
 
   // 1. 自動生成全球唯一流水帳編號
-  const txnNumber = generateTransactionId();
+  const txnNumber = typeof generateTransactionId === 'function' 
+    ? generateTransactionId() 
+    : `TXN-${new Date().toISOString().slice(0,10).replace(/-/g,'')}-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
 
-  Swal.fire({ title: '正在完工結單並產生流水帳憑證...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  Swal.fire({ title: '正在完工結單並寫入財務流水帳...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   try {
     let appendNotes = [`【交易流水號: ${txnNumber}】`];
     const buyType = newBuyOpt?.value;
 
-    // A. 處理現場加購包卡
+    // A. 處理包卡邏輯 (現場加購 或 當下扣抵)
     if (buyType === 'new_pkg') {
       const pName = newBuyOpt.getAttribute('data-name');
       const pPrice = Number(newBuyOpt.getAttribute('data-price') || 0);
@@ -5451,6 +5548,7 @@ async function submitFinalCheckoutAction() {
       const isUseNow = (useMethod === 'useCard');
       const remainingTimes = isUseNow ? (pTimes - 1) : pTimes;
 
+      // 寫入/更新包卡資產
       await directSupabaseUpsert('customer_packages', {
         store_id: CURRENT_STORE_ID,
         phone: phone,
@@ -5461,18 +5559,52 @@ async function submitFinalCheckoutAction() {
         updated_at: new Date().toISOString()
       }, 'id');
 
+      // 寫入流水帳紀錄：加購包卡
+      await directSupabaseUpsert('ledger_records', {
+        store_id: CURRENT_STORE_ID,
+        ledger_no: txnNumber,
+        order_no_ref: String(bookingId),
+        customer_phone: phone,
+        customer_name: custName,
+        ledger_type: 'package',
+        action_type: '現場加購包卡',
+        change_amount: pTimes,
+        balance_before: 0,
+        balance_after: remainingTimes,
+        description: `現場加購【${pName}】+$${pPrice} (${pTimes}點)${isUseNow ? ' ｜ 當下扣抵 1 點' : ''}`
+      }, 'id');
+
       appendNotes.push(`【現場加購包卡: ${pName} +$${pPrice} (${pTimes}點)${isUseNow ? ' ｜ 當下扣抵 1 點' : ''}】`);
     } else if (useMethod === 'useCard') {
       const pkgs = await directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`);
       if (pkgs && pkgs.length > 0) {
-        await directSupabasePatch('customer_packages', `id=eq.${pkgs[0].id}`, {
-          remaining_times: Math.max(0, pkgs[0].remaining_times - 1)
-        });
+        const curPkg = pkgs[0];
+        const beforeTimes = Number(curPkg.remaining_times || 0);
+        const afterTimes = Math.max(0, beforeTimes - 1);
+
+        // 更新剩餘堂數
+        await directSupabasePatch('customer_packages', `id=eq.${curPkg.id}`, { remaining_times: afterTimes });
+
+        // 【關鍵修復】：寫入流水帳對帳清單 (ledger_records)
+        await directSupabaseUpsert('ledger_records', {
+          store_id: CURRENT_STORE_ID,
+          ledger_no: txnNumber,
+          order_no_ref: String(bookingId),
+          customer_phone: phone,
+          customer_name: custName,
+          ledger_type: 'package',
+          action_type: '包卡扣抵',
+          change_amount: -1,
+          balance_before: beforeTimes,
+          balance_after: afterTimes,
+          description: `預約結單核銷 1 點：${curPkg.service_name || serviceName}`
+        }, 'id');
+
         appendNotes.push(`【使用包卡扣抵 1 點】`);
       }
     }
 
-    // B. 處理現場加購儲值金
+    // B. 處理儲值金邏輯 (現場新購 或 儲值餘額折抵)
     if (buyType === 'new_topup') {
       const wName = newBuyOpt.getAttribute('data-name');
       const wPrice = Number(newBuyOpt.getAttribute('data-price') || 0);
@@ -5501,53 +5633,86 @@ async function submitFinalCheckoutAction() {
         member_discount: wDisc,
         updated_at: new Date().toISOString()
       }, 'store_id,phone');
+
+      // 寫入儲值流水帳
+      await directSupabaseUpsert('ledger_records', {
+        store_id: CURRENT_STORE_ID,
+        ledger_no: txnNumber,
+        order_no_ref: String(bookingId),
+        customer_phone: phone,
+        customer_name: custName,
+        ledger_type: 'deposit',
+        action_type: '現場儲值',
+        change_amount: wAdd,
+        balance_before: currentWallet,
+        balance_after: totalWallet,
+        description: `現場購買儲值【${wName}】本金$${wPrice}${deductAmount > 0 ? ` (當下折抵 $${deductAmount})` : ''}`
+      }, 'id');
+
     } else if (useMethod === 'useDeposit') {
       const custRes = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`);
       if (custRes && custRes.length > 0) {
         const c = custRes[0];
+        const curBal = Number(c.wallet_balance || 0);
         const discRate = Number(c.member_discount || 1);
         const discountedService = Math.round(base * discRate);
-        const deductAmt = Math.min(Number(c.wallet_balance || 0), discountedService);
-        const newBal = Math.max(0, Number(c.wallet_balance || 0) - deductAmt);
+        const deductAmt = Math.min(curBal, discountedService);
+        const newBal = Math.max(0, curBal - deductAmt);
 
         await directSupabasePatch('customers', `id=eq.${c.id}`, { wallet_balance: newBal });
+
+        // 【關鍵修復】：寫入儲值金折抵流水帳
+        await directSupabaseUpsert('ledger_records', {
+          store_id: CURRENT_STORE_ID,
+          ledger_no: txnNumber,
+          order_no_ref: String(bookingId),
+          customer_phone: phone,
+          customer_name: custName,
+          ledger_type: 'deposit',
+          action_type: '儲值金折抵',
+          change_amount: -deductAmt,
+          balance_before: curBal,
+          balance_after: newBal,
+          description: `預約結單儲值折抵 (享 ${Math.round(discRate * 100) / 10} 折)`
+        }, 'id');
+
         appendNotes.push(`【使用儲值扣抵: -$${deductAmt} (享 ${Math.round(discRate * 100) / 10} 折)】`);
       }
     }
 
     if (shuttleFee > 0) appendNotes.push(`【專車接送車資: +$${shuttleFee}】`);
 
-    // ========================================================
-    // 【收納進函式內部】：BOM 耗材自動出庫扣料與日誌記錄
-    // ========================================================
+    // C. BOM 技術耗材自動出庫扣料與異動日誌 (收納至函式內部安全執行)
     const svcObj = (backendData.services || []).find(s => (serviceName || '').includes(s.name));
     if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
       svcObj.materials.forEach(m => {
         const invItem = allInventoryItems.find(i => i.name === m.name);
         if (invItem) {
-          invItem.current_stock = Math.max(0, invItem.current_stock - 1);
-          logInventoryChange(m.name, '結單自動扣料', -1, invItem.current_stock, `預約結單扣料: ${custName} (${svcObj.name})`);
+          invItem.current_stock = Math.max(0, Number(invItem.current_stock || 0) - 1);
+          if (typeof logInventoryChange === 'function') {
+            logInventoryChange(m.name, '結單自動扣料', -1, invItem.current_stock, `預約結單扣料: ${custName} (${svcObj.name})`);
+          }
           directSupabasePatch('inventory_items', `id=eq.${invItem.id}`, { current_stock: invItem.current_stock }).catch(()=>{});
         }
       });
     }
 
-    // ========================================================
-    // 【收納進函式內部】：現場零售外帶產品扣庫與日誌記錄
-    // ========================================================
+    // D. 現場零售外帶產品扣庫與異動日誌
     const retailSel = document.getElementById('checkoutRetailSelect');
     if (retailSel && retailSel.value !== 'none') {
       const retailId = retailSel.value;
       const rItem = allInventoryItems.find(i => i.id === retailId);
       if (rItem) {
-        rItem.current_stock = Math.max(0, rItem.current_stock - 1);
-        logInventoryChange(rItem.name, '現場零售', -1, rItem.current_stock, `結單現場外帶加購: ${custName}`);
+        rItem.current_stock = Math.max(0, Number(rItem.current_stock || 0) - 1);
+        if (typeof logInventoryChange === 'function') {
+          logInventoryChange(rItem.name, '現場零售', -1, rItem.current_stock, `結單現場外帶加購: ${custName}`);
+        }
         directSupabasePatch('inventory_items', `id=eq.${rItem.id}`, { current_stock: rItem.current_stock }).catch(()=>{});
         appendNotes.push(`【現場外帶零售: ${rItem.name} +$${rItem.retail_price || 0}】`);
       }
     }
 
-    // C. 寫入 bookings 結單狀態、流水號與明細備註
+    // E. 更新 bookings 結單狀態、實收金額與流水號
     const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
     const mergedNotes = `${appt ? appt.notes : ''} ${appendNotes.join(' ')}`.trim();
 
@@ -5555,12 +5720,10 @@ async function submitFinalCheckoutAction() {
       status: '已結單',
       final_price: finalPrice,
       notes: mergedNotes,
-      transaction_no: txnNumber // 寫入資料庫
+      transaction_no: txnNumber
     });
 
-    // ========================================================
-    // 【核心連動】：若開啟 Google 試算表連動模組，非同步寫入 Sheets
-    // ========================================================
+    // F. Google 試算表同步 (若啟用)
     if (backendData.settings?.enable_sheets_sync === true || (backendData.storeInfo?.allowed_modules || []).includes('sheets_sync')) {
       fetch(API_URL, {
         method: "POST",
@@ -5580,51 +5743,30 @@ async function submitFinalCheckoutAction() {
     }
 
     closeCheckoutModal();
+
     Swal.fire({
       title: '完工結單對帳成功！',
       html: `
-        <div class="text-left text-xs bg-brand-50 p-3 rounded-2xl border border-brand-200 text-brand-900 space-y-1">
-          <div>• 交易流水號：<b class="font-mono text-brand-900">${txnNumber}</b></div>
+        <div class="text-left text-xs bg-brand-50 p-3.5 rounded-2xl border border-brand-200 text-brand-900 space-y-1.5 font-sans">
+          <div>• 交易流水號：<b class="font-mono text-brand-900 text-sm">${txnNumber}</b></div>
           <div>• 顧客姓名：<b>${custName}</b> (${phone})</div>
           <div>• 現場實收：<b class="text-emerald-700 text-sm font-mono">NT$ ${finalPrice.toLocaleString()}</b></div>
-          <div class="text-[11px] text-gray-500 pt-1">${appendNotes.join('<br>')}</div>
+          <div class="text-[11px] text-gray-500 pt-1 border-t border-brand-200 leading-relaxed">${appendNotes.join('<br>')}</div>
         </div>
       `,
       icon: 'success'
     });
 
-    fetchDataAndRender();
-    loadMarketingCenter();
+    // 重新載入數據與更新各分頁視圖
+    await fetchDataAndRender();
+    if (typeof loadMarketingCenter === 'function') loadMarketingCenter();
+    if (typeof renderRevenue === 'function') renderRevenue();
+    if (typeof renderTransactionsList === 'function') renderTransactionsList();
+
   } catch (err) {
     Swal.fire('結單失敗', err.message, 'error');
   }
 }
-
-    // D. 【資深工程師補丁】：執行技術耗材 BOM 自動出庫扣料與日誌記錄
-    const svcObj = (backendData.services || []).find(s => (currentCheckoutBookingObj.service || '').includes(s.name));
-    if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
-      svcObj.materials.forEach(m => {
-        const invItem = allInventoryItems.find(i => i.name === m.name);
-        if (invItem) {
-          invItem.current_stock = Math.max(0, invItem.current_stock - 1);
-          logInventoryChange(m.name, '結單自動扣料', -1, invItem.current_stock, `預約結單扣料: ${custName} (${svcObj.name})`);
-          directSupabasePatch('inventory_items', `id=eq.${invItem.id}`, { current_stock: invItem.current_stock }).catch(()=>{});
-        }
-      });
-    }
-
-    // E. 【資深工程師補丁】：執行現場零售外帶產品扣庫與日誌記錄
-    const retailSel = document.getElementById('checkoutRetailSelect');
-    if (retailSel && retailSel.value !== 'none') {
-      const retailId = retailSel.value;
-      const rItem = allInventoryItems.find(i => i.id === retailId);
-      if (rItem) {
-        rItem.current_stock = Math.max(0, rItem.current_stock - 1);
-        logInventoryChange(rItem.name, '現場零售', -1, rItem.current_stock, `結單現場外帶加購: ${custName}`);
-        directSupabasePatch('inventory_items', `id=eq.${rItem.id}`, { current_stock: rItem.current_stock }).catch(()=>{});
-        appendNotes.push(`【現場外帶零售: ${rItem.name} +$${rItem.retail_price || 0}】`);
-      }
-    }
 
     function cancelBooking(id, name) {
       Swal.fire({
@@ -6617,59 +6759,134 @@ function renderRevenue() {
 // 【買斷版開關徹底隱形閘道】未購買之模組開關 100% 蒸發
 // 8 大美學風格色系永遠保留為標配預設功能！
 // ========================================================
+// ==========================================
+// 17 大模組嚴格閘道控制 (全選擇器精確映射 + 隱藏商模切換)
+// ==========================================
 function applyLifetimeModulesStrictGating(storeInfo) {
   if (!storeInfo) return;
   const isLifetime = (storeInfo.plan_type === 'lifetime');
   const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
   const s = backendData.settings || {};
 
-  // 17 大模組與後台 UI 選擇器對照表
+  // 17 大模組與 HTML DOM 選擇器完整對照矩陣
   const moduleUIMap = {
-    'services': { nav: ['[onclick*="\'services\'"]'], settings: ['#page-services'] },
-    'shift': { nav: ['[onclick*="\'shift\'"]'], settings: ['#cfg-shift-start', '#weekly-off-grid'] },
-    'audit': { nav: [], settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit'] },
-    'buffer': { nav: [], settings: ['#cfg-buffer'] },
-    'staff_sub': { nav: [], settings: ['#staff-manager-list', '#cfg-toggle-commission-calc'] },
-    'marketing_tools': { nav: ['[onclick*="\'marketing\'"]'], settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons'] },
-    'inventory': { nav: ['[onclick*="\'inventory\'"]'], settings: ['#svc-material-checkboxes-container'] },
-    'revenue': { nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'], settings: ['#page-revenue', '#page-transactions'] },
-    'care': { nav: ['[onclick*="\'care\'"]'], settings: ['#page-care', '#cfg-toggle-care'] },
-    'reviews': { nav: ['[onclick*="\'reviews\'"]'], settings: ['#page-reviews', '#cfg-toggle-reviews'] },
-    'portfolio': { nav: [], settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio'] },
-    'slots': { nav: ['[onclick*="\'slots\'"]'], settings: ['#page-slots'] },
-    'contract': { nav: [], settings: ['#cfg-toggle-contract', '#cfg-contract-content'] },
-    'pets': { nav: ['#nav-btn-pets'], settings: ['#section-pet-questions-manager'] },
-    'boarding': { nav: ['#nav-btn-boarding'], settings: ['#section-pet-hotel-settings'] },
-    'line_push': { nav: [], settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu'] }
+    // 1. 服務項目與分類設定
+    'services': {
+      nav: ['[onclick*="\'services\'"]'],
+      settings: ['#page-services', '#cfg-toggle-show-price']
+    },
+    // 2. 專員上班排班表
+    'shift': {
+      nav: ['[onclick*="\'shift\'"]'],
+      settings: ['#cfg-shift-start', '#cfg-shift-end', '#cfg-shift-interval', '#weekly-off-grid', '#new-custom-off-date', '#cfg-toggle-multi-staff-schedule']
+    },
+    // 3. 預約審核機制與訂金收取
+    'audit': {
+      nav: [],
+      settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit', '#cfg-deposit-mode', '#cfg-deposit-amount', '#cfg-deposit-info']
+    },
+    // 4. 預約緩衝禁約時間
+    'buffer': {
+      nav: [],
+      settings: ['#cfg-buffer']
+    },
+    // 5. 專員分權登入與抽成算薪
+    'staff_sub': {
+      nav: [],
+      settings: ['#staff-manager-list', '#new-staff-id', '#cfg-toggle-commission-calc', '#cfg-commission-rate', '#cfg-designated-bonus', '#cfg-toggle-staff-select']
+    },
+    // 6. 行銷工具 (儲值金、包卡、折扣碼、輪播圖、選品商城)
+    'marketing_tools': {
+      nav: ['[onclick*="\'marketing\'"]'],
+      settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons', '#cfg-toggle-carousel', '#cfg-toggle-featured-shop', '#cfg-promo-rules-input']
+    },
+    // 7. 進銷存與 BOM 耗材自動出庫
+    'inventory': {
+      nav: ['[onclick*="\'inventory\'"]'],
+      settings: ['#svc-material-checkboxes-container']
+    },
+    // 8. 營業報表與財務流水帳
+    'revenue': {
+      nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'],
+      settings: ['#page-revenue', '#page-transactions']
+    },
+    // 9. 定期回訪關懷提醒
+    'care': {
+      nav: ['[onclick*="\'care\'"]'],
+      settings: ['#page-care', '#cfg-toggle-care', '#cfg-care']
+    },
+    // 10. 顧客好評審核牆
+    'reviews': {
+      nav: ['[onclick*="\'reviews\'"]'],
+      settings: ['#page-reviews', '#cfg-toggle-reviews', '#review-tags-manage-box']
+    },
+    // 11. PORTFOLIO 作品集展示
+    'portfolio': {
+      nav: [],
+      settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio']
+    },
+    // 12. 9:16 IG 限動空檔一鍵發布
+    'slots': {
+      nav: ['[onclick*="\'slots\'"]'],
+      settings: ['#page-slots']
+    },
+    // 13. 定型化契約與親筆手寫簽名
+    'contract': {
+      nav: [],
+      settings: ['#cfg-toggle-contract', '#cfg-contract-title', '#cfg-contract-content']
+    },
+    // 14. 毛孩照護履歷與健康總檔 (寵物專屬)
+    'pets': {
+      nav: ['#nav-btn-pets'],
+      settings: ['#section-pet-questions-manager']
+    },
+    // 15. 寵物度假住宿與供餐排程 (寵物專屬)
+    'boarding': {
+      nav: ['#nav-btn-boarding'],
+      settings: ['#section-pet-hotel-settings', '#cfg-toggle-stay-notice', '#cfg-stay-notice-content']
+    },
+    // 16. LINE 推播與一鍵接單
+    'line_push': {
+      nav: [],
+      settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu', '#cfg-toggle-line-one-click', '#cfg-line-token']
+    },
+    // 17. Google 試算表即時連動
+    'sheets_sync': {
+      nav: [],
+      settings: []
+    }
   };
 
-  // 買斷版模式：未購買模組徹底隱藏
+  // 買斷版執行強制過濾
   if (isLifetime) {
     Object.keys(moduleUIMap).forEach(modKey => {
       const isAllowed = allowed.includes(modKey);
       const conf = moduleUIMap[modKey];
 
-      // 隱藏底部分頁鈕
+      // A. 隱藏底部分頁導覽鈕
       conf.nav.forEach(sel => {
-        document.querySelectorAll(sel).forEach(el => {
-          el.style.setProperty('display', isAllowed ? '' : 'none', 'important');
+        document.querySelectorAll(sel).forEach(btn => {
+          btn.style.setProperty('display', isAllowed ? '' : 'none', 'important');
         });
       });
 
-      // 隱藏設定開關及區塊
+      // B. 隱藏設定分頁的開關與區塊
       conf.settings.forEach(sel => {
         document.querySelectorAll(sel).forEach(targetEl => {
+          // 向上抓取最接近的 label 或外層卡片容器，保證整個開關行或區塊乾淨隱藏
           const wrapper = targetEl.closest('label') || targetEl.closest('.bg-white') || targetEl;
           wrapper.style.setProperty('display', isAllowed ? '' : 'none', 'important');
         });
       });
     });
 
-    // 買斷版隱藏業主自行切換營運模式按鈕（避免美業自行切為住宿）
+    // 【重要】：買斷版後台徹底隱藏「門市核心營運模式切換」重大設定區（商模全權收歸總管設置）
     const modeSwitchBox = document.getElementById('current-mode-display-badge')?.closest('.bg-amber-50\\/60');
-    if (modeSwitchBox) modeSwitchBox.style.setProperty('display', 'none', 'important');
+    if (modeSwitchBox) {
+      modeSwitchBox.style.setProperty('display', 'none', 'important');
+    }
   } else {
-    // 訂閱版：根據設定開關動態隱藏底部分頁（若整組關閉則分頁鈕消失）
+    // 訂閱版：依據 store_settings 開關動態調整部分導覽列顯隱
     const showMarketing = (s.enable_wallet || s.enable_packages || s.enable_coupons);
     document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
       el.style.setProperty('display', showMarketing ? '' : 'none', 'important');
@@ -7945,7 +8162,6 @@ function promptManualInputLast5(bookingId, customerName) {
 // 【毛孩履歷分頁】全域狀態與渲染邏輯
 // ========================================================
 let allAdminPetsCache = [];
-let blacklistedPhonesSet = new Set(); // 全域黑名單電話快查表
 
 // ========================================================
 // 【修復版】loadAdminPetsPageData — 跨表精準關聯家長 LINE 暱稱與姓名
