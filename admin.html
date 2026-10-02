@@ -219,11 +219,25 @@
 </div>
     <!-- 分頁 4. 名單總覽 (page-customer) -->
     <div id="page-customer" class="page space-y-4 full-admin-only" style="display: none;">
-      <!-- 新進審核專區 -->
-      <div class="bg-amber-50/90 border-2 border-amber-300 p-4 rounded-3xl space-y-3 shadow-xs">
+
+      <!-- 專區 1：已付訂金 ＆ 付款截圖待核對專區 (醒目綠框，三位員工共同查帳認領) -->
+      <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-400 p-4 rounded-3xl space-y-3 shadow-xs" id="paid-deposit-audit-wrapper">
+        <div class="flex justify-between items-center">
+          <span class="font-black text-emerald-950 text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-money-bill-wave text-emerald-600 animate-bounce"></i> 已付訂金 ＆ 轉帳截圖待核對專區
+          </span>
+          <span id="paid-deposit-badge" class="px-2.5 py-0.5 bg-emerald-200 text-emerald-900 text-[10px] font-bold rounded-full">0 筆待對帳</span>
+        </div>
+        <div id="paid-deposit-container" class="space-y-2.5">
+          <div class="text-center text-xs text-emerald-800/60 py-3">目前無已付款待對帳預約</div>
+        </div>
+      </div>
+
+      <!-- 專區 2：新進預約排程審核專區 (純時段接單審核) -->
+      <div class="bg-amber-50/90 border-2 border-amber-300 p-4 rounded-3xl space-y-3 shadow-xs" id="pending-audit-wrapper">
         <div class="flex justify-between items-center">
           <span class="font-black text-amber-950 text-xs flex items-center gap-1.5">
-            <i class="fa-solid fa-bell text-amber-600 animate-bounce"></i> 新進預約審核 ＆ 訂金核對專區
+            <i class="fa-solid fa-bell text-amber-600"></i> 新進預約審核專區 (待確認接單)
           </span>
           <span id="pending-audit-badge" class="px-2.5 py-0.5 bg-amber-200 text-amber-900 text-[10px] font-bold rounded-full">0 筆待處理</span>
         </div>
@@ -232,7 +246,7 @@
         </div>
       </div>
 
-      <!-- 訂金警戒專區 -->
+      <!-- 專區 3：尚未收到訂金防呆警戒區 -->
       <div class="bg-rose-50/80 border border-rose-200 p-4 rounded-3xl space-y-2.5 shadow-xs" id="unpaid-deposit-wrapper">
         <div class="flex justify-between items-center">
           <span class="font-bold text-rose-950 text-xs flex items-center gap-1.5">
@@ -294,16 +308,22 @@
     <div id="page-inventory" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex justify-between items-center pb-2 border-b border-brand-100">
-          <div>
-            <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-              <i class="fa-solid fa-boxes-stacked text-brand-500"></i> 通用產品與技術耗材 (BOM) 庫存主檔
-            </h2>
-            <p class="text-[11px] text-brand-500 mt-0.5">支援自建分類、安全存量防呆、現場零售外帶出庫</p>
-          </div>
-          <button onclick="openAddProductModal()" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition">
-            <i class="fa-solid fa-plus mr-1"></i> 新增品項/耗材
-          </button>
-        </div>
+  <div>
+    <h2 class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-boxes-stacked text-brand-500"></i> 通用產品與技術耗材 (BOM) 庫存主檔
+    </h2>
+    <p class="text-[11px] text-brand-500 mt-0.5">支援自建分類、安全存量防呆、現場零售外帶出庫</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <!-- 新增：快速實體盤點按鈕 -->
+    <button type="button" onclick="openInventoryStocktakeModal()" class="px-3 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1">
+      <i class="fa-solid fa-clipboard-check text-brand-600"></i> 快速盤點校正
+    </button>
+    <button type="button" onclick="openAddProductModal()" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition flex items-center gap-1">
+      <i class="fa-solid fa-plus text-[10px]"></i> 新增品項/耗材
+    </button>
+  </div>
+</div>
         <div class="flex gap-2">
           <select id="inv-filter-category" class="flex-1 p-2 bg-brand-50 rounded-xl border border-brand-200 text-xs font-bold" onchange="renderInventoryList()">
             <option value="ALL">全部分類 (技術耗材與零售外帶)</option>
@@ -1167,8 +1187,8 @@
     <!-- 分頁 15. 設定分頁 (page-settings，已徹底修復 DOM 結構閉合與排版) -->
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
 
-      <!-- 4. 門市營業時間與公休排班 (排版自適應不重疊) -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <!-- 1. 營業時間與排班 (綁定 shift 模組) -->
+      <div data-setting-module="shift" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-clock text-brand-500"></i> 門市營業時段、排班間隔與公休日
@@ -1215,26 +1235,26 @@
           <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
         </div>
       </div>
-      
+
       <!-- 門市設備與席位資源管理庫 (動態新增、設定數量上限) -->
-<div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3.5 text-xs">
-  <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-    <div>
-      <span class="text-xs font-bold text-brand-900 block flex items-center gap-1.5">
-        <i class="fa-solid fa-couch text-amber-600"></i> 門市硬體設備與席位資源庫
-      </span>
-      <span class="text-[10.5px] text-brand-400 mt-0.5">設定足部沙發、美容床、VIP包廂等設備數量，系統將智慧防撞期</span>
-    </div>
-    <button type="button" onclick="openAddResourceModal()" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs">
-      <i class="fa-solid fa-plus text-[10px]"></i> 新增資源設備
-    </button>
-  </div>
-  
-  <!-- 資源設備卡片列表 -->
-  <div id="store-resources-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1"></div>
-</div>
-      
-      <!-- 8. 活動說明圖與公告 -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3.5 text-xs">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <div>
+            <span class="text-xs font-bold text-brand-900 block flex items-center gap-1.5">
+              <i class="fa-solid fa-couch text-amber-600"></i> 門市硬體設備與席位資源庫
+            </span>
+            <span class="text-[10.5px] text-brand-400 mt-0.5">設定足部沙發、美容床、VIP包廂等設備數量，系統將智慧防撞期</span>
+          </div>
+          <button type="button" onclick="openAddResourceModal()" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs">
+            <i class="fa-solid fa-plus text-[10px]"></i> 新增資源設備
+          </button>
+        </div>
+        
+        <!-- 資源設備卡片列表 -->
+        <div id="store-resources-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1"></div>
+      </div>
+
+      <!-- 活動說明圖與公告 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">活動說明圖 (9:16 直式最多 7 張，含獨立刪除鈕) 與滿版公告</span>
         <div>
@@ -1250,9 +1270,9 @@
           <textarea id="cfg-promo-imgs-text" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 font-mono text-gray-400" readonly placeholder="上傳後自動產生圖片網址清單..."></textarea>
         </div>
       </div>
-      
-      <!-- 1. 預約審核機制與訂金收取規則 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+
+      <!-- 2. 預約審核機制與訂金 (綁定 audit 模組) -->
+      <div data-setting-module="audit" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-clipboard-check text-brand-500"></i> 預約審核機制與訂金收取規則
@@ -1270,7 +1290,7 @@
           <label class="flex items-center justify-between p-2.5 rounded-xl bg-brand-50/70 border border-brand-200/60 cursor-pointer">
             <div>
               <span class="font-bold text-brand-900 block">啟用 線下預收訂金機制</span>
-              <span class="text-[10px] text-brand-500">開啟時：前台送單後顯示店家匯款卡片與回報後五碼按鈕，名單開啟防呆提醒</span>
+              <span class="text-[10px] text-brand-500">開啟時：前台送單後顯示店家匯款卡片與回報憑證，名單開啟防呆提醒</span>
             </div>
             <input type="checkbox" id="cfg-toggle-deposit" class="accent-brand-400 w-4 h-4 ml-2" checked>
           </label>
@@ -1293,6 +1313,14 @@
             </div>
           </div>
           <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">顧客回報訂金方式 (前台動態切換)：</label>
+            <select id="cfg-deposit-report-mode" class="w-full p-2.5 text-xs rounded-xl border border-brand-200 bg-white outline-none font-bold">
+              <option value="both">1. 兩者都需要 (填寫帳號末五碼 ＋ 上傳轉帳截圖)</option>
+              <option value="receipt_only">2. 僅回傳轉帳截圖 (免記帳號後五碼，手機截圖最快)</option>
+              <option value="last5_only">3. 僅回覆帳號後五碼 (傳統純文字回報)</option>
+            </select>
+          </div>
+          <div>
             <label class="block text-[11px] font-bold text-brand-800 mb-1">匯款銀行帳號與說明文字：</label>
             <textarea id="cfg-deposit-info" rows="2" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-white leading-relaxed outline-none" placeholder="例：玉山銀行 (808) 帳號 1234-5678-9012..."></textarea>
           </div>
@@ -1306,24 +1334,38 @@
         </div>
       </div>
 
-      <!-- 2. 門市專員名冊與獨立排班設定 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <!-- 3. 專員名冊與獨立登入 (綁定 staff_sub 模組) -->
+      <div data-setting-module="staff_sub" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <div>
             <span class="text-xs font-bold text-brand-900 block flex items-center gap-1.5">
               <i class="fa-solid fa-user-group text-brand-500"></i> 門市專員名冊與獨立排班設定
             </span>
-            <span class="text-[10px] text-brand-400">支援老闆查看與修改專員密碼</span>
+            <span class="text-[10px] text-brand-400">支援老闆查看與修改專員密碼及獨立授權</span>
           </div>
           <span id="staff-count-badge" class="px-2.5 py-0.5 bg-brand-100 text-brand-800 rounded-full text-[10px] font-bold">0 位專員</span>
         </div>
         <div id="staff-manager-list" class="space-y-2"></div>
         <div class="pt-2 border-t border-brand-100 space-y-2 text-xs">
-          <div class="font-bold text-brand-800 text-[11px]">＋ 登記新專員</div>
+          <div class="font-bold text-brand-800 text-[11px]">＋ 登記新專員 (可指定工作台開放分頁)</div>
           <div class="grid grid-cols-3 gap-2">
             <input type="text" id="new-staff-id" placeholder="編號 (如: S01)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
-            <input type="text" id="new-staff-name" placeholder="姓名 (如: Emily)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
+            <input type="text" id="new-staff-name" placeholder="姓名 (如: 莫莉)" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none">
             <input type="password" id="new-staff-pin" placeholder="密碼 (預設8888)" maxlength="6" class="p-2 text-xs border border-brand-200 rounded-xl bg-brand-50/50 outline-none font-mono">
+          </div>
+          <div>
+            <label class="block font-bold text-brand-800 text-[11px] mb-1">勾選開放給此專員的工作台後台分頁：</label>
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-1.5 p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-[11px]" id="new-staff-pages-box">
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="calendar" checked class="staff-perm-cb accent-[#8C7355]"> 日曆</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="shift" checked class="staff-perm-cb accent-[#8C7355]"> 排班</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="customer" checked class="staff-perm-cb accent-[#8C7355]"> 名單</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="add" checked class="staff-perm-cb accent-[#8C7355]"> 新增代客</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="boarding-schedule" class="staff-perm-cb accent-[#8C7355]"> 住宿房況</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="pets" class="staff-perm-cb accent-[#8C7355]"> 毛孩履歷</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="care" class="staff-perm-cb accent-[#8C7355]"> 回訪關懷</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="slots" class="staff-perm-cb accent-[#8C7355]"> 空檔發布</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="reviews" class="staff-perm-cb accent-[#8C7355]"> 顧客好評</label>
+            </div>
           </div>
           <button type="button" onclick="addStaffMember()" class="w-full py-2 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold shadow-xs transition">建立並保存專員資料</button>
         </div>
@@ -1338,15 +1380,15 @@
         </div>
       </div>
 
-      <!-- 7. 專員抽成、指定獎金與算薪 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+      <!-- 4. 專員抽成與指定獎金 (綁定 staff_sub 模組) -->
+      <div data-setting-module="staff_sub" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
           <span>專員業績抽成與顧客指定獎金模組</span>
           <input type="checkbox" id="cfg-toggle-commission-calc" class="accent-brand-400" checked>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="font-bold block mb-1">預設抽成比例 (%)：</label>
+            <label class="font-bold block mb-1">預設服務抽成比例 (%)：</label>
             <div class="flex items-center gap-1.5">
               <input type="number" id="cfg-commission-rate" class="w-full p-2 rounded-xl border border-brand-200 text-center font-bold font-mono" value="50">
               <span>%</span>
@@ -1362,9 +1404,8 @@
         </div>
       </div>
 
-      
-      <!-- 3. LINE 推播與通報設定 (已徹底修正巢狀閉合) -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+      <!-- 5. LINE 推播與通報管道 (綁定 line_push 模組) -->
+      <div data-setting-module="line_push" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-brands fa-line text-emerald-600 text-sm"></i> 預約通報與推播管道設定 (LINE / Email)
@@ -1406,7 +1447,7 @@
         </div>
       </div>
 
-      <!-- 6. 20 餘項功能模組開關控制板 (買斷版將全卡徹底隱藏) -->
+      <!-- 6. 【關鍵】：20+ 功能模組開關控制板 (買斷版 100% 隱蔽，專屬 ID) -->
       <div id="section-module-toggles" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">進階功能與行銷模組開關控制板 (20+ 模組全開關)</span>
         
@@ -1494,8 +1535,8 @@
         </div>
       </div>
 
-      <!-- 9. 定型化契約與手寫電子簽章 (依指示優化載入按鈕文字) -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+      <!-- 7. 定型化契約 (綁定 contract 模組) -->
+      <div data-setting-module="contract" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2 font-bold">
           <span>定型化契約與親筆數位簽署存證</span>
           <input type="checkbox" id="cfg-toggle-contract" class="accent-[#8C7355] w-4 h-4">
@@ -1515,14 +1556,14 @@
         </div>
       </div>
 
-      <!-- 10. 居家保養叮嚀 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+      <!-- 8. 居家保養叮嚀 (綁定 care 模組) -->
+      <div data-setting-module="care" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">🌿 居家保養小叮嚀內容</span>
         <textarea id="cfg-care" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
       </div>
 
-      <!-- 毛孩履歷問題管理（預設問題開關 ＋ 老闆自訂動態題庫） -->
-      <div id="section-pet-questions-manager" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
+      <!-- 9. 毛孩履歷問題管理 (綁定 pets 模組，純美業自動隱藏) -->
+      <div id="section-pet-questions-manager" data-setting-module="pets" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs" style="display: none;">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
             <i class="fa-solid fa-clipboard-question text-amber-600"></i> 毛孩照護履歷問卷管理 (前台題庫控制)
@@ -1555,29 +1596,27 @@
         </div>
       </div>
 
-      
-      <!-- 寵物住宿進階營運規格設定 (房間數配置與供餐，受模式連動自動顯隱) -->
-      <!-- 寵物住宿進階營運規格設定 (完全自訂房型名稱、金額與供餐) -->
-      <div id="section-pet-hotel-settings" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs" style="display: none;">
+      <!-- 10. 寵物住宿進階營運規格設定 (綁定 boarding 模組，完全包裹供餐、房型與鮮食費率) -->
+      <div id="section-pet-hotel-settings" data-setting-module="boarding" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs" style="display: none;">
         <div class="font-bold text-brand-900 border-b pb-2 flex items-center justify-between">
           <span class="flex items-center gap-1.5"><i class="fa-solid fa-hotel text-amber-600"></i> 寵物住宿房型等級、餐食與時段動態配置</span>
           <span class="text-[10px] text-brand-400">所有前台名稱與金額皆可修改</span>
         </div>
 
         <!-- 前台行前叮嚀與規範設定 -->
-<div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
-  <div class="flex justify-between items-center font-bold text-amber-950">
-    <span class="flex items-center gap-1.5 text-xs">
-      <i class="fa-solid fa-bullhorn text-amber-600"></i> 前台「行前叮嚀與規範」顯示與文案編輯
-    </span>
-    <label class="flex items-center gap-1 cursor-pointer text-xs">
-      <input type="checkbox" id="cfg-toggle-stay-notice" class="accent-[#8C7355] w-4 h-4" checked>
-      <span>前台啟用展示</span>
-    </label>
-  </div>
-  <textarea id="cfg-stay-notice-content" rows="3" class="w-full p-2.5 rounded-xl border border-amber-300 bg-white text-xs leading-relaxed outline-none" placeholder="輸入行前叮嚀規範，例如：入住請攜帶疫苗手冊、自備平時食用之乾糧與睡墊..."></textarea>
-</div>
-        
+        <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
+          <div class="flex justify-between items-center font-bold text-amber-950">
+            <span class="flex items-center gap-1.5 text-xs">
+              <i class="fa-solid fa-bullhorn text-amber-600"></i> 前台「行前叮嚀與規範」顯示與文案編輯
+            </span>
+            <label class="flex items-center gap-1 cursor-pointer text-xs">
+              <input type="checkbox" id="cfg-toggle-stay-notice" class="accent-[#8C7355] w-4 h-4" checked>
+              <span>前台啟用展示</span>
+            </label>
+          </div>
+          <textarea id="cfg-stay-notice-content" rows="3" class="w-full p-2.5 rounded-xl border border-amber-300 bg-white text-xs leading-relaxed outline-none" placeholder="輸入行前叮嚀規範，例如：入住請攜帶疫苗手冊、自備平時食用之乾糧與睡墊..."></textarea>
+        </div>
+
         <!-- 基礎時間與房數 -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
@@ -1632,9 +1671,72 @@
           <div id="admin-meal-options-list" class="space-y-1.5"></div>
         </div>
 
-        <!-- 3. 前台顯示自訂文案自訂區 -->
+        <!-- 3. 寵物住宿鮮食餐費率設定 (嚴格收納於住宿卡片內，非寵美模式不再孤立外露) -->
+        <div class="space-y-3 pt-2 border-t border-brand-100">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
+              <i class="fa-solid fa-bowl-food text-amber-600"></i> 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價)：
+            </span>
+            <span class="text-[10px] text-amber-800 font-medium">每格皆為「單餐價格 (元/餐)」</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
+            <!-- 小型犬/貓 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">小型犬 / 貓咪 (&lt;10kg)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+                <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="80">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="75">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="70">
+              </div>
+            </div>
+
+            <!-- 中型犬 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+                <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="100">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="90">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="85">
+              </div>
+            </div>
+
+            <!-- 大型犬 -->
+            <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+              <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
+                <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="120">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="110">
+              </div>
+              <div>
+                <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
+                <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="105">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 前台按鈕與附加服務顯示文字自訂 -->
         <div class="space-y-2 pt-2 border-t border-brand-100">
-          <span class="font-bold text-brand-900 text-[11px] block">3. 前台按鈕與附加服務顯示文字自訂：</span>
+          <span class="font-bold text-brand-900 text-[11px] block">4. 前台按鈕與附加服務顯示文字自訂：</span>
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="block text-gray-500 text-[10px] mb-0.5">美容按鈕文字：</label>
@@ -1658,70 +1760,7 @@
         </div>
       </div>
 
-      <!-- 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價，嚴格單餐計價) -->
-      <div class="space-y-3 pt-2 border-t border-brand-100">
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-brand-900 text-[11px] flex items-center gap-1">
-            <i class="fa-solid fa-bowl-food text-amber-600"></i> 3. 寵物住宿鮮食餐費率設定 (依體型與三餐矩陣計價)：
-          </span>
-          <span class="text-[10px] text-amber-800 font-medium">每格皆為「單餐價格 (元/餐)」</span>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center text-xs">
-          <!-- 小型犬/貓 -->
-          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-            <span class="font-bold text-brand-900 block text-[11px]">小型犬 / 貓咪 (&lt;10kg)</span>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-              <input type="number" id="cfg-meal-small-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="80">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-small-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="75">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-small-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="70">
-            </div>
-          </div>
-
-          <!-- 中型犬 -->
-          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-            <span class="font-bold text-brand-900 block text-[11px]">中型犬 (10-20kg)</span>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-              <input type="number" id="cfg-meal-med-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="100">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-med-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="90">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-med-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="85">
-            </div>
-          </div>
-
-          <!-- 大型犬 -->
-          <div class="p-2.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
-            <span class="font-bold text-brand-900 block text-[11px]">大型犬 (21kg以上)</span>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日一餐 (元/餐)</label>
-              <input type="number" id="cfg-meal-large-1" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="120">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日兩餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-large-2" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="110">
-            </div>
-            <div>
-              <label class="text-[9.5px] text-gray-500">一日三餐 (單餐折合價)</label>
-              <input type="number" id="cfg-meal-large-3" class="w-full p-1.5 border rounded-lg font-mono text-center text-xs bg-white font-bold" value="105">
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- 帳號安全與後台密碼修改 (補回功能) -->
+      <!-- 11. 帳號安全與後台密碼修改 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
           <span class="font-bold text-brand-900 flex items-center gap-1.5 text-xs">
@@ -1741,8 +1780,8 @@
           </button>
         </div>
       </div>
-      
-      <!-- 5. 品牌外觀與 LOGO 上傳 (按鈕防跑版) -->
+
+      <!-- 12. 品牌資料與前台外觀 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">品牌資料與前台外觀</span>
         <div>
@@ -1782,39 +1821,39 @@
           <input type="text" id="cfg-hours" class="w-full p-2.5 rounded-xl border border-brand-200 bg-white outline-none">
         </div>
       </div>
-      
-      <!-- 前台品牌風格色系自訂 (8款韓系莫蘭迪與時髦對比主題) -->
-<div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-  <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-    <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-      <i class="fa-solid fa-palette text-brand-500"></i>
-      <span>前台品牌風格色系自訂 (8款主題)</span>
-    </span>
-    <span class="text-[10px] text-brand-400 font-mono">Theme Palette</span>
-  </div>
 
-  <div class="space-y-2.5 text-xs">
-    <label class="block font-bold text-brand-800 text-[11px]">選擇前台展示色調：</label>
-    <select id="cfg-theme-color" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold text-brand-900 outline-none cursor-pointer" onchange="previewSelectedThemeColor(this.value)">
-      <option value="latte">1. 大地燕麥暖棕 (Latte Warm Brown) - 經典沙龍／舒活</option>
-      <option value="matcha">2. 日系抹茶茶木 (Matcha Earth Wood) - 植萃純淨／舒壓</option>
-      <option value="noir">3. 經典極簡黑白 (Noir Minimalist) - 時尚俐落／潮流</option>
-      <option value="navy">4. 韓系霧霾灰藍 (Muted Slate Navy) - 溫柔名媛／氣質</option>
-      <option value="rose">5. 法式暮粉煙燻 (Rose Dust Pink) - 柔美質感／美甲美睫</option>
-      <option value="mist">6. 莫蘭迪鼠尾草綠 (Sage Mist Green) - 森林清新／寵物友善</option>
-      <option value="amber">7. 活力暖橘潮黑 (Amber & Dark Slate) - 暖橘公告／潮黑對比</option>
-      <option value="taupe">8. 焙茶燕麥冷灰 (Taupe Warm Grey) - 高級靜奢／日韓簡約</option>
-    </select>
+      <!-- 13. 前台品牌風格色系自訂 (8款韓系莫蘭迪與時髦對比主題) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-palette text-brand-500"></i>
+            <span>前台品牌風格色系自訂 (8款主題)</span>
+          </span>
+          <span class="text-[10px] text-brand-400 font-mono">Theme Palette</span>
+        </div>
 
-    <!-- 色票即時預覽列 -->
-    <div class="p-3 bg-brand-50/80 rounded-2xl border border-brand-200/60 flex items-center justify-between">
-      <span class="text-[11px] font-bold text-brand-700" id="theme-preview-name">當前色票預覽：</span>
-      <div class="flex items-center gap-1.5" id="theme-color-chips"></div>
-    </div>
-  </div>
-</div>
-      
-      <!-- 11. 社群導航 -->
+        <div class="space-y-2.5 text-xs">
+          <label class="block font-bold text-brand-800 text-[11px]">選擇前台展示色調：</label>
+          <select id="cfg-theme-color" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 text-xs font-bold text-brand-900 outline-none cursor-pointer" onchange="previewSelectedThemeColor(this.value)">
+            <option value="latte">1. 大地燕麥暖棕 (Latte Warm Brown) - 經典沙龍／舒活</option>
+            <option value="matcha">2. 日系抹茶茶木 (Matcha Earth Wood) - 植萃純淨／舒壓</option>
+            <option value="noir">3. 經典極簡黑白 (Noir Minimalist) - 時尚俐落／潮流</option>
+            <option value="navy">4. 韓系霧霾灰藍 (Muted Slate Navy) - 溫柔名媛／氣質</option>
+            <option value="rose">5. 法式暮粉煙燻 (Rose Dust Pink) - 柔美質感／美甲美睫</option>
+            <option value="mist">6. 莫蘭迪鼠尾草綠 (Sage Mist Green) - 森林清新／寵物友善</option>
+            <option value="amber">7. 活力暖橘潮黑 (Amber & Dark Slate) - 暖橘公告／潮黑對比</option>
+            <option value="taupe">8. 焙茶燕麥冷灰 (Taupe Warm Grey) - 高級靜奢／日韓簡約</option>
+          </select>
+
+          <!-- 色票即時預覽列 -->
+          <div class="p-3 bg-brand-50/80 rounded-2xl border border-brand-200/60 flex items-center justify-between">
+            <span class="text-[11px] font-bold text-brand-700" id="theme-preview-name">當前色票預覽：</span>
+            <div class="flex items-center gap-1.5" id="theme-color-chips"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 14. 社群平台與 Google 地圖導航 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">社群平台與 Google 地圖導航</span>
         <div><label class="block font-bold mb-1">官方 LINE 連結：</label><input type="text" id="cfg-line" class="w-full p-2.5 rounded-xl border border-brand-200"></div>
@@ -1829,7 +1868,7 @@
         </button>
       </div>
 
-      <!-- 門市商業模式切換（賦予明確 ID：買斷版 100% 徹底隱形） -->
+      <!-- 15. 【關鍵】：門市核心營運模式切換 (買斷版 100% 隱蔽，專屬 ID: section-industry-mode-switch) -->
       <div id="section-industry-mode-switch" class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6">
         <div class="flex items-center justify-between border-b border-amber-200 pb-2">
           <div>
@@ -1852,8 +1891,8 @@
           </button>
         </div>
       </div>
-</div>
-  </main>
+    </div>
+     </main>
 
   <!-- 底部固定導覽列 (整合 << 與 >> 滑動按鈕，業主一目了然) -->
   <div class="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-white/95 backdrop-blur-md border-t border-brand-200/90 shadow-xl pb-[env(safe-area-inset-bottom,12px)] px-1">
@@ -2157,6 +2196,126 @@ const THEME_PALETTES = {
   let customQuestionsList = [];
 
   // ========================================================
+// 【算薪模組升級】技術抽成 ＋ 產品零售抽成 ＋ 薪資單一鍵列印
+// ========================================================
+function renderStaffPayrollTable(staffStats) {
+  const tbody = document.getElementById('staff-commission-tbody');
+  if (!tbody) return;
+
+  const serviceRate = Number(backendData.settings?.commissionRate ?? 50);
+  const retailRate = Number(backendData.settings?.retailCommissionRate ?? 10);
+  const bonusPerGuest = Number(backendData.settings?.designatedBonus ?? 50);
+
+  tbody.innerHTML = Object.keys(staffStats).map(sName => {
+    const st = staffStats[sName];
+    const serviceComm = Math.round(st.serviceRevenue * (serviceRate / 100));
+    const retailComm = Math.round(st.retailRevenue * (retailRate / 100));
+    const designatedTotal = st.designatedCount * bonusPerGuest;
+    const basePay = Number(st.baseSalary || 0);
+    const finalSalary = basePay + serviceComm + retailComm + designatedTotal;
+
+    return `
+      <tr class="hover:bg-brand-50/50 border-b border-brand-100 text-xs">
+        <td class="py-2.5 px-2 font-bold">${sName}</td>
+        <td class="py-2.5 px-2 font-mono">${st.count} 人 <span class="text-brand-400 text-[10px]">(指名:${st.designatedCount})</span></td>
+        <td class="py-2.5 px-2 font-mono">NT$ ${st.serviceRevenue.toLocaleString()} <span class="text-[10px] text-brand-400">(${serviceRate}%)</span></td>
+        <td class="py-2.5 px-2 font-mono text-amber-800 font-bold">NT$ ${st.retailRevenue.toLocaleString()} <span class="text-[10px] text-amber-600">(${retailRate}%)</span></td>
+        <td class="py-2.5 px-2 font-mono text-emerald-700">+NT$ ${designatedTotal}</td>
+        <td class="py-2.5 px-2 font-black text-theme-primary font-mono text-right">NT$ ${finalSalary.toLocaleString()}</td>
+        <td class="py-2.5 px-2 text-right">
+          <button type="button" onclick="printStaffPaySlip('${sName}', ${basePay}, ${serviceComm}, ${retailComm}, ${designatedTotal}, ${finalSalary})" class="px-2 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg text-[10px] font-bold">薪資單</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// 薪資單彈窗一鍵列印
+function printStaffPaySlip(name, base, svcComm, retComm, bonus, total) {
+  Swal.fire({
+    title: `【${name}】本月業績薪資明細單`,
+    html: `
+      <div class="text-left text-xs bg-brand-50 p-4 rounded-2xl border border-brand-200 space-y-2 font-mono leading-relaxed">
+        <div class="flex justify-between border-b pb-1 font-bold text-brand-900"><span>結算專員：</span><span>${name}</span></div>
+        <div class="flex justify-between"><span>保障底薪：</span><span>NT$ ${base.toLocaleString()}</span></div>
+        <div class="flex justify-between"><span>技術服務業績抽成：</span><span>NT$ ${svcComm.toLocaleString()}</span></div>
+        <div class="flex justify-between"><span>門市零售銷售抽成：</span><span>NT$ ${retComm.toLocaleString()}</span></div>
+        <div class="flex justify-between"><span>顧客指名專員獎金：</span><span>NT$ ${bonus.toLocaleString()}</span></div>
+        <div class="flex justify-between border-t pt-1 font-black text-sm text-emerald-800 font-serif">
+          <span>應發薪資總計：</span><span>NT$ ${total.toLocaleString()}</span>
+        </div>
+      </div>
+    `,
+    confirmButtonText: '確定 / 列印',
+    confirmButtonColor: '#8C7355'
+  });
+}
+    
+    // ========================================================
+// 【進銷存升級】現場庫存快速盤點校正 (自動產生盈虧日誌)
+// ========================================================
+async function openInventoryStocktakeModal() {
+  if (allInventoryItems.length === 0) return Swal.fire('目前尚無品項', '', 'info');
+
+  const rowsHtml = allInventoryItems.map((it, idx) => `
+    <tr class="border-b border-brand-100 text-xs">
+      <td class="py-2.5 px-2 font-bold">${it.name}</td>
+      <td class="py-2.5 px-2 text-gray-500 font-mono">${it.current_stock} ${it.unit}</td>
+      <td class="py-2.5 px-2">
+        <input type="number" id="actual-stock-${idx}" data-orig="${it.current_stock}" data-id="${it.id}" data-name="${it.name}" data-unit="${it.unit}" value="${it.current_stock}" class="w-20 p-1.5 border border-brand-200 rounded-lg font-mono text-center font-bold bg-white outline-none">
+      </td>
+    </tr>
+  `).join('');
+
+  const { isConfirmed } = await Swal.fire({
+    title: '門市現場庫存實體盤點校正',
+    html: `
+      <div class="text-left text-xs space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+        <p class="text-brand-500">請輸入現場實際清點數量，系統將自動比對差異並寫入損耗/盤盈日誌：</p>
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b text-brand-400">
+              <th class="py-1 px-2">品項名稱</th>
+              <th class="py-1 px-2">系統存量</th>
+              <th class="py-1 px-2">實盤數量</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `,
+    width: '600px',
+    showCancelButton: true,
+    confirmButtonText: '確認儲存盤點結果',
+    confirmButtonColor: '#8C7355'
+  });
+
+  if (isConfirmed) {
+    Swal.showLoading();
+    let adjustCount = 0;
+    for (let idx = 0; idx < allInventoryItems.length; idx++) {
+      const input = document.getElementById(`actual-stock-${idx}`);
+      if (!input) continue;
+      const actualVal = Number(input.value);
+      const origVal = Number(input.getAttribute('data-orig'));
+      const diff = actualVal - origVal;
+      const itemName = input.getAttribute('data-name');
+      const itemId = input.getAttribute('data-id');
+
+      if (diff !== 0) {
+        adjustCount++;
+        allInventoryItems[idx].current_stock = actualVal;
+        const typeStr = diff > 0 ? '盤點盤盈入庫' : '盤點損耗調整';
+        logInventoryChange(itemName, typeStr, diff, actualVal, `實體盤點校正 (原:${origVal} ➔ 實盤:${actualVal})`);
+        await directSupabasePatch('inventory_items', `id=eq.${itemId}`, { current_stock: actualVal });
+      }
+    }
+    renderInventoryList();
+    Swal.fire('盤點完成！', `已校正 ${adjustCount} 樣具有存量差異之耗材品項。`, 'success');
+  }
+}
+    
+    // ========================================================
 // 【硬體資源管理引擎】動態增刪改設備與數量上限
 // ========================================================
 let storeResourcesList = [
@@ -3285,7 +3444,9 @@ renderStoreResourcesList();
       if (pageId === 'settings') { populateSettings(); renderStaffManager(); }
     }
 
-    // 商業營運型態切換：動態控制住宿與毛孩導覽鈕顯隱
+    // ========================================================
+// 【商業營運模式切換器】精確控制前台版型、分頁導覽與後台卡片顯隱
+// ========================================================
 function handleIndustryModeChange(mode) {
   const isPetGrooming = (mode === 'pet_grooming');
   const isPetHotel = (mode === 'pet_hotel');
@@ -3297,11 +3458,16 @@ function handleIndustryModeChange(mode) {
   if (navBoarding) navBoarding.style.setProperty('display', isPetHotel ? 'flex' : 'none', 'important');
   if (navPets) navPets.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'flex' : 'none', 'important');
 
-  // 2. 設定分頁內部寵物相關大卡片顯隱
+  // 2. 設定分頁內部寵物相關大卡片顯隱 (純美業模式下 100% 徹底隱形)
   const hotelSettings = document.getElementById('section-pet-hotel-settings');
   const petQuestions = document.getElementById('section-pet-questions-manager');
-  if (hotelSettings) hotelSettings.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
-  if (petQuestions) petQuestions.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'block' : 'none', 'important');
+  
+  if (hotelSettings) {
+    hotelSettings.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+  }
+  if (petQuestions) {
+    petQuestions.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'block' : 'none', 'important');
+  }
 
   // 3. 代客預約 (page-add) 模式切換器自適應
   const quickModeBox = document.querySelector('input[name="quick-industry-mode"]')?.closest('.p-3\\.5');
@@ -3724,13 +3890,30 @@ function renderSingleCardHTML(a) {
   let bathAddons = [];
   let addonTags = [];
 
+  // 1. 抓取付款截圖網址 (兼容「付款截圖」與「轉帳截圖」格式，只保留一次宣告)
+  const matchReceipt = (cleanUserNote || '').match(/【(?:付款截圖|轉帳截圖):\s*([^】]+)】/);
+  const receiptUrl = a.deposit_receipt_url || (matchReceipt ? matchReceipt[1].trim() : '');
+  
+  // 若備註內有截圖標籤，將它從備註字串清除，避免污染內部店務筆記
+  if (matchReceipt) {
+    cleanUserNote = cleanUserNote.replace(matchReceipt[0], '');
+  }
+
+  // 2. 定義查看截圖按鈕 HTML (有截圖時才產生按鈕)
+  const receiptBtnHtml = receiptUrl ? `
+    <button type="button" onclick="viewDepositReceipt('${receiptUrl}', '${a.name}', '${a.depositLast5 || a.deposit_last5 || ''}')" class="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-lg text-[10.5px] font-bold border border-purple-300 transition flex items-center gap-1 shadow-2xs" title="點擊檢視顧客轉帳明細截圖">
+      <i class="fa-solid fa-image text-purple-700"></i> 查看截圖
+    </button>
+  ` : '';
+
   // A. 提取 Email
   if (cleanUserNote.includes('Email:')) {
     const parts = cleanUserNote.split('Email:');
     cleanUserNote = parts[0];
     parsedEmail = (parts[1] || '').trim().split(' ')[0].split('|')[0].trim();
   }
-
+  
+  
   // B. 提取毛孩身分 (抽離備註)
   const petMatch = cleanUserNote.match(/【毛孩(?:\d*):\s*([^】]+)】/);
   if (petMatch) {
@@ -4053,6 +4236,7 @@ function renderSingleCardHTML(a) {
           </a>
           ${blacklistBtnHtml}
           ${signBtnHtml}
+          ${receiptBtnHtml}
           ${isPetMode && petName ? `
             <button type="button" onclick="sendUpcomingNotice('${a.name}', '${petName}', '${a.phone}', '${a.date}', '${a.time}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[10.5px]">提醒預約</button>
             <button type="button" onclick="sendPickupNotice('${a.name}', '${petName}', '${a.phone}')" class="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg font-bold text-[10.5px]">通知接回</button>
@@ -4317,69 +4501,99 @@ function getBookingDepositDisplay(a) {
   // ==========================================
   // 4. 名單總覽 (嚴格過濾：過期單自動歸檔，訂金依新舊客精準分流)
   // ==========================================
-  function renderCustomer() {
-    const appts = backendData.appointments || [];
-    const filter = document.getElementById('filter-status')?.value || 'ALL';
-    const container = document.getElementById('cust-content-area');
-    if (!container) return;
+  // ==========================================
+// 4. 名單總覽 (嚴格拆分：已付款對帳區、新進預約審核區、未收訂金警戒區)
+// ==========================================
+function renderCustomer() {
+  const appts = backendData.appointments || [];
+  const filter = document.getElementById('filter-status')?.value || 'ALL';
+  const container = document.getElementById('cust-content-area');
+  if (!container) return;
 
-    // 取得今日字串 (YYYY/MM/DD)
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')}`;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayStr = `${now.getFullYear()}/${pad(now.getMonth()+1)}/${pad(now.getDate())}`;
 
-    // 任何狀態的預約，只要日期早於今日 (a.date < todayStr) 一律視為歷史過期單，自動消失
-    const activeAppts = appts.filter(a => a.date >= todayStr);
+  // 僅展示今日及未來預約
+  const activeAppts = appts.filter(a => a.date >= todayStr);
 
-    let filtered = activeAppts;
-    if (filter !== 'ALL') {
-      filtered = activeAppts.filter(a => a.status === filter);
-    } else {
-      filtered = activeAppts.filter(a => a.status !== '已取消' && a.status !== '婉拒');
-    }
-
-    if (filtered.length === 0) {
-      container.innerHTML = `<div class="text-center py-8 text-gray-400 text-xs">目前無即將到來的排程名單 (過期單已自動歸檔)</div>`;
-    } else {
-      container.innerHTML = filtered.map(a => renderSingleCardHTML(a)).join('');
-    }
-
-    // 頂部新進審核專區 (過期自動消失)
-    const pendingAudit = activeAppts.filter(a => a.status === '待確認');
-    const pendingBadge = document.getElementById('pending-audit-badge');
-    const pendingBox = document.getElementById('pending-audit-container');
-    if (pendingBadge) pendingBadge.innerText = `${pendingAudit.length} 筆待處理`;
-    if (pendingBox) {
-      pendingBox.innerHTML = pendingAudit.length > 0 
-        ? pendingAudit.map(a => renderSingleCardHTML(a)).join('') 
-        : '<div class="text-center text-xs text-amber-800/70 py-3 font-medium">目前無待審核預約</div>';
-    }
-
-    // 訂金警戒專區：僅篩選「依設定必須付訂金，但未確認入帳」之有效預約
-    const isDepEnabled = (backendData.settings?.enableDeposit === true);
-    const depMode = backendData.settings?.depositMode || 'all';
-
-    const unpaidDep = activeAppts.filter(a => {
-      if (a.status === '已取消' || a.status === '已結單') return false;
-      if (!isDepEnabled) return false;
-      if (depMode === 'new_only' && a.customer_type !== 'new') return false; // 熟客直接放行，不進警戒區
-      return !a.deposit_confirmed && !(a.notes || '').includes('訂金已核對');
-    });
-
-    const unpaidBadge = document.getElementById('unpaid-deposit-badge');
-    const unpaidBox = document.getElementById('unpaid-deposit-container');
-    if (unpaidBadge) unpaidBadge.innerText = `${unpaidDep.length} 筆`;
-    if (unpaidBox) {
-      unpaidBox.innerHTML = unpaidDep.length > 0 ? unpaidDep.map(a => `
-        <div class="p-3 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs shadow-2xs">
-          <div>
-            <b class="text-rose-950 font-bold">${a.name}</b> <span class="font-mono text-gray-500">(${a.phone})</span>
-            <div class="text-[11px] text-rose-700 mt-0.5">${a.service} - 預約時間：${a.date} ${a.time}</div>
-          </div>
-          <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">未付訂金</span>
-        </div>
-      `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已核對訂金或為免收訂金</div>';
-    }
+  // 1. 渲染主列表
+  let filtered = activeAppts;
+  if (filter !== 'ALL') {
+    filtered = activeAppts.filter(a => a.status === filter);
+  } else {
+    filtered = activeAppts.filter(a => a.status !== '已取消' && a.status !== '婉拒');
   }
+
+  container.innerHTML = (filtered.length > 0)
+    ? filtered.map(a => renderSingleCardHTML(a)).join('')
+    : `<div class="text-center py-8 text-gray-400 text-xs">目前無即將到來的排程名單</div>`;
+
+  // 2. 專區 1：已付訂金 ＆ 付款截圖待核對專區 (客人已回報五碼或傳了截圖，但尚未入帳確認)
+  const paidAuditList = activeAppts.filter(a => {
+    if (a.status === '已取消' || a.status === '婉拒' || a.status === '已結單') return false;
+    const hasLast5 = Boolean(a.depositLast5 || a.deposit_last5);
+    const hasReceipt = Boolean((a.notes || '').includes('付款截圖') || a.deposit_receipt_url);
+    const isConfirmed = (a.deposit_confirmed === true || (a.notes || '').includes('訂金已核對'));
+    return (hasLast5 || hasReceipt) && !isConfirmed;
+  });
+
+  const paidBadge = document.getElementById('paid-deposit-badge');
+  const paidBox = document.getElementById('paid-deposit-container');
+  if (paidBadge) paidBadge.innerText = `${paidAuditList.length} 筆待對帳`;
+  if (paidBox) {
+    paidBox.innerHTML = paidAuditList.length > 0
+      ? paidAuditList.map(a => renderSingleCardHTML(a)).join('')
+      : '<div class="text-center text-xs text-emerald-800/60 py-2">目前無已付款待對帳預約</div>';
+  }
+
+  // 3. 專區 2：純新進預約審核專區 (待確認接單，且尚未回報付款憑證)
+  const pendingAudit = activeAppts.filter(a => {
+    if (a.status !== '待確認') return false;
+    const hasLast5 = Boolean(a.depositLast5 || a.deposit_last5);
+    const hasReceipt = Boolean((a.notes || '').includes('付款截圖') || a.deposit_receipt_url);
+    return !hasLast5 && !hasReceipt;
+  });
+
+  const pendingBadge = document.getElementById('pending-audit-badge');
+  const pendingBox = document.getElementById('pending-audit-container');
+  if (pendingBadge) pendingBadge.innerText = `${pendingAudit.length} 筆待處理`;
+  if (pendingBox) {
+    pendingBox.innerHTML = pendingAudit.length > 0
+      ? pendingAudit.map(a => renderSingleCardHTML(a)).join('')
+      : '<div class="text-center text-xs text-amber-800/70 py-2">目前無待審核預約</div>';
+  }
+
+  // 4. 專區 3：未收訂金警戒專區 (依設定需付訂金，但完全未收到付款憑證者)
+  const isDepEnabled = (backendData.settings?.enableDeposit === true);
+  const depMode = backendData.settings?.depositMode || 'all';
+
+  const unpaidDep = activeAppts.filter(a => {
+    if (a.status === '已取消' || a.status === '婉拒' || a.status === '已結單') return false;
+    if (!isDepEnabled) return false;
+    if (depMode === 'new_only' && a.customer_type !== 'new') return false;
+
+    const hasLast5 = Boolean(a.depositLast5 || a.deposit_last5);
+    const hasReceipt = Boolean((a.notes || '').includes('付款截圖') || a.deposit_receipt_url);
+    const isConfirmed = (a.deposit_confirmed === true || (a.notes || '').includes('訂金已核對'));
+    return !hasLast5 && !hasReceipt && !isConfirmed;
+  });
+
+  const unpaidBadge = document.getElementById('unpaid-deposit-badge');
+  const unpaidBox = document.getElementById('unpaid-deposit-container');
+  if (unpaidBadge) unpaidBadge.innerText = `${unpaidDep.length} 筆`;
+  if (unpaidBox) {
+    unpaidBox.innerHTML = unpaidDep.length > 0 ? unpaidDep.map(a => `
+      <div class="p-3 bg-white rounded-2xl border border-rose-200 flex justify-between items-center text-xs shadow-2xs">
+        <div>
+          <b class="text-rose-950 font-bold">${a.name}</b> <span class="font-mono text-gray-500">(${a.phone})</span>
+          <div class="text-[11px] text-rose-700 mt-0.5">${a.service} - 預約時間：${a.date} ${a.time}</div>
+        </div>
+        <span class="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full">未付訂金</span>
+      </div>
+    `).join('') : '<div class="text-center text-xs text-rose-800/60 py-1">全數皆已回報或為免收訂金</div>';
+  }
+}
 
     async function quickUpdateStatus(id, newStatus) {
       if (newStatus === '已取消') {
@@ -5885,6 +6099,38 @@ async function submitFinalCheckoutAction() {
   const bookingId = currentCheckoutBookingObj.id;
   const serviceName = currentCheckoutBookingObj.service;
 
+  // ----------------------------------------------------
+// 【BOM 智慧扣料升級】含總開關檢查、零庫存柔性出庫防呆與日誌追蹤
+// ----------------------------------------------------
+const enableBomDeduct = backendData.settings?.enable_bom_auto_deduct !== false;
+
+if (enableBomDeduct) {
+  const svcObj = (backendData.services || []).find(s => (serviceName || '').includes(s.name));
+  if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
+    for (let m of svcObj.materials) {
+      const invItem = allInventoryItems.find(i => i.name === m.name);
+      if (invItem) {
+        const curStock = Number(invItem.current_stock || 0);
+        const dosageVal = parseInt(m.dosage) || 1;
+        const afterStock = curStock - dosageVal;
+
+        // 柔性出庫：若庫存已為 0 或扣除後為負數，記錄警戒並允許出庫
+        invItem.current_stock = afterStock;
+        
+        if (typeof logInventoryChange === 'function') {
+          const alertNote = (afterStock < 0) 
+            ? `⚠️️ [零庫存柔性扣除] 結單: ${custName} (${txnNumber})` 
+            : `預約結單扣料: ${custName} (${txnNumber})`;
+          logInventoryChange(m.name, '結單自動扣料', -dosageVal, afterStock, alertNote);
+        }
+        
+        // 背景非同步更新 Supabase
+        directSupabasePatch('inventory_items', `id=eq.${invItem.id}`, { current_stock: afterStock }).catch(() => {});
+      }
+    }
+  }
+}
+  
   // 1. 自動生成全球唯一流水帳編號
   const txnNumber = typeof generateTransactionId === 'function' 
     ? generateTransactionId() 
@@ -6766,6 +7012,36 @@ if (topCustBox) {
   `).join('') || '<div class="text-center py-4 text-brand-400">目前尚無足夠數據</div>';
 }
   
+  // ========================================================
+// 【智慧商業分析升級】尖峰熱門預約時段分佈分析 (指導排班)
+// ========================================================
+const hourlyBookingMap = {};
+filtered.filter(a => a.status === '已結單' || a.status === '已確認').forEach(a => {
+  const hour = (a.time || '10:00').split(':')[0] + ':00';
+  hourlyBookingMap[hour] = (hourlyBookingMap[hour] || 0) + 1;
+});
+
+const sortedHours = Object.entries(hourlyBookingMap).sort((a, b) => b[1] - a[1]);
+const maxHourAppts = sortedHours[0] ? sortedHours[0][1] : 1;
+
+const peakChartBox = document.getElementById('analytics-peak-hours');
+if (peakChartBox) {
+  peakChartBox.innerHTML = sortedHours.slice(0, 6).map(([hr, cnt]) => {
+    const pct = Math.round((cnt / maxHourAppts) * 100);
+    return `
+      <div class="space-y-1 text-xs">
+        <div class="flex justify-between font-bold">
+          <span class="font-mono">${hr}</span>
+          <span class="text-brand-500 font-mono">${cnt} 組預約</span>
+        </div>
+        <div class="w-full bg-white h-2 rounded-full overflow-hidden border border-brand-200">
+          <div class="bg-gradient-to-r from-blue-400 to-indigo-600 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="text-center py-4 text-brand-400">目前尚無預約時段數據</div>';
+}
+  
   // 專員算薪
   const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
   const commSection = document.getElementById('staff-revenue-section');
@@ -7169,95 +7445,82 @@ if (topCustBox) {
     }
 
     // ========================================================
-// 【買斷版開關徹底隱形閘道】未購買之模組開關 100% 蒸發
-// 8 大美學風格色系永遠保留為標配預設功能！
+// 【總管授權全自動同步閘道】買斷版專用
+// 1. 徹底消滅 20+ 開關板與商模切換
+// 2. 嚴格對照 總管 allowed_modules 控制 17 大模組導覽鈕與設定卡片
 // ========================================================
-// ==========================================
-// 17 大模組嚴格閘道控制 (全選擇器精確映射 + 隱藏商模切換)
-// ==========================================
-// ==========================================
-// 17 大模組嚴格閘道控制 (全權隱藏商模切換與 20+ 開關板)
-// ==========================================
+// ========================================================
+// 【總管授權全自動同步閘道】買斷版專用
+// ========================================================
 function applyLifetimeModulesStrictGating(storeInfo) {
   if (!storeInfo) return;
 
-  // 多重兼容判定：判斷是否為買斷版 (Lifetime)
+  // 1. 精準辨識買斷版身分
   const isLifetime = (
     storeInfo.plan_type === 'lifetime' || 
     storeInfo.plan_status === 'lifetime' || 
-    storeInfo.is_lifetime === true || 
     String(storeInfo.plan_name || '').includes('買斷')
   );
   
   const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
+  const activeMode = storeInfo.industry_mode || storeInfo.industry_type || backendData.settings?.industryMode || 'beauty';
   const s = backendData.settings || {};
 
-  // 17 大模組與 HTML DOM 選擇器精確對照表
-  const moduleUIMap = {
-    'services': { nav: ['[onclick*="\'services\'"]'], settings: ['#page-services', '#cfg-toggle-show-price'] },
-    'shift': { nav: ['[onclick*="\'shift\'"]'], settings: ['#cfg-shift-start', '#cfg-shift-end', '#cfg-shift-interval', '#weekly-off-grid', '#new-custom-off-date', '#cfg-toggle-multi-staff-schedule'] },
-    'audit': { nav: [], settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit', '#cfg-deposit-mode', '#cfg-deposit-amount', '#cfg-deposit-info'] },
-    'buffer': { nav: [], settings: ['#cfg-buffer'] },
-    'staff_sub': { nav: [], settings: ['#staff-manager-list', '#new-staff-id', '#cfg-toggle-commission-calc', '#cfg-commission-rate', '#cfg-designated-bonus', '#cfg-toggle-staff-select'] },
-    'marketing_tools': { nav: ['[onclick*="\'marketing\'"]'], settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons', '#cfg-toggle-carousel', '#cfg-toggle-featured-shop', '#cfg-promo-rules-input'] },
-    'inventory': { nav: ['[onclick*="\'inventory\'"]'], settings: ['#svc-material-checkboxes-container'] },
-    'revenue': { nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'], settings: ['#page-revenue', '#page-transactions'] },
-    'care': { nav: ['[onclick*="\'care\'"]'], settings: ['#page-care', '#cfg-toggle-care', '#cfg-care'] },
-    'reviews': { nav: ['[onclick*="\'reviews\'"]'], settings: ['#page-reviews', '#cfg-toggle-reviews', '#review-tags-manage-box'] },
-    'portfolio': { nav: [], settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio'] },
-    'slots': { nav: ['[onclick*="\'slots\'"]'], settings: ['#page-slots'] },
-    'contract': { nav: [], settings: ['#cfg-toggle-contract', '#cfg-contract-title', '#cfg-contract-content'] },
-    'pets': { nav: ['#nav-btn-pets'], settings: ['#section-pet-questions-manager'] },
-    'boarding': { nav: ['#nav-btn-boarding'], settings: ['#section-pet-hotel-settings', '#cfg-toggle-stay-notice', '#cfg-stay-notice-content'] },
-    'line_push': { nav: [], settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu', '#cfg-toggle-line-one-click', '#cfg-line-token'] },
-    'sheets_sync': { nav: [], settings: [] }
+  // 2. 17 大模組與導覽列選擇器對照表
+  const navMap = {
+    'services': '[onclick*="\'services\'"]',
+    'shift': '[onclick*="\'shift\'"]',
+    'inventory': '[onclick*="\'inventory\'"]',
+    'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
+    'care': '[onclick*="\'care\'"]',
+    'reviews': '[onclick*="\'reviews\'"]',
+    'slots': '[onclick*="\'slots\'"]',
+    'marketing_tools': '[onclick*="\'marketing\'"]',
+    'pets': '#nav-btn-pets',
+    'boarding': '#nav-btn-boarding'
   };
 
-  // ------------------------------------------------------------------
-  // 核心邏輯：買斷版絕對隱蔽「商模切換」與「模組開關板」
-  // ------------------------------------------------------------------
   if (isLifetime) {
-    // 1. 隱藏「20+ 功能模組開關控制板」（買斷版由管理中心配給，店家無須開關）
-    const moduleToggleCard = document.getElementById('section-module-toggles') || document.querySelector('#cfg-toggle-staff-select')?.closest('.bg-white');
-    if (moduleToggleCard) {
-      moduleToggleCard.style.setProperty('display', 'none', 'important');
+    // A. 買斷版特權執行：徹底隱蔽「20+ 開關控制板」與「三大商模切換」
+    const moduleToggles = document.getElementById('section-module-toggles') || document.querySelector('#cfg-toggle-staff-select')?.closest('.bg-white');
+    if (moduleToggles) {
+      moduleToggles.style.setProperty('display', 'none', 'important');
     }
 
-    // 2. 隱藏「三大商模切換器」（交機買斷時已鎖定商模，嚴禁店家自行切換）
-    const modeSwitchBox = document.getElementById('section-industry-mode-switch') || document.getElementById('current-mode-display-badge')?.closest('.shadow-sm');
-    if (modeSwitchBox) {
-      modeSwitchBox.style.setProperty('display', 'none', 'important');
+    const modeSwitch = document.getElementById('section-industry-mode-switch') || document.getElementById('current-mode-display-badge')?.closest('.shadow-sm');
+    if (modeSwitch) {
+      modeSwitch.style.setProperty('display', 'none', 'important');
     }
 
-    // 3. 遍歷 17 大模組：未開通項目將底部分頁鈕與設定卡片徹底隱形
-    Object.keys(moduleUIMap).forEach(modKey => {
-      const isAllowed = allowed.includes(modKey);
-      const conf = moduleUIMap[modKey];
+    // B. 底部分頁導覽按鈕：未在 allowed_modules 內者全數消失
+    Object.keys(navMap).forEach(modKey => {
+      let isAllowed = allowed.includes(modKey);
+      if (activeMode === 'beauty' && (modKey === 'pets' || modKey === 'boarding')) isAllowed = false;
+      if (activeMode === 'pet_grooming' && modKey === 'boarding') isAllowed = false;
 
-      // 隱藏底部分頁按鈕
-      conf.nav.forEach(sel => {
-        document.querySelectorAll(sel).forEach(btn => {
-          btn.style.setProperty('display', isAllowed ? '' : 'none', 'important');
-        });
-      });
-
-      // 隱藏設定分頁的模組卡片
-      conf.settings.forEach(sel => {
-        document.querySelectorAll(sel).forEach(targetEl => {
-          const wrapper = targetEl.closest('.bg-white') || targetEl.closest('.p-5') || targetEl;
-          if (wrapper && wrapper.id !== 'page-settings') {
-            wrapper.style.setProperty('display', isAllowed ? '' : 'none', 'important');
-          }
-        });
+      document.querySelectorAll(navMap[modKey]).forEach(el => {
+        el.style.setProperty('display', isAllowed ? '' : 'none', 'important');
       });
     });
+
+    // C. 設定分頁內部卡片：未在 allowed_modules 內者全卡連根拔除
+    document.querySelectorAll('[data-setting-module]').forEach(card => {
+      const modKey = card.getAttribute('data-setting-module');
+      let isAllowed = allowed.includes(modKey);
+
+      if (activeMode === 'beauty' && (modKey === 'pets' || modKey === 'boarding')) isAllowed = false;
+      if (activeMode === 'pet_grooming' && modKey === 'boarding') isAllowed = false;
+
+      card.style.setProperty('display', isAllowed ? '' : 'none', 'important');
+    });
+
   } else {
     // 訂閱版店家：按原有設定動態切換顯隱
-    const modeSwitchBox = document.getElementById('section-industry-mode-switch') || document.getElementById('current-mode-display-badge')?.closest('.shadow-sm');
-    if (modeSwitchBox) modeSwitchBox.style.removeProperty('display');
+    const moduleToggles = document.getElementById('section-module-toggles');
+    if (moduleToggles) moduleToggles.style.removeProperty('display');
 
-    const moduleToggleCard = document.getElementById('section-module-toggles') || document.querySelector('#cfg-toggle-staff-select')?.closest('.bg-white');
-    if (moduleToggleCard) moduleToggleCard.style.removeProperty('display');
+    const modeSwitch = document.getElementById('section-industry-mode-switch');
+    if (modeSwitch) modeSwitch.style.removeProperty('display');
 
     const showMarketing = (s.enable_wallet || s.enable_packages || s.enable_coupons);
     document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
@@ -8027,52 +8290,60 @@ const settingsPayload = {
       Swal.fire('已載入衛福部官方標準範本！', '', 'success');
     }
 
-    // 專員名冊維護 (支援密碼明文切換)
-    function renderStaffManager() {
-      const container = document.getElementById('staff-manager-list');
-      const countBadge = document.getElementById('staff-count-badge');
-      if (!container) return;
+    // 渲染專員清單時顯示其開放的分頁標籤
+function renderStaffManager() {
+  const container = document.getElementById('staff-manager-list');
+  const countBadge = document.getElementById('staff-count-badge');
+  if (!container) return;
 
-      const rawList = backendData.settings?.staffList || [];
-      const staffs = rawList.filter(s => s.id !== 'all');
-      if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
+  const rawList = backendData.settings?.staffList || [];
+  const staffs = rawList.filter(s => s.id !== 'all');
+  if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
 
-      if (staffs.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
-        return;
-      }
+  if (staffs.length === 0) {
+    container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
+    return;
+  }
 
-      container.innerHTML = staffs.map(s => {
-        const isVisible = staffPinVisibilityMap[s.id] === true;
-        const displayPin = isVisible ? (s.pin || '8888') : '••••';
+  const pageNamesMap = {
+    calendar: '日曆', shift: '排班', customer: '名單', add: '新增',
+    'boarding-schedule': '住宿', pets: '毛孩', care: '回訪', slots: '空檔', reviews: '好評'
+  };
 
-        return `
-          <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-            <div class="space-y-1">
-              <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
-                <span>${s.name}</span>
-                <span class="text-[10px] text-brand-400 font-mono font-normal">(${s.id})</span>
-              </div>
-              <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
-                <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
-                <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5" title="${isVisible ? '隱藏密碼' : '顯示密碼'}">
-                  <i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i>
-                </button>
-                <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
-              </div>
-            </div>
-            <div class="flex gap-1.5 items-center">
-              <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
-                <i class="fa-solid fa-link text-[10px]"></i> 複製工作台連結
-              </button>
-              <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">
-                刪除
-              </button>
-            </div>
+  container.innerHTML = staffs.map(s => {
+    const isVisible = staffPinVisibilityMap[s.id] === true;
+    const displayPin = isVisible ? (s.pin || '8888') : '••••';
+    const pages = (s.allowed_pages && s.allowed_pages.length > 0) ? s.allowed_pages : ['calendar', 'shift'];
+    const pageBadges = pages.map(p => `<span class="px-1.5 py-0.2 bg-brand-100 text-brand-800 rounded text-[9.5px] font-bold">${pageNamesMap[p] || p}</span>`).join(' ');
+
+    return `
+      <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+        <div class="space-y-1">
+          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
+            <span>${s.name}</span>
+            <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
           </div>
-        `;
-      }).join('');
-    }
+          <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
+            <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
+            <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5"><i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i></button>
+            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
+          </div>
+          <div class="pt-0.5 flex flex-wrap gap-1 items-center">
+            <span class="text-[10px] text-gray-400 font-bold">授權頁面：</span>
+            ${pageBadges}
+            <button type="button" onclick="promptEditStaffPages('${s.id}')" class="text-emerald-700 underline text-[10.5px] font-bold ml-1">修改權限</button>
+          </div>
+        </div>
+        <div class="flex gap-1.5 items-center shrink-0">
+          <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
+            <i class="fa-solid fa-link text-[10px]"></i> 複製工作台
+          </button>
+          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">刪除</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
 
     function toggleStaffPinVisibility(staffId) {
       staffPinVisibilityMap[staffId] = !staffPinVisibilityMap[staffId];
@@ -8087,25 +8358,25 @@ const settingsPayload = {
     }
 
     async function addStaffMember() {
-      const id = document.getElementById('new-staff-id').value.trim();
-      const name = document.getElementById('new-staff-name').value.trim();
-      const pin = document.getElementById('new-staff-pin').value.trim() || '8888';
-      if (!id || !name) return Swal.fire('請填寫編號與姓名', '', 'warning');
+  const id = document.getElementById('new-staff-id').value.trim();
+  const name = document.getElementById('new-staff-name').value.trim();
+  const pin = document.getElementById('new-staff-pin').value.trim() || '8888';
+  if (!id || !name) return Swal.fire('請填寫編號與姓名', '', 'warning');
 
-      let list = backendData.settings?.staffList || [];
-      if (!list.some(s => s.id === 'all')) list.unshift({ id: "all", name: "不指定", pin: "8888" });
-      if (list.some(s => s.id.toLowerCase() === id.toLowerCase())) return Swal.fire('此編號已存在', '', 'warning');
+  // 抓取老闆勾選的分頁權限
+  const allowedPages = Array.from(document.querySelectorAll('.staff-perm-cb:checked')).map(cb => cb.value);
 
-      list.push({ id, name, pin });
-      backendData.settings.staffList = list;
-      document.getElementById('new-staff-id').value = '';
-      document.getElementById('new-staff-name').value = '';
-      document.getElementById('new-staff-pin').value = '';
+  let list = backendData.settings?.staffList || [];
+  if (!list.some(s => s.id === 'all')) list.unshift({ id: "all", name: "不指定", pin: "8888", allowed_pages: ['calendar', 'shift'] });
+  if (list.some(s => s.id.toLowerCase() === id.toLowerCase())) return Swal.fire('此編號已存在', '', 'warning');
 
-      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
-      renderStaffManager();
-      Swal.fire('專員已成功建立！', '', 'success');
-    }
+  list.push({ id, name, pin, allowed_pages: allowedPages });
+  backendData.settings.staffList = list;
+
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
+  renderStaffManager();
+  Swal.fire('專員建立成功，分頁權限已綁定！', '', 'success');
+}
 
     function promptEditStaffPin(staffId, staffName, currentPin) {
       Swal.fire({
@@ -8376,7 +8647,180 @@ function renderSearchResults(records, titleText) {
   `;
 }
 
-// 永久刪除訂單函式
+// 修改已存在專員的授權分頁彈窗
+async function promptEditStaffPages(staffId) {
+  const staff = (backendData.settings?.staffList || []).find(s => s.id === staffId);
+  if (!staff) return;
+
+  const currentPages = staff.allowed_pages || ['calendar', 'shift'];
+  const allAvailable = [
+    { id: 'calendar', name: '日曆總覽' },
+    { id: 'shift', name: '個人排班' },
+    { id: 'customer', name: '名單總覽' },
+    { id: 'add', name: '代客卡位' },
+    { id: 'boarding-schedule', name: '住宿房況' },
+    { id: 'pets', name: '毛孩履歷' },
+    { id: 'care', name: '回訪關懷' },
+    { id: 'slots', name: '發布空檔' },
+    { id: 'reviews', name: '顧客好評' }
+  ];
+
+  const checksHtml = allAvailable.map(p => `
+    <label class="flex items-center gap-1.5 p-2 bg-brand-50 rounded-xl border border-brand-200 cursor-pointer font-bold text-xs">
+      <input type="checkbox" value="${p.id}" class="swal-staff-perm accent-[#8C7355] w-4 h-4" ${currentPages.includes(p.id) ? 'checked' : ''}>
+      <span>${p.name}</span>
+    </label>
+  `).join('');
+
+  const { isConfirmed } = await Swal.fire({
+    title: `設定【${staff.name}】工作台分頁權限`,
+    html: `<div class="grid grid-cols-2 gap-2 text-left p-1">${checksHtml}</div>`,
+    showCancelButton: true,
+    confirmButtonText: '確認儲存權限',
+    confirmButtonColor: '#8C7355'
+  });
+
+  if (isConfirmed) {
+    const selected = Array.from(document.querySelectorAll('.swal-staff-perm:checked')).map(cb => cb.value);
+    staff.allowed_pages = selected.length > 0 ? selected : ['calendar', 'shift'];
+    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: backendData.settings.staffList });
+    renderStaffManager();
+    Swal.fire('分頁權限已更新！', '', 'success');
+  }
+}
+
+// 專員登入時，根據授權動態控制底部選單
+function applyStaffRoleNavigation() {
+  if (!CURRENT_STAFF_PARAM || CURRENT_STAFF_PARAM === 'all') return;
+
+  const staff = (backendData.settings?.staffList || []).find(s => s.id === CURRENT_STAFF_PARAM);
+  const allowedPages = (staff && staff.allowed_pages) ? staff.allowed_pages : ['calendar', 'shift'];
+
+  // 遍歷底部分頁按鈕，只顯示有被勾選的頁面
+  document.querySelectorAll('#bottom-nav .nav-item').forEach(btn => {
+    const onclickStr = btn.getAttribute('onclick') || '';
+    const match = onclickStr.match(/switchPage\('([^']+)'/);
+    if (match && match[1]) {
+      const pageId = match[1];
+      if (allowedPages.includes(pageId)) {
+        btn.style.setProperty('display', 'flex', 'important');
+      } else {
+        btn.style.setProperty('display', 'none', 'important');
+      }
+    }
+  });
+}
+
+// ========================================================
+// 2. 轉帳截圖燈箱預覽函式
+// ========================================================
+function viewDepositReceipt(imgUrl, custName, last5) {
+  if (!imgUrl) return Swal.fire('尚無上傳轉帳截圖', '', 'info');
+  Swal.fire({
+    title: `【${custName}】轉帳付款截圖`,
+    html: `
+      <div class="space-y-2 text-xs">
+        ${last5 ? `<div class="font-bold text-emerald-800">客人回報帳號末五碼：<b class="font-mono text-sm">${last5}</b></div>` : ''}
+        <div class="border rounded-2xl overflow-hidden bg-black/5 p-1 max-h-[65vh] overflow-y-auto">
+          <img src="${imgUrl}" class="max-w-full h-auto mx-auto rounded-xl" alt="轉帳截圖">
+        </div>
+        <div class="flex justify-between items-center pt-1 text-[11px]">
+          <a href="${imgUrl}" target="_blank" class="text-blue-600 underline font-bold">另開原圖檢視</a>
+          <button type="button" onclick="navigator.clipboard.writeText('${imgUrl}'); Swal.fire('已複製圖片網址！', '', 'success')" class="text-brand-500 underline">複製截圖連結</button>
+        </div>
+      </div>
+    `,
+    confirmButtonText: '關閉檢視',
+    confirmButtonColor: '#8C7355'
+  });
+}
+
+// ========================================================
+// 3. 多人同時接單認領（接單後註記「由誰確認接單」）
+// ========================================================
+async function confirmAndClaimBooking(bookingId, custName) {
+  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  
+  // 決定預設認領人：若是專員工作台直接帶入該專員，否則讓員工在彈窗中快速點選自己名字
+  let defaultClaimer = CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all'
+    ? (staffList.find(s => s.id === CURRENT_STAFF_PARAM)?.name || CURRENT_STAFF_PARAM)
+    : '店長';
+
+  const staffOptionsHtml = staffList.map(s => `
+    <label class="p-2 border rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-brand-50 text-xs">
+      <input type="radio" name="swal-claimer" value="${s.name}" ${s.name === defaultClaimer ? 'checked' : ''} class="accent-[#8C7355]">
+      <span class="font-bold">${s.name}</span>
+    </label>
+  `).join('');
+
+  const { isConfirmed } = await Swal.fire({
+    title: `接單並確認入帳 - ${custName}`,
+    html: `
+      <div class="text-left text-xs space-y-2 p-1">
+        <p class="text-brand-600">請確認已核對款項或轉帳截圖無誤，並點選接單人員：</p>
+        <div class="grid grid-cols-2 gap-1.5 pt-1">
+          <label class="p-2 border rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-brand-50 text-xs">
+            <input type="radio" name="swal-claimer" value="店長" ${defaultClaimer === '店長' ? 'checked' : ''} class="accent-[#8C7355]">
+            <span class="font-bold">店長</span>
+          </label>
+          ${staffOptionsHtml}
+        </div>
+      </div>
+    `,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '✓ 確定接單並鎖定時段',
+    confirmButtonColor: '#10B981',
+    cancelButtonText: '取消'
+  });
+
+  if (isConfirmed) {
+    const claimer = document.querySelector('input[name="swal-claimer"]:checked')?.value || '店務人員';
+    Swal.showLoading();
+
+    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    const updatedNotes = `${appt ? appt.notes : ''} 【由 ${claimer} 接單核對入帳】`.trim();
+
+    await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
+      status: '已確認',
+      deposit_confirmed: true,
+      notes: updatedNotes
+    });
+
+    if (appt) {
+      appt.status = '已確認';
+      appt.deposit_confirmed = true;
+      appt.notes = updatedNotes;
+    }
+
+    // 發送推播通知告知群組與顧客
+    if (typeof API_URL !== 'undefined') {
+      fetch(API_URL, {
+        method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: "notifyOrderConfirmed",
+          storeId: CURRENT_STORE_ID,
+          bookingId: bookingId,
+          claimer: claimer,
+          customerName: custName
+        })
+      }).catch(() => {});
+    }
+
+    Swal.fire({
+      title: '接單成功！',
+      text: `此筆預約已由【${claimer}】正式排入行程，時段與設備已鎖定。`,
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    renderCustomer();
+    renderCalendar();
+  }
+}
+    
+        // 永久刪除訂單函式
 async function deleteBookingPermanently(id, name) {
   Swal.fire({
     title: `確定永久刪除訂單？`,
