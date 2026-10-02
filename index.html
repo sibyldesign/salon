@@ -2835,7 +2835,8 @@ function renderFrontCalendar() {
   }
 
   // ========================================================
-// 【核心修復】跨模式時段運算器（相容美業與毛孩卡片內勾選項）
+// 【智慧設備資源與人員雙防撞演算法】
+// 同時校驗：1. 美容師排班狀態 2. Group_B 獨佔衝突 3. 全店設備資源 (如足部沙發限1人)
 // ========================================================
 function calculateTimesLocally() {
   const dStr = document.getElementById('date')?.value || '';
@@ -2843,7 +2844,7 @@ function calculateTimesLocally() {
   const grid = document.getElementById('timePillGrid');
   if (!grid) return;
 
-  // 關鍵同步：同時抓取美業服務清單與毛孩卡片內勾選的所有項目
+  // 1. 同時抓取常規美業項目與毛孩卡片內勾選的所有服務
   const allChecked = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
   const sStr = allChecked.map(cb => cb.value).join(', ');
   const svcHidden = document.getElementById('service');
@@ -2854,20 +2855,32 @@ function calculateTimesLocally() {
     return;
   }
 
-  // 計算總時長與 Group_B 互斥
+  // 2. 計算總耗時、Group_B 獨佔屬性，並萃取本次預約需佔用的全店硬體資源
   let totalDuration = 0;
   let hasGroupB = false;
+  const requiredResources = [];
 
   allChecked.forEach(cb => {
     totalDuration += Number(cb.getAttribute('data-duration') || 60);
     const sName = cb.value;
     const foundSvc = (db.services || []).find(s => s.name === sName || s.service_name === sName);
-    const svcType = foundSvc ? (foundSvc.type || foundSvc.service_type) : cb.getAttribute('data-type');
-    if (svcType === 'Group_B') hasGroupB = true;
+    if (foundSvc) {
+      if (foundSvc.type === 'Group_B' || foundSvc.service_type === 'Group_B') hasGroupB = true;
+      const resName = foundSvc.required_resource || foundSvc.resource;
+      if (resName && resName !== 'none' && !requiredResources.includes(resName)) {
+        requiredResources.push(resName);
+      }
+    }
   });
   if (totalDuration === 0) totalDuration = 60;
 
-  // 後續 slots 運算與排班核對保持不變...
+  // 3. 店內固定硬體設備最大容量定義 (足部沙發嚴格限 1 人獨佔)
+  // 動態讀取店家自訂的設備與數量上限
+const resourceMaxCapacity = {};
+(db.storeResources || []).forEach(r => {
+  resourceMaxCapacity[r.name] = Number(r.capacity || 1);
+});
+  
   const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
   const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
   const interval = Number(db.shiftInterval || 30);
@@ -2877,10 +2890,11 @@ function calculateTimesLocally() {
   for (let m = startMin; m <= endMin; m += interval) defaultSlots.push(m);
 
   const targetDateFormatted = dStr.replace(/\//g, '-');
-  const dayAppts = (db.futureBookings || []).filter(a => {
+  
+  // 取得目標當天全店所有有效預約 (跨專員共同檢測設備衝突)
+  const dayAllAppts = (db.futureBookings || []).filter(a => {
     return a.appointment_time && 
            a.appointment_time.startsWith(targetDateFormatted) && 
-           (staffId === 'all' || a.staff_id === staffId || a.staffId === staffId) &&
            a.status !== '已取消' && a.status !== '婉拒';
   });
 
@@ -2899,6 +2913,7 @@ function calculateTimesLocally() {
     const slotMin = t % 60;
     const timeFormatted = (slotHour < 10 ? "0" + slotHour : slotHour) + ":" + (slotMin === 0 ? "00" : slotMin);
 
+    // A. 專員上班班表檢驗
     let isShiftOpen = false;
     if (staffId !== 'all') {
       const staffKey = `${staffId}_${dStr}`;
@@ -2921,32 +2936,70 @@ function calculateTimesLocally() {
     if (isToday && (t < (currentMinutesNow + bufferMinutes))) return;
     if (t + totalDuration > endMin + interval) return;
 
-    let conflict = false;
-    let concurrentCount = 0;
-
-    for (let a of dayAppts) {
+    // B. 美容師個人時段獨佔衝突檢驗 (Group_B)
+    let staffConflict = false;
+    const sameStaffAppts = dayAllAppts.filter(a => staffId === 'all' || a.staff_id === staffId || a.staffId === staffId);
+    
+    for (let a of sameStaffAppts) {
       const aDate = new Date(a.appointment_time);
       const aStart = aDate.getHours() * 60 + aDate.getMinutes();
       let aDuration = 60;
       let aIsGroupB = false;
+
       if (a.service_names) {
         a.service_names.split(',').forEach(n => {
           const match = (db.services || []).find(s => s.name === n.trim());
           if (match) {
             aDuration = Math.max(aDuration, Number(match.duration || 60));
-            if (match.type === 'Group_B') aIsGroupB = true;
+            if (match.type === 'Group_B' || match.service_type === 'Group_B') aIsGroupB = true;
           }
         });
       }
       const aEnd = aStart + aDuration;
       if (Math.max(t, aStart) < Math.min(t + totalDuration, aEnd)) {
-        concurrentCount++;
-        if (hasGroupB || aIsGroupB) { conflict = true; break; }
-        if (concurrentCount >= 2) { conflict = true; break; }
+        if (hasGroupB || aIsGroupB) { staffConflict = true; break; }
       }
     }
+    if (staffConflict) return;
 
-    if (conflict) return;
+    // C. 【硬體設備資源衝突檢驗（全店跨美容師共同比對）】
+    let resourceConflict = false;
+    if (requiredResources.length > 0) {
+      for (let reqRes of requiredResources) {
+        const maxCap = resourceMaxCapacity[reqRes] || 1;
+        let occupyingCount = 0;
+
+        for (let otherAppt of dayAllAppts) {
+          const oDate = new Date(otherAppt.appointment_time);
+          const oStart = oDate.getHours() * 60 + oDate.getMinutes();
+          let oDuration = 60;
+          let oUsesThisResource = false;
+
+          if (otherAppt.service_names) {
+            otherAppt.service_names.split(',').forEach(n => {
+              const match = (db.services || []).find(s => s.name === n.trim());
+              if (match) {
+                oDuration = Math.max(oDuration, Number(match.duration || 60));
+                if ((match.required_resource || match.resource) === reqRes) oUsesThisResource = true;
+              }
+            });
+          }
+
+          const oEnd = oStart + oDuration;
+          // 若時段發生重疊，且該筆預約確實佔用了此項硬體設備
+          if (oUsesThisResource && (Math.max(t, oStart) < Math.min(t + totalDuration, oEnd))) {
+            occupyingCount++;
+          }
+        }
+
+        // 當佔用數量達上限（例如足部沙發已被使用 1 組），該時段自動鎖死
+        if (occupyingCount >= maxCap) {
+          resourceConflict = true;
+          break;
+        }
+      }
+    }
+    if (resourceConflict) return;
 
     openCount++;
     const currentSelectedTime = document.getElementById('time')?.value || '';
@@ -2962,7 +3015,7 @@ function calculateTimesLocally() {
 
   grid.innerHTML = (openCount > 0) 
     ? html 
-    : '<div class="col-span-full text-center py-4 text-xs text-rose-500 bg-rose-50 rounded-2xl border border-rose-200 font-bold">當日門市無排班開放預約，請選擇其他日期</div>';
+    : '<div class="col-span-full text-center py-4 text-xs text-rose-500 bg-rose-50 rounded-2xl border border-rose-200 font-bold">該時段美容師或店內設備（如足部沙發）已滿載，請選其他時段</div>';
 }
 
   function selectTimePill(timeStr, el) {
