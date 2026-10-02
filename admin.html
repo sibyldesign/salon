@@ -412,6 +412,29 @@
           </div>
         </div>
 
+        <!-- 在 page-revenue 內部 4 核心指標下方插入視覺化統計看板 -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+  
+  <!-- 熱門項目排行榜 Top 5 -->
+  <div class="p-4 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2.5 text-xs">
+    <div class="font-bold text-brand-900 flex items-center justify-between border-b border-brand-200 pb-1.5">
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-fire text-rose-500"></i> 熱門服務排行 Top 5</span>
+      <span class="text-[10px] text-brand-400">依營收貢獻排序</span>
+    </div>
+    <div id="analytics-top-services" class="space-y-2 font-sans"></div>
+  </div>
+
+  <!-- 高貢獻 VIP 顧客榜 Top 5 -->
+  <div class="p-4 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2.5 text-xs">
+    <div class="font-bold text-brand-900 flex items-center justify-between border-b border-brand-200 pb-1.5">
+      <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-amber-500"></i> 高貢獻 VIP 顧客榜</span>
+      <span class="text-[10px] text-brand-400">累計實收金額</span>
+    </div>
+    <div id="analytics-top-customers" class="space-y-2 font-sans"></div>
+  </div>
+
+</div>
+        
         <!-- 專員業績抽成、指定獎金與工時 -->
         <div id="staff-revenue-section" class="pt-2 border-t border-brand-100 space-y-2.5">
           <div class="flex justify-between items-center">
@@ -505,18 +528,50 @@
     <!-- 分頁 8. 服務與 BOM 耗材複選設定 (page-services) -->
     <div id="page-services" class="page space-y-4 full-admin-only" style="display: none;">
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-3">
-        <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目 (含技術耗材 BOM 複選連動)</div>
+        <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目 (含硬體設備與專員連動)</div>
         <input type="hidden" id="edit-svc-id">
+        
+        <!-- 項目名稱與金額 -->
         <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="svc-name" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" placeholder="服務名稱 (例: 結構式護髮 / 精緻洗護)">
-          <input type="text" id="svc-price" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-mono" placeholder="金額 (如: 800 或 2200-3600)">
+          <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">項目名稱 *</label>
+            <input type="text" id="svc-name" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-bold" placeholder="例: 足部-初階護理">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">金額 (NT$) *</label>
+            <input type="text" id="svc-price" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-mono font-bold" placeholder="例: 600 或 600-800">
+          </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <input type="number" id="svc-duration" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none" placeholder="時間 (分鐘)" value="60">
-          <select id="svc-type" class="p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 font-bold outline-none">
-            <option value="Group_A">Group A (等待期技術類)</option>
-            <option value="Group_B">Group B (全程專屬類)</option>
-          </select>
+
+        <!-- 耗時、技術分組與店內資源設備鎖定 -->
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">耗時 (分鐘) *</label>
+            <input type="number" id="svc-duration" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-mono font-bold" value="60">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-brand-800 mb-1">插單屬性</label>
+            <select id="svc-type" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 font-bold outline-none">
+              <option value="Group_B">Group B (全程專屬類)</option>
+              <option value="Group_A">Group A (等待期技術類)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-amber-900 mb-1">佔用店內資源設備 *</label>
+            <select id="svc-resource" class="w-full p-2.5 rounded-xl border border-amber-300 bg-amber-50/50 text-xs font-bold outline-none">
+              <option value="none">無 (不佔用固定設備)</option>
+              <option value="足部沙發">足部沙發 (全店限1組)</option>
+              <option value="美容床">美容美體床</option>
+              <option value="洗頭沖水椅">洗頭沖水椅</option>
+              <option value="獨立VIP包廂">獨立VIP包廂</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 負責專員 / 美容師選取 (可複選，支援莫莉、岑岑分工) -->
+        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+          <label class="block text-[11px] font-bold text-brand-900">負責此項目的專員/美容師 (預設全體老師皆可接單)：</label>
+          <div id="svc-staff-checkboxes" class="flex flex-wrap gap-2 text-xs"></div>
         </div>
 
         <!-- 服務類別 Group A/B 插單教學小說明 -->
@@ -525,12 +580,12 @@
             <i class="fa-solid fa-circle-info text-amber-600"></i> 服務分組智慧插單說明：
           </div>
           <p class="leading-relaxed text-[11px] text-amber-900/90">
-            • <b>Group A (等待期技術類)</b>：適用燙髮、染髮、敷泥SPA等。顧客於藥水靜置等待期間，系統<b>允許自動插單剪髮</b>，將門市坪效翻倍！<br>
-            • <b>Group B (全程專屬類)</b>：適用剪髮、做臉、光療美甲、全身造型等。系統<b>100% 絕對鎖定</b>，防止設計師時段撞期乾等。
+            • <b>Group A (等待期技術類)</b>：適用燙髮、染髮、敷泥SPA等。藥水靜置等待期間允許自動插單剪髮。<br>
+            • <b>Group B (全程專屬類)</b>：適用剪髮、做臉、美甲、全身造型等。時段完全鎖定，防止設計師時段撞期。
           </p>
         </div>
 
-        <!-- 耗材複選與大容量產品留空說明 -->
+        <!-- 耗材複選與大容量產品留空說明 (BOM) -->
         <div class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 space-y-2">
           <div class="font-bold text-brand-800 text-[11px] flex items-center justify-between">
             <span class="flex items-center gap-1">
@@ -541,18 +596,26 @@
           <div id="svc-material-checkboxes-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
         </div>
 
-        <div class="flex items-center gap-2 px-1">
-          <input type="checkbox" id="svc-is-addon" class="accent-[#8C7355] rounded">
-          <label class="text-xs font-medium text-brand-800 cursor-pointer" for="svc-is-addon">設為「加購項目」</label>
+        <!-- 加購與上下架設定 -->
+        <div class="flex items-center justify-between px-1">
+          <label class="flex items-center gap-2 text-xs font-medium text-brand-800 cursor-pointer">
+            <input type="checkbox" id="svc-is-addon" class="accent-[#8C7355] rounded">
+            <span>設為「現場加購項目」</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs font-bold text-emerald-800 cursor-pointer">
+            <input type="checkbox" id="svc-is-active" class="accent-emerald-600 rounded" checked>
+            <span>立即上架於前台展示</span>
+          </label>
         </div>
+
         <div class="flex gap-2">
-          <button class="flex-1 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-xl shadow-md transition" onclick="saveServiceItem()">儲存服務項目</button>
-          <button class="px-4 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
+          <button type="button" class="flex-1 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-xl shadow-md transition" onclick="saveServiceItem()">儲存服務項目</button>
+          <button type="button" class="px-4 py-2.5 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl hidden" id="svc-cancel-btn" onclick="resetServiceForm()">取消</button>
         </div>
       </div>
 
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
-        <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表 (點擊箭頭可即時上下排序)</div>
+        <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表 (點擊箭頭可即時上下排序，支援一鍵上下架)</div>
         <div id="service-list-container" class="space-y-2"></div>
       </div>
 
@@ -1152,6 +1215,24 @@
           <div class="flex flex-wrap gap-1.5 mt-2" id="custom-off-dates-tags"></div>
         </div>
       </div>
+      
+      <!-- 門市設備與席位資源管理庫 (動態新增、設定數量上限) -->
+<div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3.5 text-xs">
+  <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+    <div>
+      <span class="text-xs font-bold text-brand-900 block flex items-center gap-1.5">
+        <i class="fa-solid fa-couch text-amber-600"></i> 門市硬體設備與席位資源庫
+      </span>
+      <span class="text-[10.5px] text-brand-400 mt-0.5">設定足部沙發、美容床、VIP包廂等設備數量，系統將智慧防撞期</span>
+    </div>
+    <button type="button" onclick="openAddResourceModal()" class="px-3 py-1.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-xs">
+      <i class="fa-solid fa-plus text-[10px]"></i> 新增資源設備
+    </button>
+  </div>
+  
+  <!-- 資源設備卡片列表 -->
+  <div id="store-resources-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1"></div>
+</div>
       
       <!-- 8. 活動說明圖與公告 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
@@ -2073,7 +2154,128 @@ const THEME_PALETTES = {
 
   let customQuestionsList = [];
 
-  function renderAdminCustomQuestions() {
+  // ========================================================
+// 【硬體資源管理引擎】動態增刪改設備與數量上限
+// ========================================================
+let storeResourcesList = [
+  { id: "res-1", name: "足部沙發", capacity: 1 },
+  { id: "res-2", name: "美容美體床", capacity: 2 },
+  { id: "res-3", name: "洗頭沖水椅", capacity: 2 },
+  { id: "res-4", name: "獨立VIP包廂", capacity: 1 }
+];
+
+// 渲染設定頁的資源設備清單
+function renderStoreResourcesList() {
+  const container = document.getElementById('store-resources-list');
+  if (!container) return;
+
+  if (!storeResourcesList || storeResourcesList.length === 0) {
+    container.innerHTML = '<div class="col-span-full text-center py-4 text-brand-400 text-xs">目前尚未設定任何限制設備</div>';
+    return;
+  }
+
+  container.innerHTML = storeResourcesList.map((res, idx) => `
+    <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+      <div>
+        <div class="font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-couch text-amber-700"></i> ${res.name}
+        </div>
+        <div class="text-[11px] text-brand-500 font-mono mt-0.5">
+          全店可同時容納：<b class="text-emerald-800 text-xs">${res.capacity}</b> 組客人
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" onclick="editResourceCapacity(${idx})" class="px-2.5 py-1 bg-white border border-brand-200 text-brand-800 rounded-lg font-bold text-[11px] hover:bg-brand-50 transition">修改數量</button>
+        <button type="button" onclick="deleteResourceItem(${idx})" class="px-2 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg font-bold text-[11px] hover:bg-rose-100 transition">刪除</button>
+      </div>
+    </div>
+  `).join('');
+
+  // 同步刷新「服務項目」表單的設備下拉選單
+  populateServiceResourceDropdown();
+}
+
+// 刷新服務項目表單內的設備下拉選單
+function populateServiceResourceDropdown(selectedVal = "none") {
+  const select = document.getElementById('svc-resource');
+  if (!select) return;
+
+  let html = `<option value="none">無 (不佔用固定設備)</option>`;
+  storeResourcesList.forEach(r => {
+    html += `<option value="${r.name}" ${r.name === selectedVal ? 'selected' : ''}>${r.name} (上限: ${r.capacity}組)</option>`;
+  });
+  select.innerHTML = html;
+}
+
+// 新增資源設備彈窗
+function openAddResourceModal() {
+  Swal.fire({
+    title: '新增門市硬體資源設備',
+    html: `
+      <div class="text-left text-xs space-y-2.5">
+        <div>
+          <label class="font-bold block mb-1">設備 / 席位名稱 *</label>
+          <input id="new-res-name" class="swal2-input text-xs" placeholder="例如：足部按摩椅、美甲光療桌">
+        </div>
+        <div>
+          <label class="font-bold block mb-1">店內可同時使用數量 (容量上限) *</label>
+          <input id="new-res-capacity" type="number" min="1" value="1" class="swal2-input text-xs font-mono font-bold">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定新增',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => {
+      const name = document.getElementById('new-res-name').value.trim();
+      const cap = Number(document.getElementById('new-res-capacity').value || 1);
+      if (!name) return Swal.showValidationMessage('請輸入設備名稱');
+      if (cap < 1) return Swal.showValidationMessage('數量至少為 1');
+      return { id: 'res-' + Date.now(), name, capacity: cap };
+    }
+  }).then(async r => {
+    if (r.isConfirmed && r.value) {
+      storeResourcesList.push(r.value);
+      renderStoreResourcesList();
+      // 同步儲存至 store_settings
+      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { store_resources: storeResourcesList });
+      Swal.fire('設備資源已建立！', '', 'success');
+    }
+  });
+}
+
+// 修改設備數量
+function editResourceCapacity(idx) {
+  const item = storeResourcesList[idx];
+  Swal.fire({
+    title: `修改【${item.name}】數量上限`,
+    input: 'number',
+    inputValue: item.capacity,
+    inputAttributes: { min: 1 },
+    showCancelButton: true,
+    confirmButtonText: '儲存',
+    confirmButtonColor: '#8C7355',
+    inputValidator: (val) => {
+      if (!val || Number(val) < 1) return '數量至少為 1';
+    }
+  }).then(async r => {
+    if (r.isConfirmed && r.value) {
+      storeResourcesList[idx].capacity = Number(r.value);
+      renderStoreResourcesList();
+      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { store_resources: storeResourcesList });
+      Swal.fire('數量已更新！', '', 'success');
+    }
+  });
+}
+
+// 刪除設備
+async function deleteResourceItem(idx) {
+  storeResourcesList.splice(idx, 1);
+  renderStoreResourcesList();
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { store_resources: storeResourcesList });
+}
+    
+    function renderAdminCustomQuestions() {
     const box = document.getElementById('admin-custom-questions-list');
     if (!box) return;
     if (customQuestionsList.length === 0) {
@@ -2812,6 +3014,10 @@ blacklistedPhonesSet = new Set(
     } catch(e) {}
 
     const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+    if (sCfg.store_resources && Array.isArray(sCfg.store_resources)) {
+  storeResourcesList = sCfg.store_resources;
+}
+renderStoreResourcesList();
     
     // 3. 【公休日計算】
     const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
@@ -4621,23 +4827,41 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
       }).join('');
     }
 
-    function editServiceItem(id) {
-    // 強制字串轉型比對，確保數字 ID 與字串 ID 均能精準匹配
-    const s = (backendData.services || []).find(item => String(item.id) === String(id));
-    if (!s) return Swal.fire('找不到該項目資料', '', 'error');
-    document.getElementById('edit-svc-id').value = s.id;
-    document.getElementById('svc-name').value = s.name || '';
-    document.getElementById('svc-price').value = s.price || '';
-    document.getElementById('svc-duration').value = s.duration || 60;
-    document.getElementById('svc-type').value = s.type || 'Group_A';
-    document.getElementById('svc-is-addon').checked = Boolean(s.isAddon);
-    
-    renderBOMCheckboxes(s.materials || []);
-    document.getElementById('svc-form-title').innerText = "修改服務項目全欄位";
-    document.getElementById('svc-cancel-btn').classList.remove('hidden');
-    // 自動平滑滾動至編輯表單
-    document.getElementById('svc-form-title').scrollIntoView({ behavior: 'smooth' });
+    // ========================================================
+// 【修改版】editServiceItem(id) — 支援設備資源動態回填
+// ========================================================
+function editServiceItem(id) {
+  // 強制字串轉型比對，確保數字 ID 與字串 ID 均能精準匹配
+  const s = (backendData.services || []).find(item => String(item.id) === String(id));
+  if (!s) return Swal.fire('找不到該項目資料', '', 'error');
+  
+  document.getElementById('edit-svc-id').value = s.id;
+  document.getElementById('svc-name').value = s.name || '';
+  document.getElementById('svc-price').value = s.price || '';
+  document.getElementById('svc-duration').value = s.duration || 60;
+  document.getElementById('svc-type').value = s.type || 'Group_A';
+  
+  // 【關鍵新增】：把該服務原本綁定的資源名稱 (例如 "足部沙發" 或 "none") 傳進下拉選單中自動選中
+  const assignedResource = s.required_resource || s.resource || 'none';
+  populateServiceResourceDropdown(assignedResource);
+
+  // 渲染專員勾選狀態
+  if (typeof renderStaffCheckboxesForService === 'function') {
+    renderStaffCheckboxesForService(s.assigned_staff || []);
   }
+
+  document.getElementById('svc-is-addon').checked = Boolean(s.isAddon);
+  const isActive = (s.isActive !== false && s.is_active !== false);
+  const activeCheckbox = document.getElementById('svc-is-active');
+  if (activeCheckbox) activeCheckbox.checked = isActive;
+  
+  renderBOMCheckboxes(s.materials || []);
+  document.getElementById('svc-form-title').innerText = "修改服務項目全欄位";
+  document.getElementById('svc-cancel-btn').classList.remove('hidden');
+  
+  // 自動平滑滾動至編輯表單
+  document.getElementById('svc-form-title').scrollIntoView({ behavior: 'smooth' });
+}
 
     function resetServiceForm() {
       document.getElementById('edit-svc-id').value = '';
@@ -4650,77 +4874,126 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
       document.getElementById('svc-cancel-btn').classList.add('hidden');
     }
 
-    async function saveServiceItem() {
-      const id = document.getElementById('edit-svc-id').value.trim();
-      const name = document.getElementById('svc-name').value.trim();
-      const priceStr = document.getElementById('svc-price').value.trim();
-      const duration = document.getElementById('svc-duration').value;
-      const type = document.getElementById('svc-type').value;
-      const isAddon = document.getElementById('svc-is-addon').checked;
+    // 渲染專員勾選框
+function renderStaffCheckboxesForService(selectedStaffList = []) {
+  const container = document.getElementById('svc-staff-checkboxes');
+  if (!container) return;
+  const list = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  if (list.length === 0) {
+    container.innerHTML = '<span class="text-gray-400 text-[11px]">尚未登記任何專員，預設由全店接單</span>';
+    return;
+  }
+  container.innerHTML = list.map(s => {
+    const isChecked = selectedStaffList.length === 0 || selectedStaffList.includes(s.name) || selectedStaffList.includes(s.id);
+    return `
+      <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 cursor-pointer">
+        <input type="checkbox" value="${s.name}" class="svc-staff-cb accent-[#8C7355]" ${isChecked ? 'checked' : ''}>
+        <span class="font-bold">${s.name}</span>
+      </label>
+    `;
+  }).join('');
+}
 
-      const selectedBOM = [];
-      document.querySelectorAll('.svc-bom-cb:checked').forEach(cb => {
-        const matName = cb.value;
-        const dosageInput = document.querySelector(`.svc-bom-dosage[data-for="${matName}"]`);
-        selectedBOM.push({
-          name: matName,
-          dosage: dosageInput ? dosageInput.value.trim() : '1單位'
-        });
-      });
+// 替換 saveServiceItem 函式
+async function saveServiceItem() {
+  const id = document.getElementById('edit-svc-id').value.trim();
+  const name = document.getElementById('svc-name').value.trim();
+  const priceStr = document.getElementById('svc-price').value.trim();
+  const duration = document.getElementById('svc-duration').value;
+  const type = document.getElementById('svc-type').value;
+  const resource = document.getElementById('svc-resource').value;
+  const isAddon = document.getElementById('svc-is-addon').checked;
+  const isActive = document.getElementById('svc-is-active').checked;
 
-      if (!name || !priceStr) return Swal.fire('名稱與金額為必填', '', 'warning');
+  const assignedStaff = Array.from(document.querySelectorAll('.svc-staff-cb:checked')).map(cb => cb.value);
 
-      const payload = {
-        store_id: CURRENT_STORE_ID,
-        service_name: name,
-        price: priceStr,
-        duration_minutes: Number(duration || 60),
-        service_type: type,
-        is_addon: isAddon,
-        materials: selectedBOM,
-        material_name: selectedBOM.length > 0 ? selectedBOM.map(m => m.name).join(', ') : 'none',
-        material_dosage: selectedBOM.length > 0 ? selectedBOM.map(m => m.dosage).join(', ') : ''
-      };
+  const selectedBOM = [];
+  document.querySelectorAll('.svc-bom-cb:checked').forEach(cb => {
+    const matName = cb.value;
+    const dosageInput = document.querySelector(`.svc-bom-dosage[data-for="${matName}"]`);
+    selectedBOM.push({
+      name: matName,
+      dosage: dosageInput ? dosageInput.value.trim() : '1單位'
+    });
+  });
 
-      if (id && !id.startsWith('def-')) {
-        await directSupabasePatch('services', `id=eq.${id}`, payload);
-      } else {
-        await directSupabaseUpsert('services', payload, 'id');
-      }
-      resetServiceForm();
-      fetchDataAndRender();
-      Swal.fire('服務項目與耗材連動已儲存！', '', 'success');
-    }
+  if (!name || !priceStr) return Swal.fire('名稱與金額為必填', '', 'warning');
 
-    function renderServiceList() {
-      const container = document.getElementById('service-list-container');
-      if (!container) return;
-      container.innerHTML = (backendData.services || []).map((s, idx) => {
-        let matHtml = '';
-        if (Array.isArray(s.materials) && s.materials.length > 0) {
-          matHtml = s.materials.map(m => `<span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9.5px]">${m.name} (${m.dosage})</span>`).join(' ');
-        } else if (s.material_name && s.material_name !== 'none') {
-          matHtml = `<span class="px-1.5 py-0.2 bg-amber-100 text-amber-800 rounded text-[9.5px]">${s.material_name} (${s.material_dosage || '50ml'})</span>`;
-        }
+  const payload = {
+    store_id: CURRENT_STORE_ID,
+    service_name: name,
+    price: priceStr,
+    duration_minutes: Number(duration || 60),
+    service_type: type,
+    required_resource: resource,
+    assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
+    is_active: isActive,
+    is_addon: isAddon,
+    materials: selectedBOM,
+    material_name: selectedBOM.length > 0 ? selectedBOM.map(m => m.name).join(', ') : 'none',
+    material_dosage: selectedBOM.length > 0 ? selectedBOM.map(m => m.dosage).join(', ') : ''
+  };
 
-        return `
-          <div class="p-3 bg-white rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-            <div>
-              <div class="font-bold text-brand-900">${s.isAddon ? '[加購] ' : ''}${s.name}</div>
-              <div class="text-[11px] text-brand-400 mt-0.5">${s.price}元 / ${s.duration}分鐘 (${s.type})</div>
-              ${matHtml ? `<div class="mt-1 flex flex-wrap gap-1 items-center"><i class="fa-solid fa-flask text-amber-600 text-[10px]"></i> ${matHtml}</div>` : ''}
-            </div>
-            <div class="flex gap-1 items-center">
-              <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, -1)">▲</button>
-              <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, 1)">▼</button>
-              <button onclick="editServiceItem('${s.id}')" class="px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg">改</button>
-              <button onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg">刪</button>
-            </div>
+  if (id && !id.startsWith('def-')) {
+    await directSupabasePatch('services', `id=eq.${id}`, payload);
+  } else {
+    await directSupabaseUpsert('services', payload, 'id');
+  }
+  resetServiceForm();
+  fetchDataAndRender();
+  Swal.fire('服務項目、設備資源與專員分工已儲存！', '', 'success');
+}
+
+    // 一鍵上架 / 下架快速切換
+async function toggleServiceActiveStatus(id, currentStatus) {
+  const newStatus = !currentStatus;
+  await directSupabasePatch('services', `id=eq.${id}`, { is_active: newStatus });
+  const s = (backendData.services || []).find(item => String(item.id) === String(id));
+  if (s) s.isActive = newStatus;
+  renderServiceList();
+  Swal.fire({
+    title: newStatus ? '項目已成功上架！' : '項目已下架 (前台隱藏)',
+    icon: 'success',
+    timer: 800,
+    showConfirmButton: false
+  });
+}
+
+// 替換 renderServiceList() 呈現豐富資源與狀態標籤
+function renderServiceList() {
+  const container = document.getElementById('service-list-container');
+  if (!container) return;
+  container.innerHTML = (backendData.services || []).map((s, idx) => {
+    const isActive = (s.isActive !== false && s.is_active !== false);
+    const resource = s.required_resource || s.resource || 'none';
+    const staffText = (Array.isArray(s.assigned_staff) && s.assigned_staff.length > 0 && !s.assigned_staff.includes('all'))
+      ? s.assigned_staff.join(', ')
+      : '全體老師通用';
+
+    return `
+      <div class="p-3.5 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/50 opacity-70'} flex justify-between items-center text-xs transition">
+        <div class="space-y-1">
+          <div class="flex items-center gap-1.5 font-bold text-brand-900">
+            <span class="${!isActive ? 'line-through text-gray-400' : ''}">${s.isAddon ? '[加購] ' : ''}${s.name}</span>
+            <button type="button" onclick="toggleServiceActiveStatus('${s.id}', ${isActive})" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono transition ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
+              ${isActive ? '✓ 上架中' : '✕ 已下架'}
+            </button>
+            ${resource !== 'none' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]"><i class="fa-solid fa-couch mr-0.5"></i> 需用: ${resource}</span>` : ''}
           </div>
-        `;
-      }).join('');
-    }
-
+          <div class="text-[11px] text-brand-500 font-mono">
+            費用: NT$ ${s.price} ｜ 耗時: ${s.duration} 分鐘 ｜ 負責專員: <b class="text-brand-800 font-sans">${staffText}</b>
+          </div>
+        </div>
+        <div class="flex gap-1 items-center">
+          <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, -1)">▲</button>
+          <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, 1)">▼</button>
+          <button onclick="editServiceItem('${s.id}')" class="px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg">改</button>
+          <button onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg">刪</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
     async function moveServiceOrder(idx, dir) {
       const svcs = backendData.services || [];
       const targetIdx = idx + dir;
@@ -6353,6 +6626,63 @@ function renderRevenue() {
     unpaidListArea.innerHTML = unpaidListHtml || '<div class="text-center text-xs text-brand-400 py-2">目前無待結單項目</div>';
   }
 
+  // ==========================================
+// 生成熱門項目與 VIP 客戶可視化進度條
+// ==========================================
+const serviceSalesMap = {};
+const customerSpendMap = {};
+
+filtered.filter(a => a.status === '已結單').forEach(a => {
+  const finalPrice = Number(a.finalPrice || a.price || 0);
+  
+  // 統計服務
+  const svcs = (a.service || '一般服務').split(',');
+  svcs.forEach(s => {
+    const sName = s.trim();
+    serviceSalesMap[sName] = (serviceSalesMap[sName] || 0) + Math.round(finalPrice / svcs.length);
+  });
+
+  // 統計顧客
+  const cKey = `${a.name} (${a.phone})`;
+  customerSpendMap[cKey] = (customerSpendMap[cKey] || 0) + finalPrice;
+});
+
+// 渲染熱門服務 Top 5
+const sortedSvcs = Object.entries(serviceSalesMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+const maxSvcRev = sortedSvcs[0] ? sortedSvcs[0][1] : 1;
+const topSvcBox = document.getElementById('analytics-top-services');
+if (topSvcBox) {
+  topSvcBox.innerHTML = sortedSvcs.map(([name, rev], idx) => {
+    const pct = Math.round((rev / maxSvcRev) * 100);
+    return `
+      <div class="space-y-1">
+        <div class="flex justify-between text-[11px] font-bold">
+          <span>${idx + 1}. ${name}</span>
+          <span class="font-mono text-emerald-800">NT$ ${rev.toLocaleString()}</span>
+        </div>
+        <div class="w-full bg-white h-2 rounded-full overflow-hidden border border-brand-200">
+          <div class="bg-gradient-to-r from-amber-400 to-[#8C7355] h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('') || '<div class="text-center py-4 text-brand-400">目前尚無足夠數據</div>';
+}
+
+// 渲染 VIP 顧客 Top 5
+const sortedCusts = Object.entries(customerSpendMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+const topCustBox = document.getElementById('analytics-top-customers');
+if (topCustBox) {
+  topCustBox.innerHTML = sortedCusts.map(([cust, spend], idx) => `
+    <div class="flex justify-between items-center p-2 bg-white rounded-xl border border-brand-100 text-xs">
+      <div class="font-bold text-brand-900 flex items-center gap-1.5">
+        <span class="w-4 h-4 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center text-[10px] font-mono">${idx + 1}</span>
+        <span>${cust}</span>
+      </div>
+      <span class="font-mono font-black text-theme-primary">NT$ ${spend.toLocaleString()}</span>
+    </div>
+  `).join('') || '<div class="text-center py-4 text-brand-400">目前尚無足夠數據</div>';
+}
+  
   // 專員算薪
   const isCalcEnabled = backendData.settings?.enableCommissionCalc !== false;
   const commSection = document.getElementById('staff-revenue-section');
@@ -7437,6 +7767,7 @@ const settingsPayload = {
   enable_logo: getCheck('cfg-toggle-logo'),
   store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
   address: document.getElementById('cfg-address')?.value.trim() || '',
+  store_resources: storeResourcesList,
   business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
   booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
   care_text: document.getElementById('cfg-care')?.value.trim() || '',
