@@ -2041,6 +2041,8 @@
     const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
     const IMGBB_API_KEY = "56cc9473cd6512942296b1fbeb5149de";
+    // 【核心補齊】：補上 Google Apps Script 核心推播與試算表同步網址
+    const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
     
     const urlParams = new URLSearchParams(window.location.search);
     const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
@@ -3096,11 +3098,15 @@ renderStoreResourcesList();
       services: (services && services.length > 0) ? services.map(s => ({
         id: s.id,
         name: s.service_name || s.name,
-        duration: s.duration_minutes || s.duration || 60,
+        duration: Number(s.duration_minutes || s.duration || 60),
         type: s.service_type || s.type || "Group_A",
         price: s.price || 0,
         isAddon: s.is_addon === true || s.isAddon === true,
         sortOrder: s.sort_order || 0,
+        // 【關鍵補齊】：補回指派專員與綁定設備欄位
+        assigned_staff: Array.isArray(s.assigned_staff) ? s.assigned_staff : (s.assigned_staff ? [s.assigned_staff] : ['all']),
+        required_resource: s.required_resource || s.resource || 'none',
+        isActive: s.is_active !== false && s.isActive !== false,
         materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
       })) : [],
 
@@ -3229,6 +3235,8 @@ renderStoreResourcesList();
     renderBoardingCareChecklist();
     initSlotsLiveUrl();
     renderBoardingDateButtons();
+    renderStaffCheckboxesForService(); // 啟動服務項目專員多選框
+    populateServiceResourceDropdown(); // 啟動設備下拉選單
     
     // 【關鍵修復】：資料庫黑名單下載完畢後，立即重繪當日日曆卡片，消除時序競爭
     if (selectedCalendarDate) {
@@ -3262,7 +3270,13 @@ renderStoreResourcesList();
       if (pageId === 'inventory') renderInventoryList();
       if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
       if (pageId === 'care') { renderCare(); populateCareRulesUI(); }
-      if (pageId === 'services') { renderBOMCheckboxes(); renderServiceList(); renderPortfolioList(); }
+      if (pageId === 'services') { 
+      renderBOMCheckboxes(); 
+      renderServiceList(); 
+      renderPortfolioList(); 
+      renderStaffCheckboxesForService(); // 確保每次切換到服務頁都即時更新
+      populateServiceResourceDropdown();
+    }
       if (pageId === 'add') renderQuickAddServices();
       if (pageId === 'marketing') loadMarketingCenter();
       if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
@@ -3963,7 +3977,7 @@ function renderSingleCardHTML(a) {
           </div>
         </div>
 
-        <!-- 狀態切換選單與專員標籤 (乾淨單一區塊) -->
+        <!-- 狀態切換選單與專員標籤 (乾淨單一區塊，排除重複貼上的 DOM) -->
         <div class="flex flex-col items-end gap-1">
           <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
             <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
@@ -3972,23 +3986,11 @@ function renderSingleCardHTML(a) {
             <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
             <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
           </select>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid${staffColor.border};">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">
             ${a.staffName}
           </span>
         </div>
-      </div>
-
-        <div class="flex flex-col items-end gap-1">
-          <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
-            <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
-            <option value="已確認" ${a.status === '已確認' ? 'selected' : ''}>已確認</option>
-            <option value="已結單" ${a.status === '已結單' ? 'selected' : ''}>已結單</option>
-            <option value="婉拒" ${a.status === '婉拒' ? 'selected' : ''}>婉拒</option>
-            <option value="已取消" ${a.status === '已取消' ? 'selected' : ''}>已取消</option>
-          </select>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono" style="background:${staffColor.bg}; color:${staffColor.text}; border:1px solid ${staffColor.border};">${a.staffName}</span>
-        </div>
-      </div>
+      </div> <!-- 頂部資訊列結束 -->
 
       <!-- 訂金狀態提示 -->
       ${depositBadgeHtml}
@@ -4864,31 +4866,50 @@ function editServiceItem(id) {
 }
 
     function resetServiceForm() {
-      document.getElementById('edit-svc-id').value = '';
-      document.getElementById('svc-name').value = '';
-      document.getElementById('svc-price').value = '';
-      document.getElementById('svc-duration').value = '60';
-      document.getElementById('svc-is-addon').checked = false;
-      renderBOMCheckboxes([]);
-      document.getElementById('svc-form-title').innerText = "新增服務項目 (含技術耗材 BOM 複選連動)";
-      document.getElementById('svc-cancel-btn').classList.add('hidden');
-    }
+  document.getElementById('edit-svc-id').value = '';
+  document.getElementById('svc-name').value = '';
+  document.getElementById('svc-price').value = '';
+  document.getElementById('svc-duration').value = '60';
+  document.getElementById('svc-type').value = 'Group_A';
+  document.getElementById('svc-is-addon').checked = false;
+  document.getElementById('svc-is-active').checked = true;
+
+  renderBOMCheckboxes([]);
+  renderStaffCheckboxesForService([]); // 重置為預設全選
+  populateServiceResourceDropdown('none'); // 重置設備為無
+
+  document.getElementById('svc-form-title').innerText = "新增服務項目 (含硬體設備與專員連動)";
+  document.getElementById('svc-cancel-btn').classList.add('hidden');
+}
 
     // 渲染專員勾選框
 function renderStaffCheckboxesForService(selectedStaffList = []) {
   const container = document.getElementById('svc-staff-checkboxes');
   if (!container) return;
-  const list = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+
+  const rawList = backendData.settings?.staffList || [];
+  const list = rawList.filter(s => s.id !== 'all');
+
+  // 若尚未登記專員，提供清楚提示
   if (list.length === 0) {
-    container.innerHTML = '<span class="text-gray-400 text-[11px]">尚未登記任何專員，預設由全店接單</span>';
+    container.innerHTML = `
+      <div class="p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-[11px] font-bold flex items-center gap-1.5 w-full">
+        <i class="fa-solid fa-circle-info text-amber-600"></i>
+        <span>尚未於「設定」分頁登記個別專員名冊，目前系統預設由全體老師皆可接單。</span>
+      </div>
+    `;
     return;
   }
+
+  // 判定是否全選：若為全新建立項目 (selectedStaffList為空) 或含有 'all'，預設全選
+  const isDefaultAll = (!selectedStaffList || selectedStaffList.length === 0 || selectedStaffList.includes('all'));
+
   container.innerHTML = list.map(s => {
-    const isChecked = selectedStaffList.length === 0 || selectedStaffList.includes(s.name) || selectedStaffList.includes(s.id);
+    const isChecked = isDefaultAll || selectedStaffList.includes(s.name) || selectedStaffList.includes(s.id);
     return `
-      <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 cursor-pointer">
-        <input type="checkbox" value="${s.name}" class="svc-staff-cb accent-[#8C7355]" ${isChecked ? 'checked' : ''}>
-        <span class="font-bold">${s.name}</span>
+      <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 cursor-pointer hover:border-brand-400 transition shadow-2xs">
+        <input type="checkbox" value="${s.name}" class="svc-staff-cb accent-[#8C7355] w-3.5 h-3.5" ${isChecked ? 'checked' : ''}>
+        <span class="font-bold text-brand-900">${s.name}</span>
       </label>
     `;
   }).join('');
