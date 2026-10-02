@@ -1406,8 +1406,8 @@
         </div>
       </div>
 
-      <!-- 6. 20 餘項功能模組開關控制板 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+      <!-- 6. 20 餘項功能模組開關控制板 (買斷版將全卡徹底隱藏) -->
+      <div id="section-module-toggles" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">進階功能與行銷模組開關控制板 (20+ 模組全開關)</span>
         
         <div class="space-y-1.5">
@@ -1829,8 +1829,8 @@
         </button>
       </div>
 
-      <!-- 門市商業模式切換（高安全規格、防誤觸、二次確認，位於設定頁最底端） -->
-      <div class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6">
+      <!-- 門市商業模式切換（賦予明確 ID：買斷版 100% 徹底隱形） -->
+      <div id="section-industry-mode-switch" class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6">
         <div class="flex items-center justify-between border-b border-amber-200 pb-2">
           <div>
             <span class="text-xs font-bold text-amber-950 block flex items-center gap-1.5">
@@ -5165,6 +5165,7 @@ let invSelectedCategories = [];
 function renderInventoryList() {
   const container = document.getElementById('inventory-items-container');
   if (!container) return;
+
   if (allInventoryItems.length === 0) {
     allInventoryItems = [
       { id: 'inv-1', category: '洗護消耗品', categories: ['洗護消耗品'], name: '深層草本舒緩洗劑 (4000ml)', current_stock: 6, safe_stock: 2, unit: '桶', cost_price: 1200, retail_price: 1800 },
@@ -5218,13 +5219,16 @@ function renderInventoryList() {
             進價: NT$ ${it.cost_price || 0} ｜ <b class="text-emerald-800">門市零售價: NT$ ${it.retail_price || 0}</b> ｜ 安全存量: ${it.safe_stock} ${it.unit}
           </div>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="text-right">
+        <div class="flex items-center gap-1.5">
+          <div class="text-right mr-1">
             <div class="font-black text-sm font-mono ${isAlert ? 'text-rose-600' : 'text-emerald-700'}">${it.current_stock} ${it.unit}</div>
             <span class="text-[9px] ${isAlert ? 'text-rose-500 font-bold' : 'text-emerald-600'}">${isAlert ? '庫存不足' : '正常'}</span>
           </div>
-          <button type="button" onclick="editProductModal('${it.id}')" class="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg font-bold text-xs">修改</button>
-          <button type="button" onclick="promptStockAdjust('${it.id}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-xs">進出庫</button>
+          <button type="button" onclick="editProductModal('${it.id}')" class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold text-xs transition">修改</button>
+          <button type="button" onclick="promptStockAdjust('${it.id}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-xs transition">進出庫</button>
+          <button type="button" onclick="deleteInventoryItem('${it.id}', '${it.name}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold text-xs border border-rose-200 transition" title="永久刪除耗材品項">
+            <i class="fa-solid fa-trash-can text-[10px]"></i> 刪除
+          </button>
         </div>
       </div>
     `;
@@ -5277,6 +5281,64 @@ function renderInventoryLogs() {
       <td class="py-2 px-1 text-[11px] text-gray-600 font-sans">${l.note}</td>
     </tr>
   `).join('');
+}
+    
+    // ========================================================
+// 【新增】庫存品項刪除引擎 (含日誌記錄與 Supabase 同步)
+// ========================================================
+async function deleteInventoryItem(itemId, itemName) {
+  const item = allInventoryItems.find(i => String(i.id) === String(itemId));
+  if (!item) return;
+
+  const { isConfirmed } = await Swal.fire({
+    title: `確定刪除品項【${itemName}】？`,
+    html: `
+      <div class="text-left text-xs bg-rose-50 p-3.5 rounded-2xl border border-rose-200 text-rose-950 space-y-1">
+        <div>• 品項名稱：<b>${itemName}</b></div>
+        <div>• 目前存量：<b>${item.current_stock} ${item.unit}</b></div>
+        <div class="text-rose-700 pt-1 border-t border-rose-200">※ 刪除後該耗材將自庫存主檔永久移除，無法復原！</div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: '確定永久刪除',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#e11d48'
+  });
+
+  if (isConfirmed) {
+    Swal.showLoading();
+    try {
+      // 1. 同步從 Supabase 資料表刪除 (若為真實 ID)
+      if (!String(itemId).startsWith('inv-demo-')) {
+        await fetch(`${SUPABASE_URL}/rest/v1/inventory_items?id=eq.${itemId}`, {
+          method: 'DELETE',
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+      }
+
+      // 2. 自動寫入異動日誌存查
+      if (typeof logInventoryChange === 'function') {
+        logInventoryChange(itemName, '品項廢止刪除', -Number(item.current_stock || 0), 0, '管理員手動刪除此耗材品項');
+      }
+
+      // 3. 記憶體快取過濾並重繪清單
+      allInventoryItems = allInventoryItems.filter(i => String(i.id) !== String(itemId));
+      renderInventoryList();
+
+      Swal.fire({
+        title: '品項已成功刪除！',
+        icon: 'success',
+        timer: 1000,
+        showConfirmButton: false
+      });
+    } catch(err) {
+      Swal.fire('刪除失敗', err.message, 'error');
+    }
+  }
 }
     
     // 再次完整編輯品項 (名稱、分類複選、進價、零售價、安全存量)
@@ -7092,131 +7154,90 @@ if (topCustBox) {
 // ==========================================
 // 17 大模組嚴格閘道控制 (全選擇器精確映射 + 隱藏商模切換)
 // ==========================================
+// ==========================================
+// 17 大模組嚴格閘道控制 (全權隱藏商模切換與 20+ 開關板)
+// ==========================================
 function applyLifetimeModulesStrictGating(storeInfo) {
   if (!storeInfo) return;
-  const isLifetime = (storeInfo.plan_type === 'lifetime');
+
+  // 多重兼容判定：判斷是否為買斷版 (Lifetime)
+  const isLifetime = (
+    storeInfo.plan_type === 'lifetime' || 
+    storeInfo.plan_status === 'lifetime' || 
+    storeInfo.is_lifetime === true || 
+    String(storeInfo.plan_name || '').includes('買斷')
+  );
+  
   const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
   const s = backendData.settings || {};
 
-  // 17 大模組與 HTML DOM 選擇器完整對照矩陣
+  // 17 大模組與 HTML DOM 選擇器精確對照表
   const moduleUIMap = {
-    // 1. 服務項目與分類設定
-    'services': {
-      nav: ['[onclick*="\'services\'"]'],
-      settings: ['#page-services', '#cfg-toggle-show-price']
-    },
-    // 2. 專員上班排班表
-    'shift': {
-      nav: ['[onclick*="\'shift\'"]'],
-      settings: ['#cfg-shift-start', '#cfg-shift-end', '#cfg-shift-interval', '#weekly-off-grid', '#new-custom-off-date', '#cfg-toggle-multi-staff-schedule']
-    },
-    // 3. 預約審核機制與訂金收取
-    'audit': {
-      nav: [],
-      settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit', '#cfg-deposit-mode', '#cfg-deposit-amount', '#cfg-deposit-info']
-    },
-    // 4. 預約緩衝禁約時間
-    'buffer': {
-      nav: [],
-      settings: ['#cfg-buffer']
-    },
-    // 5. 專員分權登入與抽成算薪
-    'staff_sub': {
-      nav: [],
-      settings: ['#staff-manager-list', '#new-staff-id', '#cfg-toggle-commission-calc', '#cfg-commission-rate', '#cfg-designated-bonus', '#cfg-toggle-staff-select']
-    },
-    // 6. 行銷工具 (儲值金、包卡、折扣碼、輪播圖、選品商城)
-    'marketing_tools': {
-      nav: ['[onclick*="\'marketing\'"]'],
-      settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons', '#cfg-toggle-carousel', '#cfg-toggle-featured-shop', '#cfg-promo-rules-input']
-    },
-    // 7. 進銷存與 BOM 耗材自動出庫
-    'inventory': {
-      nav: ['[onclick*="\'inventory\'"]'],
-      settings: ['#svc-material-checkboxes-container']
-    },
-    // 8. 營業報表與財務流水帳
-    'revenue': {
-      nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'],
-      settings: ['#page-revenue', '#page-transactions']
-    },
-    // 9. 定期回訪關懷提醒
-    'care': {
-      nav: ['[onclick*="\'care\'"]'],
-      settings: ['#page-care', '#cfg-toggle-care', '#cfg-care']
-    },
-    // 10. 顧客好評審核牆
-    'reviews': {
-      nav: ['[onclick*="\'reviews\'"]'],
-      settings: ['#page-reviews', '#cfg-toggle-reviews', '#review-tags-manage-box']
-    },
-    // 11. PORTFOLIO 作品集展示
-    'portfolio': {
-      nav: [],
-      settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio']
-    },
-    // 12. 9:16 IG 限動空檔一鍵發布
-    'slots': {
-      nav: ['[onclick*="\'slots\'"]'],
-      settings: ['#page-slots']
-    },
-    // 13. 定型化契約與親筆手寫簽名
-    'contract': {
-      nav: [],
-      settings: ['#cfg-toggle-contract', '#cfg-contract-title', '#cfg-contract-content']
-    },
-    // 14. 毛孩照護履歷與健康總檔 (寵物專屬)
-    'pets': {
-      nav: ['#nav-btn-pets'],
-      settings: ['#section-pet-questions-manager']
-    },
-    // 15. 寵物度假住宿與供餐排程 (寵物專屬)
-    'boarding': {
-      nav: ['#nav-btn-boarding'],
-      settings: ['#section-pet-hotel-settings', '#cfg-toggle-stay-notice', '#cfg-stay-notice-content']
-    },
-    // 16. LINE 推播與一鍵接單
-    'line_push': {
-      nav: [],
-      settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu', '#cfg-toggle-line-one-click', '#cfg-line-token']
-    },
-    // 17. Google 試算表即時連動
-    'sheets_sync': {
-      nav: [],
-      settings: []
-    }
+    'services': { nav: ['[onclick*="\'services\'"]'], settings: ['#page-services', '#cfg-toggle-show-price'] },
+    'shift': { nav: ['[onclick*="\'shift\'"]'], settings: ['#cfg-shift-start', '#cfg-shift-end', '#cfg-shift-interval', '#weekly-off-grid', '#new-custom-off-date', '#cfg-toggle-multi-staff-schedule'] },
+    'audit': { nav: [], settings: ['#cfg-toggle-audit-booking', '#cfg-toggle-deposit', '#cfg-deposit-mode', '#cfg-deposit-amount', '#cfg-deposit-info'] },
+    'buffer': { nav: [], settings: ['#cfg-buffer'] },
+    'staff_sub': { nav: [], settings: ['#staff-manager-list', '#new-staff-id', '#cfg-toggle-commission-calc', '#cfg-commission-rate', '#cfg-designated-bonus', '#cfg-toggle-staff-select'] },
+    'marketing_tools': { nav: ['[onclick*="\'marketing\'"]'], settings: ['#cfg-toggle-wallet', '#cfg-toggle-packages', '#cfg-toggle-coupons', '#cfg-toggle-carousel', '#cfg-toggle-featured-shop', '#cfg-promo-rules-input'] },
+    'inventory': { nav: ['[onclick*="\'inventory\'"]'], settings: ['#svc-material-checkboxes-container'] },
+    'revenue': { nav: ['[onclick*="\'revenue\'"]', '[onclick*="\'transactions\'"]'], settings: ['#page-revenue', '#page-transactions'] },
+    'care': { nav: ['[onclick*="\'care\'"]'], settings: ['#page-care', '#cfg-toggle-care', '#cfg-care'] },
+    'reviews': { nav: ['[onclick*="\'reviews\'"]'], settings: ['#page-reviews', '#cfg-toggle-reviews', '#review-tags-manage-box'] },
+    'portfolio': { nav: [], settings: ['#work-cat', '#portfolio-list-container', '#cfg-toggle-portfolio'] },
+    'slots': { nav: ['[onclick*="\'slots\'"]'], settings: ['#page-slots'] },
+    'contract': { nav: [], settings: ['#cfg-toggle-contract', '#cfg-contract-title', '#cfg-contract-content'] },
+    'pets': { nav: ['#nav-btn-pets'], settings: ['#section-pet-questions-manager'] },
+    'boarding': { nav: ['#nav-btn-boarding'], settings: ['#section-pet-hotel-settings', '#cfg-toggle-stay-notice', '#cfg-stay-notice-content'] },
+    'line_push': { nav: [], settings: ['#cfg-toggle-owner-line-push', '#cfg-toggle-line-auto-notify', '#cfg-toggle-flex-menu', '#cfg-toggle-line-one-click', '#cfg-line-token'] },
+    'sheets_sync': { nav: [], settings: [] }
   };
 
-  // 買斷版執行強制過濾
+  // ------------------------------------------------------------------
+  // 核心邏輯：買斷版絕對隱蔽「商模切換」與「模組開關板」
+  // ------------------------------------------------------------------
   if (isLifetime) {
+    // 1. 隱藏「20+ 功能模組開關控制板」（買斷版由管理中心配給，店家無須開關）
+    const moduleToggleCard = document.getElementById('section-module-toggles') || document.querySelector('#cfg-toggle-staff-select')?.closest('.bg-white');
+    if (moduleToggleCard) {
+      moduleToggleCard.style.setProperty('display', 'none', 'important');
+    }
+
+    // 2. 隱藏「三大商模切換器」（交機買斷時已鎖定商模，嚴禁店家自行切換）
+    const modeSwitchBox = document.getElementById('section-industry-mode-switch') || document.getElementById('current-mode-display-badge')?.closest('.shadow-sm');
+    if (modeSwitchBox) {
+      modeSwitchBox.style.setProperty('display', 'none', 'important');
+    }
+
+    // 3. 遍歷 17 大模組：未開通項目將底部分頁鈕與設定卡片徹底隱形
     Object.keys(moduleUIMap).forEach(modKey => {
       const isAllowed = allowed.includes(modKey);
       const conf = moduleUIMap[modKey];
 
-      // A. 隱藏底部分頁導覽鈕
+      // 隱藏底部分頁按鈕
       conf.nav.forEach(sel => {
         document.querySelectorAll(sel).forEach(btn => {
           btn.style.setProperty('display', isAllowed ? '' : 'none', 'important');
         });
       });
 
-      // B. 隱藏設定分頁的開關與區塊
+      // 隱藏設定分頁的模組卡片
       conf.settings.forEach(sel => {
         document.querySelectorAll(sel).forEach(targetEl => {
-          // 向上抓取最接近的 label 或外層卡片容器，保證整個開關行或區塊乾淨隱藏
-          const wrapper = targetEl.closest('label') || targetEl.closest('.bg-white') || targetEl;
-          wrapper.style.setProperty('display', isAllowed ? '' : 'none', 'important');
+          const wrapper = targetEl.closest('.bg-white') || targetEl.closest('.p-5') || targetEl;
+          if (wrapper && wrapper.id !== 'page-settings') {
+            wrapper.style.setProperty('display', isAllowed ? '' : 'none', 'important');
+          }
         });
       });
     });
-
-    // 【重要】：買斷版後台徹底隱藏「門市核心營運模式切換」重大設定區（商模全權收歸總管設置）
-    const modeSwitchBox = document.getElementById('current-mode-display-badge')?.closest('.bg-amber-50\\/60');
-    if (modeSwitchBox) {
-      modeSwitchBox.style.setProperty('display', 'none', 'important');
-    }
   } else {
-    // 訂閱版：依據 store_settings 開關動態調整部分導覽列顯隱
+    // 訂閱版店家：按原有設定動態切換顯隱
+    const modeSwitchBox = document.getElementById('section-industry-mode-switch') || document.getElementById('current-mode-display-badge')?.closest('.shadow-sm');
+    if (modeSwitchBox) modeSwitchBox.style.removeProperty('display');
+
+    const moduleToggleCard = document.getElementById('section-module-toggles') || document.querySelector('#cfg-toggle-staff-select')?.closest('.bg-white');
+    if (moduleToggleCard) moduleToggleCard.style.removeProperty('display');
+
     const showMarketing = (s.enable_wallet || s.enable_packages || s.enable_coupons);
     document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
       el.style.setProperty('display', showMarketing ? '' : 'none', 'important');
