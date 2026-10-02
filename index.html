@@ -326,25 +326,38 @@
             <div id="displayPackagesList" class="hidden pt-0.5 border-t border-amber-200/50 flex items-center gap-1 text-[11px] text-emerald-800 font-bold"></div>
           </div>
 
-          <!-- 訂金匯款帳號說明與後五碼快速回報專區 (依後台設定動態展開) -->
+          <!-- 訂金匯款帳號說明與回報憑證專區 (支援末五碼與截圖) -->
           <div id="quickDepositLast5Box" class="hidden mt-2.5 p-3.5 bg-amber-50 rounded-2xl border border-amber-300 space-y-2 text-xs">
-  <div class="flex items-center justify-between font-bold text-amber-950">
-    <span class="flex items-center gap-1.5">
-      <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
-    </span>
-    <span class="text-theme-primary font-black" id="quickDepositAmountLabel">NT$ 0</span>
-  </div>
-  <div id="quickDepositBankInfo" class="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11px] text-amber-900 whitespace-pre-line leading-relaxed font-mono font-medium select-all"></div>
-  <div>
-    <label class="block font-bold text-amber-950 mb-1 text-[11px]">轉帳完成請在此填寫帳號末五碼：</label>
-    <div class="flex gap-2">
-      <input type="text" id="depositLast5Input" maxlength="5" placeholder="例如：12345" class="flex-1 p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none">
-      <button type="button" onclick="submitQuickDepositLast5()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
-        送出後五碼
-      </button>
-    </div>
-  </div>
-</div>
+            <div class="flex items-center justify-between font-bold text-amber-950">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-money-bill-transfer text-amber-700"></i> 本次預約需付訂金
+              </span>
+              <span class="text-theme-primary font-black" id="quickDepositAmountLabel">NT$ 0</span>
+            </div>
+            
+            <div id="quickDepositBankInfo" class="p-2.5 bg-white/80 rounded-xl border border-amber-200 text-[11px] text-amber-900 whitespace-pre-line leading-relaxed font-mono font-medium select-all"></div>
+            
+            <div class="space-y-2 pt-1 border-t border-amber-200/60" id="depositProofInputsContainer">
+              <!-- A. 後五碼輸入框 -->
+              <div id="box-proof-last5">
+                <label class="block font-bold text-amber-950 mb-1 text-[11px]">轉帳帳號末五碼：</label>
+                <input type="text" id="depositLast5Input" maxlength="5" placeholder="例如：12345" class="w-full p-2 bg-white rounded-xl border border-amber-300 font-mono text-center font-bold text-sm tracking-widest outline-none">
+              </div>
+
+              <!-- B. 轉帳截圖上傳框 -->
+              <div id="box-proof-receipt">
+                <label class="block font-bold text-amber-950 mb-1 text-[11px]">上傳轉帳成功截圖：</label>
+                <input type="file" id="depositReceiptFileInput" accept="image/*" class="w-full text-xs bg-white p-1.5 rounded-xl border border-amber-300" onchange="handleReceiptFileChange(this)">
+                <input type="hidden" id="depositReceiptUrl">
+                <div id="receipt-preview-hint" class="hidden text-[10.5px] text-emerald-700 font-bold pt-1">✓ 截圖已上傳完畢</div>
+              </div>
+
+              <button type="button" onclick="submitQuickDepositProof()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1">
+                <i class="fa-solid fa-cloud-arrow-up"></i> 送出付款憑證
+              </button>
+            </div>
+          </div>
+        </div> <!-- ★ 聯絡電話外層的閉合標籤，絕不可省略 ★ -->
 
         <!-- 2. 預約人姓名 -->
         <div>
@@ -3955,6 +3968,111 @@ async function checkMaintenanceAndAnnouncement() {
     } catch(e) {}
   }
 
+  // A. 前台截圖上傳至 Supabase Storage
+async function handleReceiptFileChange(inputEl) {
+  const file = inputEl.files[0];
+  if (!file) return;
+  Swal.showLoading();
+  try {
+    const publicUrl = await uploadToSupabaseStorage(file, 'deposit_receipts');
+    document.getElementById('depositReceiptUrl').value = publicUrl;
+    const hint = document.getElementById('receipt-preview-hint');
+    if (hint) hint.classList.remove('hidden');
+    Swal.fire({ title: '截圖上傳成功！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch(e) {
+    Swal.fire('截圖上傳失敗', e.message, 'error');
+  }
+}
+
+// B. 依後台設定控制輸入框 (both / receipt_only / last5_only)
+function updateDepositSectionDisplay() {
+  const depositBox = document.getElementById('frontDepositSection');
+  const quickDepositBox = document.getElementById('quickDepositLast5Box');
+  const enableDeposit = (db.enableDeposit === true);
+  const currentType = document.getElementById('custType')?.value || 'old';
+  const isTargetCust = (db.depositMode === 'all') || (db.depositMode === 'new_only' && currentType === 'new');
+  const depositAmt = Number(db.depositAmount || 0);
+
+  const shouldShow = enableDeposit && isTargetCust && depositAmt > 0;
+
+  if (quickDepositBox) {
+    if (shouldShow) {
+      quickDepositBox.classList.remove('hidden');
+      quickDepositBox.style.display = 'block';
+      const amtLabel = document.getElementById('quickDepositAmountLabel');
+      const bankInfo = document.getElementById('quickDepositBankInfo');
+      if (amtLabel) amtLabel.innerText = `定額訂金：NT$ ${depositAmt.toLocaleString()} 元`;
+      if (bankInfo) bankInfo.innerText = db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012\n請於預約後完成匯款並填寫後五碼或傳截圖。';
+
+      // 控制截圖與五碼之顯隱
+      const reportMode = db.depositReportMode || 'both';
+      const boxLast5 = document.getElementById('box-proof-last5');
+      const boxReceipt = document.getElementById('box-proof-receipt');
+      if (boxLast5) boxLast5.style.display = (reportMode === 'receipt_only') ? 'none' : 'block';
+      if (boxReceipt) boxReceipt.style.display = (reportMode === 'last5_only') ? 'none' : 'block';
+    } else {
+      quickDepositBox.classList.add('hidden');
+      quickDepositBox.style.display = 'none';
+    }
+  }
+
+  if (depositBox) {
+    if (shouldShow) {
+      depositBox.classList.remove('hidden');
+      depositBox.style.display = 'block';
+      const amtTag = document.getElementById('depositAmountTag');
+      const infoText = document.getElementById('depositInfoText');
+      if (amtTag) amtTag.innerText = `需預付訂金：${depositAmt.toLocaleString()} 元`;
+      if (infoText) infoText.innerText = db.depositInfo || '玉山銀行 (808) 帳號 1234-5678-9012';
+    } else {
+      depositBox.classList.add('hidden');
+      depositBox.style.display = 'none';
+    }
+  }
+}
+
+// C. 前台顧客送出付款憑證
+async function submitQuickDepositProof() {
+  const phone = document.getElementById('phone')?.value.trim().replace(/[^0-9]/g, '');
+  const reportMode = db.depositReportMode || 'both';
+  const last5 = document.getElementById('depositLast5Input')?.value.trim();
+  const receiptUrl = document.getElementById('depositReceiptUrl')?.value.trim();
+
+  if (!phone || phone.length < 8) return Swal.fire('請先輸入完整手機號碼', '', 'warning');
+  if ((reportMode === 'both' || reportMode === 'last5_only') && (!last5 || last5.length !== 5)) {
+    return Swal.fire('請填寫正確的 5 碼帳號末碼', '', 'warning');
+  }
+  if ((reportMode === 'both' || reportMode === 'receipt_only') && !receiptUrl) {
+    return Swal.fire('請先選擇並上傳轉帳成功截圖', '', 'warning');
+  }
+
+  Swal.showLoading();
+  try {
+    const bookings = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1`);
+    if (!bookings || bookings.length === 0) return Swal.fire('查無預約紀錄', '請先填寫資料送出預約申請。', 'info');
+
+    const targetBooking = bookings[0];
+    let noteAppend = '';
+    if (receiptUrl) noteAppend += ` 【付款截圖: ${receiptUrl}】`;
+
+    await directSupabasePatch('bookings', `id=eq.${targetBooking.id}`, {
+      deposit_reported: true,
+      deposit_last5: last5 || '',
+      deposit_receipt_url: receiptUrl || '',
+      notes: `${targetBooking.notes || ''} ${noteAppend}`.trim()
+    });
+
+    Swal.fire({
+      title: '付款憑證已回報！',
+      text: '店家確認款項或截圖無誤後，將立即為您接單保留時段。',
+      icon: 'success',
+      confirmButtonColor: '#8C7355'
+    });
+  } catch(e) {
+    Swal.fire('送出失敗', e.message, 'error');
+  }
+}
+  
   function openReviewModal() { document.getElementById('reviewModal').classList.remove('hidden'); }
   function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); }
   function setReviewRating(star) {
