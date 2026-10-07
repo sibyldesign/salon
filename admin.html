@@ -3626,6 +3626,7 @@ renderStoreResourcesList();
     };
 
     backendData = {
+      storeInfo: sInfo, // ★★★ 關鍵加入此行，確保買斷版身分永久鎖定 ★★★
       appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
         const d = new Date(b.appointment_time);
         const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
@@ -3766,6 +3767,7 @@ renderStoreResourcesList();
         enableFlexMenu: sCfg.enable_flex_menu ?? true
       }
     };
+    backendData.storeInfo = sInfo; // 再次雙重保險
 
     // 5. 【強制執行】：動態模式佈局切換 ＆ 買斷版模組嚴格閘道
     handleIndustryModeChange(backendData.settings.industryMode);
@@ -3814,6 +3816,18 @@ renderStoreResourcesList();
     // 4. 路由切換器 (全域 14 個核心分頁)
     // ==========================================
     function switchPage(pageId, el) {
+      // 1. 如果試圖切換到設定，依身分智慧分流
+      if (pageId === 'settings') {
+        routeToSettingsPage(el);
+        return;
+      }
+
+      // 2. 如果買斷版店家試圖打開方案分頁，直接攔截轉往設定
+      if (pageId === 'subscription' && isStoreLifetime()) {
+        routeToSettingsPage(el);
+        return;
+      }
+
       document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
       document.querySelectorAll('.nav-item').forEach(n => {
         n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
@@ -7897,37 +7911,35 @@ if (peakChartBox) {
 // 負責：1. 底部分頁按鈕過濾 2. 買斷設定分頁內的加購卡片過濾
 // ========================================================
 function applyLifetimeModulesStrictGating(storeInfo) {
-  if (!storeInfo) return;
+  const sInfo = storeInfo || backendData.storeInfo;
+  if (!sInfo) return;
 
-  const isLifetime = (
-    storeInfo.plan_type === 'lifetime' || 
-    storeInfo.plan_status === 'lifetime' || 
-    String(storeInfo.plan_name || '').includes('買斷')
-  );
-
-  const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
-  const activeMode = storeInfo.industry_mode || storeInfo.industry_type || backendData.settings?.industryMode || 'beauty';
-
-  // 分頁按鈕選擇器
-  const navMap = {
-    'shift': '[onclick*="\'shift\'"]',
-    'inventory': '[onclick*="\'inventory\'"]',
-    'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
-    'care': '[onclick*="\'care\'"]',
-    'reviews': '[onclick*="\'reviews\'"]',
-    'slots': '[onclick*="\'slots\'"]',
-    'marketing_tools': '[onclick*="\'marketing\'"]',
-    'pets': '#nav-btn-pets',
-    'boarding': '#nav-btn-boarding'
-  };
+  const isLifetime = isStoreLifetime();
+  const allowed = Array.isArray(sInfo.allowed_modules) ? sInfo.allowed_modules : [];
+  const activeMode = sInfo.industry_mode || sInfo.industry_type || backendData.settings?.industryMode || 'beauty';
 
   const navSubBtn = document.getElementById('nav-btn-subscription');
 
   if (isLifetime) {
-    // A. 買斷版必做：徹底隱藏「方案與訂閱」分頁按鈕！
-    if (navSubBtn) navSubBtn.style.setProperty('display', 'none', 'important');
+    // ★★★ 核心要求 1：買斷版永久徹底隱藏「方案與訂閱」按鈕 ★★★
+    if (navSubBtn) {
+      navSubBtn.style.setProperty('display', 'none', 'important');
+    }
 
-    // B. 底部分頁按鈕：總管有開放才顯示
+    // 底部分頁導覽對照表
+    const navMap = {
+      'shift': '[onclick*="\'shift\'"]',
+      'inventory': '[onclick*="\'inventory\'"]',
+      'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
+      'care': '[onclick*="\'care\'"]',
+      'reviews': '[onclick*="\'reviews\'"]',
+      'slots': '[onclick*="\'slots\'"]',
+      'marketing_tools': '[onclick*="\'marketing\'"]',
+      'pets': '#nav-btn-pets',
+      'boarding': '#nav-btn-boarding'
+    };
+
+    // 總管有勾選加購才在底部分頁顯示，沒加購直接隱形
     Object.keys(navMap).forEach(modKey => {
       let isAllowed = allowed.includes(modKey);
       if (activeMode === 'beauty' && (modKey === 'pets' || modKey === 'boarding')) isAllowed = false;
@@ -7938,18 +7950,31 @@ function applyLifetimeModulesStrictGating(storeInfo) {
       });
     });
 
-    // C. 買斷版設定分頁內部卡片：總管有開通才顯示內容設定，絕無開關
+    // ★★★ 核心要求 2：買斷版設定分頁加購卡片（有加購才長出內容卡片，絕無啟用開關）★★★
     const cardWallet = document.getElementById('lt-addon-card-wallet');
     const cardPackages = document.getElementById('lt-addon-card-packages');
     const cardContract = document.getElementById('lt-addon-card-contract');
 
-    if (cardWallet) cardWallet.style.setProperty('display', allowed.includes('wallet') ? 'block' : 'none', 'important');
-    if (cardPackages) cardPackages.style.setProperty('display', allowed.includes('packages') ? 'block' : 'none', 'important');
-    if (cardContract) cardContract.style.setProperty('display', allowed.includes('contract') ? 'block' : 'none', 'important');
+    if (cardWallet) cardWallet.classList.toggle('hidden', !allowed.includes('wallet'));
+    if (cardPackages) cardPackages.classList.toggle('hidden', !allowed.includes('packages'));
+    if (cardContract) cardContract.classList.toggle('hidden', !allowed.includes('contract'));
 
   } else {
-    // 訂閱版：顯示「方案」按鈕，全功能大滿貫開啟
+    // 訂閱版：顯示「方案」按鈕，全功能導覽按鈕全開
     if (navSubBtn) navSubBtn.style.removeProperty('display');
+
+    const navMap = {
+      'shift': '[onclick*="\'shift\'"]',
+      'inventory': '[onclick*="\'inventory\'"]',
+      'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
+      'care': '[onclick*="\'care\'"]',
+      'reviews': '[onclick*="\'reviews\'"]',
+      'slots': '[onclick*="\'slots\'"]',
+      'marketing_tools': '[onclick*="\'marketing\'"]',
+      'pets': '#nav-btn-pets',
+      'boarding': '#nav-btn-boarding'
+    };
+
     Object.keys(navMap).forEach(modKey => {
       document.querySelectorAll(navMap[modKey]).forEach(el => el.style.removeProperty('display'));
     });
@@ -8720,57 +8745,62 @@ const settingsPayload = {
 
     // 渲染專員清單時顯示其開放的分頁標籤
 function renderStaffManager() {
-  const container = document.getElementById('staff-manager-list');
-  const countBadge = document.getElementById('staff-count-badge');
-  if (!container) return;
-
   const rawList = backendData.settings?.staffList || [];
   const staffs = rawList.filter(s => s.id !== 'all');
-  if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
 
-  if (staffs.length === 0) {
-    container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
-    return;
-  }
+  const targets = [
+    { list: document.getElementById('staff-manager-list'), badge: document.getElementById('staff-count-badge'), isLt: false },
+    { list: document.getElementById('lt-staff-manager-list'), badge: document.getElementById('lt-staff-count-badge'), isLt: true }
+  ];
 
-  const pageNamesMap = {
-    calendar: '日曆', shift: '排班', customer: '名單', add: '新增',
-    'boarding-schedule': '住宿', pets: '毛孩', care: '回訪', slots: '空檔', reviews: '好評'
-  };
+  targets.forEach(({ list: container, badge: countBadge, isLt }) => {
+    if (!container) return;
+    if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
 
-  container.innerHTML = staffs.map(s => {
-    const isVisible = staffPinVisibilityMap[s.id] === true;
-    const displayPin = isVisible ? (s.pin || '8888') : '••••';
-    const pages = (s.allowed_pages && s.allowed_pages.length > 0) ? s.allowed_pages : ['calendar', 'shift'];
-    const pageBadges = pages.map(p => `<span class="px-1.5 py-0.2 bg-brand-100 text-brand-800 rounded text-[9.5px] font-bold">${pageNamesMap[p] || p}</span>`).join(' ');
+    if (staffs.length === 0) {
+      container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
+      return;
+    }
 
-    return `
-      <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-        <div class="space-y-1">
-          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
-            <span>${s.name}</span>
-            <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
+    const pageNamesMap = {
+      calendar: '日曆', shift: '排班', customer: '名單', add: '新增',
+      'boarding-schedule': '住宿', pets: '毛孩', care: '回訪', slots: '空檔', reviews: '好評'
+    };
+
+    container.innerHTML = staffs.map(s => {
+      const isVisible = staffPinVisibilityMap[s.id] === true;
+      const displayPin = isVisible ? (s.pin || '8888') : '••••';
+      const pages = (s.allowed_pages && s.allowed_pages.length > 0) ? s.allowed_pages : ['calendar', 'shift'];
+      const pageBadges = pages.map(p => `<span class="px-1.5 py-0.2 bg-brand-100 text-brand-800 rounded text-[9.5px] font-bold">${pageNamesMap[p] || p}</span>`).join(' ');
+
+      return `
+        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+          <div class="space-y-1">
+            <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
+              <span>${s.name}</span>
+              <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
+            </div>
+            <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
+              <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
+              <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5"><i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i></button>
+              <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
+            </div>
+            <div class="pt-0.5 flex flex-wrap gap-1 items-center">
+              <span class="text-[10px] text-gray-400 font-bold">授權頁面：</span>
+              ${pageBadges}
+              <button type="button" onclick="promptEditStaffPages('${s.id}')" class="text-emerald-700 underline text-[10.5px] font-bold ml-1">修改權限</button>
+            </div>
           </div>
-          <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
-            <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
-            <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5"><i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i></button>
-            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
-          </div>
-          <div class="pt-0.5 flex flex-wrap gap-1 items-center">
-            <span class="text-[10px] text-gray-400 font-bold">授權頁面：</span>
-            ${pageBadges}
-            <button type="button" onclick="promptEditStaffPages('${s.id}')" class="text-emerald-700 underline text-[10.5px] font-bold ml-1">修改權限</button>
+          <div class="flex gap-1.5 items-center shrink-0">
+            <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
+              <i class="fa-solid fa-link text-[10px]"></i> 複製工作台
+            </button>
+            <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">刪除</button>
           </div>
         </div>
-        <div class="flex gap-1.5 items-center shrink-0">
-          <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
-            <i class="fa-solid fa-link text-[10px]"></i> 複製工作台
-          </button>
-          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">刪除</button>
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  });
 }
 
     function toggleStaffPinVisibility(staffId) {
@@ -8785,25 +8815,31 @@ function renderStaffManager() {
       });
     }
 
-    async function addStaffMember() {
-  const id = document.getElementById('new-staff-id').value.trim();
-  const name = document.getElementById('new-staff-name').value.trim();
-  const pin = document.getElementById('new-staff-pin').value.trim() || '8888';
-  if (!id || !name) return Swal.fire('請填寫編號與姓名', '', 'warning');
+    async function addStaffMember(prefix = '') {
+  const isLt = (prefix === 'lt');
+  const id = (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')?.value || '').trim();
+  const name = (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')?.value || '').trim();
+  const pin = (document.getElementById(isLt ? 'lt-new-staff-pin' : 'new-staff-pin')?.value || '').trim() || '8888';
 
-  // 抓取老闆勾選的分頁權限
-  const allowedPages = Array.from(document.querySelectorAll('.staff-perm-cb:checked')).map(cb => cb.value);
+  if (!id || !name) return Swal.fire('請填寫編號與姓名', '', 'warning');
 
   let list = backendData.settings?.staffList || [];
   if (!list.some(s => s.id === 'all')) list.unshift({ id: "all", name: "不指定", pin: "8888", allowed_pages: ['calendar', 'shift'] });
   if (list.some(s => s.id.toLowerCase() === id.toLowerCase())) return Swal.fire('此編號已存在', '', 'warning');
+
+  const allowedPages = isLt 
+    ? ['calendar', 'shift', 'customer'] 
+    : Array.from(document.querySelectorAll('.staff-perm-cb:checked')).map(cb => cb.value);
 
   list.push({ id, name, pin, allowed_pages: allowedPages });
   backendData.settings.staffList = list;
 
   await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
   renderStaffManager();
-  Swal.fire('專員建立成功，分頁權限已綁定！', '', 'success');
+
+  if (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')) document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id').value = '';
+  if (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')) document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name').value = '';
+  Swal.fire('專員建立成功！', '', 'success');
 }
 
     function promptEditStaffPin(staffId, staffName, currentPin) {
@@ -8878,22 +8914,29 @@ function renderStaffManager() {
       `).join('');
     }
 
-    async function uploadLogoImgBB() {
-  const file = document.getElementById('logo-file-input').files[0];
+    async function uploadLogoImg(prefix = '') {
+  const isLt = (prefix === 'lt');
+  const fileInput = document.getElementById(isLt ? 'lt-logo-file-input' : 'logo-file-input');
+  const file = fileInput?.files[0];
   if (!file) return Swal.fire('請先選擇 LOGO 圖檔', '', 'warning');
+
   Swal.showLoading();
   try {
     const url = await uploadToSupabaseStorage(file, 'logo');
-    document.getElementById('cfg-logo').value = url;
-    const previewBox = document.getElementById('logo-preview-box');
-    const previewImg = document.getElementById('logo-preview-img');
-    if (previewBox && previewImg) {
-      previewImg.src = url;
-      previewBox.classList.remove('hidden');
+    const targetInput = document.getElementById(isLt ? 'lt-logo' : 'cfg-logo');
+    if (targetInput) targetInput.value = url;
+
+    if (!isLt) {
+      const previewBox = document.getElementById('logo-preview-box');
+      const previewImg = document.getElementById('logo-preview-img');
+      if (previewBox && previewImg) {
+        previewImg.src = url;
+        previewBox.classList.remove('hidden');
+      }
     }
-    Swal.fire('LOGO 上傳成功！', '', 'success');
-  } catch(e) { 
-    Swal.fire('上傳失敗', e.message, 'error'); 
+    Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+  } catch(e) {
+    Swal.fire('上傳失敗', e.message, 'error');
   }
 }
 
@@ -9721,41 +9764,48 @@ async function triggerTomorrowReminders() {
       calcAdminQuickSummary();
     }
 
-    // ========================================================
-    // 2. 設定分頁智慧路由器 (全域獨立函式：保證買斷與訂閱版皆能點開)
-    // ========================================================
-    function routeToSettingsPage(btnEl) {
-      const store = backendData.storeInfo || {};
-      const isLifetime = (
-        store.plan_type === 'lifetime' || 
-        store.plan_status === 'lifetime' || 
-        String(store.plan_name || '').includes('買斷')
-      );
+    // ==========================================
+// 【全域精準身分識別】判定此店家是否為尊榮買斷版
+// ==========================================
+function isStoreLifetime() {
+  const s = backendData.storeInfo || {};
+  return Boolean(
+    s.plan_type === 'lifetime' || 
+    s.plan_status === 'lifetime' || 
+    String(s.plan_name || '').includes('買斷')
+  );
+}
 
-      // 隱藏所有分頁
-      document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-      document.querySelectorAll('.nav-item').forEach(n => {
-        n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
-      });
-      if (btnEl) btnEl.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+// ==========================================
+// 【核心路由分流】點擊設定時，精確依照版本分流，100% 不卡死
+// ==========================================
+function routeToSettingsPage(btnEl) {
+  const isLifetime = isStoreLifetime();
 
-      if (isLifetime) {
-        // 進入買斷版專屬獨立設定分頁
-        const ltPage = document.getElementById('page-settings-lifetime');
-        if (ltPage) {
-          ltPage.style.display = 'block';
-          populateLifetimeSettings();
-        }
-      } else {
-        // 進入訂閱版全功能設定分頁
-        const subPage = document.getElementById('page-settings');
-        if (subPage) {
-          subPage.style.display = 'block';
-          populateSettings();
-        }
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  // 1. 隱藏所有頁面
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
+  });
+  if (btnEl) btnEl.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+
+  if (isLifetime) {
+    // 買斷版：進入專屬買斷獨立設定分頁 (#page-settings-lifetime)
+    const ltPage = document.getElementById('page-settings-lifetime');
+    if (ltPage) {
+      ltPage.style.display = 'block';
+      populateLifetimeSettings();
     }
+  } else {
+    // 訂閱版：進入全功能設定分頁 (#page-settings)
+    const subPage = document.getElementById('page-settings');
+    if (subPage) {
+      subPage.style.display = 'block';
+      populateSettings();
+    }
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
     // ========================================================
     // 3. 買斷版專用資料回填與加購模組卡片獨立開關
