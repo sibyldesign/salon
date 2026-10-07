@@ -2718,34 +2718,37 @@ function renderHotelTimeGrid(type, dateStr) {
 
     // 1. 美業模式單一清單
     if (svcGrid) {
-      svcGrid.innerHTML = '';
-      const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
-      db.services.forEach(s => {
-        const isAddon = (s.isAddon === true);
-        const disabledClass = isAddon && !hasMainSelected ? 'opacity-40 pointer-events-none' : '';
-        const priceText = (db.enableShowPrice !== false) ? `NT$ ${s.price}` : '';
-        svcGrid.innerHTML += `
-          <label class="service-card flex items-center justify-between p-3 rounded-xl border border-brand-200 bg-white cursor-pointer transition text-xs ${disabledClass}">
-            <div class="flex items-center gap-2 truncate">
-              <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="rounded accent-[#8C7355]">
-              <span class="truncate font-medium">${isAddon ? '<span class="text-[10px] text-brand-400 bg-brand-100 px-1 py-0.2 rounded font-bold mr-1">[加購]</span>' : ''}${s.name}</span>
+    svcGrid.innerHTML = '';
+    const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
+    db.services.forEach(s => {
+      const isAddon = (s.isAddon === true);
+      const disabledClass = isAddon && !hasMainSelected ? 'opacity-40 pointer-events-none' : '';
+      const priceText = (db.enableShowPrice !== false) ? `NT$ ${s.price}` : '';
+      svcGrid.innerHTML += `
+        <label class="service-card flex items-start justify-between p-3 rounded-2xl border border-brand-200 bg-white cursor-pointer transition text-xs ${disabledClass}">
+          <div class="flex items-start gap-2.5 flex-1 pr-2">
+            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="mt-0.5 rounded accent-[#8C7355] shrink-0">
+            <div class="flex-1 whitespace-normal break-words leading-snug">
+              ${isAddon ? '<span class="text-[9.5px] text-brand-500 bg-brand-100 px-1.5 py-0.5 rounded font-bold mr-1 inline-block">[加購]</span>' : ''}
+              <span class="font-bold text-brand-900 ${s.name.length > 12 ? 'text-[11px]' : 'text-xs'}">${s.name}</span>
             </div>
-            ${priceText ? `<span class="text-theme-primary font-bold ml-1 shrink-0 font-mono">${priceText}</span>` : ''}
-          </label>`;
-      });
-    }
+          </div>
+          ${priceText ? `<span class="text-theme-primary font-bold shrink-0 font-mono text-xs whitespace-nowrap pl-1">${priceText}</span>` : ''}
+        </label>`;
+    });
+  }
 
-    // 2. 寵美模式：將項目渲染進「毛孩 1」卡片內部
-    if (pet1SvcGrid) {
-      pet1SvcGrid.innerHTML = mainSvcs.map(s => `
-        <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
-          <span class="flex items-center gap-2 font-medium">
-            <input type="checkbox" class="pet-1-svc rounded accent-[#8C7355]" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
-            <span>${s.name}</span>
-          </span>
-          <span class="font-mono font-bold text-brand-700">NT$ ${s.price}</span>
-        </label>
-      `).join('');
+  // 2. 寵美模式：毛孩 1 卡片內項目渲染（同樣支援長名稱換行）
+  if (pet1SvcGrid) {
+    pet1SvcGrid.innerHTML = mainSvcs.map(s => `
+      <label class="flex items-start justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
+        <div class="flex items-start gap-2 flex-1 pr-2">
+          <input type="checkbox" class="pet-1-svc rounded accent-[#8C7355] mt-0.5 shrink-0" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
+          <span class="font-bold text-brand-900 whitespace-normal break-words leading-snug ${s.name.length > 12 ? 'text-[11px]' : 'text-xs'}">${s.name}</span>
+        </div>
+        <span class="font-mono font-bold text-brand-700 shrink-0 text-xs whitespace-nowrap">NT$ ${s.price}</span>
+      </label>
+    `).join('');
     }
 
     if (pet1AddonGrid) {
@@ -2804,11 +2807,16 @@ function renderFrontCalendar() {
     let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
     let thisCellDate = new Date(currentYear, currentMonth, i);
     let isPast = (thisCellDate < todayZero);
-    let isAvailable = !isPast && (db.availableDates.length === 0 || db.availableDates.includes(dStr));
+    
+    // 嚴格判定：若後台完全沒設公休名單，則只要不是過去日一律可預約
+    let isAvailable = !isPast;
+    if (Array.isArray(db.availableDates) && db.availableDates.length > 0) {
+      isAvailable = !isPast && db.availableDates.includes(dStr);
+    }
+    
     let isActive = (dStr === selectedDate);
     
     if (isAvailable) {
-      // 正常可預約營業日
       html += `
         <div class="py-2.5 text-xs font-bold cursor-pointer transition ${
           isActive 
@@ -2818,16 +2826,15 @@ function renderFrontCalendar() {
           ${i}
         </div>`;
     } else {
-      // 【公休日 / 過去日】：顯著淺灰底色 + 劃線 + 休字區隔
-      const isStoreOff = !isPast; // 未來但不可選，代表門市公休
+      const isStoreOff = !isPast; // 未來但不可選，代表是門市公休
       html += `
-        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none transition ${
+        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none ${
           isStoreOff 
-            ? 'bg-gray-100/90 text-gray-400 border border-dashed border-gray-200' 
-            : 'bg-brand-50/40 text-gray-300 opacity-60'
+            ? 'bg-stone-100 text-stone-400 border border-stone-200' 
+            : 'bg-stone-50 text-stone-300 opacity-50'
         }">
-          <span class="${isStoreOff ? 'line-through text-[11px]' : ''}">${i}</span>
-          ${isStoreOff ? '<span class="text-[8.5px] scale-90 font-bold text-stone-400">休</span>' : ''}
+          <span class="${isStoreOff ? 'line-through text-[11px] text-stone-400 font-bold' : ''}">${i}</span>
+          ${isStoreOff ? '<span class="text-[9px] font-bold text-stone-400 scale-90">休</span>' : ''}
         </div>`;
     }
   }
@@ -3131,33 +3138,43 @@ function updateCheckoutSummary() {
   let outOfPocketMin = minTotal;
   let outOfPocketMax = maxTotal;
 
-  // 包卡抵扣
-  if (isUsePkg && maxTotal > 0) {
-    let matchedItemMin = 0, matchedItemMax = 0;
-    let matchedPkgName = '';
+  // 包卡抵扣（升級支援關鍵字交叉比對，例如：剪髮 vs 洗剪造型設計）
+    if (isUsePkg && maxTotal > 0) {
+      let matchedItemMin = 0, matchedItemMax = 0;
+      let matchedPkgName = '';
 
-    for (let itm of selectedItems) {
-      if (itm.isAddon) continue;
-      const matched = userPackages.find(p => (p.service_name === itm.name || itm.name.includes(p.service_name)) && p.remaining_times > 0);
-      if (matched) {
-        matchedItemMin = itm.min;
-        matchedItemMax = itm.max;
-        matchedPkgName = matched.service_name;
-        break;
+      for (let itm of selectedItems) {
+        if (itm.isAddon) continue;
+        const matched = userPackages.find(p => {
+          if (p.remaining_times <= 0) return false;
+          const pkgSvc = (p.service_name || '').toLowerCase();
+          const itmName = (itm.name || '').toLowerCase();
+          // A. 完全吻合
+          if (pkgSvc === itmName || itmName.includes(pkgSvc) || pkgSvc.includes(itmName)) return true;
+          // B. 核心詞模糊比對（剪髮、洗澡、染髮、美甲、做臉）
+          const coreWords = ['剪', '洗', '染', '燙', '護', '手', '足', '甲', '臉', 'spa', '泥'];
+          return coreWords.some(w => pkgSvc.includes(w) && itmName.includes(w));
+        });
+
+        if (matched) {
+          matchedItemMin = itm.min;
+          matchedItemMax = itm.max;
+          matchedPkgName = matched.service_name;
+          break;
+        }
+      }
+
+      if (matchedPkgName) {
+        outOfPocketMin = Math.max(0, minTotal - matchedItemMin);
+        outOfPocketMax = Math.max(0, maxTotal - matchedItemMax);
+        deductText = `使用【${matchedPkgName}】包卡扣抵 1 堂`;
+        document.getElementById('box-package-remain-notice')?.classList.remove('hidden');
+        document.getElementById('text-remain-package-times').innerText = Math.max(0, (userPackages[0]?.remaining_times || 1) - 1);
+      } else {
+        chkPkg.checked = false;
+        Swal.fire('無法使用包卡', '所選項目與您名下的包卡項目性質不符，無法抵扣。', 'warning');
       }
     }
-
-    if (matchedPkgName) {
-      outOfPocketMin = Math.max(0, minTotal - matchedItemMin);
-      outOfPocketMax = Math.max(0, maxTotal - matchedItemMax);
-      deductText = `使用【${matchedPkgName}】包卡扣抵 1 堂`;
-      document.getElementById('box-package-remain-notice')?.classList.remove('hidden');
-      document.getElementById('text-remain-package-times').innerText = Math.max(0, (userPackages[0]?.remaining_times || 1) - 1);
-    } else {
-      chkPkg.checked = false;
-      Swal.fire('無法使用包卡', '所選項目與名下包卡服務項目不符，無法抵扣。', 'warning');
-    }
-  }
 
   // 儲值金抵扣 (依折數計算折後金額，若儲值足夠則項目自付額歸零)
   if (isUseWal && !isUsePkg && maxTotal > 0) {
@@ -3391,10 +3408,15 @@ async function uploadToSupabaseStorage(file, folder = 'uploads') {
       statusText.innerText = '✓ 已完成閱讀，請於下方手寫簽名';
       statusText.className = 'text-[10px] text-emerald-600 font-bold';
     }
-    document.getElementById('signatureWrapper')?.classList.remove('hidden');
-    initSignaturePad();
+    const wrapper = document.getElementById('signatureWrapper');
+    if (wrapper) {
+      wrapper.classList.remove('hidden');
+      // 確保 DOM 渲染到畫面上後再抓取實體寬度，防止 clientWidth 為 0
+      requestAnimationFrame(() => {
+        initSignaturePad();
+      });
+    }
   }
-
   function closeContractModal() {
     document.getElementById('contractModal')?.classList.add('hidden');
   }
@@ -3419,7 +3441,13 @@ function initSignaturePad() {
     const rect = sigCanvas.getBoundingClientRect();
     const cx = e.touches ? e.touches[0].clientX : e.clientX;
     const cy = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: cx - rect.left, y: cy - rect.top };
+    // 加入縮放矩陣校正，避免手機頁面滾動與彈窗縮放時筆尖與軌跡偏移
+    const scaleX = sigCanvas.width / (rect.width || 1);
+    const scaleY = sigCanvas.height / (rect.height || 1);
+    return { 
+      x: (cx - rect.left) * scaleX, 
+      y: (cy - rect.top) * scaleY 
+    };
   };
 
   const startDraw = (e) => { 
@@ -4141,7 +4169,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   let dValRaw = "";
   let tVal = "";
 
-  // 2. 寵物模式基本防呆
+  // 2. 寵物模式基本防呆（動態毛孩遍歷，徹底防範刪除區塊後的索引懸空與報錯）
   if (db.industryType !== 'beauty') {
     const p1Name = document.getElementById('petName')?.value.trim();
     const p1Breed = document.getElementById('petBreed')?.value.trim();
@@ -4151,19 +4179,34 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     if (!p1Breed) return Swal.fire('請填寫毛孩品種', '例如：柴犬、貴賓、米克斯', 'warning');
     if (isNaN(p1Weight) || p1Weight <= 0) return Swal.fire('請填寫毛孩體重 (kg)', '', 'warning');
 
-    for (let i = 1; i <= frontPetBlocksCount; i++) {
-      const pName = document.getElementById(i === 1 ? 'petName' : `petName_${i}`)?.value.trim();
-      if (!pName) continue;
-      const pBreed = document.getElementById(i === 1 ? 'petBreed' : `petBreed_${i}`)?.value.trim() || '';
-      const pWeight = document.getElementById(i === 1 ? 'petWeight' : `petWeight_${i}`)?.value.trim() || '';
-      const pAge = document.getElementById(i === 1 ? 'petAge' : `petAge_${i}`)?.value.trim() || '';
-      const pGender = document.getElementById(i === 1 ? 'petGender' : `petGender_${i}`)?.value || '';
-      const pNotes = document.getElementById(i === 1 ? 'petPersonality' : `petPersonality_${i}`)?.value.trim() || '';
-      const pSvcs = Array.from(document.querySelectorAll(i === 1 ? '#service-grid input:checked, .pet-1-svc:checked, .pet-1-addon:checked' : `.pet-${i}-svc:checked, .pet-${i}-addon:checked`)).map(cb => cb.value).join(', ');
+    // A. 處理固定存在的「毛孩 1」
+    const p1Age = document.getElementById('petAge')?.value.trim() || '';
+    const p1Gender = document.getElementById('petGender')?.value || '';
+    const p1Notes = document.getElementById('petPersonality')?.value.trim() || '';
+    const p1Svcs = Array.from(document.querySelectorAll('#service-grid input:checked, .pet-1-svc:checked, .pet-1-addon:checked')).map(cb => cb.value).join(', ');
 
-      notesArray.push(`【毛孩${i}: ${pName} / ${pBreed} / ${pWeight}kg / ${pAge}歲 / ${pGender} / 項目: ${pSvcs || '現場確認'} / 備註: ${pNotes}】`);
-    }
+    notesArray.push(`【毛孩1: ${p1Name} / ${p1Breed} / ${p1Weight}kg / ${p1Age}歲 / ${p1Gender} / 項目: ${p1Svcs || '現場確認'} / 備註: ${p1Notes}】`);
 
+    // B. 動態遍歷畫面上實際存在的額外毛孩（若使用者新增又刪除，此處只遍歷留存的區塊，不依賴計數器）
+    const extraPetBlocks = document.querySelectorAll('#additionalPetsContainer [id^="pet-block-"]');
+    extraPetBlocks.forEach((block, idx) => {
+      const blockId = block.id; // 例: pet-block-2
+      const blockIdx = blockId.replace('pet-block-', '');
+      const pName = document.getElementById(`petName_${blockIdx}`)?.value.trim();
+      if (!pName) return;
+
+      const pBreed = document.getElementById(`petBreed_${blockIdx}`)?.value.trim() || '';
+      const pWeight = document.getElementById(`petWeight_${blockIdx}`)?.value.trim() || '';
+      const pAge = document.getElementById(`petAge_${blockIdx}`)?.value.trim() || '';
+      const pGender = document.getElementById(`petGender_${blockIdx}`)?.value || '';
+      const pNotes = document.getElementById(`petPersonality_${blockIdx}`)?.value.trim() || '';
+      const pSvcs = Array.from(document.querySelectorAll(`.pet-${blockIdx}-svc:checked, .pet-${blockIdx}-addon:checked`)).map(cb => cb.value).join(', ');
+
+      const displayNum = idx + 2; // 接續毛孩 1，重新排列為毛孩 2、毛孩 3...
+      notesArray.push(`【毛孩${displayNum}: ${pName} / ${pBreed} / ${pWeight}kg / ${pAge}歲 / ${pGender} / 項目: ${pSvcs || '現場確認'} / 備註: ${pNotes}】`);
+    });
+
+    // C. 門市接送地址檢查
     if (document.getElementById('chkNeedShuttle')?.checked) {
       const sAddr = document.getElementById('shuttleAddress')?.value.trim();
       if (!sAddr) return Swal.fire('勾選接送請務必填寫詳細地址', '', 'warning');
@@ -4297,13 +4340,58 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const resData = await res.json();
     const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
-    // 同步主檔
+    // 1. 同步顧客主檔 (覆寫最新姓名、信箱、LINE 暱稱)
     await directSupabaseUpsert('customers', {
-      store_id: CURRENT_STORE_ID, phone: phoneVal, name: nameVal, updated_at: new Date().toISOString()
+      store_id: CURRENT_STORE_ID,
+      phone: phoneVal,
+      name: nameVal,
+      email: emailVal || '',
+      line_name: document.getElementById('lineName')?.value.trim() || '',
+      updated_at: new Date().toISOString()
     }, 'store_id,phone');
 
+    // 2. 寵物模式：完整覆寫名下所有毛孩資料庫欄位
     if (db.industryType !== 'beauty') {
-      await syncCurrentPetToDatabase(phoneVal, nameVal);
+      const p1Name = document.getElementById('petName')?.value.trim();
+      if (p1Name) {
+        await directSupabaseUpsert('pets', {
+          store_id: CURRENT_STORE_ID,
+          customer_phone: phoneVal,
+          name: p1Name,
+          breed: document.getElementById('petBreed')?.value.trim() || '',
+          weight_kg: Number(document.getElementById('petWeight')?.value || 0),
+          age_str: document.getElementById('petAge')?.value.trim() || '',
+          species: document.getElementById('petGender')?.value || '',
+          coat_type: document.getElementById('petChipId')?.value.trim() || '',
+          vaccine_year: document.getElementById('petVaccineYear')?.value.trim() || '',
+          deworm_date: document.getElementById('petDewormDate')?.value.trim() || '',
+          allergy_history: document.getElementById('petAllergy')?.value.trim() || '',
+          notes: document.getElementById('petPersonality')?.value.trim() || '',
+          photo_url: document.getElementById('petPhotoUrl_1')?.value || '',
+          updated_at: new Date().toISOString()
+        }, 'id');
+      }
+
+      // 同步額外毛孩 (毛孩 2、毛孩 3...)
+      const extraBlocks = document.querySelectorAll('#additionalPetsContainer [id^="pet-block-"]');
+      for (let block of extraBlocks) {
+        const bIdx = block.id.replace('pet-block-', '');
+        const pName = document.getElementById(`petName_${bIdx}`)?.value.trim();
+        if (pName) {
+          await directSupabaseUpsert('pets', {
+            store_id: CURRENT_STORE_ID,
+            customer_phone: phoneVal,
+            name: pName,
+            breed: document.getElementById(`petBreed_${bIdx}`)?.value.trim() || '',
+            weight_kg: Number(document.getElementById(`petWeight_${bIdx}`)?.value || 0),
+            age_str: document.getElementById(`petAge_${bIdx}`)?.value.trim() || '',
+            species: document.getElementById(`petGender_${bIdx}`)?.value || '',
+            notes: document.getElementById(`petPersonality_${bIdx}`)?.value.trim() || '',
+            photo_url: document.getElementById(`petPhotoUrl_${bIdx}`)?.value || '',
+            updated_at: new Date().toISOString()
+          }, 'id');
+        }
+      }
     }
 
     // 發送推播通知與郵件 (天價消滅：傳入乾淨 price 與 price_range)
