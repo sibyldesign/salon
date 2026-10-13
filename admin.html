@@ -10272,23 +10272,48 @@ function applyMarketingInnerSectionsGating() {
   const store = backendData.storeInfo || {};
   const isLifetime = isStoreLifetime();
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
+  const s = backendData.settings || {};
 
-  const blockWallet = document.getElementById('mkt-block-wallet');
-  const blockPackages = document.getElementById('mkt-block-packages');
-  const blockCoupons = document.getElementById('mkt-block-coupons');
+  // 1. 各模組獨立授權判定 (買斷看總管 allowed_modules；訂閱看後台設定開關)
+  const hasWallet = isLifetime ? allowed.includes('wallet') : (s.enable_wallet !== false);
+  const hasPackages = isLifetime ? allowed.includes('packages') : (s.enable_packages !== false);
+  const hasCoupons = isLifetime ? allowed.includes('coupons') : (s.enable_coupons !== false);
 
-  if (isLifetime) {
-    // 買斷版：依總管 allowed_modules 個別開關決定顯隱
-    if (blockWallet) blockWallet.style.setProperty('display', allowed.includes('wallet') ? 'block' : 'none', 'important');
-    if (blockPackages) blockPackages.style.setProperty('display', allowed.includes('packages') ? 'block' : 'none', 'important');
-    if (blockCoupons) blockCoupons.style.setProperty('display', allowed.includes('coupons') ? 'block' : 'none', 'important');
-  } else {
-    // 訂閱版：依店家後台設定開關 (enable_wallet, enable_packages, enable_coupons) 決定
-    const s = backendData.settings || {};
-    if (blockWallet) blockWallet.style.setProperty('display', s.enable_wallet !== false ? 'block' : 'none', 'important');
-    if (blockPackages) blockPackages.style.setProperty('display', s.enable_packages !== false ? 'block' : 'none', 'important');
-    if (blockCoupons) blockCoupons.style.setProperty('display', s.enable_coupons !== false ? 'block' : 'none', 'important');
+  // 2. 獲取行銷分頁內部各實體卡片 (支援專屬 ID 與 DOM 向上相容查找)
+  const blockWallet = document.getElementById('mkt-block-wallet') || 
+                      document.getElementById('wallet-table-body')?.closest('.bg-white');
+  const blockPackages = document.getElementById('mkt-block-packages') || 
+                        document.getElementById('packages-table-body')?.closest('.bg-white');
+  const blockCoupons = document.getElementById('mkt-block-coupons') || 
+                       document.getElementById('coupons-card-container')?.closest('.bg-white');
+
+  // 門市規則庫卡片內的分項容器
+  const walletRulesBox = document.getElementById('wallet-rules-container')?.closest('.space-y-2');
+  const pkgRulesBox = document.getElementById('package-rules-container')?.closest('.space-y-2');
+  const rulesCard = walletRulesBox?.closest('.bg-white');
+
+  // 3. 細粒度精準顯隱
+  if (blockWallet) blockWallet.style.setProperty('display', hasWallet ? 'block' : 'none', 'important');
+  if (walletRulesBox) walletRulesBox.style.setProperty('display', hasWallet ? 'block' : 'none', 'important');
+
+  if (blockPackages) blockPackages.style.setProperty('display', hasPackages ? 'block' : 'none', 'important');
+  if (pkgRulesBox) pkgRulesBox.style.setProperty('display', hasPackages ? 'block' : 'none', 'important');
+
+  if (blockCoupons) blockCoupons.style.setProperty('display', hasCoupons ? 'block' : 'none', 'important');
+
+  // 若儲值與包卡都沒開，規則庫大卡片直接隱藏
+  if (rulesCard) {
+    rulesCard.style.setProperty('display', (hasWallet || hasPackages) ? 'block' : 'none', 'important');
   }
+
+  // 4. 底部分頁「行銷」按鈕：三者任一有開才顯示，全關則徹底隱形
+  const hasAnyMarketing = hasWallet || hasPackages || hasCoupons;
+  document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
+    el.style.setProperty('display', hasAnyMarketing ? '' : 'none', 'important');
+  });
+
+  // 5. 連動：同步過濾代客下單與結單彈窗選項
+  syncAddonControlsAvailability(hasWallet, hasPackages, hasCoupons);
 }
 
 // ========================================================
@@ -10356,16 +10381,8 @@ function applyLifetimeModulesStrictGating(storeInfo) {
 // ========================================================
 // 3. 代客下單 (page-add) 與 結單彈窗 (checkoutModal) 智慧連動
 // ========================================================
-function syncAddonControlsAvailability() {
-  const store = backendData.storeInfo || {};
-  const isLifetime = isStoreLifetime();
-  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
-  const s = backendData.settings || {};
-
-  const hasWallet = isLifetime ? allowed.includes('wallet') : (s.enable_wallet !== false);
-  const hasPackages = isLifetime ? allowed.includes('packages') : (s.enable_packages !== false);
-
-  // A. 代客預約頁面 (#page-add) 智慧隱藏未開通項目
+function syncAddonControlsAvailability(hasWallet, hasPackages, hasCoupons) {
+  // A. 代客預約頁面 (#page-add)
   const pkgSel = document.getElementById('quick-addon-pkg');
   const walSel = document.getElementById('quick-addon-wal');
   const pkgCheckLabel = document.getElementById('quick-use-pkg')?.closest('label');
@@ -10376,13 +10393,21 @@ function syncAddonControlsAvailability() {
   if (walSel) walSel.style.display = hasWallet ? 'block' : 'none';
   if (walCheckLabel) walCheckLabel.style.display = hasWallet ? 'inline-flex' : 'none';
 
-  // 若兩者皆未開通，整行方案加購框可柔性隱藏
-  const addonSection = document.querySelector('#page-add .p-3.bg-brand-50');
-  if (addonSection && !hasWallet && !hasPackages) {
-    addonSection.style.display = 'none';
-  } else if (addonSection) {
-    addonSection.style.display = 'block';
-  }
+  // B. 完工結單彈窗 (#checkoutModal)
+  const optCard = document.getElementById('optUseCardDeductText');
+  const optDep = document.getElementById('optUseDepositText');
+  const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
+  const topupGroup = document.getElementById('topupBuyOptionsGroup');
+  const cardBadge = document.getElementById('checkModalCurrentCard')?.closest('div');
+  const depBadge = document.getElementById('checkModalCurrentDeposit')?.closest('div');
+
+  if (optCard) optCard.style.display = hasPackages ? '' : 'none';
+  if (pkgGroup) pkgGroup.style.display = hasPackages ? '' : 'none';
+  if (cardBadge) cardBadge.style.display = hasPackages ? 'flex' : 'none';
+
+  if (optDep) optDep.style.display = hasWallet ? '' : 'none';
+  if (topupGroup) topupGroup.style.display = hasWallet ? '' : 'none';
+  if (depBadge) depBadge.style.display = hasWallet ? 'flex' : 'none';
 }
 
 // 升級結單彈窗初始化：未開通的方案從下拉選單與頂部提示中完全消除
