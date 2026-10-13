@@ -4118,6 +4118,28 @@ async function submitQuickDepositProof() {
     el.classList.toggle('text-brand-700');
   }
 
+  // 前台依總管 allowed_modules 智慧隱藏方案輸入項
+function applyFrontEndMarketingControls(storeInfo) {
+  const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
+  const isLifetime = (storeInfo.plan_type === 'lifetime');
+
+  const hasWallet = !isLifetime || allowed.includes('wallet');
+  const hasPackages = !isLifetime || allowed.includes('packages');
+  const hasCoupons = !isLifetime || allowed.includes('coupons');
+
+  // 1. 折扣碼輸入區塊
+  const couponBox = document.getElementById('front-coupon-wrapper');
+  if (couponBox) couponBox.style.display = hasCoupons ? 'block' : 'none';
+
+  // 2. 包卡折抵按鈕
+  const pkgDeductRow = document.getElementById('front-package-deduct-row');
+  if (pkgDeductRow) pkgDeductRow.style.display = hasPackages ? 'flex' : 'none';
+
+  // 3. 儲值金折抵按鈕
+  const walletDeductRow = document.getElementById('front-wallet-deduct-row');
+  if (walletDeductRow) walletDeductRow.style.display = hasWallet ? 'flex' : 'none';
+}
+  
   async function submitCustomerReview() {
   const name = document.getElementById('name').value.trim() || '門市顧客';
   const rating = Number(document.getElementById('reviewRatingVal').value || 5);
