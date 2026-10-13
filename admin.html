@@ -2740,12 +2740,32 @@ const THEME_OPTIONS = {
   taupe:  { name: '焙茶燕麥冷灰', colors: ['#F8F6F4', '#E8E3DF', '#6E6259', '#332B25'] }
 };
 
+// 輔助函式：快速安全取得色系名稱
+function getThemeName(themeKey) {
+  return THEME_OPTIONS[themeKey]?.name || THEME_OPTIONS['latte'].name;
+}
+
+// 輔助函式：產生 4 色色票圓點 HTML
+function getThemeColorChipsHtml(themeKey) {
+  const item = THEME_OPTIONS[themeKey] || THEME_OPTIONS['latte'];
+  return item.colors.map(c => `
+    <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10 shadow-2xs" style="background-color: ${c};" title="${c}"></span>
+  `).join('');
+}
+
     // ========================================================
 // 【修復版】開通尊榮買斷店家 (修正 theme_color 欄位與 Slug 防撞)
 // ========================================================
+// ========================================================
+// 開通尊榮買斷店家 (相容 THEME_OPTIONS 物件版)
+// ========================================================
 async function openCreateLifetimeStoreModal() {
   const modeSelectHtml = INDUSTRY_MODE_OPTIONS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-  const themeSelectHtml = THEME_OPTIONS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  
+  // ★ 使用 Object.entries 走訪物件，保留完整名稱並避免 map 報錯
+  const themeSelectHtml = Object.entries(THEME_OPTIONS).map(([key, item]) => `
+    <option value="${key}">${item.name} (${key})</option>
+  `).join('');
 
   const { value: formValues } = await Swal.fire({
     title: '開通尊榮買斷版店家',
@@ -2766,7 +2786,7 @@ async function openCreateLifetimeStoreModal() {
           </select>
         </div>
         <div>
-          <label class="block font-bold mb-1 text-brand-800">預設風格主題色系：</label>
+          <label class="block font-bold mb-1 text-brand-800">風格主題色系：</label>
           <select id="new-life-theme" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-brand-50 text-brand-950 outline-none">
             ${themeSelectHtml}
           </select>
@@ -2776,7 +2796,7 @@ async function openCreateLifetimeStoreModal() {
           <input type="text" id="new-life-phone" placeholder="例如：0912345678" class="swal2-input !m-0 !w-full text-xs font-mono">
         </div>
         <div>
-          <label class="block font-bold mb-1 text-gray-600">前台短網址 Slug (留空將自動生成唯一值)：</label>
+          <label class="block font-bold mb-1 text-gray-600">前台短網址 Slug (留空自動生成唯一值)：</label>
           <input type="text" id="new-life-slug" placeholder="例如：momo-hair" class="swal2-input !m-0 !w-full text-xs font-mono">
         </div>
         <div>
@@ -2801,6 +2821,7 @@ async function openCreateLifetimeStoreModal() {
       if (!name) { Swal.showValidationMessage('請填寫「店家名稱」！'); return false; }
       if (!email || !email.includes('@')) { Swal.showValidationMessage('請填寫有效「電子信箱」！'); return false; }
 
+      // 防止傳入空字串導致 unique 約束報錯
       if (!slug) {
         slug = 'store-' + Math.random().toString(36).substring(2, 8);
       }
@@ -2815,7 +2836,7 @@ async function openCreateLifetimeStoreModal() {
     try {
       const generatedToken = 'adm_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
 
-      // ★ 核心修復：使用 theme_color 替代不存在的 theme 欄位
+      // ★ 欄位嚴格對齊資料庫的 theme_color
       const payload = {
         store_name: formValues.name,
         owner_email: formValues.email,
@@ -2842,7 +2863,6 @@ async function openCreateLifetimeStoreModal() {
         body: JSON.stringify(payload)
       });
 
-      // 若遇 slug 衝突，自動追加隨機後綴重試
       if (!storeRes.ok) {
         const errText = await storeRes.text();
         if (errText.includes('stores_slug_key')) {
@@ -2862,9 +2882,7 @@ async function openCreateLifetimeStoreModal() {
         }
       }
 
-      if (!storeRes.ok) {
-        throw new Error(await storeRes.text());
-      }
+      if (!storeRes.ok) throw new Error(await storeRes.text());
 
       const createdStores = await storeRes.json();
       const newStore = createdStores[0];
@@ -2910,6 +2928,62 @@ async function openCreateLifetimeStoreModal() {
         icon: 'error'
       });
     }
+  }
+}
+    
+    // ========================================================
+// 更換風格色系 (彈窗內含 4 階色號色票即時檢視)
+// ========================================================
+async function promptChangeStoreTheme(storeId) {
+  const s = allStores.find(item => item.id === storeId);
+  if (!s) return;
+  const currentTheme = s.theme_color || 'latte';
+
+  const optionsHtml = Object.entries(THEME_OPTIONS).map(([key, item]) => {
+    const isSelected = (currentTheme === key);
+    const chips = item.colors.map(c => `
+      <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10" style="background-color: ${c};" title="${c}"></span>
+    `).join('');
+
+    return `
+      <label class="flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition ${isSelected ? 'bg-brand-50 border-[#8C7355] font-bold shadow-2xs' : 'border-gray-200 hover:bg-gray-50'}">
+        <div class="flex items-center gap-2">
+          <input type="radio" name="swal-theme" value="${key}" ${isSelected ? 'checked' : ''} class="accent-[#8C7355]">
+          <span class="text-xs text-brand-900">${item.name}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          ${chips}
+        </div>
+      </label>
+    `;
+  }).join('');
+
+  const { value: theme } = await Swal.fire({
+    title: `更換【${s.store_name}】風格色系`,
+    html: `<div class="space-y-1.5 p-1 text-left max-h-[50vh] overflow-y-auto">${optionsHtml}</div>`,
+    showCancelButton: true,
+    confirmButtonText: '確定套用',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消',
+    preConfirm: () => document.querySelector('input[name="swal-theme"]:checked')?.value
+  });
+
+  if (theme) {
+    Swal.showLoading();
+    await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ theme_color: theme })
+      }),
+      fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}`, {
+        method: "PATCH",
+        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ theme_color: theme })
+      }).catch(() => {})
+    ]);
+    Swal.fire('色系已更新！', '', 'success');
+    loadStores();
   }
 }
     
