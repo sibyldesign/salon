@@ -2728,273 +2728,47 @@
     let currentCheckoutBookingObj = null;
     let customInventoryCategories = ["洗護消耗品", "技術耗材", "零售外帶品", "毛孩零食玩具", "工具雜項"];
     
-    // 後台 8 大美學主題色票定義 (含背景、淺階底色、主色與公告色)
-const THEME_OPTIONS = {
-  latte:  { name: '大地燕麥暖棕', colors: ['#FDFBF7', '#F5ECE3', '#8C7355', '#3A3026'] },
-  matcha: { name: '日系抹茶茶木', colors: ['#F7F8F5', '#E5EADF', '#637361', '#2D352C'] },
-  noir:   { name: '經典極簡黑白', colors: ['#FBFBFB', '#EFEFEF', '#1A1A1A', '#000000'] },
-  navy:   { name: '韓系霧霾灰藍', colors: ['#F6F8FA', '#E1E8EE', '#4A5F73', '#212B35'] },
-  rose:   { name: '法式暮粉煙燻', colors: ['#FCF8F8', '#F1E2E4', '#996C74', '#42282C'] },
-  mist:   { name: '莫蘭迪鼠尾草綠', colors: ['#F5F7F6', '#E0E8E5', '#557169', '#25332F'] },
-  amber:  { name: '活力暖橘潮黑', colors: ['#F9F6F0', '#FCEFD9', '#ED8E38', '#000000'] }, // 最深色為純黑 #000000
-  taupe:  { name: '焙茶燕麥冷灰', colors: ['#F8F6F4', '#E8E3DF', '#6E6259', '#332B25'] }
-};
-
-// ★【核心補齊 1】：安全取得色系名稱 (防 undefined 崩潰)
-function getThemeName(themeKey) {
-  return THEME_OPTIONS[themeKey]?.name || THEME_OPTIONS['latte'].name;
-}
-
-// ★【核心補齊 2】：生成 4 階色號色票 HTML (解決 ReferenceError 導致清單消失)
-function getThemeColorChipsHtml(themeKey) {
-  const item = THEME_OPTIONS[themeKey] || THEME_OPTIONS['latte'];
-  return (item.colors || []).map(c => `
-    <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10 shadow-2xs" style="background-color: ${c};" title="${c}"></span>
-  `).join('');
-}
-
-// ★【核心補齊 3】：全域買斷版店家精準判定 (相容多種標記方式)
-function isLifetimeStore(s) {
-  return Boolean(
-    s.plan_type === 'lifetime' || 
-    s.plan_status === 'lifetime' || 
-    String(s.plan_name || '').includes('買斷')
-  );
-}
-
     // ========================================================
-// 【修復版】開通尊榮買斷店家 (修正 theme_color 欄位與 Slug 防撞)
-// ========================================================
-// ========================================================
-// 開通尊榮買斷店家 (相容 THEME_OPTIONS 物件版)
-// ========================================================
-async function openCreateLifetimeStoreModal() {
-  const modeSelectHtml = INDUSTRY_MODE_OPTIONS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-  
-  // ★ 使用 Object.entries 走訪物件，保留完整名稱並避免 map 報錯
-  const themeSelectHtml = Object.entries(THEME_OPTIONS).map(([key, item]) => `
-    <option value="${key}">${item.name} (${key})</option>
-  `).join('');
-
-  const { value: formValues } = await Swal.fire({
-    title: '開通尊榮買斷版店家',
-    html: `
-      <div class="text-left text-xs space-y-3 p-1 text-brand-900">
-        <div>
-          <label class="block font-bold mb-1 text-purple-950">店家名稱 <span class="text-rose-500">*必填</span>：</label>
-          <input type="text" id="new-life-name" placeholder="例如：莫莫專業美髮沙龍" class="swal2-input !m-0 !w-full text-xs">
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-purple-950">電子信箱 Email <span class="text-rose-500">*必填</span>：</label>
-          <input type="email" id="new-life-email" placeholder="例如：owner@example.com" class="swal2-input !m-0 !w-full text-xs font-mono">
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-purple-950">三大營運模式：</label>
-          <select id="new-life-mode" class="w-full p-2.5 rounded-xl border border-purple-200 text-xs font-bold bg-purple-50 text-purple-950 outline-none">
-            ${modeSelectHtml}
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-brand-800">風格主題色系：</label>
-          <select id="new-life-theme" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-brand-50 text-brand-950 outline-none">
-            ${themeSelectHtml}
-          </select>
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-gray-600">負責人手機 (選填)：</label>
-          <input type="text" id="new-life-phone" placeholder="例如：0912345678" class="swal2-input !m-0 !w-full text-xs font-mono">
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-gray-600">前台短網址 Slug (留空自動生成唯一值)：</label>
-          <input type="text" id="new-life-slug" placeholder="例如：momo-hair" class="swal2-input !m-0 !w-full text-xs font-mono">
-        </div>
-        <div>
-          <label class="block font-bold mb-1 text-gray-600">後台解鎖 PIN 碼 (預設 8888)：</label>
-          <input type="text" id="new-life-pin" value="8888" placeholder="預設 8888" class="swal2-input !m-0 !w-full text-xs font-mono">
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '確定開通買斷店家',
-    confirmButtonColor: '#6B21A8',
-    cancelButtonText: '取消',
-    preConfirm: () => {
-      const name = document.getElementById('new-life-name')?.value.trim();
-      const email = document.getElementById('new-life-email')?.value.trim();
-      const mode = document.getElementById('new-life-mode')?.value || 'beauty';
-      const theme = document.getElementById('new-life-theme')?.value || 'latte';
-      const phone = document.getElementById('new-life-phone')?.value.trim() || '';
-      let slug = document.getElementById('new-life-slug')?.value.trim().toLowerCase() || '';
-      const pin = document.getElementById('new-life-pin')?.value.trim() || '8888';
-
-      if (!name) { Swal.showValidationMessage('請填寫「店家名稱」！'); return false; }
-      if (!email || !email.includes('@')) { Swal.showValidationMessage('請填寫有效「電子信箱」！'); return false; }
-
-      // 防止傳入空字串導致 unique 約束報錯
-      if (!slug) {
-        slug = 'store-' + Math.random().toString(36).substring(2, 8);
-      }
-
-      return { name, email, mode, theme, phone, slug, pin };
-    }
-  });
-
-  if (formValues) {
-    Swal.fire({ title: '正在建立買斷店家資料庫...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-    try {
-      const generatedToken = 'adm_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
-
-      // ★ 欄位嚴格對齊資料庫的 theme_color
-      const payload = {
-        store_name: formValues.name,
-        owner_email: formValues.email,
-        owner_phone: formValues.phone,
-        industry_type: formValues.mode,
-        theme_color: formValues.theme,
-        slug: formValues.slug,
-        admin_pin: formValues.pin,
-        admin_token: generatedToken,
-        plan_type: 'lifetime',
-        plan_name: '尊榮買斷版',
-        plan_status: 'active',
-        allowed_modules: []
-      };
-
-      let storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!storeRes.ok) {
-        const errText = await storeRes.text();
-        if (errText.includes('stores_slug_key')) {
-          payload.slug = `${formValues.slug}-${Date.now().toString(36).slice(-4)}`;
-          storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
-            method: "POST",
-            headers: {
-              "apikey": SUPABASE_ANON_KEY,
-              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-              "Content-Type": "application/json",
-              "Prefer": "return=representation"
-            },
-            body: JSON.stringify(payload)
-          });
-        } else {
-          throw new Error(errText);
-        }
-      }
-
-      if (!storeRes.ok) throw new Error(await storeRes.text());
-
-      const createdStores = await storeRes.json();
-      const newStore = createdStores[0];
-
-      // 同步初始化 store_settings
-      await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          store_id: newStore.id,
-          display_title: formValues.name,
-          industry_mode: formValues.mode,
-          theme_color: formValues.theme,
-          shift_start_time: '09:00',
-          shift_end_time: '19:00',
-          shift_interval: 30,
-          booking_buffer_hours: 1
-        })
-      }).catch(() => {});
-
-      Swal.fire({
-        title: '買斷店家開通成功！',
-        html: `
-          <div class="text-left text-xs bg-purple-50 p-3.5 rounded-2xl border border-purple-200 text-purple-950 space-y-1 font-sans">
-            <div>• 店家名稱：<b>${newStore.store_name}</b></div>
-            <div>• 短網址：<span class="font-mono text-blue-600">/${newStore.slug}</span></div>
-            <div>• 後台專屬 Token：<span class="font-mono text-xs">${generatedToken}</span></div>
-            <div>• 預設 PIN 碼：<b class="font-mono">${formValues.pin}</b></div>
-          </div>
-        `,
-        icon: 'success'
-      });
-
-      loadStores();
-    } catch(e) {
-      Swal.fire({
-        title: '開通失敗',
-        html: `<div class="text-left text-xs text-rose-600 font-mono bg-rose-50 p-3 rounded-xl border border-rose-200">${e.message}</div>`,
-        icon: 'error'
-      });
-    }
-  }
-}
-    
+    // 【風格色票定義】8 款主題 4 階色號 (雙別名相容，徹底杜絕 ReferenceError)
     // ========================================================
-// 更換風格色系 (彈窗內含 4 階色號色票即時檢視)
-// ========================================================
-async function promptChangeStoreTheme(storeId) {
-  const s = allStores.find(item => item.id === storeId);
-  if (!s) return;
-  const currentTheme = s.theme_color || 'latte';
+    const THEME_PALETTES = {
+      latte:  { name: '大地燕麥暖棕', colors: ['#FDFBF7', '#F5ECE3', '#8C7355', '#3A3026'] },
+      matcha: { name: '日系抹茶茶木', colors: ['#F7F8F5', '#E5EADF', '#637361', '#2D352C'] },
+      noir:   { name: '經典極簡黑白', colors: ['#FBFBFB', '#EFEFEF', '#1A1A1A', '#000000'] },
+      navy:   { name: '韓系霧霾灰藍', colors: ['#F6F8FA', '#E1E8EE', '#4A5F73', '#212B35'] },
+      rose:   { name: '法式暮粉煙燻', colors: ['#FCF8F8', '#F1E2E4', '#996C74', '#42282C'] },
+      mist:   { name: '莫蘭迪鼠尾草綠', colors: ['#F5F7F6', '#E0E8E5', '#557169', '#25332F'] },
+      amber:  { name: '活力暖橘潮黑', colors: ['#F9F6F0', '#FCEFD9', '#ED8E38', '#000000'] },
+      taupe:  { name: '焙茶燕麥冷灰', colors: ['#F8F6F4', '#E8E3DF', '#6E6259', '#332B25'] }
+    };
+    const THEME_OPTIONS = THEME_PALETTES; // 別名相容
 
-  const optionsHtml = Object.entries(THEME_OPTIONS).map(([key, item]) => {
-    const isSelected = (currentTheme === key);
-    const chips = item.colors.map(c => `
-      <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10" style="background-color: ${c};" title="${c}"></span>
-    `).join('');
+    // ★ 色系安全輔助函式
+    function getThemeName(themeKey) {
+      return THEME_PALETTES[themeKey]?.name || THEME_PALETTES['latte'].name;
+    }
 
-    return `
-      <label class="flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition ${isSelected ? 'bg-brand-50 border-[#8C7355] font-bold shadow-2xs' : 'border-gray-200 hover:bg-gray-50'}">
-        <div class="flex items-center gap-2">
-          <input type="radio" name="swal-theme" value="${key}" ${isSelected ? 'checked' : ''} class="accent-[#8C7355]">
-          <span class="text-xs text-brand-900">${item.name}</span>
-        </div>
-        <div class="flex items-center gap-1">
-          ${chips}
-        </div>
-      </label>
-    `;
-  }).join('');
+    function getThemeColorChipsHtml(themeKey) {
+      const item = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
+      return (item.colors || []).map(c => `
+        <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10 shadow-2xs" style="background-color: ${c};" title="${c}"></span>
+      `).join('');
+    }
 
-  const { value: theme } = await Swal.fire({
-    title: `更換【${s.store_name}】風格色系`,
-    html: `<div class="space-y-1.5 p-1 text-left max-h-[50vh] overflow-y-auto">${optionsHtml}</div>`,
-    showCancelButton: true,
-    confirmButtonText: '確定套用',
-    confirmButtonColor: '#8C7355',
-    cancelButtonText: '取消',
-    preConfirm: () => document.querySelector('input[name="swal-theme"]:checked')?.value
-  });
+    // 色票預覽渲染函式
+    function previewSelectedThemeColor(themeKey) {
+      const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : 'latte';
+      const t = THEME_PALETTES[safeKey];
+      const nameEl = document.getElementById('theme-preview-name');
+      const chipsEl = document.getElementById('theme-color-chips');
 
-  if (theme) {
-    Swal.showLoading();
-    await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${storeId}`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ theme_color: theme })
-      }),
-      fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${storeId}`, {
-        method: "PATCH",
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ theme_color: theme })
-      }).catch(() => {})
-    ]);
-    Swal.fire('色系已更新！', '', 'success');
-    loadStores();
-  }
-}
+      if (nameEl) nameEl.innerText = `${t.name}：`;
+      if (chipsEl) {
+        chipsEl.innerHTML = t.colors.map(c => `
+          <span class="w-5 h-5 rounded-full border border-black/10 shadow-2xs inline-block transition transform hover:scale-110" style="background-color: ${c};" title="${c}"></span>
+        `).join('');
+      }
+    }
     
     // 模式切換確認函式
   function confirmSwitchIndustryMode(newMode) {
