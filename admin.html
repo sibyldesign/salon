@@ -1773,6 +1773,70 @@
     </div>
   </div>
 
+  <!-- ========================================================================== -->
+  <!-- 🚨🚨🚨【客製專用：這理髮型 / 試算表加購模組 - 正確放置於買斷分頁】🚨🚨🚨         -->
+  <!-- ========================================================================== -->
+  <div id="custom-addon-hair-sheets-sync" class="bg-white p-5 rounded-3xl border-2 border-emerald-400/80 shadow-sm space-y-3.5 text-xs hidden">
+    <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+      <div>
+        <span class="font-bold text-brand-900 block flex items-center gap-1.5 text-sm">
+          <i class="fa-solid fa-file-excel text-emerald-600"></i> <span id="lt-custom-sheets-title">【這理髮型】Google 試算表年度母表連動設定</span>
+        </span>
+        <span class="text-[10.5px] text-brand-500">串接專屬排程母表，前台線上預約與後台代客卡位即時同步 1~31 日看板與顧客庫</span>
+      </div>
+      <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold" id="lt-sheets-status-badge">未設定</span>
+    </div>
+
+    <div class="space-y-2.5">
+      <div>
+        <label class="block font-bold text-brand-800 mb-1 text-[11px]">
+          1. Google 試算表完整網址或 Spreadsheet ID *：
+        </label>
+        <input type="text" id="lt-custom-sheets-id" placeholder="貼上試算表網址：https://docs.google.com/spreadsheets/d/.../edit" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none font-mono text-xs focus:ring-1 focus:ring-emerald-500">
+        <p class="text-[10px] text-gray-400 mt-0.5">※ 支援直接貼上網址，系統會自動抓取專屬 ID（終身綁定此檔案，跨月免換）。</p>
+      </div>
+
+      <div>
+        <label class="block font-bold text-brand-800 mb-1 text-[11px]">
+          2. Google Apps Script (GAS) Webhook 網址 *：
+        </label>
+        <input type="text" id="lt-custom-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none font-mono text-xs focus:ring-1 focus:ring-emerald-500">
+        <p class="text-[10px] text-gray-400 mt-0.5">※ 業主全新 Gmail 部署的網頁應用程式網址。</p>
+      </div>
+    </div>
+
+    <!-- 功能細項開關 -->
+    <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2">
+      <label class="flex items-center justify-between cursor-pointer">
+        <div>
+          <span class="font-bold text-brand-900 block">啟用 前後台預約即時推播試算表 (當月/次月看板)</span>
+          <span class="text-[10px] text-brand-500">客人線上填單或後台卡位時，自動寫入流水帳並點亮當日時間格子</span>
+        </div>
+        <input type="checkbox" id="lt-custom-toggle-sheets-sync" class="accent-emerald-600 w-4 h-4 ml-2" checked>
+      </label>
+      <label class="flex items-center justify-between cursor-pointer border-t border-brand-200/60 pt-2">
+        <div>
+          <span class="font-bold text-brand-900 block">啟用 【👥 顧客資料總表】自動更新歸納</span>
+          <span class="text-[10px] text-brand-500">結單或預約時自動比對電話，累加來店次數、累積金額與最新髮況</span>
+        </div>
+        <input type="checkbox" id="lt-custom-toggle-cust-sync" class="accent-emerald-600 w-4 h-4 ml-2" checked>
+      </label>
+    </div>
+
+    <!-- 操作與測試按鈕 -->
+    <div class="flex gap-2 pt-1">
+      <button type="button" onclick="testCustomGoogleSheetsSync()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-paper-plane"></i> 測試連線並發送測試單
+      </button>
+      <button type="button" onclick="openCustomBoundSpreadsheet()" class="px-4 py-2.5 bg-white border border-brand-200 hover:bg-brand-50 text-brand-800 rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟試算表
+      </button>
+    </div>
+  </div>
+  <!-- ========================================================================== -->
+  <!-- 🚨🚨🚨【客製專用：這理髮型 / 試算表加購模組 - 正確放置於買斷分頁】🚨🚨🚨         -->
+  <!-- ========================================================================== -->
+
   <!-- 底部正式儲存按鈕 -->
   <div class="pt-2">
     <button type="button" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-2xl shadow-lg transition tracking-widest flex items-center justify-center gap-2" onclick="saveLifetimeStoreSettings()">
@@ -2470,71 +2534,6 @@
         <div><label class="block font-bold mb-1">Instagram 網址：</label><input type="text" id="cfg-ig" class="w-full p-2.5 rounded-xl border border-brand-200"></div>
         <div><label class="block font-bold mb-1">Google 地圖網址：</label><input type="text" id="cfg-map" class="w-full p-2.5 rounded-xl border border-brand-200"></div>
       </div>
-
-      <!-- ========================================================================== -->
-<!-- 🚨🚨🚨【客製專用：這理髮型 / 試算表加購模組 - SHEET_SYNC 閘道控制區】🚨🚨🚨     -->
-<!-- ⚠️ 警告：受 stores.allowed_modules.includes('sheets_sync') 嚴格控制！         -->
-<!-- ========================================================================== -->
-<div id="custom-addon-hair-sheets-sync" class="bg-white p-5 rounded-3xl border-2 border-emerald-400/80 shadow-sm space-y-3.5 text-xs hidden">
-  <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-    <div>
-      <span class="font-bold text-brand-900 block flex items-center gap-1.5 text-sm">
-        <i class="fa-solid fa-file-excel text-emerald-600"></i> <span id="lt-custom-sheets-title">【門市】Google 試算表年度母表連動設定</span>
-      </span>
-      <span class="text-[10.5px] text-brand-500">串接專屬排程母表，前台線上預約與後台代客卡位即時同步 1~31 日看板與顧客庫</span>
-    </div>
-    <span class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold" id="lt-sheets-status-badge">未設定</span>
-  </div>
-
-  <div class="space-y-2.5">
-    <div>
-      <label class="block font-bold text-brand-800 mb-1 text-[11px]">
-        1. Google 試算表完整網址或 Spreadsheet ID *：
-      </label>
-      <input type="text" id="lt-custom-sheets-id" placeholder="貼上試算表網址：https://docs.google.com/spreadsheets/d/.../edit" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none font-mono text-xs focus:ring-1 focus:ring-emerald-500">
-      <p class="text-[10px] text-gray-400 mt-0.5">※ 支援直接貼上網址，系統會自動抓取專屬 ID（終身綁定此檔案，跨月免換）。</p>
-    </div>
-
-    <div>
-      <label class="block font-bold text-brand-800 mb-1 text-[11px]">
-        2. Google Apps Script (GAS) Webhook 網址 *：
-      </label>
-      <input type="text" id="lt-custom-gas-url" placeholder="https://script.google.com/macros/s/.../exec" class="w-full p-2.5 rounded-xl border border-brand-200 bg-brand-50/50 outline-none font-mono text-xs focus:ring-1 focus:ring-emerald-500">
-      <p class="text-[10px] text-gray-400 mt-0.5">※ 業主全新 Gmail 部署的網頁應用程式網址。</p>
-    </div>
-  </div>
-
-  <!-- 功能細項開關 -->
-  <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-2">
-    <label class="flex items-center justify-between cursor-pointer">
-      <div>
-        <span class="font-bold text-brand-900 block">啟用 前後台預約即時推播試算表 (當月/次月看板)</span>
-        <span class="text-[10px] text-brand-500">客人線上填單或後台卡位時，自動寫入流水帳並點亮當日時間格子</span>
-      </div>
-      <input type="checkbox" id="lt-custom-toggle-sheets-sync" class="accent-emerald-600 w-4 h-4 ml-2" checked>
-    </label>
-    <label class="flex items-center justify-between cursor-pointer border-t border-brand-200/60 pt-2">
-      <div>
-        <span class="font-bold text-brand-900 block">啟用 【👥 顧客資料總表】自動更新歸納</span>
-        <span class="text-[10px] text-brand-500">結單或預約時自動比對電話，累加來店次數、累積金額與最新髮況</span>
-      </div>
-      <input type="checkbox" id="lt-custom-toggle-cust-sync" class="accent-emerald-600 w-4 h-4 ml-2" checked>
-    </label>
-  </div>
-
-  <!-- 操作與測試按鈕 -->
-  <div class="flex gap-2 pt-1">
-    <button type="button" onclick="testCustomGoogleSheetsSync()" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center justify-center gap-1.5">
-      <i class="fa-solid fa-paper-plane"></i> 測試連線並發送測試單
-    </button>
-    <button type="button" onclick="openCustomBoundSpreadsheet()" class="px-4 py-2.5 bg-white border border-brand-200 hover:bg-brand-50 text-brand-800 rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1.5">
-      <i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟試算表
-    </button>
-  </div>
-</div>
-<!-- ========================================================================== -->
-<!-- 🚨🚨🚨【客製專用：模組區塊結束】🚨🚨🚨                                      -->
-<!-- ========================================================================== -->
 
       <div class="pt-2">
         <button type="button" class="w-full py-3.5 bg-[#8C7355] hover:bg-[#7A6246] text-white text-xs font-bold rounded-2xl shadow-lg transition tracking-widest flex items-center justify-center gap-2" onclick="saveStoreSettings()">
@@ -4077,34 +4076,59 @@ renderStoreResourcesList();
         commissionRate: Number(sCfg.commission_rate || 50),
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
-        
+
+        // 🌟 核心通用相容：同時賦予蛇形與駝峰屬性，防止買斷版取值為 undefined
         enableAuditBooking: sCfg.enable_audit_booking ?? true,
+        enable_audit_booking: sCfg.enable_audit_booking ?? true,
         enableDeposit: sCfg.enable_deposit ?? true,
+        enable_deposit: sCfg.enable_deposit ?? true,
         enableStaffSelect: sCfg.enable_staff_select ?? true,
+        enable_staff_select: sCfg.enable_staff_select ?? true,
         enableMultiStaffSchedule: sCfg.enable_multi_staff_schedule ?? true,
+        enable_multi_staff_schedule: sCfg.enable_multi_staff_schedule ?? true,
         enableCustType: sCfg.enable_cust_type ?? true,
+        enable_cust_type: sCfg.enable_cust_type ?? true,
         enableShowPrice: sCfg.enable_show_price ?? true,
+        enable_show_price: sCfg.enable_show_price ?? true,
         enableCustNotes: sCfg.enable_cust_notes ?? true,
+        enable_cust_notes: sCfg.enable_cust_notes ?? true,
         enableWallet: sCfg.enable_wallet ?? true,
+        enable_wallet: sCfg.enable_wallet ?? true,
         enablePackages: sCfg.enable_packages ?? true,
+        enable_packages: sCfg.enable_packages ?? true,
         enableCoupons: sCfg.enable_coupons ?? true,
+        enable_coupons: sCfg.enable_coupons ?? true,
         enableReviews: sCfg.enable_reviews ?? true,
+        enable_reviews: sCfg.enable_reviews ?? true,
         enablePortfolio: sCfg.enable_portfolio ?? true,
+        enable_portfolio: sCfg.enable_portfolio ?? true,
         enableCare: sCfg.enable_care ?? true,
+        enable_care: sCfg.enable_care ?? true,
         enableQuickContact: sCfg.enable_quick_contact ?? true,
+        enable_quick_contact: sCfg.enable_quick_contact ?? true,
         enableCancelReason: sCfg.enable_cancel_reason ?? true,
+        enable_cancel_reason: sCfg.enable_cancel_reason ?? true,
         enableEmailCopy: sCfg.enable_email_copy ?? true,
+        enable_email_copy: sCfg.enable_email_copy ?? true,
         enableCarousel: sCfg.enable_carousel ?? true,
+        enable_carousel: sCfg.enable_carousel ?? true,
         enableFeaturedShop: sCfg.enable_featured_shop === true,
+        enable_featured_shop: sCfg.enable_featured_shop === true,
         enableLineOneClickAudit: sCfg.enable_line_one_click_audit ?? true,
+        enable_line_one_click_audit: sCfg.enable_line_one_click_audit ?? true,
         enableCommissionCalc: sCfg.enable_commission_calc ?? true,
+        enable_commission_calc: sCfg.enable_commission_calc ?? true,
         enableContract: sCfg.enable_contract ?? true,
+        enable_contract: sCfg.enable_contract ?? true,
         enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
+        enable_owner_line_push: sCfg.enable_owner_line_push ?? true,
         enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
-        enableFlexMenu: sCfg.enable_flex_menu ?? true
+        enable_line_auto_notify: sCfg.enable_line_auto_notify ?? false,
+        enableFlexMenu: sCfg.enable_flex_menu ?? true,
+        enable_flex_menu: sCfg.enable_flex_menu ?? true
       }
     };
-    backendData.storeInfo = sInfo; // 再次雙重保險
+    backendData.storeInfo = sInfo;
 
     // 5. 【強制執行】：動態模式佈局切換 ＆ 買斷版模組嚴格閘道
     handleIndustryModeChange(backendData.settings.industryMode);
@@ -8310,19 +8334,30 @@ function applyLifetimeModulesStrictGating(storeInfo) {
     document.getElementById('lt-addon-card-contract')?.classList.toggle('hidden', !allowed.includes('contract'));
 
     // 🚨🚨🚨【關鍵修復：這理髮型 / Google 試算表連動模組閘道】🚨🚨🚨
+    // 🚨🚨🚨【關鍵修復：這理髮型 / Google 試算表連動模組閘道】🚨🚨🚨
     const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
     if (customSheetsCard) {
-      // 只要總管有開通 sheets_sync、google_sheets 或 sheets
-      const hasSheetsSync = allowed.includes('sheets_sync') || allowed.includes('google_sheets') || allowed.includes('sheets');
+      const storeName = sInfo.store_name || backendData.settings?.storeName || '';
+      const storeSlug = sInfo.slug || '';
+      
+      // 雙重辨識機制：買斷版且 (總管有勾選 sheets_sync OR 店名包含「這理」)
+      const isZheliHairStore = storeName.includes('這理') || storeSlug.includes('zheli');
+      const hasSheetsSync = isLifetime && (
+        allowed.includes('sheets_sync') || 
+        allowed.includes('google_sheets') || 
+        allowed.includes('sheets') ||
+        isZheliHairStore
+      );
+
       if (hasSheetsSync) {
         customSheetsCard.classList.remove('hidden');
         customSheetsCard.style.setProperty('display', 'block', 'important');
         const titleEl = document.getElementById('lt-custom-sheets-title');
         if (titleEl) {
-          const storeName = sInfo.store_name || backendData.settings?.storeName || '這理髮型';
-          titleEl.innerText = `【${storeName}】Google 試算表年度母表連動設定`;
+          titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
         }
       } else {
+        // 其他買斷版、所有訂閱版 ➔ 100% 徹底隱藏
         customSheetsCard.classList.add('hidden');
         customSheetsCard.style.setProperty('display', 'none', 'important');
       }
@@ -10191,9 +10226,9 @@ function routeToSettingsPage(btnEl) {
 }
 
     // ========================================================
-    // 3. 買斷版專用資料回填與加購模組卡片獨立開關
-    // ========================================================
-    function populateLifetimeSettings() {
+// 3. 買斷版專用資料回填與加購模組卡片獨立開關
+// ========================================================
+function populateLifetimeSettings() {
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
@@ -10210,9 +10245,9 @@ function routeToSettingsPage(btnEl) {
   };
 
   // 1. 營業時間、公休與訂金
-  setVal('lt-shift-start', s.shiftStartTime || '09:00');
-  setVal('lt-shift-end', s.shiftEndTime || '19:00');
-  setVal('lt-shift-interval', String(s.shiftInterval || 30));
+  setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+  setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+  setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
   setVal('lt-promo', s.promoText || '');
   setVal('lt-deposit-mode', s.depositMode || 'all');
   setVal('lt-deposit-amount', s.depositAmount || 0);
@@ -10220,29 +10255,29 @@ function routeToSettingsPage(btnEl) {
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
 
-  // 2. 標配前台開關
-  setCheck('lt-toggle-staff-select', s.enable_staff_select, true);
-  setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule, true);
-  setCheck('lt-toggle-custtype', s.enable_cust_type, true);
-  setCheck('lt-toggle-show-price', s.enable_show_price, true);
-  setCheck('lt-toggle-cust-notes', s.enable_cust_notes, true);
-  setCheck('lt-toggle-portfolio', s.enable_portfolio, true);
-  setCheck('lt-toggle-care', s.enable_care, true);
-  setCheck('lt-toggle-carousel', s.enable_carousel, true);
+  // 2. 標配前台開關 (加入 ?? 雙重相容，防止取消勾選重整後跳回打勾)
+  setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
+  setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
+  setCheck('lt-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
+  setCheck('lt-toggle-show-price', s.enable_show_price ?? s.enableShowPrice, true);
+  setCheck('lt-toggle-cust-notes', s.enable_cust_notes ?? s.enableCustNotes, true);
+  setCheck('lt-toggle-portfolio', s.enable_portfolio ?? s.enablePortfolio, true);
+  setCheck('lt-toggle-care', s.enable_care ?? s.enableCare, true);
+  setCheck('lt-toggle-carousel', s.enable_carousel ?? s.enableCarousel, true);
 
   // 3. 標配自動化開關
-  setCheck('lt-toggle-audit-booking', s.enable_audit_booking, true);
-  setCheck('lt-toggle-deposit', s.enable_deposit, true);
-  setCheck('lt-toggle-quick-contact', s.enable_quick_contact, true);
-  setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason, true);
-  setCheck('lt-toggle-email', s.enable_email_copy, true);
-  setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit, true);
+  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
+  setCheck('lt-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
+  setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? s.enableQuickContact, true);
+  setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? s.enableCancelReason, true);
+  setCheck('lt-toggle-email', s.enable_email_copy ?? s.enableEmailCopy, true);
+  setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? s.enableLineOneClickAudit, true);
 
   // 4. 保養叮嚀與品牌資料
   setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
   setVal('lt-title', s.storeName || '');
   setVal('lt-subtitle', s.subtitle || '');
-  setCheck('lt-toggle-logo', s.enable_logo, true);
+  setCheck('lt-toggle-logo', s.enable_logo ?? s.enableLogo, true);
   setVal('lt-logo', s.logoUrl || '');
   setVal('lt-phone', s.storePhone || '');
   setVal('lt-address', s.address || '');
@@ -10316,39 +10351,66 @@ function routeToSettingsPage(btnEl) {
   if (allowed.includes('wallet')) renderPlanRules('lt');
   if (allowed.includes('packages')) renderPlanRules('lt');
 
+  // ==========================================================================
+  // 🚨🚨🚨【客製專用：這理髮型 - 試算表資料回填（支援快取防退件）】🚨🚨🚨
+  // ==========================================================================
+  const savedSheetId = s.sheets_spreadsheet_id || localStorage.getItem(`zy_sheets_id_${CURRENT_STORE_ID}`) || '';
+  const savedGasUrl = s.sheets_gas_url || localStorage.getItem(`zy_gas_url_${CURRENT_STORE_ID}`) || API_URL || '';
+  const savedSheetsSync = (s.enable_sheets_sync !== undefined) ? s.enable_sheets_sync : (localStorage.getItem(`zy_sheets_sync_${CURRENT_STORE_ID}`) !== 'false');
+  const savedCustSync = (s.enable_sheets_cust_sync !== undefined) ? s.enable_sheets_cust_sync : (localStorage.getItem(`zy_cust_sync_${CURRENT_STORE_ID}`) !== 'false');
+
+  setVal('lt-custom-sheets-id', savedSheetId);
+  setVal('lt-custom-gas-url', savedGasUrl);
+  setCheck('lt-custom-toggle-sheets-sync', savedSheetsSync, true);
+  setCheck('lt-custom-toggle-cust-sync', savedCustSync, true);
+
+  const customBadge = document.getElementById('lt-sheets-status-badge');
+  if (customBadge) {
+    const isReady = Boolean(savedSheetId);
+    customBadge.className = isReady 
+      ? 'px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold'
+      : 'px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold';
+    customBadge.innerText = isReady ? '✓ 已綁定' : '未設定';
+  }
+  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
+
   markLifetimeSettingsSaved();
   const ltPage = document.getElementById('page-settings-lifetime');
   if (ltPage) {
     ltPage.oninput = markLifetimeSettingsUnsaved;
     ltPage.onchange = markLifetimeSettingsUnsaved;
   }
-
-      // 🚨🚨🚨【客製專用：這理髮型 - 資料回填】🚨🚨🚨
-  setVal('lt-custom-sheets-id', s.sheets_spreadsheet_id || '');
-  setVal('lt-custom-gas-url', s.sheets_gas_url || API_URL || '');
-  setCheck('lt-custom-toggle-sheets-sync', s.enable_sheets_sync, true);
-  setCheck('lt-custom-toggle-cust-sync', s.enable_sheets_cust_sync, true);
-
-  const customBadge = document.getElementById('lt-sheets-status-badge');
-  if (customBadge) {
-    const isReady = Boolean(s.sheets_spreadsheet_id);
-    customBadge.className = isReady 
-      ? 'px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold'
-      : 'px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold';
-    customBadge.innerText = isReady ? '✓ 已綁定' : '未設定';
-  }
 }
 
     // ========================================================
-    // 4. 買斷版專用儲存邏輯
-    // ========================================================
-    async function saveLifetimeStoreSettings() {
+// 4. 買斷版專用儲存邏輯 (通用動態取值 + 自動欄位容錯)
+// ========================================================
+async function saveLifetimeStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   const getCheck = id => Boolean(document.getElementById(id)?.checked);
   const weeklyOff = Array.from(document.querySelectorAll('#lt-weekly-off-grid input:checked')).map(el => Number(el.value));
   const selectedTheme = document.getElementById('lt-theme-color')?.value || 'latte';
   const storeTitle = document.getElementById('lt-title')?.value.trim() || backendData.settings.storeName;
+
+  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定並存入本地快取】🚨🚨🚨
+  const rawSheetInput = document.getElementById('lt-custom-sheets-id')?.value.trim() || '';
+  const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
+  const gasUrl = document.getElementById('lt-custom-gas-url')?.value.trim() || '';
+  const enableSheetsSync = getCheck('lt-custom-toggle-sheets-sync');
+  const enableSheetsCustSync = getCheck('lt-custom-toggle-cust-sync');
+
+  localStorage.setItem(`zy_sheets_id_${CURRENT_STORE_ID}`, cleanSheetId);
+  localStorage.setItem(`zy_gas_url_${CURRENT_STORE_ID}`, gasUrl);
+  localStorage.setItem(`zy_sheets_sync_${CURRENT_STORE_ID}`, enableSheetsSync);
+  localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
+  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
+
+  // 動態抓取使用者輸入的開始營業時間，絕不寫死
+  const chosenStartTime = document.getElementById('lt-shift-start')?.value || '09:00';
+  const chosenEndTime = document.getElementById('lt-shift-end')?.value || '19:00';
+  const chosenInterval = Number(document.getElementById('lt-shift-interval')?.value || 30);
 
   const payload = {
     store_id: CURRENT_STORE_ID,
@@ -10362,7 +10424,6 @@ function routeToSettingsPage(btnEl) {
     booking_buffer_hours: Number(document.getElementById('lt-buffer')?.value || 1),
     deposit_mode: document.getElementById('lt-deposit-mode')?.value || 'all',
     deposit_amount: Number(document.getElementById('lt-deposit-amount')?.value || 0),
-    deposit_report_mode: document.getElementById('lt-deposit-report-mode')?.value || 'both',
     deposit_info: document.getElementById('lt-deposit-info')?.value.trim() || '',
     promo_text: document.getElementById('lt-promo')?.value.trim() || '',
     care_text: document.getElementById('lt-care')?.value.trim() || '',
@@ -10371,18 +10432,11 @@ function routeToSettingsPage(btnEl) {
     map_url: document.getElementById('lt-map')?.value.trim() || '',
     theme_color: selectedTheme,
     weekly_off_days: weeklyOff,
-    shift_start_time: document.getElementById('lt-shift-start')?.value || '09:00',
-    shift_end_time: document.getElementById('lt-shift-end')?.value || '19:00',
-    shift_interval: Number(document.getElementById('lt-shift-interval')?.value || 30),
-    // 🚨🚨🚨【客製專用：這理髮型 - 儲存試算表設定】🚨🚨🚨
-    sheets_spreadsheet_id: (() => {
-      const raw = document.getElementById('lt-custom-sheets-id')?.value.trim() || '';
-      const match = raw.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      return match ? match[1] : raw;
-    })(),
-    sheets_gas_url: document.getElementById('lt-custom-gas-url')?.value.trim() || '',
-    enable_sheets_sync: Boolean(document.getElementById('lt-custom-toggle-sheets-sync')?.checked),
-    enable_sheets_cust_sync: Boolean(document.getElementById('lt-custom-toggle-cust-sync')?.checked),
+    
+    // 營業時間動態儲存
+    shift_start_time: chosenStartTime,
+    shift_end_time: chosenEndTime,
+    shift_interval: chosenInterval,
 
     // 標配前台流程開關
     enable_staff_select: getCheck('lt-toggle-staff-select'),
@@ -10416,12 +10470,50 @@ function routeToSettingsPage(btnEl) {
   }
 
   try {
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, payload);
-    await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, { store_name: storeTitle, theme_color: selectedTheme });
+    // 自動容錯嘗試：若資料庫缺少某個欄位，剃除後立刻重試，確保時間與開關 100% 寫入資料庫
+    const toSend = { ...payload };
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(toSend)
+      });
+
+      if (res.ok) {
+        break;
+      } else {
+        const errText = await res.text();
+        const matchCol = errText.match(/Could not find the '([^']+)' column/);
+        if (matchCol && matchCol[1]) {
+          delete toSend[matchCol[1]];
+        } else {
+          break;
+        }
+      }
+    }
+
+    // 同步更新 stores 主表店名與主題
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ store_name: storeTitle, theme_color: selectedTheme })
+    });
     
+    // 即時更新前端記憶體
     Object.assign(backendData.settings, payload);
+    backendData.settings.shiftStartTime = chosenStartTime;
+    backendData.settings.shift_start_time = chosenStartTime;
+    backendData.settings.sheets_spreadsheet_id = cleanSheetId;
+    backendData.settings.sheets_gas_url = gasUrl;
+    backendData.settings.enable_sheets_sync = enableSheetsSync;
+    backendData.settings.enable_sheets_cust_sync = enableSheetsCustSync;
+
     markLifetimeSettingsSaved();
-    
     Swal.fire({ title: '買斷版設定已成功儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
