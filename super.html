@@ -882,92 +882,165 @@
       if (el) el.value = d.toISOString().split('T')[0];
     }
 
-    async function openCreateLifetimeStoreModal() {
-      const modeSelectHtml = INDUSTRY_MODE_OPTIONS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-      const themeSelectHtml = THEME_OPTIONS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    // ========================================================
+// 【修復版】開通尊榮買斷版店家 (防空Slug衝突、自動補建設定檔)
+// ========================================================
+async function openCreateLifetimeStoreModal() {
+  const modeSelectHtml = INDUSTRY_MODE_OPTIONS.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  const themeSelectHtml = THEME_OPTIONS.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
 
-      const { value: formValues } = await Swal.fire({
-        title: '開通尊榮買斷版店家',
-        html: `
-          <div class="text-left text-xs space-y-3 p-1 text-brand-900">
-            <div>
-              <label class="block font-bold mb-1 text-purple-950">店家名稱 <span class="text-rose-500">*必填</span>：</label>
-              <input type="text" id="new-life-name" placeholder="例如：莫莫專業美髮沙龍" class="swal2-input !m-0 !w-full text-xs">
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-purple-950">電子信箱 Email <span class="text-rose-500">*必填</span>：</label>
-              <input type="email" id="new-life-email" placeholder="例如：owner@example.com" class="swal2-input !m-0 !w-full text-xs font-mono">
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-purple-950">三大營運模式 (預設純美業)：</label>
-              <select id="new-life-mode" class="w-full p-2.5 rounded-xl border border-purple-200 text-xs font-bold bg-purple-50 text-purple-950 outline-none">
-                ${modeSelectHtml}
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-brand-800">預設風格主題色系 (標配保留)：</label>
-              <select id="new-life-theme" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-brand-50 text-brand-950 outline-none">
-                ${themeSelectHtml}
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-gray-600">負責人手機 (選填)：</label>
-              <input type="text" id="new-life-phone" placeholder="例如：0912345678" class="swal2-input !m-0 !w-full text-xs font-mono">
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-gray-600">前台短網址 Slug (選填)：</label>
-              <input type="text" id="new-life-slug" placeholder="例如：momo-hair" class="swal2-input !m-0 !w-full text-xs font-mono">
-            </div>
-            <div>
-              <label class="block font-bold mb-1 text-gray-600">後台解鎖 PIN 碼 (預設 8888)：</label>
-              <input type="text" id="new-life-pin" value="8888" placeholder="預設 8888" class="swal2-input !m-0 !w-full text-xs font-mono">
-            </div>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: '確定開通買斷店家',
-        confirmButtonColor: '#6B21A8',
-        cancelButtonText: '取消',
-        preConfirm: () => {
-          const name = document.getElementById('new-life-name')?.value.trim();
-          const email = document.getElementById('new-life-email')?.value.trim();
-          const mode = document.getElementById('new-life-mode')?.value || 'beauty';
-          const theme = document.getElementById('new-life-theme')?.value || 'cashmere-latte';
-          const phone = document.getElementById('new-life-phone')?.value.trim() || '';
-          const slug = document.getElementById('new-life-slug')?.value.trim() || '';
-          const pin = document.getElementById('new-life-pin')?.value.trim() || '8888';
+  const { value: formValues } = await Swal.fire({
+    title: '開通尊榮買斷版店家',
+    html: `
+      <div class="text-left text-xs space-y-3 p-1 text-brand-900">
+        <div>
+          <label class="block font-bold mb-1 text-purple-950">店家名稱 <span class="text-rose-500">*必填</span>：</label>
+          <input type="text" id="new-life-name" placeholder="例如：莫莫專業美髮沙龍" class="swal2-input !m-0 !w-full text-xs">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-purple-950">電子信箱 Email <span class="text-rose-500">*必填</span>：</label>
+          <input type="email" id="new-life-email" placeholder="例如：owner@example.com" class="swal2-input !m-0 !w-full text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-purple-950">三大營運模式 (預設純美業)：</label>
+          <select id="new-life-mode" class="w-full p-2.5 rounded-xl border border-purple-200 text-xs font-bold bg-purple-50 text-purple-950 outline-none">
+            ${modeSelectHtml}
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-brand-800">預設風格主題色系：</label>
+          <select id="new-life-theme" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-brand-50 text-brand-950 outline-none">
+            ${themeSelectHtml}
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-gray-600">負責人手機 (選填)：</label>
+          <input type="text" id="new-life-phone" placeholder="例如：0912345678" class="swal2-input !m-0 !w-full text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-gray-600">前台短網址 Slug (留空將自動生成唯一值)：</label>
+          <input type="text" id="new-life-slug" placeholder="例如：momo-hair" class="swal2-input !m-0 !w-full text-xs font-mono">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-gray-600">後台解鎖 PIN 碼 (預設 8888)：</label>
+          <input type="text" id="new-life-pin" value="8888" placeholder="預設 8888" class="swal2-input !m-0 !w-full text-xs font-mono">
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定開通買斷店家',
+    confirmButtonColor: '#6B21A8',
+    cancelButtonText: '取消',
+    preConfirm: () => {
+      const name = document.getElementById('new-life-name')?.value.trim();
+      const email = document.getElementById('new-life-email')?.value.trim();
+      const mode = document.getElementById('new-life-mode')?.value || 'beauty';
+      const theme = document.getElementById('new-life-theme')?.value || 'cashmere-latte';
+      const phone = document.getElementById('new-life-phone')?.value.trim() || '';
+      let slug = document.getElementById('new-life-slug')?.value.trim().toLowerCase() || '';
+      const pin = document.getElementById('new-life-pin')?.value.trim() || '8888';
 
-          if (!name) { Swal.showValidationMessage('請填寫「店家名稱」！'); return false; }
-          if (!email || !email.includes('@')) { Swal.showValidationMessage('請填寫有效「電子信箱」！'); return false; }
-          return { name, email, mode, theme, phone, slug, pin };
-        }
+      if (!name) { Swal.showValidationMessage('請填寫「店家名稱」！'); return false; }
+      if (!email || !email.includes('@')) { Swal.showValidationMessage('請填寫有效「電子信箱」！'); return false; }
+
+      // 核心防護：若未填 Slug，自動隨機生成唯一後綴，絕不傳遞空字串導致 SQL 約束衝突
+      if (!slug) {
+        slug = 'store-' + Math.random().toString(36).substring(2, 8);
+      }
+
+      return { name, email, mode, theme, phone, slug, pin };
+    }
+  });
+
+  if (formValues) {
+    Swal.fire({ title: '正在開通買斷店家資料庫...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+    try {
+      // 1. 生成唯一安全 Token
+      const generatedToken = 'adm_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+
+      // 2. 寫入 stores 主表 (同時兼容各版本欄位命名)
+      const storeRes = await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify({
+          store_name: formValues.name,
+          owner_email: formValues.email,
+          owner_phone: formValues.phone,
+          industry_type: formValues.mode,
+          industry_mode: formValues.mode,
+          theme: formValues.theme,
+          theme_color: formValues.theme,
+          slug: formValues.slug,
+          admin_pin: formValues.pin,
+          admin_token: generatedToken,
+          plan_type: 'lifetime',
+          plan_name: '尊榮買斷版',
+          plan_status: 'active',
+          allowed_modules: []
+        })
       });
 
-      if (formValues) {
-        Swal.showLoading();
-        try {
-          await fetch(`${SUPABASE_URL}/rest/v1/stores`, {
-            method: "POST",
-            headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json", "Prefer": "return=representation" },
-            body: JSON.stringify({
-              store_name: formValues.name,
-              owner_email: formValues.email,
-              industry_mode: formValues.mode,
-              theme: formValues.theme,
-              owner_phone: formValues.phone,
-              slug: formValues.slug,
-              admin_pin: formValues.pin,
-              plan_type: 'lifetime',
-              plan_name: '尊榮買斷版',
-              plan_status: 'active',
-              allowed_modules: [] // 初始預設純標配，無額外加購模組
-            })
-          });
-          Swal.fire('開通成功！', `已建立【${formValues.name}】買斷檔案。`, 'success');
-          loadStores();
-        } catch(e) { Swal.fire('開通失敗', e.message, 'error'); }
+      if (!storeRes.ok) {
+        const errDetail = await storeRes.text();
+        throw new Error(errDetail.includes('stores_slug_key') ? '短網址 Slug 已被其他店家佔用，請更換！' : `門市建立失敗：${errDetail}`);
       }
+
+      const createdStores = await storeRes.json();
+      const newStore = createdStores[0];
+
+      // 3. 同步建立預設 store_settings 初始化資料，杜絕後台破版
+      await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "resolution=merge-duplicates"
+        },
+        body: JSON.stringify({
+          store_id: newStore.id,
+          display_title: formValues.name,
+          industry_mode: formValues.mode,
+          theme_color: formValues.theme,
+          shift_start_time: '09:00',
+          shift_end_time: '19:00',
+          shift_interval: 30,
+          booking_buffer_hours: 1,
+          enable_staff_select: true,
+          enable_multi_staff_schedule: true,
+          enable_cust_type: true,
+          enable_show_price: true,
+          enable_cust_notes: true,
+          enable_portfolio: true,
+          enable_care: true,
+          enable_carousel: true
+        })
+      });
+
+      Swal.fire({
+        title: '買斷店家開通成功！',
+        html: `
+          <div class="text-left text-xs bg-purple-50 p-3.5 rounded-2xl border border-purple-200 text-purple-950 space-y-1 font-sans">
+            <div>• 店家名稱：<b>${newStore.store_name}</b></div>
+            <div>• 短網址：<span class="font-mono text-blue-600">/${newStore.slug}</span></div>
+            <div>• 後台專屬 Token：<span class="font-mono text-xs">${generatedToken}</span></div>
+            <div>• 預設 PIN 碼：<b class="font-mono">${formValues.pin}</b></div>
+          </div>
+        `,
+        icon: 'success'
+      });
+      loadStores();
+    } catch(e) {
+      Swal.fire('開通失敗', e.message, 'error');
     }
+  }
+}
 
     async function promptChangeStoreIndustryMode(storeId) {
       const s = allStores.find(item => item.id === storeId);
