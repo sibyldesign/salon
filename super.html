@@ -696,7 +696,9 @@
         const allowedCount = Array.isArray(s.allowed_modules) ? s.allowed_modules.length : 0;
 
         const curMode = INDUSTRY_MODE_OPTIONS.find(m => m.id === (s.industry_mode || s.industry_type || 'beauty')) || INDUSTRY_MODE_OPTIONS[0];
-        const curTheme = THEME_OPTIONS.find(t => t.id === (s.theme_color || 'latte')) || THEME_OPTIONS[0];
+        const themeKey = s.theme_color || 'latte';
+const curTheme = THEME_OPTIONS[themeKey] || THEME_OPTIONS['latte'];
+const themeChips = getThemeColorChipsHtml(themeKey);
 
         const lockBtnHtml = isLocked
           ? `<button type="button" onclick="toggleStoreLockById('${s.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition text-xs flex items-center gap-1 shadow-xs">
@@ -736,12 +738,15 @@
               </div>
 
               <div class="flex items-center justify-between p-2 bg-white rounded-xl border border-purple-200">
-                <div>
-                  <span class="text-gray-400 block text-[9px]">風格色系 (標配保留)</span>
-                  <span class="font-bold text-brand-900 text-xs">${curTheme.name}</span>
-                </div>
-                <button type="button" onclick="promptChangeStoreTheme('${s.id}')" class="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-bold text-[10px]">換色系</button>
-              </div>
+  <div>
+    <span class="text-gray-400 block text-[9px]">風格色系 (標配保留)</span>
+    <div class="flex items-center gap-1.5 mt-0.5">
+      <span class="font-bold text-brand-900 text-xs">${curTheme.name}</span>
+      <div class="flex items-center gap-0.5">${themeChips}</div>
+    </div>
+  </div>
+  <button type="button" onclick="promptChangeStoreTheme('${s.id}')" class="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg font-bold text-[10px]">換色系</button>
+</div>
 
               <div class="flex items-center justify-between">
                 <div><b>信箱：</b>${s.owner_email || '未填寫'}</div>
