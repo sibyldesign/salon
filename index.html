@@ -4101,6 +4101,30 @@ async function submitQuickDepositProof() {
   }
 }
   
+  // ========================================================
+// 前台依開通項目動態隱藏顧客端輸入項 (貼於 index.html)
+// ========================================================
+function applyFrontMarketingVisibility(storeInfo) {
+  const allowed = Array.isArray(storeInfo.allowed_modules) ? storeInfo.allowed_modules : [];
+  const isLifetime = (storeInfo.plan_type === 'lifetime');
+
+  const hasWallet = !isLifetime || allowed.includes('wallet');
+  const hasPackages = !isLifetime || allowed.includes('packages');
+  const hasCoupons = !isLifetime || allowed.includes('coupons');
+
+  // 1. 折扣碼輸入框與按鈕 (未開 coupons 則徹底隱藏)
+  const couponBox = document.getElementById('coupon-section') || document.querySelector('.coupon-input-box');
+  if (couponBox) couponBox.style.display = hasCoupons ? 'block' : 'none';
+
+  // 2. 包卡扣抵選項 (未開 packages 則徹底隱藏)
+  const pkgDeductBox = document.getElementById('use-package-deduct') || document.querySelector('[data-deduct="package"]');
+  if (pkgDeductBox) pkgDeductBox.closest('label, div').style.display = hasPackages ? 'block' : 'none';
+
+  // 3. 儲值金扣抵選項 (未開 wallet 則徹底隱藏)
+  const walletDeductBox = document.getElementById('use-wallet-deduct') || document.querySelector('[data-deduct="wallet"]');
+  if (walletDeductBox) walletDeductBox.closest('label, div').style.display = hasWallet ? 'block' : 'none';
+}
+  
   function openReviewModal() { document.getElementById('reviewModal').classList.remove('hidden'); }
   function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); }
   function setReviewRating(star) {
