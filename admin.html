@@ -2740,17 +2740,26 @@ const THEME_OPTIONS = {
   taupe:  { name: '焙茶燕麥冷灰', colors: ['#F8F6F4', '#E8E3DF', '#6E6259', '#332B25'] }
 };
 
-// 輔助函式：快速安全取得色系名稱
+// ★【核心補齊 1】：安全取得色系名稱 (防 undefined 崩潰)
 function getThemeName(themeKey) {
   return THEME_OPTIONS[themeKey]?.name || THEME_OPTIONS['latte'].name;
 }
 
-// 輔助函式：產生 4 色色票圓點 HTML
+// ★【核心補齊 2】：生成 4 階色號色票 HTML (解決 ReferenceError 導致清單消失)
 function getThemeColorChipsHtml(themeKey) {
   const item = THEME_OPTIONS[themeKey] || THEME_OPTIONS['latte'];
-  return item.colors.map(c => `
+  return (item.colors || []).map(c => `
     <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10 shadow-2xs" style="background-color: ${c};" title="${c}"></span>
   `).join('');
+}
+
+// ★【核心補齊 3】：全域買斷版店家精準判定 (相容多種標記方式)
+function isLifetimeStore(s) {
+  return Boolean(
+    s.plan_type === 'lifetime' || 
+    s.plan_status === 'lifetime' || 
+    String(s.plan_name || '').includes('買斷')
+  );
 }
 
     // ========================================================
