@@ -202,7 +202,7 @@
   </div>
   
   <div class="max-w-md mx-auto text-center pt-3 pb-4 px-4 relative bg-brand-50">
-    <h1 id="brand-title" class="font-serif text-2xl tracking-wider text-brand-900 font-bold">線上預約系統</h1>
+    <h1 id="brand-title" class="font-sans font-black text-2xl tracking-wider text-brand-900" style="font-family: 'Playfair Display', 'Noto Sans TC', sans-serif;">線上預約系統</h1>
     <div id="brand-subtitle" class="text-xs tracking-[0.25em] mt-1 font-medium text-theme-primary">專業服務門市</div>
   </div>
 
@@ -4509,18 +4509,17 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     let safePhone = String(phoneVal || '').replace(/\D/g, '');
     if (safePhone.length === 9 && safePhone.startsWith('9')) safePhone = '0' + safePhone;
 
-    // 判斷當前是否為「這理髮型」或有客製試算表的店家（落實多租戶隔離）
-    const isZheliStore = (CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb') || (db.storeName && db.storeName.includes('這理'));
-    const targetSpreadsheetId = db.sheets_spreadsheet_id || (isZheliStore ? "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ" : null);
+    // 【修改此處】：強制指定這理髮型的母表 ID，避免變數延遲讀取失敗
+    const targetSpreadsheetId = "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
 
     // ------------------------------------------------------------------------
     // 2. 單一原子 Webhook 派發（發送確認信 + 試算表三表同步 + LINE通知）
     // ------------------------------------------------------------------------
     const webhookPayload = {
-      action: "submitBooking",
+      action: "syncBookingToSheet", // 明確呼叫試算表同步動作
       store_id: CURRENT_STORE_ID,
-      store_name: db.storeName || "這理髮型",
-      spreadsheet_id: targetSpreadsheetId, // 非試算表店家為 null，GAS 自動略過試算表寫入
+      store_name: "這理髮型",
+      spreadsheet_id: targetSpreadsheetId,
       transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
       date: formattedDate,
       time: targetTime,
