@@ -553,6 +553,18 @@
         <div class="text-xs font-bold text-brand-900" id="svc-form-title">新增服務項目 (含硬體設備與專員連動)</div>
         <input type="hidden" id="edit-svc-id">
         
+        <!-- 服務項目大分類設定 -->
+<div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
+  <label class="block text-[11px] font-bold text-brand-900">服務大分類 (支援自訂或從常用挑選) *：</label>
+  <div class="flex gap-2">
+    <select id="svc-category-preset" onchange="document.getElementById('svc-category').value = this.value" class="w-1/2 p-2.5 rounded-xl border border-brand-200 text-xs bg-white font-bold outline-none">
+      <option value="">-- 快速挑選常用分類 --</option>
+      <!-- 由 JS 依美業或寵美模式動態填入 -->
+    </select>
+    <input type="text" id="svc-category" placeholder="輸入或修改大分類 (如: 縮毛矯正/大型犬)" class="w-1/2 p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none font-bold">
+  </div>
+</div>
+        
         <!-- 項目名稱與金額 -->
         <div class="grid grid-cols-2 gap-2">
           <div>
@@ -638,6 +650,8 @@
 
       <div class="bg-white p-4 rounded-3xl border border-brand-200 shadow-sm space-y-2">
         <div class="text-xs font-bold text-brand-900 mb-2">服務項目列表 (點擊箭頭可即時上下排序，支援一鍵上下架)</div>
+        <!-- 服務分類過濾標籤列 -->
+<div class="flex gap-1.5 overflow-x-auto pb-2 no-scrollbar" id="svc-category-filter-bar"></div>
         <div id="service-list-container" class="space-y-2"></div>
       </div>
 
@@ -3999,12 +4013,12 @@ renderStoreResourcesList();
       services: (services && services.length > 0) ? services.map(s => ({
         id: s.id,
         name: s.service_name || s.name,
+        category: s.category || '一般服務', // 🌟 補齊這行，重整後大分類才不會消失！
         duration: Number(s.duration_minutes || s.duration || 60),
         type: s.service_type || s.type || "Group_A",
         price: s.price || 0,
         isAddon: s.is_addon === true || s.isAddon === true,
         sortOrder: s.sort_order || 0,
-        // 【關鍵補齊】：補回指派專員與綁定設備欄位
         assigned_staff: Array.isArray(s.assigned_staff) ? s.assigned_staff : (s.assigned_staff ? [s.assigned_staff] : ['all']),
         required_resource: s.required_resource || s.resource || 'none',
         isActive: s.is_active !== false && s.isActive !== false,
@@ -4025,6 +4039,7 @@ renderStoreResourcesList();
         subtitle: sCfg.display_subtitle || "",
         logoUrl: sCfg.logo_url || "",
         enableLogo: sCfg.enable_logo ?? true,
+        enable_logo: sCfg.enable_logo ?? true,
         storePhone: sCfg.store_phone || "",
         address: sCfg.address || "",
         businessHours: sCfg.business_hours || "09:00 - 19:00",
@@ -4044,7 +4059,6 @@ renderStoreResourcesList();
         careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
         reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
         
-        // 模式與色系鎖定
         themeColor: rawTheme,
         theme_color: rawTheme,
         industryMode: rawMode,
@@ -4069,15 +4083,32 @@ renderStoreResourcesList();
         line: sCfg.line_url || "",
         ig: sCfg.ig_url || "",
         map: sCfg.map_url || "",
-        lineChannelToken: sCfg.line_channel_token || "",
+        
+        // 🌟 營業時間精準對齊 (雙向命名，徹底杜絕 11:31 回滾)
         shiftStartTime: sCfg.shift_start_time || "09:00",
+        shift_start_time: sCfg.shift_start_time || "09:00",
         shiftEndTime: sCfg.shift_end_time || "19:00",
+        shift_end_time: sCfg.shift_end_time || "19:00",
         shiftInterval: Number(sCfg.shift_interval || 30),
+        shift_interval: Number(sCfg.shift_interval || 30),
+        weekly_off_days: weeklyOffDays,
         commissionRate: Number(sCfg.commission_rate || 50),
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
-        // 🌟 核心通用相容：同時賦予蛇形與駝峰屬性，防止買斷版取值為 undefined
+        // 🌟 通報推播與 Token 對齊 (保證買斷與訂閱皆可啟用)
+        lineChannelToken: sCfg.line_channel_token || "",
+        line_channel_token: sCfg.line_channel_token || "",
+        enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
+        enable_owner_line_push: sCfg.enable_owner_line_push ?? true,
+        enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
+        enable_line_auto_notify: sCfg.enable_line_auto_notify ?? false,
+        enableFlexMenu: sCfg.enable_flex_menu ?? true,
+        enable_flex_menu: sCfg.enable_flex_menu ?? true,
+        enableEmailCopy: sCfg.enable_email_copy ?? true,
+        enable_email_copy: sCfg.enable_email_copy ?? true,
+
+        // 🌟 流程開關通用雙向對齊 (讀到 false 絕對不變 true)
         enableAuditBooking: sCfg.enable_audit_booking ?? true,
         enable_audit_booking: sCfg.enable_audit_booking ?? true,
         enableDeposit: sCfg.enable_deposit ?? true,
@@ -4108,8 +4139,6 @@ renderStoreResourcesList();
         enable_quick_contact: sCfg.enable_quick_contact ?? true,
         enableCancelReason: sCfg.enable_cancel_reason ?? true,
         enable_cancel_reason: sCfg.enable_cancel_reason ?? true,
-        enableEmailCopy: sCfg.enable_email_copy ?? true,
-        enable_email_copy: sCfg.enable_email_copy ?? true,
         enableCarousel: sCfg.enable_carousel ?? true,
         enable_carousel: sCfg.enable_carousel ?? true,
         enableFeaturedShop: sCfg.enable_featured_shop === true,
@@ -4119,13 +4148,7 @@ renderStoreResourcesList();
         enableCommissionCalc: sCfg.enable_commission_calc ?? true,
         enable_commission_calc: sCfg.enable_commission_calc ?? true,
         enableContract: sCfg.enable_contract ?? true,
-        enable_contract: sCfg.enable_contract ?? true,
-        enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
-        enable_owner_line_push: sCfg.enable_owner_line_push ?? true,
-        enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
-        enable_line_auto_notify: sCfg.enable_line_auto_notify ?? false,
-        enableFlexMenu: sCfg.enable_flex_menu ?? true,
-        enable_flex_menu: sCfg.enable_flex_menu ?? true
+        enable_contract: sCfg.enable_contract ?? true
       }
     };
     backendData.storeInfo = sInfo;
@@ -5839,21 +5862,27 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
 // 【修改版】editServiceItem(id) — 支援設備資源動態回填
 // ========================================================
 function editServiceItem(id) {
-  // 強制字串轉型比對，確保數字 ID 與字串 ID 均能精準匹配
   const s = (backendData.services || []).find(item => String(item.id) === String(id));
   if (!s) return Swal.fire('找不到該項目資料', '', 'error');
   
+  populateCategoryPresets(); // 刷新美業 / 寵美大分類下拉選單
+  
   document.getElementById('edit-svc-id').value = s.id;
   document.getElementById('svc-name').value = s.name || '';
+  document.getElementById('svc-category').value = s.category || '一般服務';
+  
+  const presetSel = document.getElementById('svc-category-preset');
+  if (presetSel) presetSel.value = s.category || '';
+  
   document.getElementById('svc-price').value = s.price || '';
   document.getElementById('svc-duration').value = s.duration || 60;
   document.getElementById('svc-type').value = s.type || 'Group_A';
   
-  // 【關鍵新增】：把該服務原本綁定的資源名稱 (例如 "足部沙發" 或 "none") 傳進下拉選單中自動選中
+  // 設備與席位資源回填
   const assignedResource = s.required_resource || s.resource || 'none';
   populateServiceResourceDropdown(assignedResource);
 
-  // 渲染專員勾選狀態
+  // 負責專員複選框回填
   if (typeof renderStaffCheckboxesForService === 'function') {
     renderStaffCheckboxesForService(s.assigned_staff || []);
   }
@@ -5864,7 +5893,7 @@ function editServiceItem(id) {
   if (activeCheckbox) activeCheckbox.checked = isActive;
   
   renderBOMCheckboxes(s.materials || []);
-  document.getElementById('svc-form-title').innerText = "修改服務項目全欄位";
+  document.getElementById('svc-form-title').innerText = `修改服務項目【${s.name}】`;
   document.getElementById('svc-cancel-btn').classList.remove('hidden');
   
   // 自動平滑滾動至編輯表單
@@ -5874,20 +5903,21 @@ function editServiceItem(id) {
     function resetServiceForm() {
   document.getElementById('edit-svc-id').value = '';
   document.getElementById('svc-name').value = '';
+  document.getElementById('svc-category').value = '';
   document.getElementById('svc-price').value = '';
   document.getElementById('svc-duration').value = '60';
   document.getElementById('svc-type').value = 'Group_A';
   document.getElementById('svc-is-addon').checked = false;
   document.getElementById('svc-is-active').checked = true;
 
+  populateCategoryPresets();
   renderBOMCheckboxes([]);
-  renderStaffCheckboxesForService([]); // 重置為預設全選
-  populateServiceResourceDropdown('none'); // 重置設備為無
+  renderStaffCheckboxesForService([]);
+  populateServiceResourceDropdown('none');
 
   document.getElementById('svc-form-title').innerText = "新增服務項目 (含硬體設備與專員連動)";
   document.getElementById('svc-cancel-btn').classList.add('hidden');
 }
-
     // 渲染專員勾選框
 function renderStaffCheckboxesForService(selectedStaffList = []) {
   const container = document.getElementById('svc-staff-checkboxes');
@@ -5925,6 +5955,7 @@ function renderStaffCheckboxesForService(selectedStaffList = []) {
 async function saveServiceItem() {
   const id = document.getElementById('edit-svc-id').value.trim();
   const name = document.getElementById('svc-name').value.trim();
+  const category = document.getElementById('svc-category').value.trim() || '一般服務';
   const priceStr = document.getElementById('svc-price').value.trim();
   const duration = document.getElementById('svc-duration').value;
   const type = document.getElementById('svc-type').value;
@@ -5938,17 +5969,15 @@ async function saveServiceItem() {
   document.querySelectorAll('.svc-bom-cb:checked').forEach(cb => {
     const matName = cb.value;
     const dosageInput = document.querySelector(`.svc-bom-dosage[data-for="${matName}"]`);
-    selectedBOM.push({
-      name: matName,
-      dosage: dosageInput ? dosageInput.value.trim() : '1單位'
-    });
+    selectedBOM.push({ name: matName, dosage: dosageInput ? dosageInput.value.trim() : '1單位' });
   });
 
-  if (!name || !priceStr) return Swal.fire('名稱與金額為必填', '', 'warning');
+  if (!name || !priceStr) return Swal.fire('項目名稱與金額為必填', '', 'warning');
 
   const payload = {
     store_id: CURRENT_STORE_ID,
     service_name: name,
+    category: category, // 🌟 儲存大分類
     price: priceStr,
     duration_minutes: Number(duration || 60),
     service_type: type,
@@ -5956,19 +5985,19 @@ async function saveServiceItem() {
     assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
     is_active: isActive,
     is_addon: isAddon,
-    materials: selectedBOM,
-    material_name: selectedBOM.length > 0 ? selectedBOM.map(m => m.name).join(', ') : 'none',
-    material_dosage: selectedBOM.length > 0 ? selectedBOM.map(m => m.dosage).join(', ') : ''
+    materials: selectedBOM
   };
 
+  Swal.showLoading();
   if (id && !id.startsWith('def-')) {
     await directSupabasePatch('services', `id=eq.${id}`, payload);
   } else {
     await directSupabaseUpsert('services', payload, 'id');
   }
+
   resetServiceForm();
-  fetchDataAndRender();
-  Swal.fire('服務項目、設備資源與專員分工已儲存！', '', 'success');
+  await fetchDataAndRender();
+  Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1000, showConfirmButton: false });
 }
 
     // 一鍵上架 / 下架快速切換
@@ -5986,36 +6015,104 @@ async function toggleServiceActiveStatus(id, currentStatus) {
   });
 }
 
-// 替換 renderServiceList() 呈現豐富資源與狀態標籤
+// 當前選取之分類過濾
+let activeServiceCategoryFilter = 'ALL';
+
+// 依據門市模式 (美業 vs 寵美) 取得常用預設大分類
+function getPresetCategoriesByMode() {
+  const mode = backendData.settings?.industryMode || 'beauty';
+  if (mode === 'pet_grooming' || mode === 'pet_hotel') {
+    return ["小型犬專區 (9kg以下)", "中型犬專區 (10-20kg)", "大型犬專區 (21kg以上)", "貓咪精緻洗護", "單項加購與藥浴", "現場其他"];
+  }
+  return ["剪髮造型系列", "燙髮設計 (溫塑/縮毛)", "質感染髮 (整頭/挑染)", "深層護髮/頭皮SPA", "洗髮護理", "現場加購服務"];
+}
+
+// 初始化表單內的分類下拉選單
+function populateCategoryPresets() {
+  const sel = document.getElementById('svc-category-preset');
+  if (!sel) return;
+  const presets = getPresetCategoriesByMode();
+  sel.innerHTML = '<option value="">-- 快速挑選常用分類 --</option>' + 
+    presets.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+    
+    // 替換 renderServiceList() 呈現豐富資源與狀態標籤
 function renderServiceList() {
   const container = document.getElementById('service-list-container');
+  const filterBar = document.getElementById('svc-category-filter-bar');
   if (!container) return;
-  container.innerHTML = (backendData.services || []).map((s, idx) => {
-    const isActive = (s.isActive !== false && s.is_active !== false);
-    const resource = s.required_resource || s.resource || 'none';
-    const staffText = (Array.isArray(s.assigned_staff) && s.assigned_staff.length > 0 && !s.assigned_staff.includes('all'))
-      ? s.assigned_staff.join(', ')
-      : '全體老師通用';
+
+  const services = backendData.services || [];
+  populateCategoryPresets();
+
+  // 1. 抓取目前已有的所有大分類
+  const categories = Array.from(new Set(services.map(s => s.category || '一般服務')));
+
+  // 2. 渲染頂部大分類切換標籤列
+  if (filterBar) {
+    filterBar.innerHTML = `
+      <button type="button" onclick="activeServiceCategoryFilter='ALL'; renderServiceList();" class="px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${activeServiceCategoryFilter === 'ALL' ? 'bg-[#8C7355] text-white shadow-xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
+        全部項目 (${services.length})
+      </button>
+      ${categories.map(cat => {
+        const count = services.filter(s => (s.category || '一般服務') === cat).length;
+        const isSelected = (activeServiceCategoryFilter === cat);
+        return `
+          <button type="button" onclick="activeServiceCategoryFilter='${cat}'; renderServiceList();" class="px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${isSelected ? 'bg-[#8C7355] text-white shadow-xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
+            ${cat} (${count})
+          </button>
+        `;
+      }).join('')}
+    `;
+  }
+
+  // 3. 依據大分類分組展示卡片
+  const displayCategories = (activeServiceCategoryFilter === 'ALL') ? categories : [activeServiceCategoryFilter];
+
+  if (services.length === 0) {
+    container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">尚無服務項目，請於上方新增</div>';
+    return;
+  }
+
+  container.innerHTML = displayCategories.map(cat => {
+    const groupItems = services.filter(s => (s.category || '一般服務') === cat);
+    if (groupItems.length === 0) return '';
 
     return `
-      <div class="p-3.5 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/50 opacity-70'} flex justify-between items-center text-xs transition">
-        <div class="space-y-1">
-          <div class="flex items-center gap-1.5 font-bold text-brand-900">
-            <span class="${!isActive ? 'line-through text-gray-400' : ''}">${s.isAddon ? '[加購] ' : ''}${s.name}</span>
-            <button type="button" onclick="toggleServiceActiveStatus('${s.id}', ${isActive})" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono transition ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
-              ${isActive ? '✓ 上架中' : '✕ 已下架'}
-            </button>
-            ${resource !== 'none' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]"><i class="fa-solid fa-couch mr-0.5"></i> 需用: ${resource}</span>` : ''}
-          </div>
-          <div class="text-[11px] text-brand-500 font-mono">
-            費用: NT$ ${s.price} ｜ 耗時: ${s.duration} 分鐘 ｜ 負責專員: <b class="text-brand-800 font-sans">${staffText}</b>
-          </div>
+      <div class="space-y-2 pt-2">
+        <div class="flex items-center gap-2 px-1">
+          <span class="w-2 h-3.5 bg-[#8C7355] rounded-full"></span>
+          <span class="font-black text-xs text-brand-900">${cat}</span>
+          <span class="text-[10px] text-brand-400 font-mono">(${groupItems.length} 項)</span>
         </div>
-        <div class="flex gap-1 items-center">
-          <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, -1)">▲</button>
-          <button class="w-7 h-7 flex items-center justify-center bg-brand-50 border border-brand-200 rounded-lg text-xs font-bold" onclick="moveServiceOrder(${idx}, 1)">▼</button>
-          <button onclick="editServiceItem('${s.id}')" class="px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg">改</button>
-          <button onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg">刪</button>
+        <div class="space-y-2">
+          ${groupItems.map((s, idx) => {
+            const isActive = (s.isActive !== false && s.is_active !== false);
+            const staffText = (Array.isArray(s.assigned_staff) && s.assigned_staff.length > 0 && !s.assigned_staff.includes('all'))
+              ? s.assigned_staff.join(', ')
+              : '全體專員通用';
+
+            return `
+              <div class="p-3.5 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/60 opacity-60'} flex justify-between items-center text-xs transition">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-1.5 font-bold text-brand-900">
+                    <span class="${!isActive ? 'line-through text-gray-400' : ''}">${s.isAddon ? '[加購] ' : ''}${s.name}</span>
+                    <button type="button" onclick="toggleServiceActiveStatus('${s.id}',${isActive})" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono transition ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
+                      ${isActive ? '✓ 上架中' : '✕ 已下架'}
+                    </button>
+                    ${s.required_resource && s.required_resource !== 'none' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]"><i class="fa-solid fa-couch mr-0.5"></i> ${s.required_resource}</span>` : ''}
+                  </div>
+                  <div class="text-[11px] text-brand-500 font-mono">
+                    NT$ ${s.price} ｜ 耗時: ${s.duration} 分鐘 ｜ 負責專員: <b class="text-brand-800 font-sans">${staffText}</b>
+                  </div>
+                </div>
+                <div class="flex gap-1 items-center">
+                  <button type="button" onclick="editServiceItem('${s.id}')" class="px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition">修改</button>
+                  <button type="button" onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg hover:bg-rose-100 transition">刪除</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
     `;
@@ -6621,140 +6718,6 @@ function renderShiftDateButtons() {
         }
       });
     }
-
-    // ========================================================
-// 【修復語法順序版】openCheckoutModal — 結單對帳彈窗初始化
-// ========================================================
-async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle = false) {
-  // 1. 記錄當前結單預約物件
-  currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
-  
-  // 2. DOM 元素快速繫結
-  const modalName = document.getElementById('chk-modal-name');
-  const modalPhone = document.getElementById('chk-modal-phone');
-  const modalService = document.getElementById('chk-modal-service');
-  const modalBasePrice = document.getElementById('chk-modal-base-price');
-  const customBasePrice = document.getElementById('check_custom_base_price');
-  const modalFinalPrice = document.getElementById('chk-modal-final-price');
-  const pkgGroup = document.getElementById('pkgBuyOptionsGroup'); // 【提前定義】
-  const topupGroup = document.getElementById('topupBuyOptionsGroup'); // 【提前定義】
-
-  if (modalName) modalName.innerText = name;
-  if (modalPhone) modalPhone.innerText = phone;
-  if (modalService) modalService.innerText = service;
-  if (modalBasePrice) modalBasePrice.innerText = `NT$ ${Number(price || 0).toLocaleString()}`;
-  if (customBasePrice) customBasePrice.value = price || 0;
-  if (modalFinalPrice) modalFinalPrice.value = price || 0;
-
-  // 3. 渲染現場新購方案下拉選單 (包卡與儲值)
-  if (pkgGroup) {
-    pkgGroup.innerHTML = (backendData.settings?.packageRules || []).map(p => `
-      <option value="new_pkg" data-name="${p.name}" data-price="${p.price}" data-times="${p.times || 10}">
-        + 購買【${p.name}】(+NT$ ${Number(p.price).toLocaleString()}，含 ${p.times || 10} 點)
-      </option>
-    `).join('');
-  }
-
-  if (topupGroup) {
-    topupGroup.innerHTML = (backendData.settings?.walletRules || []).map(w => `
-      <option value="new_topup" data-name="${w.name}" data-price="${w.price}" data-add="${w.price + (w.bonus || 0)}" data-discount="${w.discount || 1}">
-        + 購買【${w.name}】(+NT$ ${Number(w.price).toLocaleString()}，入帳 $${(w.price + (w.bonus || 0)).toLocaleString()})
-      </option>
-    `).join('');
-  }
-
-  // 4. 自動預選顧客在前台預約時指定的加購方案或扣抵
-  const currentNotes = (currentCheckoutBookingObj.service || '') + ' ' + ((backendData.appointments || []).find(a => a.id === id)?.notes || '');
-  
-  if (currentNotes.includes('現場加購包卡') && pkgGroup) {
-    const opt = Array.from(pkgGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
-    if (opt) {
-      document.getElementById('check_new_buy_select').value = 'new_pkg';
-      opt.selected = true;
-    }
-  }
-  if (currentNotes.includes('現場加購儲值') && topupGroup) {
-    const opt = Array.from(topupGroup.options).find(o => currentNotes.includes(o.getAttribute('data-name')));
-    if (opt) {
-      document.getElementById('check_new_buy_select').value = 'new_topup';
-      opt.selected = true;
-    }
-  }
-  if (currentNotes.includes('使用包卡扣抵')) {
-    document.getElementById('check_discount_use_select').value = 'useCard';
-  } else if (currentNotes.includes('使用儲值扣抵')) {
-    document.getElementById('check_discount_use_select').value = 'useDeposit';
-  }
-
-  // 5. 專車接送車資輸入列動態顯隱
-  const shuttleBox = document.getElementById('checkoutShuttleFeeRow');
-  const shuttleInput = document.getElementById('check_shuttle_fee');
-  if (shuttleBox) shuttleBox.classList.toggle('hidden', !isNeedShuttle);
-  if (shuttleInput) shuttleInput.value = isNeedShuttle ? 200 : 0;
-
-  // 6. 【BOM 耗材預告區塊】動態顯示關聯技術耗材
-  const svcObj = (backendData.services || []).find(s => (service || '').includes(s.name));
-  const bomSection = document.getElementById('checkoutBOMSection');
-  const bomList = document.getElementById('checkoutBOMList');
-
-  if (bomSection && bomList) {
-    if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
-      bomSection.classList.remove('hidden');
-      bomList.innerHTML = svcObj.materials.map(m => `<div>• 關聯耗材：<b>${m.name}</b> (預計出庫 -${m.dosage})</div>`).join('');
-    } else {
-      bomSection.classList.add('hidden');
-    }
-  }
-
-  let cardPoints = 0;
-  let walletBal = 0;
-  let discountRate = 1;
-
-  // 7. 非同步平行撈取顧客包卡與儲值金資產
-  try {
-    const [pkgs, custs] = await Promise.all([
-      directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
-      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`)
-    ]);
-
-    if (pkgs && pkgs.length > 0) {
-      const matched = pkgs.find(p => service.includes(p.service_name)) || pkgs[0];
-      cardPoints = matched.remaining_times || 0;
-      const optCard = document.getElementById('optUseCardDeductText');
-      if (optCard) optCard.innerText = `使用【${matched.service_name}】扣點 (剩餘 ${cardPoints} 點)`;
-    }
-
-    if (custs && custs.length > 0) {
-      walletBal = Number(custs[0].wallet_balance || 0);
-      discountRate = Number(custs[0].member_discount || 1);
-      const optDep = document.getElementById('optUseDepositText');
-      if (optDep) {
-        optDep.innerText = `使用已有儲值金 (餘額 $${walletBal.toLocaleString()}，享 ${discountRate * 10} 折)`;
-        optDep.setAttribute('data-rate', discountRate);
-      }
-    }
-  } catch (e) {
-    console.warn("載入顧客資產異常:", e);
-  }
-
-  // 8. 渲染目前資產 UI
-  const curCardEl = document.getElementById('checkModalCurrentCard');
-  const curDepEl = document.getElementById('checkModalCurrentDeposit');
-  if (curCardEl) curCardEl.innerText = `${cardPoints} 點`;
-  if (curDepEl) curDepEl.innerText = `$${walletBal.toLocaleString()}`;
-
-  // 9. 渲染零售外帶品選單
-  const retailSelect = document.getElementById('checkoutRetailSelect');
-  if (retailSelect) {
-    const retailItems = allInventoryItems.filter(it => (Array.isArray(it.categories) ? it.categories.includes('零售外帶品') : it.category === '零售外帶品'));
-    retailSelect.innerHTML = '<option value="none" data-price="0">不加購零售產品</option>' +
-      retailItems.map(it => `<option value="${it.id}" data-price="${it.retail_price || 350}">${it.name} (+NT$ ${Number(it.retail_price || 350).toLocaleString()})</option>`).join('');
-  }
-
-  // 10. 觸發即時金額重算並展開彈窗
-  recalcCheckoutTotal();
-  document.getElementById('checkoutModal').classList.remove('hidden');
-}
 
     function closeCheckoutModal() {
       document.getElementById('checkoutModal').classList.add('hidden');
@@ -8282,105 +8245,6 @@ if (peakChartBox) {
         </tr>
       `;
     }
-
-// ========================================================
-// 2. 嚴格模組權限閘道 (底部分頁按鈕、加購卡片與行銷大分頁按鈕)
-// ========================================================
-function applyLifetimeModulesStrictGating(storeInfo) {
-  const sInfo = storeInfo || backendData.storeInfo;
-  if (!sInfo) return;
-
-  const isLifetime = isStoreLifetime();
-  const allowed = Array.isArray(sInfo.allowed_modules) ? sInfo.allowed_modules : [];
-  const activeMode = sInfo.industry_mode || sInfo.industry_type || backendData.settings?.industryMode || 'beauty';
-
-  const navSubBtn = document.getElementById('nav-btn-subscription');
-
-  if (isLifetime) {
-    // A. 買斷版徹底隱藏「方案與訂閱」
-    if (navSubBtn) navSubBtn.style.setProperty('display', 'none', 'important');
-
-    // B. 各底部分頁依授權顯隱
-    const navMap = {
-      'shift': '[onclick*="\'shift\'"]',
-      'inventory': '[onclick*="\'inventory\'"]',
-      'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
-      'care': '[onclick*="\'care\'"]',
-      'reviews': '[onclick*="\'reviews\'"]',
-      'slots': '[onclick*="\'slots\'"]',
-      'pets': '#nav-btn-pets',
-      'boarding': '#nav-btn-boarding'
-    };
-
-    Object.keys(navMap).forEach(modKey => {
-      let isAllowed = allowed.includes(modKey);
-      if (activeMode === 'beauty' && (modKey === 'pets' || modKey === 'boarding')) isAllowed = false;
-      if (activeMode === 'pet_grooming' && modKey === 'boarding') isAllowed = false;
-
-      document.querySelectorAll(navMap[modKey]).forEach(el => {
-        el.style.setProperty('display', isAllowed ? '' : 'none', 'important');
-      });
-    });
-
-    // C. 行銷分頁底層按鈕開關：只要儲值、包卡、折扣碼任一開通即呈現
-    const hasAnyMarketing = allowed.includes('wallet') || allowed.includes('packages') || allowed.includes('coupons');
-    document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
-      el.style.setProperty('display', hasAnyMarketing ? '' : 'none', 'important');
-    });
-
-    // D. 買斷設定分頁常規加購卡片顯隱
-    document.getElementById('lt-addon-card-revenue')?.classList.toggle('hidden', !allowed.includes('revenue'));
-    document.getElementById('lt-addon-card-line_push')?.classList.toggle('hidden', !allowed.includes('line_push'));
-    document.getElementById('lt-addon-card-contract')?.classList.toggle('hidden', !allowed.includes('contract'));
-
-    // 🚨🚨🚨【關鍵修復：這理髮型 / Google 試算表連動模組閘道】🚨🚨🚨
-    // 🚨🚨🚨【關鍵修復：這理髮型 / Google 試算表連動模組閘道】🚨🚨🚨
-    const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
-    if (customSheetsCard) {
-      const storeName = sInfo.store_name || backendData.settings?.storeName || '';
-      const storeSlug = sInfo.slug || '';
-      
-      // 雙重辨識機制：買斷版且 (總管有勾選 sheets_sync OR 店名包含「這理」)
-      const isZheliHairStore = storeName.includes('這理') || storeSlug.includes('zheli');
-      const hasSheetsSync = isLifetime && (
-        allowed.includes('sheets_sync') || 
-        allowed.includes('google_sheets') || 
-        allowed.includes('sheets') ||
-        isZheliHairStore
-      );
-
-      if (hasSheetsSync) {
-        customSheetsCard.classList.remove('hidden');
-        customSheetsCard.style.setProperty('display', 'block', 'important');
-        const titleEl = document.getElementById('lt-custom-sheets-title');
-        if (titleEl) {
-          titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
-        }
-      } else {
-        // 其他買斷版、所有訂閱版 ➔ 100% 徹底隱藏
-        customSheetsCard.classList.add('hidden');
-        customSheetsCard.style.setProperty('display', 'none', 'important');
-      }
-    }
-
-  } else {
-    // 訂閱版：顯示「方案」，所有功能導覽按鈕全開
-    if (navSubBtn) navSubBtn.style.removeProperty('display');
-    document.querySelectorAll('#bottom-nav .nav-item').forEach(el => el.style.removeProperty('display'));
-    
-    // 訂閱版絕對不顯示客製試算表卡片
-    const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
-    if (customSheetsCard) {
-      customSheetsCard.classList.add('hidden');
-      customSheetsCard.style.setProperty('display', 'none', 'important');
-    }
-  }
-
-  // 同步連動行銷分頁內部各小區塊
-  applyMarketingInnerSectionsGating();
-  // 同步連動代客新增與結單彈窗之按鈕
-  syncAddonControlsAvailability();
-}
     
     function openAddPackageModal() {
       const svcs = backendData.services || [];
@@ -8435,26 +8299,6 @@ function applyLifetimeModulesStrictGating(storeInfo) {
         await directSupabasePatch('customer_packages', `id=eq.${id}`, { remaining_times: rem - 1 });
         Swal.fire('核銷成功！', `剩餘 ${rem - 1} 點`, 'success');
         loadMarketingCenter();
-      }
-    });
-  }
-
-    async function deleteCustomerReview(id) {
-    Swal.fire({
-      title: '確定刪除此評價？',
-      text: '刪除後將無法復原。',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      confirmButtonText: '確認刪除'
-    }).then(async r => {
-      if (r.isConfirmed) {
-        await fetch(`${SUPABASE_URL}/rest/v1/customer_reviews?id=eq.${id}`, {
-          method: "DELETE",
-          headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        loadAdminReviews();
-        Swal.fire('已刪除評價', '', 'success');
       }
     });
   }
@@ -9227,37 +9071,6 @@ function renderStaffManager(targetPrefix = '') {
   if (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')) document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id').value = '';
   if (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')) document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name').value = '';
   Swal.fire('專員建立成功，分頁權限已綁定！', '', 'success');
-}
-
-    // ========================================================
-// 5. 黑名單功能改為加購模組控制
-// ========================================================
-// 預約卡片內的黑名單按鈕渲染 (只有加購 blacklist 模組才出現)
-function getBlacklistButtonHtml(phone, name) {
-  const isLifetime = isStoreLifetime();
-  const allowed = Array.isArray(backendData.storeInfo?.allowed_modules) ? backendData.storeInfo.allowed_modules : [];
-
-  // 若為買斷版且「未加購 blacklist 模組」，直接不渲染按鈕
-  if (isLifetime && !allowed.includes('blacklist')) {
-    return '';
-  }
-
-  const pureCustPhone = getCleanPhone(phone);
-  const isCustBlocked = (typeof blacklistedPhonesSet !== 'undefined') && blacklistedPhonesSet.has(pureCustPhone);
-
-  if (isCustBlocked) {
-    return `
-      <button type="button" onclick="toggleCustomerBlacklist('${phone}', '${name}')" class="px-2.5 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-[10.5px] font-bold border border-rose-300 transition flex items-center gap-1 shadow-2xs">
-        <i class="fa-solid fa-ban text-[10px] text-rose-600"></i> 已封鎖
-      </button>
-    `;
-  } else {
-    return `
-      <button type="button" onclick="toggleCustomerBlacklist('${phone}', '${name}')" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 rounded-lg text-[10.5px] font-bold border border-stone-200 transition flex items-center gap-1">
-        <i class="fa-solid fa-user-slash text-[9px]"></i> 黑名單
-      </button>
-    `;
-  }
 }
     
     function promptEditStaffPin(staffId, staffName, currentPin) {
@@ -10244,7 +10057,7 @@ function populateLifetimeSettings() {
     el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 營業時間、公休與訂金
+  // 1. 營業時間（精確帶入儲存值，杜絕跳回）
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
@@ -10255,7 +10068,7 @@ function populateLifetimeSettings() {
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
 
-  // 2. 標配前台開關 (加入 ?? 雙重相容，防止取消勾選重整後跳回打勾)
+  // 2. 標配前台開關（精確讀取 false）
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
   setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
   setCheck('lt-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
@@ -10291,14 +10104,13 @@ function populateLifetimeSettings() {
   renderStaffManager('lt');
   const storeIdDisp = document.getElementById('lt-disp-current-store-id');
   if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
-  if (Array.isArray(s.weekly_off_days)) {
-    document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
-      input.checked = s.weekly_off_days.includes(Number(input.value));
-    });
-  }
+  const offDays = s.weekly_off_days || [];
+  document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
+    input.checked = offDays.includes(Number(input.value));
+  });
   renderUploadSlots('lt');
 
-  // 6. ★【模式連動】：寵物住宿配置卡片顯隱
+  // 6. 寵物住宿模式連動
   const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
   if (petHotelCard) {
     const isPetHotel = (currentMode === 'pet_hotel');
@@ -10311,39 +10123,29 @@ function populateLifetimeSettings() {
       setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
       setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
       setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
-
-      const mealRates = s.boardingMealRates || {};
-      setVal('lt-cfg-meal-small-1', mealRates.small ? mealRates.small[0] : 80);
-      setVal('lt-cfg-meal-small-2', mealRates.small ? mealRates.small[1] : 75);
-      setVal('lt-cfg-meal-small-3', mealRates.small ? mealRates.small[2] : 70);
-      setVal('lt-cfg-meal-med-1', mealRates.medium ? mealRates.medium[0] : 100);
-      setVal('lt-cfg-meal-med-2', mealRates.medium ? mealRates.medium[1] : 90);
-      setVal('lt-cfg-meal-med-3', mealRates.medium ? mealRates.medium[2] : 85);
-      setVal('lt-cfg-meal-large-1', mealRates.large ? mealRates.large[0] : 120);
-      setVal('lt-cfg-meal-large-2', mealRates.large ? mealRates.large[1] : 110);
-      setVal('lt-cfg-meal-large-3', mealRates.large ? mealRates.large[2] : 105);
-
-      setVal('lt-cfg-label-mode-grooming', s.labelModeGrooming || '精緻洗護美容');
-      setVal('lt-cfg-label-mode-boarding', s.labelModeBoarding || '安親度假住宿');
-      setVal('lt-cfg-label-hotel-bath-in', s.labelHotelBathIn || '【入住當天】進房前基礎清潔洗護');
-      setVal('lt-cfg-label-hotel-bath-out', s.labelHotelBathOut || '【退房當天】返家前深層造型美容／洗澡');
-
       renderAdminRoomTiers('lt');
       renderAdminMealOptions('lt');
     }
   }
 
-  // 7. 加購模組內容卡片展示
+  // 7. 買斷版加購卡片展示
   if (allowed.includes('revenue')) {
     setVal('lt-cfg-commission-rate', s.commissionRate ?? 50);
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
-  if (allowed.includes('line_push')) {
-    setVal('lt-line-token', s.lineChannelToken || '');
-    setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push, true);
-    setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify, false);
-    setCheck('lt-cfg-toggle-flex-menu', s.enable_flex_menu, true);
+  
+  // 🌟 通報推播與管道回填（LINE / Email 完整啟用）
+  const hasLinePush = allowed.includes('line_push') || Boolean(s.lineChannelToken || s.line_channel_token);
+  const linePushCard = document.getElementById('lt-addon-card-line_push');
+  if (linePushCard) {
+    linePushCard.classList.toggle('hidden', !hasLinePush);
+    if (hasLinePush) linePushCard.style.setProperty('display', 'block', 'important');
   }
+  setVal('lt-line-token', s.lineChannelToken || s.line_channel_token || '');
+  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
+  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
+  setCheck('lt-cfg-toggle-flex-menu', s.enable_flex_menu ?? s.enableFlexMenu, true);
+
   if (allowed.includes('contract')) {
     setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
     setVal('lt-contract-content', s.contractContent || '');
@@ -10352,8 +10154,31 @@ function populateLifetimeSettings() {
   if (allowed.includes('packages')) renderPlanRules('lt');
 
   // ==========================================================================
-  // 🚨🚨🚨【客製專用：這理髮型 - 試算表資料回填（支援快取防退件）】🚨🚨🚨
+  // 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
   // ==========================================================================
+  const storeName = store.store_name || s.storeName || '';
+  const storeSlug = store.slug || '';
+  const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+  const hasSheetsSync = isStoreLifetime() && (
+    allowed.includes('sheets_sync') || 
+    allowed.includes('google_sheets') || 
+    allowed.includes('sheets') || 
+    isZheli
+  );
+
+  const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
+  if (customSheetsCard) {
+    if (hasSheetsSync) {
+      customSheetsCard.classList.remove('hidden');
+      customSheetsCard.style.setProperty('display', 'block', 'important');
+      const titleEl = document.getElementById('lt-custom-sheets-title');
+      if (titleEl) titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
+    } else {
+      customSheetsCard.classList.add('hidden');
+      customSheetsCard.style.setProperty('display', 'none', 'important');
+    }
+  }
+
   const savedSheetId = s.sheets_spreadsheet_id || localStorage.getItem(`zy_sheets_id_${CURRENT_STORE_ID}`) || '';
   const savedGasUrl = s.sheets_gas_url || localStorage.getItem(`zy_gas_url_${CURRENT_STORE_ID}`) || API_URL || '';
   const savedSheetsSync = (s.enable_sheets_sync !== undefined) ? s.enable_sheets_sync : (localStorage.getItem(`zy_sheets_sync_${CURRENT_STORE_ID}`) !== 'false');
@@ -10381,9 +10206,8 @@ function populateLifetimeSettings() {
     ltPage.onchange = markLifetimeSettingsUnsaved;
   }
 }
-
     // ========================================================
-// 4. 買斷版專用儲存邏輯 (通用動態取值 + 自動欄位容錯)
+// 4. 買斷版專用儲存邏輯 (補齊通報推播 + 自動剔除無效欄位防回滾)
 // ========================================================
 async function saveLifetimeStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -10393,7 +10217,7 @@ async function saveLifetimeStoreSettings() {
   const selectedTheme = document.getElementById('lt-theme-color')?.value || 'latte';
   const storeTitle = document.getElementById('lt-title')?.value.trim() || backendData.settings.storeName;
 
-  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定並存入本地快取】🚨🚨🚨
+  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定並存入本地快取備份】🚨🚨🚨
   const rawSheetInput = document.getElementById('lt-custom-sheets-id')?.value.trim() || '';
   const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
@@ -10407,7 +10231,7 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 動態抓取使用者輸入的開始營業時間，絕不寫死
+  // 動態抓取營業時間輸入值 (不寫死)
   const chosenStartTime = document.getElementById('lt-shift-start')?.value || '09:00';
   const chosenEndTime = document.getElementById('lt-shift-end')?.value || '19:00';
   const chosenInterval = Number(document.getElementById('lt-shift-interval')?.value || 30);
@@ -10438,6 +10262,13 @@ async function saveLifetimeStoreSettings() {
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
 
+    // 🌟 核心補齊：預約通報與推播管道設定 (完整儲存)
+    line_channel_token: document.getElementById('lt-line-token')?.value.trim() || '',
+    enable_owner_line_push: getCheck('lt-cfg-toggle-owner-line-push'),
+    enable_line_auto_notify: getCheck('lt-cfg-toggle-line-auto-notify'),
+    enable_flex_menu: getCheck('lt-cfg-toggle-flex-menu'),
+    enable_email_copy: getCheck('lt-toggle-email'),
+
     // 標配前台流程開關
     enable_staff_select: getCheck('lt-toggle-staff-select'),
     enable_multi_staff_schedule: getCheck('lt-toggle-multi-staff-schedule'),
@@ -10453,24 +10284,18 @@ async function saveLifetimeStoreSettings() {
     enable_deposit: getCheck('lt-toggle-deposit'),
     enable_quick_contact: getCheck('lt-toggle-quick-contact'),
     enable_cancel_reason: getCheck('lt-toggle-cancel-reason'),
-    enable_email_copy: getCheck('lt-toggle-email'),
     enable_line_one_click_audit: getCheck('lt-toggle-line-one-click'),
 
     updated_at: new Date().toISOString()
   };
 
-  // 僅在合約模組開放且卡片展示時保存內文
   if (!document.getElementById('lt-addon-card-contract')?.classList.contains('hidden')) {
     payload.contract_title = document.getElementById('lt-contract-title')?.value.trim() || '定型化服務契約書';
     payload.contract_content = document.getElementById('lt-contract-content')?.value.trim() || '';
   }
-  // 僅在推播模組開放時保存 Token
-  if (!document.getElementById('lt-addon-card-line_push')?.classList.contains('hidden')) {
-    payload.line_channel_token = document.getElementById('lt-line-token')?.value.trim() || '';
-  }
 
   try {
-    // 自動容錯嘗試：若資料庫缺少某個欄位，剃除後立刻重試，確保時間與開關 100% 寫入資料庫
+    // 🌟 核心防禦：自動辨識並剝除 Supabase 資料表未建立之欄位，保證 11:30 與所有勾選 100% 成功寫入
     const toSend = { ...payload };
     for (let attempt = 0; attempt < 5; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
@@ -10490,6 +10315,7 @@ async function saveLifetimeStoreSettings() {
         const errText = await res.text();
         const matchCol = errText.match(/Could not find the '([^']+)' column/);
         if (matchCol && matchCol[1]) {
+          console.warn(`[自動防護] 資料表尚無 ${matchCol[1]} 欄位，自動剃除後重試`);
           delete toSend[matchCol[1]];
         } else {
           break;
@@ -10572,7 +10398,7 @@ function applyMarketingInnerSectionsGating() {
 }
 
 // ========================================================
-// 2. 嚴格模組權限閘道 (底部分頁按鈕、加購卡片與行銷大分頁按鈕)
+// 【唯一定義】買斷版全域嚴格模組權限閘道 (保持在腳本底部)
 // ========================================================
 function applyLifetimeModulesStrictGating(storeInfo) {
   const sInfo = storeInfo || backendData.storeInfo;
@@ -10610,21 +10436,55 @@ function applyLifetimeModulesStrictGating(storeInfo) {
       });
     });
 
-    // C. ★【行銷分頁底層按鈕開關】：只要儲值、包卡、折扣碼「任一項」開通，立即出現行銷分頁！
+    // C. 行銷分頁底層按鈕開關 (儲值、包卡、折扣碼任一開通才顯示)
     const hasAnyMarketing = allowed.includes('wallet') || allowed.includes('packages') || allowed.includes('coupons');
     document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
       el.style.setProperty('display', hasAnyMarketing ? '' : 'none', 'important');
     });
 
-    // D. 買斷設定分頁加購卡片顯隱 (已排除行銷，只管 revenue, line_push, contract)
+    // D. 買斷設定分頁常規加購卡片顯隱 (未開通連卡片都隱形)
     document.getElementById('lt-addon-card-revenue')?.classList.toggle('hidden', !allowed.includes('revenue'));
     document.getElementById('lt-addon-card-line_push')?.classList.toggle('hidden', !allowed.includes('line_push'));
     document.getElementById('lt-addon-card-contract')?.classList.toggle('hidden', !allowed.includes('contract'));
+
+    // E. 標配開關區若包含加購項目，未開通者直接隱蔽該列開關
+    const portfolioRow = document.getElementById('lt-toggle-portfolio')?.closest('label');
+    if (portfolioRow) portfolioRow.style.display = allowed.includes('portfolio') ? 'flex' : 'none';
+
+    // F. 【這理髮型 / 試算表連動模組閘道】
+    const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
+    if (customSheetsCard) {
+      const storeName = sInfo.store_name || backendData.settings?.storeName || '';
+      const storeSlug = sInfo.slug || '';
+      const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+      const hasSheetsSync = isLifetime && (
+        allowed.includes('sheets_sync') || 
+        allowed.includes('google_sheets') || 
+        allowed.includes('sheets') || 
+        isZheli
+      );
+
+      if (hasSheetsSync) {
+        customSheetsCard.classList.remove('hidden');
+        customSheetsCard.style.setProperty('display', 'block', 'important');
+        const titleEl = document.getElementById('lt-custom-sheets-title');
+        if (titleEl) titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
+      } else {
+        customSheetsCard.classList.add('hidden');
+        customSheetsCard.style.setProperty('display', 'none', 'important');
+      }
+    }
 
   } else {
     // 訂閱版：顯示「方案」，所有功能導覽按鈕全開
     if (navSubBtn) navSubBtn.style.removeProperty('display');
     document.querySelectorAll('#bottom-nav .nav-item').forEach(el => el.style.removeProperty('display'));
+    
+    const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
+    if (customSheetsCard) {
+      customSheetsCard.classList.add('hidden');
+      customSheetsCard.style.setProperty('display', 'none', 'important');
+    }
   }
 
   // 同步連動行銷分頁內部各小區塊
@@ -10632,7 +10492,6 @@ function applyLifetimeModulesStrictGating(storeInfo) {
   // 同步連動代客新增與結單彈窗之按鈕
   syncAddonControlsAvailability();
 }
-
 // ========================================================
 // 3. 代客下單 (page-add) 與 結單彈窗 (checkoutModal) 智慧連動
 // ========================================================
@@ -10665,10 +10524,15 @@ function syncAddonControlsAvailability(hasWallet, hasPackages, hasCoupons) {
   if (depBadge) depBadge.style.display = hasWallet ? 'flex' : 'none';
 }
 
-// 升級結單彈窗初始化：未開通的方案從下拉選單與頂部提示中完全消除
+// ========================================================
+// 【完美整合版】openCheckoutModal — 結單對帳彈窗初始化
+// 結合：模組嚴格權限閘道 + 自動預選備註方案 + BOM出庫預告 + 資產載入
+// ========================================================
 async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle = false) {
+  // 1. 記錄當前結單預約物件
   currentCheckoutBookingObj = { id, name, phone, service, price: Number(price || 0) };
 
+  // 2. 模組授權判定 (買斷版看 allowed_modules；訂閱版看後台開關)
   const store = backendData.storeInfo || {};
   const isLifetime = isStoreLifetime();
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
@@ -10677,21 +10541,28 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
   const hasWallet = isLifetime ? allowed.includes('wallet') : (s.enable_wallet !== false);
   const hasPackages = isLifetime ? allowed.includes('packages') : (s.enable_packages !== false);
 
-  // 1. 基礎文字賦值
-  document.getElementById('chk-modal-name').innerText = name;
-  document.getElementById('chk-modal-phone').innerText = phone;
-  document.getElementById('chk-modal-service').innerText = service;
-  document.getElementById('chk-modal-base-price').innerText = `NT$ ${Number(price || 0).toLocaleString()}`;
-  document.getElementById('check_custom_base_price').value = price || 0;
-  document.getElementById('chk-modal-final-price').value = price || 0;
+  // 3. DOM 基礎文字與金額賦值
+  const modalName = document.getElementById('chk-modal-name');
+  const modalPhone = document.getElementById('chk-modal-phone');
+  const modalService = document.getElementById('chk-modal-service');
+  const modalBasePrice = document.getElementById('chk-modal-base-price');
+  const customBasePrice = document.getElementById('check_custom_base_price');
+  const modalFinalPrice = document.getElementById('chk-modal-final-price');
 
-  // 2. 智慧顯隱頂部資產提示卡
+  if (modalName) modalName.innerText = name;
+  if (modalPhone) modalPhone.innerText = phone;
+  if (modalService) modalService.innerText = service;
+  if (modalBasePrice) modalBasePrice.innerText = `NT$ ${Number(price || 0).toLocaleString()}`;
+  if (customBasePrice) customBasePrice.value = price || 0;
+  if (modalFinalPrice) modalFinalPrice.value = price || 0;
+
+  // 4. 頂部資產提示卡依開通權限顯隱
   const cardBadgeRow = document.getElementById('checkModalCurrentCard')?.closest('div');
   const depBadgeRow = document.getElementById('checkModalCurrentDeposit')?.closest('div');
   if (cardBadgeRow) cardBadgeRow.style.display = hasPackages ? 'flex' : 'none';
   if (depBadgeRow) depBadgeRow.style.display = hasWallet ? 'flex' : 'none';
 
-  // 3. 現場新購方案下拉選單按權限建置
+  // 5. 現場新購方案下拉選單按權限建置
   const pkgGroup = document.getElementById('pkgBuyOptionsGroup');
   const topupGroup = document.getElementById('topupBuyOptionsGroup');
 
@@ -10717,19 +10588,65 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
     topupGroup.style.display = hasWallet ? '' : 'none';
   }
 
-  // 4. 舊有扣抵下拉選單選項依開通顯隱
+  // 6. 舊有扣抵下拉選單選項依開通權限顯隱
   const optCard = document.getElementById('optUseCardDeductText');
   const optDep = document.getElementById('optUseDepositText');
   if (optCard) optCard.style.display = hasPackages ? '' : 'none';
   if (optDep) optDep.style.display = hasWallet ? '' : 'none';
 
-  // 5. 專車接送車資
+  // 7. 自動預選顧客在前台預約時指定的方案或扣抵
+  const currentAppt = (backendData.appointments || []).find(a => String(a.id) === String(id));
+  const combinedNotes = (service || '') + ' ' + (currentAppt?.notes || '');
+  const checkBuySelect = document.getElementById('check_new_buy_select');
+  const checkDiscountSelect = document.getElementById('check_discount_use_select');
+
+  if (checkBuySelect) {
+    checkBuySelect.value = 'none'; // 先重置
+    if (hasPackages && combinedNotes.includes('現場加購包卡') && pkgGroup) {
+      const opt = Array.from(pkgGroup.options).find(o => combinedNotes.includes(o.getAttribute('data-name')));
+      if (opt) {
+        checkBuySelect.value = 'new_pkg';
+        opt.selected = true;
+      }
+    } else if (hasWallet && combinedNotes.includes('現場加購儲值') && topupGroup) {
+      const opt = Array.from(topupGroup.options).find(o => combinedNotes.includes(o.getAttribute('data-name')));
+      if (opt) {
+        checkBuySelect.value = 'new_topup';
+        opt.selected = true;
+      }
+    }
+  }
+
+  if (checkDiscountSelect) {
+    checkDiscountSelect.value = 'none'; // 先重置
+    if (hasPackages && combinedNotes.includes('使用包卡扣抵')) {
+      checkDiscountSelect.value = 'useCard';
+    } else if (hasWallet && combinedNotes.includes('使用儲值扣抵')) {
+      checkDiscountSelect.value = 'useDeposit';
+    }
+  }
+
+  // 8. 專車接送車資輸入列動態顯隱
   const shuttleBox = document.getElementById('checkoutShuttleFeeRow');
   const shuttleInput = document.getElementById('check_shuttle_fee');
   if (shuttleBox) shuttleBox.classList.toggle('hidden', !isNeedShuttle);
   if (shuttleInput) shuttleInput.value = isNeedShuttle ? 200 : 0;
 
-  // 6. 撈取顧客資產並更新 UI
+  // 9. BOM 耗材自動出庫預告清單動態顯示
+  const svcObj = (backendData.services || []).find(s => (service || '').includes(s.name));
+  const bomSection = document.getElementById('checkoutBOMSection');
+  const bomList = document.getElementById('checkoutBOMList');
+
+  if (bomSection && bomList) {
+    if (svcObj && Array.isArray(svcObj.materials) && svcObj.materials.length > 0) {
+      bomSection.classList.remove('hidden');
+      bomList.innerHTML = svcObj.materials.map(m => `<div>• 關聯耗材：<b>${m.name}</b> (預計出庫 -${m.dosage})</div>`).join('');
+    } else {
+      bomSection.classList.add('hidden');
+    }
+  }
+
+  // 10. 非同步撈取顧客包卡與儲值金資產
   let cardPoints = 0;
   let walletBal = 0;
   let discountRate = 1;
@@ -10741,10 +10658,11 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
     ]);
 
     if (pkgs && pkgs.length > 0) {
-      const matched = pkgs.find(p => service.includes(p.service_name)) || pkgs[0];
+      const matched = pkgs.find(p => (service || '').includes(p.service_name)) || pkgs[0];
       cardPoints = matched.remaining_times || 0;
       if (optCard) optCard.innerText = `使用【${matched.service_name}】扣點 (剩餘 ${cardPoints} 點)`;
     }
+
     if (custs && custs.length > 0) {
       walletBal = Number(custs[0].wallet_balance || 0);
       discountRate = Number(custs[0].member_discount || 1);
@@ -10753,12 +10671,17 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
         optDep.setAttribute('data-rate', discountRate);
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn("載入顧客資產異常:", e);
+  }
 
-  document.getElementById('checkModalCurrentCard').innerText = `${cardPoints} 點`;
-  document.getElementById('checkModalCurrentDeposit').innerText = `$${walletBal.toLocaleString()}`;
+  // 11. 更新目前資產 UI 數值
+  const curCardEl = document.getElementById('checkModalCurrentCard');
+  const curDepEl = document.getElementById('checkModalCurrentDeposit');
+  if (curCardEl) curCardEl.innerText = `${cardPoints} 點`;
+  if (curDepEl) curDepEl.innerText = `$${walletBal.toLocaleString()}`;
 
-  // 7. 零售外帶產品下拉
+  // 12. 零售外帶產品下拉選單
   const retailSelect = document.getElementById('checkoutRetailSelect');
   if (retailSelect) {
     const retailItems = allInventoryItems.filter(it => (Array.isArray(it.categories) ? it.categories.includes('零售外帶品') : it.category === '零售外帶品'));
@@ -10766,6 +10689,7 @@ async function openCheckoutModal(id, name, phone, service, price, isNeedShuttle 
       retailItems.map(it => `<option value="${it.id}" data-price="${it.retail_price || 350}">${it.name} (+NT$ ${Number(it.retail_price || 350).toLocaleString()})</option>`).join('');
   }
 
+  // 13. 觸發金額重算並開啟彈窗
   recalcCheckoutTotal();
   document.getElementById('checkoutModal').classList.remove('hidden');
 }
