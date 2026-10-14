@@ -4467,48 +4467,68 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       }
     }
 
-    // 發送推播通知與郵件 (天價消滅：傳入乾淨 price 與 price_range)
+    // ------------------------------------------------------------------------
+    // 1. 整理通訊、設計師代號與服務代碼
+    // ------------------------------------------------------------------------
+    const isNewCust = (document.getElementById('custType')?.value === 'new');
+    const staffVal = document.getElementById('staffName')?.value?.trim() || '';
+    const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
+    
+    // 老闆指定規則：新客不指定 Newno / 新客指定 New指 / 舊客不指定 no / 舊客指定 Solo/Elaine
+    let staffCode = 'no';
+    if (isNewCust) {
+      staffCode = isDesignated ? 'New指' : 'Newno';
+    } else if (isDesignated) {
+      staffCode = staffVal;
+    }
+
+    // 服務代碼判定：C 剪髮 / L 設計長剪 / P 燙髮
+    let shortServiceCode = 'C';
+    const svcUpper = String(sVal || '').toUpperCase();
+    if (svcUpper.includes('燙') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
+      shortServiceCode = 'P';
+    } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪')) {
+      shortServiceCode = 'L';
+    }
+
+    const cleanLineName = guestLineUid || document.getElementById('lineName')?.value.trim() || '';
+    const formattedDate = String(dValRaw || '').replace(/-/g, '/');
+    const targetTime = tVal || '10:00';
+    const sheetId = db.sheets_spreadsheet_id || "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+
+    // ------------------------------------------------------------------------
+    // 2. 發送推播通知與顧客確認郵件 (補齊 email / customer_email 確保收到信件)
+    // ------------------------------------------------------------------------
     try {
       fetch(API_URL, {
-        method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "application/json" },
+        method: "POST",
+        mode: "no-cors",
+        keepalive: true,
+        headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
-          action: "submitBooking", store_id: CURRENT_STORE_ID,
-          data: Object.assign({}, dbPayload, { 
-            date: dValRaw, time: tVal, service: sVal, 
-            price: finalBasePrice, price_range: cleanPriceRangeText,
-            signature_url: signatureBase64 
+          action: "submitBooking",
+          store_id: CURRENT_STORE_ID,
+          data: Object.assign({}, dbPayload, {
+            email: emailVal,
+            customer_email: emailVal,
+            customerEmail: emailVal,
+            date: formattedDate,
+            time: targetTime,
+            service: sVal,
+            price: finalBasePrice,
+            price_range: cleanPriceRangeText,
+            signature_url: signatureBase64
           })
         })
-      }).catch(() => {});
-    } catch(e) {}
+      }).catch(err => console.warn("Email/LINE 通知派發略過:", err));
+    } catch (e) {
+      console.warn("通知封包發送異常:", e);
+    }
 
-    // 🌟 核心同步：前台送單即時派發至 Google 試算表（預約流水總表 + 顧客庫）
+    // ------------------------------------------------------------------------
+    // 3. 試算表三表即時同步 (預約流水總表 + 顧客資料總表 + 每日排程看板)
+    // ------------------------------------------------------------------------
     try {
-      // 1. 判定設計師代號（老闆規則：Newno / New指 / no / 專員名稱）
-      const isNewCust = (document.getElementById('custType')?.value === 'new');
-      const staffVal = document.getElementById('staffName')?.value?.trim() || '';
-      const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
-      
-      let staffCode = 'no'; // 舊客不指定
-      if (isNewCust) {
-        staffCode = isDesignated ? 'New指' : 'Newno'; // 新客：指定 / 不指定
-      } else if (isDesignated) {
-        staffCode = staffVal; // 舊客指定：直接填寫設計師名稱（如 Solo / Elaine）
-      }
-
-      // 2. 判定服務代碼（C 剪髮 / L 設計長剪 / P 燙髮）
-      let shortServiceCode = 'C';
-      const svcUpper = String(sVal || '').toUpperCase();
-      if (svcUpper.includes('燙') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
-        shortServiceCode = 'P';
-      } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪')) {
-        shortServiceCode = 'L';
-      }
-
-      // 3. 取得顧客 LINE 名稱與電話
-      const cleanLineName = guestLineUid || document.getElementById('lineName')?.value.trim() || '';
-
-      // 4. 背景靜默派發至 Google Apps Script Webhook
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -4517,13 +4537,14 @@ document.getElementById('bookForm').onsubmit = async function(e) {
         body: JSON.stringify({
           action: "syncBookingToSheet",
           store_id: CURRENT_STORE_ID,
-          spreadsheet_id: db.sheets_spreadsheet_id || "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ",
+          spreadsheet_id: sheetId,
           transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
-          date: String(dValRaw || '').replace(/-/g, '/'),
-          time: tVal || '10:00',
+          date: formattedDate,
+          time: targetTime,
           staff_name: staffCode,
           customer_name: nameVal,
           phone: phoneVal,
+          customer_email: emailVal,
           line_name: cleanLineName,
           service_code: shortServiceCode,
           service_name: sVal,
@@ -4531,7 +4552,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
           status: "待確認",
           notes: notesArray.join(' | ')
         })
-      }).catch(err => console.warn("試算表背景同步略過:", err));
+      }).catch(err => console.warn("試算表同步派發略過:", err));
     } catch (sheetErr) {
       console.warn("試算表封包組裝失敗:", sheetErr);
     }
