@@ -4490,6 +4490,110 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     btn.innerText = "送出預約申請";
   }
 };
+
+  // ========================================================
+// 🌟 嚴格雙層模組防禦檢驗器 (總管授權 + 店家開關)
+// ========================================================
+function isFeatureActive(moduleKey, settingKey) {
+  const store = storeData?.storeInfo || {};
+  const sCfg = storeData?.settings || {};
+  const isLifetime = (store.plan_type === 'lifetime' || store.plan_status === 'lifetime' || String(store.plan_name || '').includes('買斷'));
+  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
+
+  // 1. 第一層：若為買斷版，總管未加購授權 ➔ 100% 徹底封鎖
+  if (isLifetime && !allowed.includes(moduleKey)) {
+    return false;
+  }
+
+  // 2. 第二層：店家後台自行關閉 ➔ 不顯示
+  if (settingKey && sCfg[settingKey] === false) {
+    return false;
+  }
+
+  return true;
+}
+
+// ========================================================
+// 🌟 套用到前台各模組的顯隱控制
+// ========================================================
+function applyFrontEndModuleVisibility() {
+  // 1. 好評展示牆
+  const reviewSection = document.getElementById('front-reviews-section');
+  if (reviewSection) {
+    reviewSection.style.display = isFeatureActive('reviews', 'enable_reviews') ? 'block' : 'none';
+  }
+
+  // 2. 促銷折扣碼輸入框 (填單區)
+  const couponInputBlock = document.getElementById('front-coupon-input-block');
+  if (couponInputBlock) {
+    couponInputBlock.style.display = isFeatureActive('coupons', 'enable_coupons') ? 'block' : 'none';
+  }
+
+  // 3. 儲值金與包卡折抵選項 (填單結算區)
+  const walletDeductOption = document.getElementById('front-wallet-deduct-option');
+  if (walletDeductOption) {
+    walletDeductOption.style.display = isFeatureActive('wallet', 'enable_wallet') ? 'block' : 'none';
+  }
+  const pkgDeductOption = document.getElementById('front-package-deduct-option');
+  if (pkgDeductOption) {
+    pkgDeductOption.style.display = isFeatureActive('packages', 'enable_packages') ? 'block' : 'none';
+  }
+
+  // 4. 作品集專區
+  const portfolioSection = document.getElementById('front-portfolio-section');
+  if (portfolioSection) {
+    portfolioSection.style.display = isFeatureActive('portfolio', 'enable_portfolio') ? 'block' : 'none';
+  }
+}
+
+  // ========================================================
+// 🌟 前台雙層防禦檢查器 (總管有加購 ＋ 店家有啟用 才算開通)
+// ========================================================
+function isModuleAvailable(moduleKey, settingKey) {
+  const store = storeData?.storeInfo || {};
+  const sCfg = storeData?.settings || {};
+  const isLifetime = (store.plan_type === 'lifetime' || store.plan_status === 'lifetime' || String(store.plan_name || '').includes('買斷'));
+  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
+
+  // 1. 第一關：買斷版店家若總管未開通該模組 ➔ 100% 隱蔽！
+  if (isLifetime && !allowed.includes(moduleKey)) {
+    return false;
+  }
+
+  // 2. 第二關：店家在後台主動關閉該功能 ➔ 隱蔽！
+  if (settingKey && sCfg[settingKey] === false) {
+    return false;
+  }
+
+  return true;
+}
+
+// 在前台渲染頁面時套用：
+function renderFrontEndSections() {
+  // 1. 好評輪播牆：未加購 reviews 絕對不出現
+  const reviewSection = document.getElementById('front-reviews-container');
+  if (reviewSection) {
+    reviewSection.style.display = isModuleAvailable('reviews', 'enable_reviews') ? 'block' : 'none';
+  }
+
+  // 2. 折扣碼輸入框：未加購 coupons 絕對不出現
+  const couponInputBox = document.getElementById('front-coupon-wrapper');
+  if (couponInputBox) {
+    couponInputBox.style.display = isModuleAvailable('coupons', 'enable_coupons') ? 'block' : 'none';
+  }
+
+  // 3. 儲值金折抵：未加購 wallet 絕對不出現
+  const walletDeductBox = document.getElementById('front-wallet-deduct-wrapper');
+  if (walletDeductBox) {
+    walletDeductBox.style.display = isModuleAvailable('wallet', 'enable_wallet') ? 'block' : 'none';
+  }
+
+  // 4. 包卡核銷折抵：未加購 packages 絕對不出現
+  const packageDeductBox = document.getElementById('front-package-deduct-wrapper');
+  if (packageDeductBox) {
+    packageDeductBox.style.display = isModuleAvailable('packages', 'enable_packages') ? 'block' : 'none';
+  }
+}
 </script>
 </body>
 </html>
