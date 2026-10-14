@@ -4474,92 +4474,90 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const staffVal = document.getElementById('staffName')?.value?.trim() || '';
     const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
     
-    // 老闆專屬代碼：新客不指定 Newno / 新客指定 New指 / 舊客不指定 no / 舊客指定 Solo/Elaine
+    // 【老闆專屬代碼規則落實】：
+    // 新客不指定 -> Newno
+    // 新客指定   -> 若指定 Elaine 記為 New指(Elaine) 供看板精準分流至 F~G 欄；指定 Solo 或其他記為 New指
+    // 舊客不指定 -> no
+    // 舊客指定   -> 直接填寫專員名稱 (例如: Solo, Elaine)
     let staffCode = 'no';
     if (isNewCust) {
-      staffCode = isDesignated ? 'New指' : 'Newno';
+      if (isDesignated) {
+        staffCode = staffVal.includes('Elaine') ? 'New指(Elaine)' : 'New指';
+      } else {
+        staffCode = 'Newno';
+      }
     } else if (isDesignated) {
       staffCode = staffVal;
     }
 
-    // 服務代碼判定：C 剪髮 / L 設計長剪 / P 燙髮
+    // 【服務代碼轉換規則落實】：剪髮 C、長剪 L、燙髮/縮毛 P
     let shortServiceCode = 'C';
     const svcUpper = String(sVal || '').toUpperCase();
-    if (svcUpper.includes('燙') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
+    if (svcUpper.includes('燙') || svcUpper.includes('縮毛') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
       shortServiceCode = 'P';
-    } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪')) {
+    } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪') || svcUpper.includes('長剪')) {
       shortServiceCode = 'L';
+    } else {
+      shortServiceCode = 'C';
     }
 
     const cleanLineName = guestLineUid || document.getElementById('lineName')?.value.trim() || '';
     const formattedDate = String(dValRaw || '').replace(/-/g, '/');
-    const targetTime = tVal || '10:00';
-    // 確保電話開頭帶 0 (10 碼)
+    const targetTime = tVal || '11:00';
+
+    // 手機號碼格式化：強制補齊開頭 0 (10 碼)，避免試算表吃掉 0
     let safePhone = String(phoneVal || '').replace(/\D/g, '');
     if (safePhone.length === 9 && safePhone.startsWith('9')) safePhone = '0' + safePhone;
 
+    // 判斷當前是否為「這理髮型」或有客製試算表的店家（落實多租戶隔離）
+    const isZheliStore = (CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb') || (db.storeName && db.storeName.includes('這理'));
+    const targetSpreadsheetId = db.sheets_spreadsheet_id || (isZheliStore ? "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ" : null);
+
     // ------------------------------------------------------------------------
-    // 2. 發送推播通知與顧客確認郵件 (補齊 email / customer_email，徹底解決信件漏寄)
+    // 2. 單一原子 Webhook 派發（發送確認信 + 試算表三表同步 + LINE通知）
     // ------------------------------------------------------------------------
+    const webhookPayload = {
+      action: "submitBooking",
+      store_id: CURRENT_STORE_ID,
+      store_name: db.storeName || "這理髮型",
+      spreadsheet_id: targetSpreadsheetId, // 非試算表店家為 null，GAS 自動略過試算表寫入
+      transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
+      date: formattedDate,
+      time: targetTime,
+      staff_name: staffCode,
+      customer_name: nameVal,
+      phone: safePhone,
+      customer_phone: safePhone,
+      email: emailVal,
+      customer_email: emailVal,
+      customerEmail: emailVal,
+      line_name: cleanLineName,
+      service_code: shortServiceCode,
+      service_name: sVal,
+      service: sVal,
+      price: Number(finalBasePrice || 0),
+      final_price: Number(finalBasePrice || 0),
+      price_range: cleanPriceRangeText,
+      signature_url: signatureBase64,
+      status: "待確認",
+      notes: notesArray.join(' | ')
+    };
+
     try {
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         keepalive: true,
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 🌟 避開 Preflight 阻斷
-        body: JSON.stringify({
-          action: "submitBooking",
-          store_id: CURRENT_STORE_ID,
-          data: Object.assign({}, dbPayload, {
-            email: emailVal,
-            customer_email: emailVal,
-            customerEmail: emailVal,
-            date: formattedDate,
-            time: targetTime,
-            service: sVal,
-            price: finalBasePrice,
-            price_range: cleanPriceRangeText,
-            signature_url: signatureBase64
-          })
-        })
-      }).catch(err => console.warn("Email/LINE 通知派發略過:", err));
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 避免 CORS Preflight 阻斷
+        body: JSON.stringify(webhookPayload)
+      }).catch(err => console.warn("GAS Webhook 派發略過:", err));
     } catch (e) {
       console.warn("通知封包發送異常:", e);
     }
 
     // ------------------------------------------------------------------------
-    // 3. 試算表即時同步 (寫入預約流水總表 + 顧客資料總表)
+    // 3. 成功預約畫面導向與訂金提示
     // ------------------------------------------------------------------------
-    try {
-      fetch(API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        keepalive: true,
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 🌟 避開 Preflight 阻斷
-        body: JSON.stringify({
-          action: "syncBookingToSheet",
-          store_id: CURRENT_STORE_ID,
-          spreadsheet_id: "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ", // 這理排程表 ID
-          transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
-          date: formattedDate,
-          time: targetTime,
-          staff_name: staffCode,
-          customer_name: nameVal,
-          phone: safePhone,
-          customer_email: emailVal,
-          line_name: cleanLineName,
-          service_code: shortServiceCode,
-          service_name: sVal,
-          final_price: Number(finalBasePrice || 0),
-          status: "待確認",
-          notes: notesArray.join(' | ')
-        })
-      }).catch(err => console.warn("試算表同步派發略過:", err));
-    } catch (sheetErr) {
-      console.warn("試算表封包組裝失敗:", sheetErr);
-    }
-    
-    // 成功畫面導向
     const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
 
     if (isNeedDeposit && db.depositAmount > 0 && !isReportedDeposit) {
@@ -4575,7 +4573,9 @@ document.getElementById('bookForm').onsubmit = async function(e) {
             </div>
           </div>
         `,
-        icon: 'info', confirmButtonText: '已完成匯款，送出後五碼', confirmButtonColor: '#8C7355',
+        icon: 'info',
+        confirmButtonText: '已完成匯款，送出後五碼',
+        confirmButtonColor: '#8C7355',
         preConfirm: () => document.getElementById('swal-deposit-last5')?.value.trim()
       }).then(async (r) => {
         if (r.value && newBookingId) {
@@ -4589,58 +4589,53 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       document.getElementById('success-screen').classList.remove('hidden');
     }
   } catch (err) {
-    Swal.fire('預約傳送失敗', err.message, 'error');
+    console.error("預約送單失敗:", err);
+    Swal.fire('預約傳送失敗', err.message || '連線逾時，請稍後重試', 'error');
     btn.disabled = false;
     btn.innerText = "送出預約申請";
   }
 };
-
+    
   // ========================================================
-// 🌟 前台雙層防禦檢查器 (總管有加購 ＋ 店家有啟用 才算開通)
+// 🌟 前台雙層防禦檢查器 (相容全域 db 物件)
 // ========================================================
 function isModuleAvailable(moduleKey, settingKey) {
-  const store = storeData?.storeInfo || {};
-  const sCfg = storeData?.settings || {};
-  const isLifetime = (store.plan_type === 'lifetime' || store.plan_status === 'lifetime' || String(store.plan_name || '').includes('買斷'));
-  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
+  const isLifetime = Boolean(db?.isLifetime);
+  const allowed = Array.isArray(db?.allowedModules) ? db.allowedModules : [];
 
-  // 1. 第一關：買斷版店家若總管未開通該模組 ➔ 100% 隱蔽！
+  // 1. 第一關：買斷版店家若總管未開通該模組 ➔ 100% 隱蔽
   if (isLifetime && !allowed.includes(moduleKey)) {
     return false;
   }
 
-  // 2. 第二關：店家在後台主動關閉該功能 ➔ 隱蔽！
-  if (settingKey && sCfg[settingKey] === false) {
+  // 2. 第二關：店家在後台主動關閉該功能 ➔ 隱蔽
+  if (settingKey && db && db[settingKey] === false) {
     return false;
   }
 
   return true;
 }
 
-// 在前台渲染頁面時套用：
+// 在前台渲染頁面時套用模組顯隱
 function renderFrontEndSections() {
-  // 1. 好評輪播牆：未加購 reviews 絕對不出現
-  const reviewSection = document.getElementById('front-reviews-container');
+  const reviewSection = document.getElementById('reviewWallSection');
   if (reviewSection) {
-    reviewSection.style.display = isModuleAvailable('reviews', 'enable_reviews') ? 'block' : 'none';
+    reviewSection.style.display = isModuleAvailable('reviews', 'enableReviews') ? 'block' : 'none';
   }
 
-  // 2. 折扣碼輸入框：未加購 coupons 絕對不出現
-  const couponInputBox = document.getElementById('front-coupon-wrapper');
+  const couponInputBox = document.getElementById('section-marketing-coupon');
   if (couponInputBox) {
-    couponInputBox.style.display = isModuleAvailable('coupons', 'enable_coupons') ? 'block' : 'none';
+    couponInputBox.style.display = isModuleAvailable('coupons', 'enableCoupons') ? 'block' : 'none';
   }
 
-  // 3. 儲值金折抵：未加購 wallet 絕對不出現
-  const walletDeductBox = document.getElementById('front-wallet-deduct-wrapper');
+  const walletDeductBox = document.getElementById('section-marketing-wallet');
   if (walletDeductBox) {
-    walletDeductBox.style.display = isModuleAvailable('wallet', 'enable_wallet') ? 'block' : 'none';
+    walletDeductBox.style.display = isModuleAvailable('wallet', 'enableWallet') ? 'block' : 'none';
   }
 
-  // 4. 包卡核銷折抵：未加購 packages 絕對不出現
-  const packageDeductBox = document.getElementById('front-package-deduct-wrapper');
+  const packageDeductBox = document.getElementById('section-marketing-packages');
   if (packageDeductBox) {
-    packageDeductBox.style.display = isModuleAvailable('packages', 'enable_packages') ? 'block' : 'none';
+    packageDeductBox.style.display = isModuleAvailable('packages', 'enablePackages') ? 'block' : 'none';
   }
 }
 </script>
