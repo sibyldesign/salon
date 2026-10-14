@@ -4482,58 +4482,58 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       }).catch(() => {});
     } catch(e) {}
 
-    // 🌟 核心補齊：前台送單即時派發至 Google 試算表（預約流水總表 + 顧客庫）
+    // 🌟 核心同步：前台送單即時派發至 Google 試算表（預約流水總表 + 顧客庫）
     try {
-      // 1. 判斷新客/舊客與指定/不指定代號
+      // 1. 判定設計師代號（老闆規則：Newno / New指 / no / 專員名稱）
       const isNewCust = (document.getElementById('custType')?.value === 'new');
-      const isDesignated = (document.getElementById('staffId')?.value !== 'all' && document.getElementById('staffName')?.value !== '不指定');
+      const staffVal = document.getElementById('staffName')?.value?.trim() || '';
+      const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
       
-      let staffCode = 'no'; // 預設：舊客不指定
-      if (isNewCust && !isDesignated) {
-        staffCode = 'Newno'; // 新客不指定
-      } else if (isNewCust && isDesignated) {
-        staffCode = 'New指'; // 新客指定
-      } else if (!isNewCust && !isDesignated) {
-        staffCode = 'no';    // 舊客不指定
-      } else {
-        staffCode = document.getElementById('staffName')?.value || 'Solo'; // 舊客指定直接填設計師名
+      let staffCode = 'no'; // 舊客不指定
+      if (isNewCust) {
+        staffCode = isDesignated ? 'New指' : 'Newno'; // 新客：指定 / 不指定
+      } else if (isDesignated) {
+        staffCode = staffVal; // 舊客指定：直接填寫設計師名稱（如 Solo / Elaine）
       }
 
-      // 2. 判斷服務代碼 C / L / P
+      // 2. 判定服務代碼（C 剪髮 / L 設計長剪 / P 燙髮）
       let shortServiceCode = 'C';
-      const svcUpper = sVal.toUpperCase();
+      const svcUpper = String(sVal || '').toUpperCase();
       if (svcUpper.includes('燙') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
         shortServiceCode = 'P';
       } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪')) {
         shortServiceCode = 'L';
-      } else {
-        shortServiceCode = 'C';
       }
 
-      // 3. 發送至 Google Apps Script Webhook
+      // 3. 取得顧客 LINE 名稱與電話
+      const cleanLineName = guestLineUid || document.getElementById('lineName')?.value.trim() || '';
+
+      // 4. 背景靜默派發至 Google Apps Script Webhook
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
+        keepalive: true,
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({
           action: "syncBookingToSheet",
           store_id: CURRENT_STORE_ID,
+          spreadsheet_id: db.sheets_spreadsheet_id || "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ",
           transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
-          date: dValRaw.replace(/-/g, '/'),
-          time: tVal,
-          staff_name: staffCode, // 🌟 填入老闆要求的 Newno / New指 / no / 設計師名
+          date: String(dValRaw || '').replace(/-/g, '/'),
+          time: tVal || '10:00',
+          staff_name: staffCode,
           customer_name: nameVal,
           phone: phoneVal,
-          line_name: guestLineUid || document.getElementById('lineName')?.value.trim() || '',
-          service_code: shortServiceCode, // 🌟 C / L / P
+          line_name: cleanLineName,
+          service_code: shortServiceCode,
           service_name: sVal,
-          final_price: finalBasePrice,
+          final_price: Number(finalBasePrice || 0),
           status: "待確認",
           notes: notesArray.join(' | ')
         })
       }).catch(err => console.warn("試算表背景同步略過:", err));
-    } catch(sheetErr) {
-      console.warn("試算表派發失敗:", sheetErr);
+    } catch (sheetErr) {
+      console.warn("試算表封包組裝失敗:", sheetErr);
     }
     
     // 成功畫面導向
