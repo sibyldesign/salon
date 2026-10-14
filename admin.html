@@ -924,17 +924,6 @@
     <!-- 分頁 11. 行銷中心 (page-marketing) 支援細粒度模組獨立開關 -->
 <div id="page-marketing" class="page space-y-5 full-admin-only" style="display: none;">
 
-  <!-- 通用前台規則說明區 (任一營銷模組開通即展示) -->
-  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
-    <div class="flex justify-between items-center">
-      <label class="font-bold text-brand-900 flex items-center gap-1.5">
-        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「活動與方案使用說明」文字內容編輯
-      </label>
-      <button onclick="savePromoRulesText()" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition">儲存說明內容</button>
-    </div>
-    <textarea id="cfg-promo-rules-input" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed" placeholder="輸入前台活動區塊規則說明..."></textarea>
-  </div>
-
   <!-- ========================================== -->
   <!-- 模組區塊 1：會員儲值金體系 (wallet) -->
   <!-- ========================================== -->
@@ -1248,6 +1237,22 @@
     </button>
   </div>
 
+  <!-- 通用前台規則說明區 (買斷版設定專用) -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
+    <div class="flex justify-between items-center">
+      <label class="font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「活動與方案使用說明」文字內容編輯
+      </label>
+      <button type="button" onclick="savePromoRulesText('lt')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition hover:bg-[#7A6246]">
+        儲存說明內容
+      </button>
+    </div>
+    <textarea id="lt-promo-rules-input" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明，例如：
+• 預約請準時抵達，為您保留 10 分鐘。
+• 如需改期請提前 24 小時告知店家。"></textarea>
+    <p class="text-[10px] text-gray-400">※ 即時連動前台「本月活動」說明卡片，未開通行銷模組之店家亦可在此編輯。</p>
+  </div>
+  
   <!-- 2. 門市營業時段、排班間隔與公休日 (標配) -->
   <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
     <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -8366,11 +8371,17 @@ if (peakChartBox) {
       });
     }
 
-    async function savePromoRulesText() {
-      const val = document.getElementById('cfg-promo-rules-input').value.trim();
-      await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: val });
-      Swal.fire('說明內容已儲存！', '', 'success');
-    }
+    async function savePromoRulesText(prefix = '') {
+  const inputId = (prefix === 'lt') ? 'lt-promo-rules-input' : 'cfg-promo-rules-input';
+  const val = document.getElementById(inputId)?.value.trim() || '';
+
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: val });
+  if (backendData.settings) {
+    backendData.settings.promoRulesText = val;
+    backendData.settings.promo_rules_text = val;
+  }
+  Swal.fire({ title: '說明內容已儲存！', icon: 'success', timer: 1000, showConfirmButton: false });
+}
 
     // ==========================================
     // 17. 顧客好評審核牆與特色標籤管理
@@ -10067,6 +10078,7 @@ function populateLifetimeSettings() {
   setVal('lt-deposit-report-mode', s.depositReportMode || 'both');
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
+  setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
 
   // 2. 標配前台開關（精確讀取 false）
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
@@ -10256,6 +10268,7 @@ async function saveLifetimeStoreSettings() {
     map_url: document.getElementById('lt-map')?.value.trim() || '',
     theme_color: selectedTheme,
     weekly_off_days: weeklyOff,
+    promo_rules_text: document.getElementById('lt-promo-rules')?.value.trim() || '',
     
     // 營業時間動態儲存
     shift_start_time: chosenStartTime,
@@ -10338,6 +10351,7 @@ async function saveLifetimeStoreSettings() {
     backendData.settings.sheets_gas_url = gasUrl;
     backendData.settings.enable_sheets_sync = enableSheetsSync;
     backendData.settings.enable_sheets_cust_sync = enableSheetsCustSync;
+    backendData.settings.promoRulesText = payload.promo_rules_text;
 
     markLifetimeSettingsSaved();
     Swal.fire({ title: '買斷版設定已成功儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
@@ -10398,7 +10412,7 @@ function applyMarketingInnerSectionsGating() {
 }
 
 // ========================================================
-// 【唯一定義】買斷版全域嚴格模組權限閘道 (保持在腳本底部)
+// 🌟 全系統模組嚴格閘道（排班永久常駐標配，絕不隱藏！）
 // ========================================================
 function applyLifetimeModulesStrictGating(storeInfo) {
   const sInfo = storeInfo || backendData.storeInfo;
@@ -10410,76 +10424,106 @@ function applyLifetimeModulesStrictGating(storeInfo) {
 
   const navSubBtn = document.getElementById('nav-btn-subscription');
 
+  // 通用輔助隱藏函式
+  const setNavVisible = (selector, isVisible) => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.style.setProperty('display', isVisible ? 'flex' : 'none', 'important');
+    });
+  };
+
   if (isLifetime) {
+    // ----------------------------------------------------
     // A. 買斷版徹底隱藏「方案與訂閱」
+    // ----------------------------------------------------
     if (navSubBtn) navSubBtn.style.setProperty('display', 'none', 'important');
 
-    // B. 各底部分頁依授權顯隱
-    const navMap = {
-      'shift': '[onclick*="\'shift\'"]',
-      'inventory': '[onclick*="\'inventory\'"]',
-      'revenue': '[onclick*="\'revenue\'"], [onclick*="\'transactions\'"]',
-      'care': '[onclick*="\'care\'"]',
-      'reviews': '[onclick*="\'reviews\'"]',
-      'slots': '[onclick*="\'slots\'"]',
-      'pets': '#nav-btn-pets',
-      'boarding': '#nav-btn-boarding'
-    };
+    // ----------------------------------------------------
+    // B. 【核心修正】：底部分頁導覽列（標配永久顯示，加購嚴格過濾）
+    // ----------------------------------------------------
+    // 1. 核心標配：日曆、名單、排班、服務、查詢、新增、設定（永久常駐，絕不隱藏）
+    setNavVisible('[onclick*="\'calendar\'"]', true);
+    setNavVisible('[onclick*="\'customer\'"]', true);
+    setNavVisible('[data-admin-module="shift"], [onclick*="\'shift\'"]', true); // 🌟 保證排班分頁永久在線！
+    setNavVisible('[data-admin-module="services"], [onclick*="\'services\'"]', true);
+    setNavVisible('[onclick*="\'search\'"]', true);
+    setNavVisible('[onclick*="\'add\'"]', true);
+    setNavVisible('[onclick*="routeToSettingsPage"]', true);
 
-    Object.keys(navMap).forEach(modKey => {
-      let isAllowed = allowed.includes(modKey);
-      if (activeMode === 'beauty' && (modKey === 'pets' || modKey === 'boarding')) isAllowed = false;
-      if (activeMode === 'pet_grooming' && modKey === 'boarding') isAllowed = false;
+    // 2. 加購模組分頁：總管有開通才顯示
+    setNavVisible('[data-admin-module="inventory"], [onclick*="\'inventory\'"]', allowed.includes('inventory'));
+    setNavVisible('[data-admin-module="revenue"], [onclick*="\'revenue\'"], [onclick*="\'transactions\'"]', allowed.includes('revenue'));
+    setNavVisible('[data-admin-module="care"], [onclick*="\'care\'"]', allowed.includes('care'));
+    setNavVisible('[data-admin-module="reviews"], [onclick*="\'reviews\'"]', allowed.includes('reviews'));
+    setNavVisible('[data-admin-module="slots"], [onclick*="\'slots\'"]', allowed.includes('slots'));
 
-      document.querySelectorAll(navMap[modKey]).forEach(el => {
-        el.style.setProperty('display', isAllowed ? '' : 'none', 'important');
-      });
-    });
+    // 3. 寵物專屬分頁（需同時符合模式與模組開通）
+    setNavVisible('#nav-btn-pets', (activeMode !== 'beauty') && allowed.includes('pets'));
+    setNavVisible('#nav-btn-boarding', (activeMode === 'pet_hotel') && allowed.includes('boarding'));
 
-    // C. 行銷分頁底層按鈕開關 (儲值、包卡、折扣碼任一開通才顯示)
+    // 4. 行銷大分頁按鈕：儲值、包卡、折扣碼「至少開通一項」才出現
     const hasAnyMarketing = allowed.includes('wallet') || allowed.includes('packages') || allowed.includes('coupons');
-    document.querySelectorAll('[onclick*="\'marketing\'"]').forEach(el => {
-      el.style.setProperty('display', hasAnyMarketing ? '' : 'none', 'important');
-    });
+    setNavVisible('[data-admin-module="marketing_tools"], [onclick*="\'marketing\'"]', hasAnyMarketing);
 
-    // D. 買斷設定分頁常規加購卡片顯隱 (未開通連卡片都隱形)
-    document.getElementById('lt-addon-card-revenue')?.classList.toggle('hidden', !allowed.includes('revenue'));
-    document.getElementById('lt-addon-card-line_push')?.classList.toggle('hidden', !allowed.includes('line_push'));
-    document.getElementById('lt-addon-card-contract')?.classList.toggle('hidden', !allowed.includes('contract'));
+    // ----------------------------------------------------
+    // C. 行銷分頁內部 (#page-marketing)：未開通的卡片連根拔除
+    // ----------------------------------------------------
+    const hideBlock = (id, isVisible) => {
+      const el = document.getElementById(id);
+      if (el) el.style.setProperty('display', isVisible ? 'block' : 'none', 'important');
+    };
+    hideBlock('mkt-block-wallet', allowed.includes('wallet'));
+    hideBlock('mkt-block-packages', allowed.includes('packages'));
+    hideBlock('mkt-block-coupons', allowed.includes('coupons'));
 
-    // E. 標配開關區若包含加購項目，未開通者直接隱蔽該列開關
-    const portfolioRow = document.getElementById('lt-toggle-portfolio')?.closest('label');
-    if (portfolioRow) portfolioRow.style.display = allowed.includes('portfolio') ? 'flex' : 'none';
+    // ----------------------------------------------------
+    // D. 買斷設定頁 (#page-settings-lifetime) 中的加購卡片顯隱
+    // ----------------------------------------------------
+    const toggleCard = (id, isVisible) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.toggle('hidden', !isVisible);
+        el.style.setProperty('display', isVisible ? 'block' : 'none', 'important');
+      }
+    };
+    toggleCard('lt-addon-card-revenue', allowed.includes('revenue'));
+    toggleCard('lt-addon-card-line_push', allowed.includes('line_push'));
+    toggleCard('lt-addon-card-contract', allowed.includes('contract'));
 
-    // F. 【這理髮型 / 試算表連動模組閘道】
+    // ----------------------------------------------------
+    // E. 開關列深度隱藏（未加購的項目，連開關的整行標籤都抹除）
+    // ----------------------------------------------------
+    const hideToggleRow = (inputCheckboxId, isVisible) => {
+      const cb = document.getElementById(inputCheckboxId);
+      const row = cb ? cb.closest('label') : null;
+      if (row) {
+        row.style.setProperty('display', isVisible ? 'flex' : 'none', 'important');
+      }
+    };
+    hideToggleRow('lt-toggle-portfolio', allowed.includes('portfolio'));
+    hideToggleRow('lt-toggle-care', allowed.includes('care'));
+
+    // ----------------------------------------------------
+    // F. 這理髮型試算表連動模組閘道
+    // ----------------------------------------------------
     const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
     if (customSheetsCard) {
       const storeName = sInfo.store_name || backendData.settings?.storeName || '';
       const storeSlug = sInfo.slug || '';
       const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
-      const hasSheetsSync = isLifetime && (
-        allowed.includes('sheets_sync') || 
-        allowed.includes('google_sheets') || 
-        allowed.includes('sheets') || 
-        isZheli
-      );
-
-      if (hasSheetsSync) {
-        customSheetsCard.classList.remove('hidden');
-        customSheetsCard.style.setProperty('display', 'block', 'important');
-        const titleEl = document.getElementById('lt-custom-sheets-title');
-        if (titleEl) titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
-      } else {
-        customSheetsCard.classList.add('hidden');
-        customSheetsCard.style.setProperty('display', 'none', 'important');
-      }
+      const hasSheets = allowed.includes('sheets_sync') || allowed.includes('google_sheets') || allowed.includes('sheets') || isZheli;
+      toggleCard('custom-addon-hair-sheets-sync', hasSheets);
     }
 
   } else {
-    // 訂閱版：顯示「方案」，所有功能導覽按鈕全開
+    // ----------------------------------------------------
+    // 訂閱版：方案按鈕恢復顯示，所有功能導覽按鈕 100% 全開
+    // ----------------------------------------------------
     if (navSubBtn) navSubBtn.style.removeProperty('display');
-    document.querySelectorAll('#bottom-nav .nav-item').forEach(el => el.style.removeProperty('display'));
-    
+    document.querySelectorAll('#bottom-nav .nav-item').forEach(el => {
+      el.style.removeProperty('display');
+    });
+
+    // 訂閱版不顯示特定客製試算表卡片
     const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
     if (customSheetsCard) {
       customSheetsCard.classList.add('hidden');
@@ -10487,10 +10531,8 @@ function applyLifetimeModulesStrictGating(storeInfo) {
     }
   }
 
-  // 同步連動行銷分頁內部各小區塊
-  applyMarketingInnerSectionsGating();
-  // 同步連動代客新增與結單彈窗之按鈕
-  syncAddonControlsAvailability();
+  // 同步連動代客新增與結單彈窗之加購選項
+  syncAddonControlsAvailability(allowed.includes('wallet'), allowed.includes('packages'), allowed.includes('coupons'));
 }
 // ========================================================
 // 3. 代客下單 (page-add) 與 結單彈窗 (checkoutModal) 智慧連動
