@@ -1327,6 +1327,20 @@ function applyIndustryModeUI(mode) {
       const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
       const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
+      // 🌟 核心防禦：判定是否為買斷版與總管授權清單
+      const isLifetime = Boolean(
+        sInfo.plan_type === 'lifetime' || 
+        sInfo.plan_status === 'lifetime' || 
+        String(sInfo.plan_name || '').includes('買斷')
+      );
+      const allowed = Array.isArray(sInfo.allowed_modules) ? sInfo.allowed_modules : [];
+
+      // 🌟 雙層鎖定檢驗器：買斷版若總管未開通，直接強制 false！店家後台開關完全失效
+      const checkModule = (modKey, cfgVal, defaultVal = false) => {
+        if (isLifetime && !allowed.includes(modKey)) return false;
+        return parseBoolStrict(cfgVal, defaultVal);
+      };
+
       const dbThemeCfg = sCfg.theme_color || sCfg.themeColor;
       const dbThemeStore = sInfo.theme_color || sInfo.themeColor;
       const localCachedTheme = localStorage.getItem('zy_cached_theme');
@@ -1370,81 +1384,92 @@ function applyIndustryModeUI(mode) {
       })) : DEFAULT_SERVICES;
 
       Object.assign(db, {
-      storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
-      subtitle: sCfg.display_subtitle || "專業門市服務",
-      themeColor: resolvedTheme,
-      industryType: rawMode,
-      enableLogo: sCfg.enable_logo !== false,
-      logoUrl: sCfg.logo_url || "",
-      storePhone: sCfg.store_phone || "",
-      promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-      promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
-        "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
-      ],
-      address: sCfg.address || "門市服務據點",
-      businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
-      bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
-      careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
+        storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
+        subtitle: sCfg.display_subtitle || "專業門市服務",
+        themeColor: resolvedTheme,
+        industryType: rawMode,
+        enableLogo: sCfg.enable_logo !== false,
+        logoUrl: sCfg.logo_url || "",
+        storePhone: sCfg.store_phone || "",
+        promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
+        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
+          "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
+        ],
+        address: sCfg.address || "門市服務據點",
+        businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
+        bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
+        careText: sCfg.care_text || "服務完成後請保持清潔乾燥。",
         pet_profile_questions: sCfg.pet_profile_questions || [],
-front_stay_notice: sCfg.front_stay_notice || '',
-enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
-      ig: sCfg.ig_url || "#",
-      line: sCfg.line_url || "#",
-      map: sCfg.map_url || "#",
-      
-      // 行銷與功能開關 (嚴格判定：確保後台取消勾選時，前台能精準識別為 false)
-      enableEmailCopy: sCfg.enable_email_copy !== false,
-      enableDeposit: sCfg.enable_deposit === true,
-      depositMode: sCfg.deposit_mode || 'all',
-      depositAmount: Number(sCfg.deposit_amount || 0),
-      depositInfo: sCfg.deposit_info || '',
-      enableStaffSelect: sCfg.enable_staff_select !== false,
-      enableFeaturedShop: sCfg.enable_featured_shop === true,
-      enableShowPrice: sCfg.enable_show_price !== false,
-      enableCustNotes: sCfg.enable_cust_notes !== false,
-      enableContract: sCfg.enable_contract === true,
-      
-      // 獨立行銷模組開關 (明確以 === true 或 !== false 控管)
-      enableWallet: (sCfg.enable_wallet === true || sCfg.enableWallet === true),
-      enablePackages: (sCfg.enable_packages === true || sCfg.enablePackages === true),
-      enableCoupons: (sCfg.enable_coupons === true || sCfg.enableCoupons === true),
-      enablePortfolio: sCfg.enable_portfolio !== false,
-      enableReviews: sCfg.enable_reviews !== false,
-      enableCare: sCfg.enable_care !== false,
-      enableCarousel: sCfg.enable_carousel !== false,
+        front_stay_notice: sCfg.front_stay_notice || '',
+        enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
+        ig: sCfg.ig_url || "#",
+        line: sCfg.line_url || "#",
+        map: sCfg.map_url || "#",
+        
+        // 標配開關
+        enableEmailCopy: sCfg.enable_email_copy !== false,
+        enableDeposit: sCfg.enable_deposit === true,
+        depositMode: sCfg.deposit_mode || 'all',
+        depositAmount: Number(sCfg.deposit_amount || 0),
+        depositInfo: sCfg.deposit_info || '',
+        enableStaffSelect: sCfg.enable_staff_select !== false,
+        enableFeaturedShop: sCfg.enable_featured_shop === true,
+        enableShowPrice: sCfg.enable_show_price !== false,
+        enableCustNotes: sCfg.enable_cust_notes !== false,
 
-      contractTitle: sCfg.contract_title || '線上定型化服務契約書',
-      contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
-      promoRulesText: sCfg.promo_rules_text || '',
-      walletRules: sCfg.wallet_rules || [],
-      packageRules: sCfg.package_rules || [],
-      staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
-      staffSchedules: sCfg.staff_schedules || {},
-      shiftStartTime: sCfg.shift_start_time || "09:00",
-      shiftEndTime: sCfg.shift_end_time || "19:00",
-      shiftInterval: Number(sCfg.shift_interval || 30),
-      services: formattedServices,
-      portfolio: portfolios || [],
-      availableDates: availableDates,
-      futureBookings: bookings || [],
-      boardingSettings: sCfg.boarding_settings || {},
-      boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
-      hotelRoomTiers: sCfg.hotel_room_tiers || [],
-      hotelMealOptions: sCfg.hotel_meal_options || [],
-      petCustomFields: sCfg.pet_custom_fields || {}
-    });
+        // 🌟 核心防禦：加購模組經過總管 allowed_modules 審查，未開通一律強制為 false
+        enableWallet: checkModule('wallet', sCfg.enable_wallet ?? sCfg.enableWallet, false),
+        enablePackages: checkModule('packages', sCfg.enable_packages ?? sCfg.enablePackages, false),
+        enableCoupons: checkModule('coupons', sCfg.enable_coupons ?? sCfg.enableCoupons, false),
+        enableReviews: checkModule('reviews', sCfg.enable_reviews ?? sCfg.enableReviews, false),
+        enablePortfolio: checkModule('portfolio', sCfg.enable_portfolio ?? sCfg.enablePortfolio, true),
+        enableContract: checkModule('contract', sCfg.enable_contract ?? sCfg.enableContract, false),
+        enableCare: checkModule('care', sCfg.enable_care ?? sCfg.enableCare, true),
+        enableCarousel: sCfg.enable_carousel !== false,
+
+        contractTitle: sCfg.contract_title || '線上定型化服務契約書',
+        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
+        promoRulesText: sCfg.promo_rules_text || '',
+        walletRules: sCfg.wallet_rules || [],
+        packageRules: sCfg.package_rules || [],
+        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
+        staffSchedules: sCfg.staff_schedules || {},
+        shiftStartTime: sCfg.shift_start_time || "09:00",
+        shiftEndTime: sCfg.shift_end_time || "19:00",
+        shiftInterval: Number(sCfg.shift_interval || 30),
+        services: formattedServices,
+        portfolio: portfolios || [],
+        availableDates: availableDates,
+        futureBookings: bookings || [],
+        boardingSettings: sCfg.boarding_settings || {},
+        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
+        hotelRoomTiers: sCfg.hotel_room_tiers || [],
+        hotelMealOptions: sCfg.hotel_meal_options || [],
+        petCustomFields: sCfg.pet_custom_fields || {}
+      });
+
       renderStoreUI();
-      loadApprovedReviews();
+
+      // 🌟 好評牆防禦：只有總管開通且店家開啟時才載入與顯示，否則強制隱藏
+      if (db.enableReviews) {
+        loadApprovedReviews();
+      } else {
+        const reviewWall = document.getElementById('reviewWallSection');
+        if (reviewWall) {
+          reviewWall.style.setProperty('display', 'none', 'important');
+          reviewWall.classList.add('hidden');
+        }
+      }
 
       const phoneEl = document.getElementById('phone');
       if (phoneEl) {
-        
+        // 保留給電話監聽使用
       }
     } catch (e) {
       console.error("載入失敗:", e);
     }
   };
-
+  
   function setType(t, e) {
     document.querySelectorAll('.type-btn').forEach(b => {
       b.className = "type-btn py-2.5 rounded-xl border border-brand-200 text-xs font-bold transition bg-white text-brand-800";
@@ -3643,19 +3668,25 @@ async function checkCustomerBenefitsByPhone() {
       }
     }
 
-    // 儲值與包卡資產卡片展示
+    // 儲值與包卡資產卡片展示 (若未加購開通，就算客人資料庫有歷史餘額也絕不顯示！)
     const walletCard = document.getElementById('memberWalletCard');
     const dispWallet = document.getElementById('displayWalletBalance');
     const dispPkgs = document.getElementById('displayPackagesList');
-    if (memberData.walletBalance > 0 || (pkgs && pkgs.length > 0)) {
+    
+    if (db.enableWallet && memberData.walletBalance > 0) {
       if (dispWallet) dispWallet.innerText = memberData.walletBalance.toLocaleString();
-      if (dispPkgs) {
-        dispPkgs.innerHTML = (pkgs && pkgs.length > 0)
-          ? `<i class="fa-solid fa-ticket text-emerald-600"></i> 名下可用包卡：` + pkgs.map(p => `<span class="bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded font-bold">${p.service_name} 剩 ${p.remaining_times} 堂</span>`).join(' ')
-          : '';
-        dispPkgs.classList.toggle('hidden', pkgs.length === 0);
-      }
       if (walletCard) walletCard.classList.remove('hidden');
+    } else {
+      if (walletCard) walletCard.classList.add('hidden');
+    }
+
+    if (db.enablePackages && pkgs && pkgs.length > 0) {
+      if (dispPkgs) {
+        dispPkgs.innerHTML = `<i class="fa-solid fa-ticket text-emerald-600"></i> 名下可用包卡：` + pkgs.map(p => `<span class="bg-emerald-100 text-emerald-900 px-1.5 py-0.5 rounded font-bold">${p.service_name} 剩 ${p.remaining_times} 堂</span>`).join(' ');
+        dispPkgs.classList.remove('hidden');
+      }
+    } else {
+      if (dispPkgs) dispPkgs.classList.add('hidden');
     }
 
     // 同框毛孩下拉選單渲染
