@@ -9038,7 +9038,8 @@ function renderStaffManager(targetPrefix = '') {
 
   container.innerHTML = staffs.map(s => {
     const isVisible = staffPinVisibilityMap[s.id] === true;
-    const displayPin = isVisible ? (s.pin || '8888') : '••••';
+    const realPin = String(s.pin || '8888');
+    const displayPin = isVisible ? realPin : '••••';
 
     return `
       <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
@@ -9049,8 +9050,11 @@ function renderStaffManager(targetPrefix = '') {
           </div>
           <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
             <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
-            <button type="button" onclick="toggleStaffPinVisibility('${s.id}')" class="text-brand-500 hover:text-brand-800 p-0.5"><i class="fa-solid ${isVisible ? 'fa-eye-slash' : 'fa-eye'} text-[11px]"></i></button>
-            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${s.pin || '8888'}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
+            <!-- 🌟 點擊眼睛：傳入正確前綴即時切換明碼/遮罩 -->
+            <button type="button" onclick="toggleStaffPinVisibility('${s.id}', '${targetPrefix}')" class="text-brand-500 hover:text-brand-800 p-1 cursor-pointer" title="${isVisible ? '隱藏密碼' : '顯示密碼'}">
+              <i class="fa-solid ${isVisible ? 'fa-eye-slash text-amber-700' : 'fa-eye text-brand-500'} text-xs"></i>
+            </button>
+            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${realPin}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
           </div>
         </div>
         <div class="flex gap-1.5 items-center shrink-0">
@@ -9064,10 +9068,20 @@ function renderStaffManager(targetPrefix = '') {
   }).join('');
 }
 
-    function toggleStaffPinVisibility(staffId) {
-      staffPinVisibilityMap[staffId] = !staffPinVisibilityMap[staffId];
-      renderStaffManager();
-    }
+    function getStaffBookingTag(customerType, staffId, staffName) {
+  const isNew = (customerType === 'new');
+  const isNoSelect = (!staffId || staffId === 'all' || staffName === '不指定' || !staffName);
+
+  if (isNew && isNoSelect) return 'Newno';
+  if (isNew && !isNoSelect) return 'New指';
+  if (!isNew && isNoSelect) return 'no';
+  return staffName; // 舊客指定直接顯示設計師名字
+}
+    
+    function toggleStaffPinVisibility(staffId, prefix = '') {
+  staffPinVisibilityMap[staffId] = !staffPinVisibilityMap[staffId];
+  renderStaffManager(prefix);
+}
 
     function copyStaffWorkplaceUrl(staffId, staffName) {
       const cleanUrl = `${window.location.origin}${window.location.pathname}?store_id=${CURRENT_STORE_ID}&staff=${encodeURIComponent(staffId)}`;
