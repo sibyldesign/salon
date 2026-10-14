@@ -1392,9 +1392,7 @@ function applyIndustryModeUI(mode) {
         logoUrl: sCfg.logo_url || "",
         storePhone: sCfg.store_phone || "",
         promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [
-          "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
-        ],
+        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [],
         address: sCfg.address || "門市服務據點",
         businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
         bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
@@ -1406,18 +1404,21 @@ function applyIndustryModeUI(mode) {
         line: sCfg.line_url || "#",
         map: sCfg.map_url || "#",
         
-        // 標配開關
-        enableEmailCopy: sCfg.enable_email_copy !== false,
-        enableDeposit: sCfg.enable_deposit === true,
+        // 🌟 標配開關（加入蛇形與駝峰兼容，後台取消勾選前台必定為 false）
+        enableEmailCopy: parseBoolStrict(sCfg.enable_email_copy ?? sCfg.enableEmailCopy, true),
+        enableDeposit: parseBoolStrict(sCfg.enable_deposit ?? sCfg.enableDeposit, false),
         depositMode: sCfg.deposit_mode || 'all',
         depositAmount: Number(sCfg.deposit_amount || 0),
         depositInfo: sCfg.deposit_info || '',
-        enableStaffSelect: sCfg.enable_staff_select !== false,
+        enableStaffSelect: parseBoolStrict(sCfg.enable_staff_select ?? sCfg.enableStaffSelect, true),
         enableFeaturedShop: sCfg.enable_featured_shop === true,
-        enableShowPrice: sCfg.enable_show_price !== false,
-        enableCustNotes: sCfg.enable_cust_notes !== false,
+        enableShowPrice: parseBoolStrict(sCfg.enable_show_price ?? sCfg.enableShowPrice, true),
+        enableCustNotes: parseBoolStrict(sCfg.enable_cust_notes ?? sCfg.enableCustNotes, true),
+        
+        // 🌟【關鍵修復此行】：補上新舊朋友開關映射，取消勾選立即在前台隱藏！
+        enableCustType: parseBoolStrict(sCfg.enable_cust_type ?? sCfg.enableCustType, true),
 
-        // 🌟 核心防禦：加購模組經過總管 allowed_modules 審查，未開通一律強制為 false
+        // 🌟 加購模組嚴格審查（總管 allowed_modules 沒開通，一律強制為 false）
         enableWallet: checkModule('wallet', sCfg.enable_wallet ?? sCfg.enableWallet, false),
         enablePackages: checkModule('packages', sCfg.enable_packages ?? sCfg.enablePackages, false),
         enableCoupons: checkModule('coupons', sCfg.enable_coupons ?? sCfg.enableCoupons, false),
@@ -1428,11 +1429,11 @@ function applyIndustryModeUI(mode) {
         enableCarousel: sCfg.enable_carousel !== false,
 
         contractTitle: sCfg.contract_title || '線上定型化服務契約書',
-        contractContent: sCfg.contract_content || '一、本服務均由專業技術人員施作，施作前已完成充分溝通。',
+        contractContent: sCfg.contract_content || '',
         promoRulesText: sCfg.promo_rules_text || '',
         walletRules: sCfg.wallet_rules || [],
         packageRules: sCfg.package_rules || [],
-        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list.map(s => ({ id: s.id, name: s.name })) : [{ id: "all", name: "不指定" }],
+        staffList: (sCfg.staff_list && sCfg.staff_list.length > 0) ? sCfg.staff_list : [{ id: "all", name: "不指定" }],
         staffSchedules: sCfg.staff_schedules || {},
         shiftStartTime: sCfg.shift_start_time || "09:00",
         shiftEndTime: sCfg.shift_end_time || "19:00",
@@ -1440,14 +1441,9 @@ function applyIndustryModeUI(mode) {
         services: formattedServices,
         portfolio: portfolios || [],
         availableDates: availableDates,
-        futureBookings: bookings || [],
-        boardingSettings: sCfg.boarding_settings || {},
-        boardingMealRates: sCfg.boarding_meal_rates || { one: 80, two: 150, three: 220 },
-        hotelRoomTiers: sCfg.hotel_room_tiers || [],
-        hotelMealOptions: sCfg.hotel_meal_options || [],
-        petCustomFields: sCfg.pet_custom_fields || {}
+        futureBookings: bookings || []
       });
-
+      
       renderStoreUI();
 
       // 🌟 好評牆防禦：只有總管開通且店家開啟時才載入與顯示，否則強制隱藏
@@ -4521,61 +4517,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     btn.innerText = "送出預約申請";
   }
 };
-
-  // ========================================================
-// 🌟 嚴格雙層模組防禦檢驗器 (總管授權 + 店家開關)
-// ========================================================
-function isFeatureActive(moduleKey, settingKey) {
-  const store = storeData?.storeInfo || {};
-  const sCfg = storeData?.settings || {};
-  const isLifetime = (store.plan_type === 'lifetime' || store.plan_status === 'lifetime' || String(store.plan_name || '').includes('買斷'));
-  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
-
-  // 1. 第一層：若為買斷版，總管未加購授權 ➔ 100% 徹底封鎖
-  if (isLifetime && !allowed.includes(moduleKey)) {
-    return false;
-  }
-
-  // 2. 第二層：店家後台自行關閉 ➔ 不顯示
-  if (settingKey && sCfg[settingKey] === false) {
-    return false;
-  }
-
-  return true;
-}
-
-// ========================================================
-// 🌟 套用到前台各模組的顯隱控制
-// ========================================================
-function applyFrontEndModuleVisibility() {
-  // 1. 好評展示牆
-  const reviewSection = document.getElementById('front-reviews-section');
-  if (reviewSection) {
-    reviewSection.style.display = isFeatureActive('reviews', 'enable_reviews') ? 'block' : 'none';
-  }
-
-  // 2. 促銷折扣碼輸入框 (填單區)
-  const couponInputBlock = document.getElementById('front-coupon-input-block');
-  if (couponInputBlock) {
-    couponInputBlock.style.display = isFeatureActive('coupons', 'enable_coupons') ? 'block' : 'none';
-  }
-
-  // 3. 儲值金與包卡折抵選項 (填單結算區)
-  const walletDeductOption = document.getElementById('front-wallet-deduct-option');
-  if (walletDeductOption) {
-    walletDeductOption.style.display = isFeatureActive('wallet', 'enable_wallet') ? 'block' : 'none';
-  }
-  const pkgDeductOption = document.getElementById('front-package-deduct-option');
-  if (pkgDeductOption) {
-    pkgDeductOption.style.display = isFeatureActive('packages', 'enable_packages') ? 'block' : 'none';
-  }
-
-  // 4. 作品集專區
-  const portfolioSection = document.getElementById('front-portfolio-section');
-  if (portfolioSection) {
-    portfolioSection.style.display = isFeatureActive('portfolio', 'enable_portfolio') ? 'block' : 'none';
-  }
-}
 
   // ========================================================
 // 🌟 前台雙層防禦檢查器 (總管有加購 ＋ 店家有啟用 才算開通)
