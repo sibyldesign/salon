@@ -4482,6 +4482,60 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       }).catch(() => {});
     } catch(e) {}
 
+    // 🌟 核心補齊：前台送單即時派發至 Google 試算表（預約流水總表 + 顧客庫）
+    try {
+      // 1. 判斷新客/舊客與指定/不指定代號
+      const isNewCust = (document.getElementById('custType')?.value === 'new');
+      const isDesignated = (document.getElementById('staffId')?.value !== 'all' && document.getElementById('staffName')?.value !== '不指定');
+      
+      let staffCode = 'no'; // 預設：舊客不指定
+      if (isNewCust && !isDesignated) {
+        staffCode = 'Newno'; // 新客不指定
+      } else if (isNewCust && isDesignated) {
+        staffCode = 'New指'; // 新客指定
+      } else if (!isNewCust && !isDesignated) {
+        staffCode = 'no';    // 舊客不指定
+      } else {
+        staffCode = document.getElementById('staffName')?.value || 'Solo'; // 舊客指定直接填設計師名
+      }
+
+      // 2. 判斷服務代碼 C / L / P
+      let shortServiceCode = 'C';
+      const svcUpper = sVal.toUpperCase();
+      if (svcUpper.includes('燙') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
+        shortServiceCode = 'P';
+      } else if (svcUpper.includes('L剪') || svcUpper.includes('長髮') || svcUpper.includes('設計剪')) {
+        shortServiceCode = 'L';
+      } else {
+        shortServiceCode = 'C';
+      }
+
+      // 3. 發送至 Google Apps Script Webhook
+      fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({
+          action: "syncBookingToSheet",
+          store_id: CURRENT_STORE_ID,
+          transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
+          date: dValRaw.replace(/-/g, '/'),
+          time: tVal,
+          staff_name: staffCode, // 🌟 填入老闆要求的 Newno / New指 / no / 設計師名
+          customer_name: nameVal,
+          phone: phoneVal,
+          line_name: guestLineUid || document.getElementById('lineName')?.value.trim() || '',
+          service_code: shortServiceCode, // 🌟 C / L / P
+          service_name: sVal,
+          final_price: finalBasePrice,
+          status: "待確認",
+          notes: notesArray.join(' | ')
+        })
+      }).catch(err => console.warn("試算表背景同步略過:", err));
+    } catch(sheetErr) {
+      console.warn("試算表派發失敗:", sheetErr);
+    }
+    
     // 成功畫面導向
     const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
 
