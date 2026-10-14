@@ -4224,48 +4224,68 @@ renderStoreResourcesList();
     // ==========================================
     // 4. 路由切換器 (全域 14 個核心分頁)
     // ==========================================
+    // ==========================================
+    // 4. 路由切換器 (強制徹底隱藏所有分頁，絕不殘留)
+    // ==========================================
     function switchPage(pageId, el) {
-  if (pageId === 'settings') {
-    routeToSettingsPage(el);
-    return;
-  }
-  if (pageId === 'subscription' && isStoreLifetime()) {
-    routeToSettingsPage(el);
-    return;
-  }
+      if (pageId === 'settings') {
+        routeToSettingsPage(el);
+        return;
+      }
+      if (pageId === 'subscription' && isStoreLifetime()) {
+        routeToSettingsPage(el);
+        return;
+      }
 
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
-  });
-  const target = document.getElementById('page-' + pageId);
-  if (target) target.style.display = 'block';
-  if (el) el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+      // 🌟【徹底消除殘留】：遍歷所有分頁，強制加上 !important 的 display: none
+      document.querySelectorAll('.page').forEach(p => {
+        p.style.setProperty('display', 'none', 'important');
+      });
 
-  if (pageId === 'inventory') {
-    renderInventoryList();
-    if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
-  }
-  if (pageId === 'pets') loadAdminPetsPageData();
-  if (pageId === 'calendar') renderCalendar();
-  if (pageId === 'shift') renderShift();
-  if (pageId === 'boarding-schedule') { renderBoardingDateButtons(); renderBoardingRoomStatus(); renderBoardingCareChecklist(); }
-  if (pageId === 'customer') renderCustomer();
-  if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
-  if (pageId === 'care') { renderCare(); populateCareRulesUI(); }
-  if (pageId === 'services') { 
-    renderBOMCheckboxes(); 
-    renderServiceList(); 
-    renderPortfolioList(); 
-    renderStaffCheckboxesForService();
-    populateServiceResourceDropdown();
-  }
-  if (pageId === 'add') renderQuickAddServices();
-  if (pageId === 'marketing') loadMarketingCenter();
-  if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
-  if (pageId === 'slots') handleSlotRangeChange();
-  if (pageId === 'subscription') renderSubscriptionUI();
-}
+      // 🌟【關鍵加入這行】：特別確保流水帳頁面在非選中時絕對隱藏
+  const txnPage = document.getElementById('page-transactions');
+  if (txnPage && pageId !== 'transactions') txnPage.style.display = 'none';
+
+      document.querySelectorAll('.nav-item').forEach(n => {
+        n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
+      });
+
+      const target = document.getElementById('page-' + pageId);
+      if (target) {
+        target.style.setProperty('display', 'block', 'important');
+      }
+      if (el) {
+        el.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+      }
+
+      // 依分頁精確觸發渲染
+      if (pageId === 'inventory') {
+        renderInventoryList();
+        if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
+      }
+      if (pageId === 'pets') loadAdminPetsPageData();
+      if (pageId === 'calendar') renderCalendar();
+      if (pageId === 'shift') renderShift();
+      if (pageId === 'boarding-schedule') { renderBoardingDateButtons(); renderBoardingRoomStatus(); renderBoardingCareChecklist(); }
+      if (pageId === 'customer') renderCustomer();
+      if (pageId === 'revenue') { renderRevenueSelect(); renderRevenue(); }
+      if (pageId === 'transactions') { renderTransactionsList(); } // 🌟 只有點到流水帳才獨立繪製
+      if (pageId === 'care') { renderCare(); populateCareRulesUI(); }
+      if (pageId === 'services') { 
+        renderBOMCheckboxes(); 
+        renderServiceList(); 
+        renderPortfolioList(); 
+        renderStaffCheckboxesForService();
+        populateServiceResourceDropdown();
+      }
+      if (pageId === 'add') renderQuickAddServices();
+      if (pageId === 'marketing') loadMarketingCenter();
+      if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
+      if (pageId === 'slots') handleSlotRangeChange();
+      if (pageId === 'subscription') renderSubscriptionUI();
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     // ========================================================
 // 【商業營運模式切換器】精確控制前台版型、分頁導覽與後台卡片顯隱
@@ -7547,24 +7567,70 @@ function calcAdminQuickSlots() {
         status: '已確認'
       };
 
+      // 🚨🚨🚨【客製專用：這理髮型 - 代客卡位即時同步試算表】🚨🚨🚨
       try {
         const res = await directSupabaseUpsert('bookings', payload, 'id');
-        // 🚨🚨🚨【客製專用：這理髮型 - 代客卡位即時同步試算表】🚨🚨🚨
-    if (typeof dispatchBookingToGoogleSheets === 'function') {
-      dispatchBookingToGoogleSheets({
-        transaction_no: `TXN-${Date.now()}`,
-        date: bookingDate,
-        time: bookingTime,
-        staff_name: document.getElementById('quick-staff-name')?.value || '不指定',
-        customer_name: name,
-        phone: phone,
-        line_name: document.getElementById('quick-line')?.value.trim() || '',
-        service: service || defaultServiceName,
-        final_price: finalPrice,
-        status: '已確認',
-        notes: userNotes
-      });
-    }
+
+        // 🌟【直通寫入這理髮型試算表】：跳過複雜判斷，直接派發 Webhook
+        try {
+          const targetGasUrl = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
+          const targetSheetId = "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+
+          // 設計師代號
+          let adminStaffCode = document.getElementById('quick-staff-name')?.value?.trim() || '不指定';
+          if (adminStaffCode === '不指定' || adminStaffCode === 'all' || !adminStaffCode) {
+            adminStaffCode = 'no';
+          }
+
+          // 服務代碼 (C剪 / L長剪 / P燙縮)
+          let adminSvcCode = 'C';
+          const sUpper = String(service || '').toUpperCase();
+          if (sUpper.includes('燙') || sUpper.includes('縮毛') || sUpper.includes('P')) {
+            adminSvcCode = 'P';
+          } else if (sUpper.includes('L剪') || sUpper.includes('長剪') || sUpper.includes('長髮') || sUpper.includes('設計剪')) {
+            adminSvcCode = 'L';
+          } else {
+            adminSvcCode = 'C';
+          }
+
+          // 手機開頭補 0
+          let safeAdminPhone = String(phone || '').replace(/\D/g, '');
+          if (safeAdminPhone.length === 9 && safeAdminPhone.startsWith('9')) safeAdminPhone = '0' + safeAdminPhone;
+
+          const sheetSyncPayload = {
+            action: "syncBookingToSheet",
+            store_id: CURRENT_STORE_ID,
+            store_name: "這理髮型",
+            spreadsheet_id: targetSheetId,
+            transaction_no: `ADM-${Date.now().toString().slice(-6)}`,
+            date: bookingDate.replace(/-/g, '/'),
+            time: bookingTime || "11:00",
+            staff_name: adminStaffCode,
+            customer_name: name,
+            phone: safeAdminPhone,
+            customer_phone: safeAdminPhone,
+            email: email || '',
+            line_name: document.getElementById('quick-line')?.value.trim() || '',
+            service_code: adminSvcCode,
+            service_name: service || '剪髮造型',
+            service: service || '剪髮造型',
+            price: Number(finalPrice || 0),
+            final_price: Number(finalPrice || 0),
+            status: "已確認",
+            notes: finalNotesArray.join(' | ')
+          };
+
+          // 送往試算表
+          fetch(targetGasUrl, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(sheetSyncPayload)
+          }).catch(err => console.warn("試算表同步略過:", err));
+        } catch (sheetErr) {
+          console.warn("試算表組裝失敗:", sheetErr);
+        }
+        
         const newBookingId = (res && res[0]) ? res[0].id : null;
 
         Swal.fire({
