@@ -4468,13 +4468,13 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     }
 
     // ------------------------------------------------------------------------
-    // 1. 整理通訊、設計師代號與服務代碼
+    // 1. 整理通訊、服務代碼與老闆專屬代號
     // ------------------------------------------------------------------------
     const isNewCust = (document.getElementById('custType')?.value === 'new');
     const staffVal = document.getElementById('staffName')?.value?.trim() || '';
     const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
     
-    // 老闆指定規則：新客不指定 Newno / 新客指定 New指 / 舊客不指定 no / 舊客指定 Solo/Elaine
+    // 老闆專屬代碼：新客不指定 Newno / 新客指定 New指 / 舊客不指定 no / 舊客指定 Solo/Elaine
     let staffCode = 'no';
     if (isNewCust) {
       staffCode = isDesignated ? 'New指' : 'Newno';
@@ -4494,17 +4494,19 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const cleanLineName = guestLineUid || document.getElementById('lineName')?.value.trim() || '';
     const formattedDate = String(dValRaw || '').replace(/-/g, '/');
     const targetTime = tVal || '10:00';
-    const sheetId = db.sheets_spreadsheet_id || "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+    // 確保電話開頭帶 0 (10 碼)
+    let safePhone = String(phoneVal || '').replace(/\D/g, '');
+    if (safePhone.length === 9 && safePhone.startsWith('9')) safePhone = '0' + safePhone;
 
     // ------------------------------------------------------------------------
-    // 2. 發送推播通知與顧客確認郵件 (補齊 email / customer_email 確保收到信件)
+    // 2. 發送推播通知與顧客確認郵件 (補齊 email / customer_email，徹底解決信件漏寄)
     // ------------------------------------------------------------------------
     try {
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         keepalive: true,
-        headers: { "Content-Type": "text/plain" },
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 🌟 避開 Preflight 阻斷
         body: JSON.stringify({
           action: "submitBooking",
           store_id: CURRENT_STORE_ID,
@@ -4526,24 +4528,24 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     }
 
     // ------------------------------------------------------------------------
-    // 3. 試算表三表即時同步 (預約流水總表 + 顧客資料總表 + 每日排程看板)
+    // 3. 試算表即時同步 (寫入預約流水總表 + 顧客資料總表)
     // ------------------------------------------------------------------------
     try {
       fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         keepalive: true,
-        headers: { "Content-Type": "text/plain" },
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 🌟 避開 Preflight 阻斷
         body: JSON.stringify({
           action: "syncBookingToSheet",
           store_id: CURRENT_STORE_ID,
-          spreadsheet_id: sheetId,
+          spreadsheet_id: "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ", // 這理排程表 ID
           transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
           date: formattedDate,
           time: targetTime,
           staff_name: staffCode,
           customer_name: nameVal,
-          phone: phoneVal,
+          phone: safePhone,
           customer_email: emailVal,
           line_name: cleanLineName,
           service_code: shortServiceCode,
