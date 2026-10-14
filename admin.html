@@ -1241,13 +1241,13 @@
   <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
     <div class="flex justify-between items-center">
       <label class="font-bold text-brand-900 flex items-center gap-1.5">
-        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「活動與方案使用說明」文字內容編輯
+        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「本月活動」文字內容編輯
       </label>
       <button type="button" onclick="savePromoRulesText('lt')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition hover:bg-[#7A6246]">
         儲存說明內容
       </button>
     </div>
-    <textarea id="lt-promo-rules-input" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明，例如：
+    <textarea id="lt-promo-rules" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明，例如：
 • 預約請準時抵達，為您保留 10 分鐘。
 • 如需改期請提前 24 小時告知店家。"></textarea>
     <p class="text-[10px] text-gray-400">※ 即時連動前台「本月活動」說明卡片，未開通行銷模組之店家亦可在此編輯。</p>
@@ -1880,6 +1880,20 @@
 </div>
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
 
+      <!-- 常規版：前台活動使用說明 -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs mt-3">
+    <div class="flex justify-between items-center">
+      <label class="font-bold text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「本月活動」文字內容編輯
+      </label>
+      <button type="button" onclick="savePromoRulesText('')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition hover:bg-[#7A6246]">
+        儲存說明內容
+      </button>
+    </div>
+    <textarea id="cfg-promo-rules" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明..."></textarea>
+    <p class="text-[10px] text-gray-400">※ 即時連動前台「本月活動」卡片內容。</p>
+  </div>
+      
       <!-- 1. 營業時間與排班 (綁定 shift 模組) -->
       <div data-setting-module="shift" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -3880,14 +3894,20 @@ async function fetchDataAndRender() {
   }
   
   try {
-    let [stores, settings, services, portfolios, bookings, custsRes] = await Promise.all([
+    let [stores, settings, services, portfolios, bookings, custsRes, invRes] = await Promise.all([
       directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
       directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`),
-      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`)
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`),
+      directSupabaseFetch(`inventory_items?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`) // 🌟 補上這行
     ]);
+
+    // 若資料庫有資料則載入，否則保留預設範本
+    if (invRes && invRes.length > 0) {
+      allInventoryItems = invRes;
+    }
 
     // 在 fetchDataAndRender() 的 Promise.all 執行完成後替換以下這行：
 blacklistedPhonesSet = new Set(
@@ -8372,7 +8392,7 @@ if (peakChartBox) {
     }
 
     async function savePromoRulesText(prefix = '') {
-  const inputId = (prefix === 'lt') ? 'lt-promo-rules-input' : 'cfg-promo-rules-input';
+  const inputId = (prefix === 'lt') ? 'lt-promo-rules' : 'cfg-promo-rules';
   const val = document.getElementById(inputId)?.value.trim() || '';
 
   await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { promo_rules_text: val });
