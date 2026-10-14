@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>線上預約系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -4519,6 +4519,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       action: "submitBooking",
       store_id: CURRENT_STORE_ID,
       store_name: "這理髮型",
+      spreadsheet_id: "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ", // ★ 補齊此行，確保試算表 100% 寫入
       transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
       date: formattedDate,
       time: targetTime,
@@ -4542,7 +4543,8 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     };
 
     try {
-      fetch(API_URL, {
+      // 加上 await 確保請求確實離開瀏覽器通道送達 GAS
+      await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         keepalive: true,
@@ -4552,7 +4554,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     } catch (e) {
       console.warn("通知發送異常:", e);
     }
-
+    
     // ------------------------------------------------------------------------
     // 3. 成功預約畫面導向與訂金提示
     // ------------------------------------------------------------------------
