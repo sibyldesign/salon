@@ -4516,10 +4516,9 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     // 2. 單一原子 Webhook 派發（發送確認信 + 試算表三表同步 + LINE通知）
     // ------------------------------------------------------------------------
     const webhookPayload = {
-      action: "syncBookingToSheet", // 明確呼叫試算表同步動作
+      action: "submitBooking",
       store_id: CURRENT_STORE_ID,
       store_name: "這理髮型",
-      spreadsheet_id: targetSpreadsheetId,
       transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
       date: formattedDate,
       time: targetTime,
@@ -4547,11 +4546,11 @@ document.getElementById('bookForm').onsubmit = async function(e) {
         method: "POST",
         mode: "no-cors",
         keepalive: true,
-        headers: { "Content-Type": "text/plain;charset=utf-8" }, // 避免 CORS Preflight 阻斷
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(webhookPayload)
-      }).catch(err => console.warn("GAS Webhook 派發略過:", err));
+      }).catch(err => console.warn("GAS Webhook 略過:", err));
     } catch (e) {
-      console.warn("通知封包發送異常:", e);
+      console.warn("通知發送異常:", e);
     }
 
     // ------------------------------------------------------------------------
