@@ -11607,6 +11607,63 @@ async function saveOwnerUidToDatabase(uid) {
     confirmButtonColor: '#8C7355'
   });
 }
+
+    // 1. 點擊按鈕後導向 LINE 官方授權頁面
+function loginWithLineForOwnerBinding() {
+  const channelId = "您的LINE_LOGIN_CHANNEL_ID"; // 填入您的 LINE Login Channel ID
+  const redirectUri = window.location.href.split('?')[0]; // 當前管理後台網址
+  const state = CURRENT_STORE_ID; // 夾帶目前店家 ID
+
+  const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
+  
+  // 導向 LINE 授權
+  window.location.href = lineAuthUrl;
+}
+
+// 2. 頁面載入時檢查網址是否有帶回 ?code= (代表老闆剛剛授權同意回來)
+window.addEventListener('DOMContentLoaded', async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get('code');
+  const stateStoreId = urlParams.get('state');
+
+  if (code && stateStoreId) {
+    Swal.fire({
+      title: '正在綁定 LINE 帳號...',
+      text: '請稍候，正在為您同步個人 LINE ID 到系統中',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      const redirectUri = window.location.href.split('?')[0];
+      const res = await callBackendApi({
+        action: 'exchangeLineAuthCode',
+        store_id: stateStoreId,
+        code: code,
+        redirectUri: redirectUri
+      });
+
+      if (res.status === 'SUCCESS') {
+        // 清除網址上的 code 參數
+        window.history.replaceState({}, document.title, redirectUri);
+        
+        // 自動填入畫面的輸入框
+        const uidInput = document.getElementById('cfg-owner-line-uid');
+        if (uidInput) uidInput.value = res.ownerUid;
+
+        Swal.fire({
+          title: '🎉 LINE 業主綁定成功！',
+          text: `已成功將您的 LINE 帳號 (${res.displayName}) 連結至本門市。`,
+          icon: 'success'
+        });
+      } else {
+        throw new Error(res.error || '授權交換失敗');
+      }
+    } catch (e) {
+      Swal.fire('綁定異常', e.message, 'error');
+    }
+  }
+});
   </script>
 </body>
 </html>
