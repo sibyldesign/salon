@@ -4701,57 +4701,70 @@ function selectOverviewDateBtn(dHyphen) {
 }
 
 // 渲染類 Excel 總覽畫布 (直條為設計師，橫軸為時間軸)
-function renderOverviewGridCanvas() {
-  const canvas = document.getElementById('overview-grid-canvas');
-  if (!canvas) return;
+// 渲染類 Excel 總覽畫布 (多租戶動態讀取專員名冊，預設顯示 A專員 / B專員)
+   function renderOverviewGridCanvas() {
+     const canvas = document.getElementById('overview-grid-canvas');
+     if (!canvas) return;
 
-  const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
-  const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
+     const viewDateHyphen = document.getElementById('overview-view-date')?.value || '';
+     if (!viewDateHyphen) {
+       canvas.innerHTML = '<div class="text-center py-8 text-xs text-brand-400">請先選取上方日期</div>';
+       return;
+     }
 
-  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-  if (staffList.length === 0) {
-    staffList.push({ id: 'solo', name: 'Solo' }, { id: 'elaine', name: 'Elaine' });
-  }
+     const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  const apptsToday = (backendData.appointments || []).filter(a => a.date === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒');
+     // 🌟 多租戶動態抓取該店專員名冊 (排除全店不指定的 'all')
+     let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+     
+     // 若該店尚未登記專員，預設以「A專員」、「B專員」作為動態範例
+     if (staffList.length === 0) {
+       staffList = [
+         { id: 'staff_a', name: 'A專員' },
+         { id: 'staff_b', name: 'B專員' }
+       ];
+     }
 
-  // 產生時間網格 (例如 10:00 到 20:00)
-  const start = backendData.settings?.shiftStartTime || '10:00';
-  const end = backendData.settings?.shiftEndTime || '20:00';
-  const [sH] = start.split(':').map(Number);
-  const [eH] = e.split(':').map(Number); // 假設由 sH 到 eH
+     const apptsToday = (backendData.appointments || []).filter(a => {
+       const aDateClean = (a.date || '').replace(/-/g, '/');
+       return aDateClean === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
+     });
+     
+     // 組合每個專員當天的行程區塊
+     let columnsHtml = staffList.map(st => {
+       const staffAppts = apptsToday.filter(a => {
+         const sName = String(a.staffName || '').trim();
+         const targetStName = String(st.name || '').trim();
+         return sName === targetStName || a.staffId === st.id || sName === '不指定' || !sName;
+       });
+       
+       return `
+         <div class="space-y-2 p-3 bg-brand-50/50 rounded-2xl border border-brand-200 min-h-[350px]">
+           <div class="text-center font-bold text-xs text-brand-900 pb-1.5 border-b border-brand-200">${st.name} 看板</div>
+           <div class="space-y-2">
+             ${staffAppts.length > 0 ? staffAppts.map(a => `
+               <div class="p-3 bg-white rounded-xl border border-amber-300 shadow-2xs space-y-1 text-xs">
+                 <div class="flex justify-between items-center font-bold text-amber-950">
+                   <span class="font-mono text-[#8C7355] text-sm">${a.time}</span>
+                   <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10px] font-bold">${a.status}</span>
+                 </div>
+                 <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-gray-400 font-mono text-xs font-normal">(${a.phone})</span></div>
+                 <div class="text-[11.5px] text-brand-800 bg-brand-50/80 p-2 rounded-lg border border-brand-100 space-y-0.5">
+                   <div><b>項目：</b>${a.service}</div>${a.notes ? `<div class="text-gray-600 mt-0.5"><b>備註/穿插：</b>${a.notes}</div>` : ''}
+                 </div>
+               </div>
+             `).join('') : '<div class="text-center py-16 text-gray-400 text-xs">當日無排程，全天空檔</div>'}
+           </div>
+         </div>
+       `;
+     }).join('');
 
-  let gridHeaderHtml = staffList.map(st => `<div class="p-2.5 bg-brand-50 rounded-xl font-bold text-center text-xs border border-brand-200">${st.name}</div>`).join('');
-
-  // 組合每個老師當天的行程區塊
-  let columnsHtml = staffList.map(st => {
-    const staffAppts = apptsToday.filter(a => a.staffName === st.name || a.staffId === st.id || a.staffName === '不指定');
-
-    return `
-      <div class="space-y-1.5 p-2 bg-brand-50/50 rounded-2xl border border-brand-200 min-h-[300px]">
-        <div class="text-center font-bold text-xs text-brand-800 pb-1 border-b border-brand-200">${st.name} 專員看板</div>
-        ${staffAppts.length > 0 ? staffAppts.map(a => `
-          <div class="p-2.5 bg-white rounded-xl border border-amber-300 shadow-2xs space-y-1 text-xs">
-            <div class="flex justify-between items-center font-bold text-amber-950">
-              <span class="font-mono text-[#8C7355]">${a.time}</span>
-              <span class="px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded text-[10px]">${a.status}</span>
-            </div>
-            <div class="font-bold text-brand-900">${a.name} <span class="text-gray-400 font-mono text-[11px]">(${a.phone})</span></div>
-            <div class="text-[11px] text-brand-700 bg-brand-50 p-1.5 rounded-lg border border-brand-100">
-              <div><b>項目：</b>${a.service}</div>${a.notes ? `<div class="text-gray-500 mt-0.5"><b>備註/穿插：</b>${a.notes}</div>` : ''}
-            </div>
-          </div>
-        `).join('') : '<div class="text-center py-10 text-gray-400 text-xs">當日無排程，全天空檔</div>'}
-      </div>
-    `;
-  }).join('');
-
-  canvas.innerHTML = `
-    <div class="grid grid-cols-${staffList.length} gap-2">
-      ${columnsHtml}
-    </div>
-  `;
-}
+     canvas.innerHTML = `
+       <div class="grid grid-cols-1 sm:grid-cols-${Math.min(staffList.length, 3)} gap-3">
+         ${columnsHtml}
+       </div>
+     `;
+   }
     
     function showApptsInCalendar(dateStr) {
       selectedCalendarDate = dateStr;
