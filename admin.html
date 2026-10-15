@@ -9071,7 +9071,7 @@ if (peakChartBox) {
     }
 
     // ========================================================
-// 【後台修復 1】色系與 Feature Flags 100% 同步回填
+// 【修復版】populateSettings() — 訂閱版設定回填引擎 (重整絕不清空)
 // ========================================================
 function populateSettings() {
   const s = backendData.settings || {};
@@ -9107,21 +9107,28 @@ function populateSettings() {
   setVal('cfg-deposit-info', s.depositInfo);
   setVal('cfg-deposit-mode', s.depositMode);
   setVal('cfg-deposit-amount', s.depositAmount);
-  setVal('cfg-shift-start', s.shiftStartTime || '09:00');
-  setVal('cfg-shift-end', s.shiftEndTime || '19:00');
-  setVal('cfg-shift-interval', String(s.shiftInterval || 30));
+  setVal('cfg-deposit-report-mode', s.depositReportMode || 'both');
+  setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+  setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+  setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
   setVal('cfg-promo', s.promoText);
   setVal('cfg-line', s.line);
   setVal('cfg-ig', s.ig);
   setVal('cfg-map', s.map);
   setVal('cfg-contract-title', s.contractTitle);
   setVal('cfg-contract-content', s.contractContent);
-  setVal('cfg-promo-rules-input', s.promoRulesText);
-  setVal('cfg-line-token', s.lineChannelToken);
+  setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  setVal('cfg-promo-rules-input', s.promoRulesText || s.promo_rules_text || '');
   setVal('cfg-line-card-theme', s.line_card_theme || 'latte');
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
-  setVal('cfg-owner-line-uid', s.owner_line_uid || '');
+
+  // 🌟 核心防護：LINE Token 與 UID 雙重讀取（資料庫 ➔ 快取備份，確保重整不消失）
+  const effectiveLineToken = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
+  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
+
+  setVal('cfg-line-token', effectiveLineToken);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
   // 2. 色系精準雙向鎖定 (資料庫優先，雙鍵快取同步)
   const localTheme = localStorage.getItem('zy_cached_theme') || localStorage.getItem('z_cached_theme');
@@ -9170,21 +9177,22 @@ function populateSettings() {
     });
   }
 
-  renderStaffManager();
-  renderPlanRules();
-  renderUploadSlots();
-}
+  // 5. 圖片預覽回填
+  const logoPreviewBox = document.getElementById('logo-preview-box');
+  const logoPreviewImg = document.getElementById('logo-preview-img');
+  if (logoPreviewBox && logoPreviewImg && s.logoUrl) {
+    logoPreviewImg.src = s.logoUrl;
+    logoPreviewBox.classList.remove('hidden');
+  }
 
+  renderStaffManager('');
+  renderPlanRules('');
+  renderUploadSlots('');
+  markSettingsSaved();
+}
 // ========================================================
-// 【後台修復 2】全欄位原子化保存 (包含 stores 與 store_settings)
+// 【修復版】saveStoreSettings() — 訂閱版全域設定保存 (帶雙向快取與自動容錯)
 // ========================================================
-// ==========================================
-// 後台完整版 saveStoreSettings() — 不省略、帶欄位容錯防呆
-// ==========================================
-// ==========================================
-// 【修正完成版】saveStoreSettings()
-// 修正變數尚未定義就使用的順序錯誤，杜絕轉圈卡死
-// ==========================================
 async function saveStoreSettings() {
   Swal.fire({ 
     title: '正在儲存設定...', 
@@ -9202,15 +9210,20 @@ async function saveStoreSettings() {
   const selectedMode = backendData.settings?.industryMode || 'beauty';
   const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings?.storeName || '沙龍門市';
 
-  // 1. 同步瀏覽器雙向快取
+  // 🌟 關鍵：精確提取 Token 與 UID，並存入永久備援快取
+  const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
+  const ownerUidVal = document.getElementById('cfg-owner-line-uid')?.value.trim() || '';
+
+  localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
+  localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem('zy_cached_theme', selectedTheme);
   localStorage.setItem('z_cached_theme', selectedTheme);
-  if (backendData.settings) {
-    backendData.settings.themeColor = selectedTheme;
-    backendData.settings.theme_color = selectedTheme;
-  }
 
-  // 2. 必須先組裝好完整的 settingsPayload！
+  const chosenStartTime = document.getElementById('cfg-shift-start')?.value || '09:00';
+  const chosenEndTime = document.getElementById('cfg-shift-end')?.value || '19:00';
+  const chosenInterval = Number(document.getElementById('cfg-shift-interval')?.value || 30);
+
+  // 組裝完整的 settingsPayload
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -9229,17 +9242,18 @@ async function saveStoreSettings() {
     care_text: document.getElementById('cfg-care')?.value.trim() || '',
     deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
     deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
+    deposit_report_mode: document.getElementById('cfg-deposit-report-mode')?.value || 'both',
     deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
     promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
     line_url: document.getElementById('cfg-line')?.value.trim() || '',
     ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
     map_url: document.getElementById('cfg-map')?.value.trim() || '',
-    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
+    line_channel_token: lineTokenVal,
+    owner_line_uid: ownerUidVal,
     line_card_theme: document.getElementById('cfg-line-card-theme')?.value || 'latte',
     contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
     contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
     promo_rules_text: document.getElementById('cfg-promo-rules')?.value.trim() || document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
-    owner_line_uid: document.getElementById('cfg-owner-line-uid')?.value.trim() || '',
 
     // 圖片、題庫與行前叮嚀
     promo_imgs: promoImgsArray.filter(Boolean),
@@ -9269,9 +9283,9 @@ async function saveStoreSettings() {
     },
 
     // 營運工時與抽成
-    shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
-    shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
-    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
+    shift_start_time: chosenStartTime,
+    shift_end_time: chosenEndTime,
+    shift_interval: chosenInterval,
     commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
     designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
 
@@ -9306,7 +9320,7 @@ async function saveStoreSettings() {
   };
 
   try {
-    // 3. 同步更新 stores 主表店名與模式
+    // 1. 同步更新 stores 主表店名與主題
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: {
@@ -9321,7 +9335,7 @@ async function saveStoreSettings() {
       })
     });
 
-    // 4. 自動防護寫入 store_settings（若有欄位缺少自動剔除並重試）
+    // 2. 自動防護寫入 store_settings（若有欄位缺少自動剃除並重試）
     const toSendSettings = { ...settingsPayload };
     let isSaved = false;
 
@@ -9358,7 +9372,7 @@ async function saveStoreSettings() {
       const errText = await res.text();
       const matchCol = errText.match(/Could not find the '([^']+)' column/);
       if (matchCol && matchCol[1]) {
-        console.warn(`[自動防護] store_settings 尚無 ${matchCol[1]} 欄位，自動剔除後重試`);
+        console.warn(`[自動防護] store_settings 尚無 ${matchCol[1]} 欄位，自動剃除後重試`);
         delete toSendSettings[matchCol[1]];
       } else {
         break;
@@ -9366,12 +9380,16 @@ async function saveStoreSettings() {
     }
 
     if (!isSaved) {
-      throw new Error('資料庫更新未能成功，請檢查網路連線或稍後再試');
+      throw new Error('資料庫更新未能成功，請檢查網路連線');
     }
 
-    // 5. 更新前端暫存記憶體
+    // 3. 更新前端暫存記憶體
     if (backendData.settings) {
       Object.assign(backendData.settings, settingsPayload);
+      backendData.settings.lineChannelToken = lineTokenVal;
+      backendData.settings.line_channel_token = lineTokenVal;
+      backendData.settings.owner_line_uid = ownerUidVal;
+      backendData.settings.ownerLineUid = ownerUidVal;
     }
 
     markSettingsSaved();
@@ -10507,7 +10525,7 @@ function isStoreLifetime() {
 }
 
 // ========================================================
-// 2. 核心路由分流器：保證買斷版與訂閱版皆能點開
+// 2. 核心路由分流器：保證買斷版與訂閱版皆能點開並正確填入資料
 // ========================================================
 function routeToSettingsPage(btnEl) {
   const isLifetime = isStoreLifetime();
