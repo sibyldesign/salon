@@ -9071,7 +9071,7 @@ if (peakChartBox) {
     }
 
     // ========================================================
-// 【修復版】populateSettings() — 訂閱版設定回填引擎 (重整絕不清空)
+// 【修復版】populateSettings() — 訂閱版設定回填引擎 (雙向輸入框對齊)
 // ========================================================
 function populateSettings() {
   const s = backendData.settings || {};
@@ -9081,7 +9081,6 @@ function populateSettings() {
     if (el && val !== undefined && val !== null) el.value = val;
   };
   
-  // 嚴格解析布林值，只有在 undefined/null 時才套用預設值，為 false 絕對不打勾！
   const setCheck = (id, val, defaultVal = true) => {
     const el = document.getElementById(id);
     if (el) {
@@ -9095,7 +9094,7 @@ function populateSettings() {
     }
   };
 
-  // 1. 基本資訊
+  // 1. 基本門市資料
   setVal('cfg-title', s.storeName);
   setVal('cfg-subtitle', s.subtitle);
   setVal('cfg-logo', s.logoUrl);
@@ -9123,14 +9122,16 @@ function populateSettings() {
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
 
-  // 🌟 核心防護：LINE Token 與 UID 雙重讀取（資料庫 ➔ 快取備份，確保重整不消失）
+  // 🌟 核心防護：優先向資料庫取值，若網路延遲則使用 LocalStorage 快取，並同時填入雙框
   const effectiveLineToken = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
   const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
 
   setVal('cfg-line-token', effectiveLineToken);
+  setVal('lt-cfg-line-token', effectiveLineToken); // 相容被誤植為 lt- 的欄位
   setVal('cfg-owner-line-uid', effectiveOwnerUid);
+  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid); // 相容被誤植為 lt- 的欄位
 
-  // 2. 色系精準雙向鎖定 (資料庫優先，雙鍵快取同步)
+  // 2. 色系雙向鎖定
   const localTheme = localStorage.getItem('zy_cached_theme') || localStorage.getItem('z_cached_theme');
   const activeTheme = (s.theme_color || s.themeColor || localTheme || 'latte');
   
@@ -9140,7 +9141,7 @@ function populateSettings() {
   setVal('cfg-theme-color', activeTheme);
   previewSelectedThemeColor(activeTheme);
 
-  // 3. 20+ Feature Flags 嚴格回填 (false 永久生效)
+  // 3. 20+ Feature Flags 嚴格回填
   setCheck('cfg-toggle-logo', s.enable_logo ?? s.enableLogo, true);
   setCheck('cfg-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
   setCheck('cfg-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
@@ -9164,7 +9165,9 @@ function populateSettings() {
   setCheck('cfg-toggle-commission-calc', s.enable_commission_calc ?? s.enableCommissionCalc, true);
   setCheck('cfg-toggle-contract', s.enable_contract ?? s.enableContract, false);
   setCheck('cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
+  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
   setCheck('cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
+  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
   setCheck('cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
   setCheck('setting-enable-phone-history', s.enable_phone_history_query, true);
   setCheck('cfg-toggle-contact-specialist', s.enable_contact_specialist, true);
@@ -9191,11 +9194,13 @@ function populateSettings() {
   markSettingsSaved();
 }
 // ========================================================
-// 【修復版】saveStoreSettings() — 訂閱版全域設定保存 (帶雙向快取與自動容錯)
+// 【終極修復版】saveStoreSettings() — 訂閱版設定保存
+// 同時相容 cfg- 與 lt-cfg- 欄位，徹底解決重整消失問題
 // ========================================================
 async function saveStoreSettings() {
   Swal.fire({ 
     title: '正在儲存設定...', 
+    text: '正在將門市資料同步寫入雲端資料庫',
     allowOutsideClick: false, 
     didOpen: () => Swal.showLoading() 
   });
@@ -9205,25 +9210,35 @@ async function saveStoreSettings() {
     return el ? Boolean(el.checked) : false;
   };
 
+  const getVal = (...ids) => {
+    for (let id of ids) {
+      const el = document.getElementById(id);
+      if (el && el.value !== undefined && el.value !== null && el.value.trim() !== '') {
+        return el.value.trim();
+      }
+    }
+    return '';
+  };
+
   const weeklyOffDays = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
   const selectedTheme = document.getElementById('cfg-theme-color')?.value || 'latte';
   const selectedMode = backendData.settings?.industryMode || 'beauty';
-  const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings?.storeName || '沙龍門市';
+  const storeTitle = getVal('cfg-title', 'lt-title') || backendData.settings?.storeName || '沙龍門市';
 
-  // 🌟 關鍵：精確提取 Token 與 UID，並存入永久備援快取
-  const lineTokenVal = document.getElementById('cfg-line-token')?.value.trim() || '';
-  const ownerUidVal = document.getElementById('cfg-owner-line-uid')?.value.trim() || '';
+  // 🌟 核心修正：同時抓取 cfg- 與 lt-cfg- 輸入框，杜絕抓不到值的問題！
+  const lineTokenVal = getVal('cfg-line-token', 'lt-cfg-line-token', 'lt-line-token');
+  const ownerUidVal = getVal('cfg-owner-line-uid', 'lt-cfg-owner-line-uid');
 
+  // 雙向硬碟持久化
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem('zy_cached_theme', selectedTheme);
   localStorage.setItem('z_cached_theme', selectedTheme);
 
-  const chosenStartTime = document.getElementById('cfg-shift-start')?.value || '09:00';
-  const chosenEndTime = document.getElementById('cfg-shift-end')?.value || '19:00';
-  const chosenInterval = Number(document.getElementById('cfg-shift-interval')?.value || 30);
+  const chosenStartTime = getVal('cfg-shift-start', 'lt-shift-start') || '09:00';
+  const chosenEndTime = getVal('cfg-shift-end', 'lt-shift-end') || '19:00';
+  const chosenInterval = Number(getVal('cfg-shift-interval', 'lt-shift-interval') || 30);
 
-  // 組裝完整的 settingsPayload
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -9231,96 +9246,93 @@ async function saveStoreSettings() {
     custom_off_dates: customOffDatesArray,
     industry_mode: selectedMode,
     theme_color: selectedTheme,
-    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
-    logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
-    enable_logo: getCheck('cfg-toggle-logo'),
-    store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
-    address: document.getElementById('cfg-address')?.value.trim() || '',
+    display_subtitle: getVal('cfg-subtitle', 'lt-subtitle'),
+    logo_url: getVal('cfg-logo', 'lt-logo'),
+    enable_logo: getCheck('cfg-toggle-logo') || getCheck('lt-toggle-logo'),
+    store_phone: getVal('cfg-phone', 'lt-phone'),
+    address: getVal('cfg-address', 'lt-address'),
     store_resources: storeResourcesList,
-    business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
-    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
-    care_text: document.getElementById('cfg-care')?.value.trim() || '',
-    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
-    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
-    deposit_report_mode: document.getElementById('cfg-deposit-report-mode')?.value || 'both',
-    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
-    promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
-    line_url: document.getElementById('cfg-line')?.value.trim() || '',
-    ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
-    map_url: document.getElementById('cfg-map')?.value.trim() || '',
+    business_hours: getVal('cfg-hours', 'lt-hours') || '09:00 - 19:00',
+    booking_buffer_hours: Number(getVal('cfg-buffer', 'lt-buffer') || 1),
+    care_text: getVal('cfg-care', 'lt-care'),
+    deposit_mode: getVal('cfg-deposit-mode', 'lt-deposit-mode') || 'all',
+    deposit_amount: Number(getVal('cfg-deposit-amount', 'lt-deposit-amount') || 0),
+    deposit_report_mode: getVal('cfg-deposit-report-mode', 'lt-deposit-report-mode') || 'both',
+    deposit_info: getVal('cfg-deposit-info', 'lt-deposit-info'),
+    promo_text: getVal('cfg-promo', 'lt-promo'),
+    line_url: getVal('cfg-line', 'lt-line'),
+    ig_url: getVal('cfg-ig', 'lt-ig'),
+    map_url: getVal('cfg-map', 'lt-map'),
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
-    line_card_theme: document.getElementById('cfg-line-card-theme')?.value || 'latte',
-    contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
-    contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
-    promo_rules_text: document.getElementById('cfg-promo-rules')?.value.trim() || document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+    line_card_theme: getVal('cfg-line-card-theme', 'setting-line-card-theme') || 'latte',
+    contract_title: getVal('cfg-contract-title', 'lt-contract-title') || '定型化服務契約書',
+    contract_content: getVal('cfg-contract-content', 'lt-contract-content'),
+    promo_rules_text: getVal('cfg-promo-rules', 'cfg-promo-rules-input', 'lt-promo-rules'),
 
-    // 圖片、題庫與行前叮嚀
     promo_imgs: promoImgsArray.filter(Boolean),
     pet_profile_questions: customQuestionsList,
-    front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
-    enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
+    front_stay_notice: getVal('cfg-stay-notice-content', 'lt-cfg-stay-notice-content'),
+    enable_front_stay_notice: getCheck('cfg-toggle-stay-notice') || getCheck('lt-cfg-toggle-stay-notice'),
 
-    // 住宿房型與供餐選項
     hotel_room_tiers: adminRoomTiers,
     hotel_meal_options: adminMealOptions,
     boarding_meal_rates: {
       small: [
-        Number(document.getElementById('cfg-meal-small-1')?.value || 80),
-        Number(document.getElementById('cfg-meal-small-2')?.value || 75),
-        Number(document.getElementById('cfg-meal-small-3')?.value || 70)
+        Number(getVal('cfg-meal-small-1', 'lt-cfg-meal-small-1') || 80),
+        Number(getVal('cfg-meal-small-2', 'lt-cfg-meal-small-2') || 75),
+        Number(getVal('cfg-meal-small-3', 'lt-cfg-meal-small-3') || 70)
       ],
       medium: [
-        Number(document.getElementById('cfg-meal-med-1')?.value || 100),
-        Number(document.getElementById('cfg-meal-med-2')?.value || 90),
-        Number(document.getElementById('cfg-meal-med-3')?.value || 85)
+        Number(getVal('cfg-meal-med-1', 'lt-cfg-meal-med-1') || 100),
+        Number(getVal('cfg-meal-med-2', 'lt-cfg-meal-med-2') || 90),
+        Number(getVal('cfg-meal-med-3', 'lt-cfg-meal-med-3') || 85)
       ],
       large: [
-        Number(document.getElementById('cfg-meal-large-1')?.value || 120),
-        Number(document.getElementById('cfg-meal-large-2')?.value || 110),
-        Number(document.getElementById('cfg-meal-large-3')?.value || 105)
+        Number(getVal('cfg-meal-large-1', 'lt-cfg-meal-large-1') || 120),
+        Number(getVal('cfg-meal-large-2', 'lt-cfg-meal-large-2') || 110),
+        Number(getVal('cfg-meal-large-3', 'lt-cfg-meal-large-3') || 105)
       ]
     },
 
-    // 營運工時與抽成
     shift_start_time: chosenStartTime,
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
-    commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
-    designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
+    commission_rate: Number(getVal('cfg-commission-rate', 'lt-cfg-commission-rate') || 50),
+    designated_bonus: Number(getVal('cfg-designated-bonus', 'lt-cfg-designated-bonus') || 50),
 
-    // 20+ 個 Feature Flags
-    enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
-    enable_deposit: getCheck('cfg-toggle-deposit'),
-    enable_staff_select: getCheck('cfg-toggle-staff-select'),
-    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
-    enable_cust_type: getCheck('cfg-toggle-custtype'),
-    enable_show_price: getCheck('cfg-toggle-show-price'),
-    enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
+    // 流程與功能開關（雙向相容）
+    enable_audit_booking: getCheck('cfg-toggle-audit-booking') || getCheck('lt-toggle-audit-booking'),
+    enable_deposit: getCheck('cfg-toggle-deposit') || getCheck('lt-toggle-deposit'),
+    enable_staff_select: getCheck('cfg-toggle-staff-select') || getCheck('lt-toggle-staff-select'),
+    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule') || getCheck('lt-toggle-multi-staff-schedule'),
+    enable_cust_type: getCheck('cfg-toggle-custtype') || getCheck('lt-toggle-custtype'),
+    enable_show_price: getCheck('cfg-toggle-show-price') || getCheck('lt-toggle-show-price'),
+    enable_cust_notes: getCheck('cfg-toggle-cust-notes') || getCheck('lt-toggle-cust-notes'),
     enable_wallet: getCheck('cfg-toggle-wallet'),
     enable_packages: getCheck('cfg-toggle-packages'),
     enable_coupons: getCheck('cfg-toggle-coupons'),
     enable_reviews: getCheck('cfg-toggle-reviews'),
-    enable_portfolio: getCheck('cfg-toggle-portfolio'),
-    enable_care: getCheck('cfg-toggle-care'),
-    enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
-    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
-    enable_email_copy: getCheck('cfg-toggle-email'),
-    enable_carousel: getCheck('cfg-toggle-carousel'),
+    enable_portfolio: getCheck('cfg-toggle-portfolio') || getCheck('lt-toggle-portfolio'),
+    enable_care: getCheck('cfg-toggle-care') || getCheck('lt-toggle-care'),
+    enable_quick_contact: getCheck('cfg-toggle-quick-contact') || getCheck('lt-toggle-quick-contact'),
+    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason') || getCheck('lt-toggle-cancel-reason'),
+    enable_email_copy: getCheck('cfg-toggle-email') || getCheck('lt-toggle-email'),
+    enable_carousel: getCheck('cfg-toggle-carousel') || getCheck('lt-toggle-carousel'),
     enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
-    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
+    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click') || getCheck('lt-toggle-line-one-click'),
     enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
     enable_contract: getCheck('cfg-toggle-contract'),
-    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
-    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
-    enable_phone_history_query: getCheck('setting-enable-phone-history'),
-    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push') || getCheck('lt-cfg-toggle-owner-line-push'),
+    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify') || getCheck('lt-cfg-toggle-line-auto-notify'),
+    enable_phone_history_query: getCheck('setting-enable-phone-history') || getCheck('lt-toggle-phone-history'),
+    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist') || getCheck('lt-toggle-contact-specialist'),
 
     updated_at: new Date().toISOString()
   };
 
   try {
-    // 1. 同步更新 stores 主表店名與主題
+    // 1. 同步更新 stores 主表店名與模式
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: {
@@ -9383,7 +9395,7 @@ async function saveStoreSettings() {
       throw new Error('資料庫更新未能成功，請檢查網路連線');
     }
 
-    // 3. 更新前端暫存記憶體
+    // 3. 完整同步前端記憶體
     if (backendData.settings) {
       Object.assign(backendData.settings, settingsPayload);
       backendData.settings.lineChannelToken = lineTokenVal;
@@ -9396,7 +9408,7 @@ async function saveStoreSettings() {
 
     Swal.fire({
       title: '系統設定已儲存！',
-      text: '所有設定與開關狀態已順利寫入。',
+      text: '所有設定與開關狀態已順利寫入雲端資料庫。',
       icon: 'success',
       timer: 1200,
       showConfirmButton: false
