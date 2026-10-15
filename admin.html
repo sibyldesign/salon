@@ -4364,9 +4364,11 @@ renderStoreResourcesList();
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
-        // 🌟 通報推播與 Token 對齊 (保證買斷與訂閱皆可啟用)
-        lineChannelToken: sCfg.line_channel_token || "",
-        line_channel_token: sCfg.line_channel_token || "",
+        // 🌟 通報推播與 Token 對齊 (保證買斷與訂閱皆可啟用，重整精準讀取)
+        lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || "",
+        line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || "",
+        owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
+        ownerLineUid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
         enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
         enable_owner_line_push: sCfg.enable_owner_line_push ?? true,
         enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
@@ -10536,7 +10538,7 @@ function routeToSettingsPage(btnEl) {
 }
 
     // ========================================================
-// 3. 買斷版專用資料回填與加購模組卡片獨立開關（已修正閉合語法，保證順暢進入後台）
+// 3. 買斷版專用資料回填與加購模組卡片獨立開關（已修正閉合語法與空值覆蓋問題）
 // ========================================================
 function populateLifetimeSettings() {
   const s = backendData.settings || {};
@@ -10634,27 +10636,20 @@ function populateLifetimeSettings() {
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
 
-  // 🌟 通報推播與管道回填（LINE / Email 完整啟用，加入雙向持久化防護）
+  // 🌟 通報推播與管道回填（LINE / Email 完整啟用，雙重持久化）
   const linePushCard = document.getElementById('lt-addon-card-line_push');
   if (linePushCard) {
     linePushCard.classList.remove('hidden');
     linePushCard.style.setProperty('display', 'block', 'important');
   }
 
-  // 優先順序：資料庫欄位 ➔ 記憶體 ➔ LocalStorage 快取備份
+  // 優先抓取資料庫 ➔ 記憶體 ➔ LocalStorage 快取
   const effectiveLineToken = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
   const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
 
-  const tokenInput = document.getElementById('lt-cfg-line-token');
-  const uidInput = document.getElementById('lt-cfg-owner-line-uid');
+  setVal('lt-cfg-line-token', effectiveLineToken);
+  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
 
-  if (tokenInput) tokenInput.value = effectiveLineToken;
-  if (uidInput) uidInput.value = effectiveOwnerUid;
-
-  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
-  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
-  setVal('lt-cfg-line-token', s.lineChannelToken || s.line_channel_token || '');
-  setVal('lt-cfg-owner-line-uid', s.owner_line_uid || s.ownerLineUid || '');
   setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
   setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
 
@@ -10743,15 +10738,15 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 動態抓取營業時間輸入值 (不寫死)
   const chosenStartTime = document.getElementById('lt-shift-start')?.value || '09:00';
   const chosenEndTime = document.getElementById('lt-shift-end')?.value || '19:00';
   const chosenInterval = Number(document.getElementById('lt-shift-interval')?.value || 30);
 
-  // 🌟 關鍵修正：精準讀取買斷版欄位（相容兩種 ID）並存入永久備援快取
-  const lineTokenVal = (document.getElementById('lt-cfg-line-token')?.value || document.getElementById('lt-line-token')?.value || '').trim();
-  const ownerUidVal = (document.getElementById('lt-cfg-owner-line-uid')?.value || document.getElementById('cfg-owner-line-uid')?.value || '').trim();
+  // 🌟 精確抓取 Token 與 UID
+  const lineTokenVal = (document.getElementById('lt-cfg-line-token')?.value || '').trim();
+  const ownerUidVal = (document.getElementById('lt-cfg-owner-line-uid')?.value || '').trim();
 
+  // 寫入永久備援快取
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
 
@@ -10777,19 +10772,17 @@ async function saveLifetimeStoreSettings() {
     weekly_off_days: weeklyOff,
     promo_rules_text: document.getElementById('lt-promo-rules')?.value.trim() || '',
     
-    // 營業時間動態儲存
     shift_start_time: chosenStartTime,
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
 
-    // 🌟 核心寫入：LINE 權杖與業主 UID
+    // 🌟 寫入資料庫欄位
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
     enable_owner_line_push: getCheck('lt-cfg-toggle-owner-line-push'),
     enable_line_auto_notify: getCheck('lt-cfg-toggle-line-auto-notify'),
     enable_email_copy: getCheck('lt-toggle-email'),
 
-    // 標配前台流程開關
     enable_staff_select: getCheck('lt-toggle-staff-select'),
     enable_multi_staff_schedule: getCheck('lt-toggle-multi-staff-schedule'),
     enable_cust_type: getCheck('lt-toggle-custtype'),
@@ -10801,7 +10794,6 @@ async function saveLifetimeStoreSettings() {
     enable_phone_history_query: getCheck('lt-toggle-phone-history'),
     enable_contact_specialist: getCheck('lt-toggle-contact-specialist'),
 
-    // 標配自動化輔助開關
     enable_audit_booking: getCheck('lt-toggle-audit-booking'),
     enable_deposit: getCheck('lt-toggle-deposit'),
     enable_quick_contact: getCheck('lt-toggle-quick-contact'),
@@ -10817,7 +10809,6 @@ async function saveLifetimeStoreSettings() {
   }
 
   try {
-    // 🌟 自動辨識與防護寫入
     const toSend = { ...payload };
     for (let attempt = 0; attempt < 5; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
@@ -10833,7 +10824,6 @@ async function saveLifetimeStoreSettings() {
 
       if (res.ok) {
         const patchData = await res.json();
-        // 若該店家尚無 store_settings 資料列，改用 POST 建立
         if (!patchData || patchData.length === 0) {
           await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
             method: "POST",
@@ -10858,7 +10848,6 @@ async function saveLifetimeStoreSettings() {
       }
     }
 
-    // 同步更新 stores 主表店名與主題
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
@@ -10870,13 +10859,7 @@ async function saveLifetimeStoreSettings() {
     backendData.settings.lineChannelToken = lineTokenVal;
     backendData.settings.line_channel_token = lineTokenVal;
     backendData.settings.owner_line_uid = ownerUidVal;
-    backendData.settings.shiftStartTime = chosenStartTime;
-    backendData.settings.shift_start_time = chosenStartTime;
-    backendData.settings.sheets_spreadsheet_id = cleanSheetId;
-    backendData.settings.sheets_gas_url = gasUrl;
-    backendData.settings.enable_sheets_sync = enableSheetsSync;
-    backendData.settings.enable_sheets_cust_sync = enableSheetsCustSync;
-    backendData.settings.promoRulesText = payload.promo_rules_text;
+    backendData.settings.ownerLineUid = ownerUidVal;
 
     markLifetimeSettingsSaved();
     Swal.fire({ title: '買斷版設定已成功儲存！', text: 'Token 與資料已成功寫入，重整絕對不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
