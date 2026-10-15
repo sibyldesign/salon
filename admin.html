@@ -153,6 +153,29 @@
       </div>
     </div>
 
+    <!-- 分頁：類 Excel 全日視覺化排程總覽 (page-overview) -->
+    <div id="page-overview" class="page space-y-4 full-admin-only" style="display: none;">
+      <div class="bg-white p-4 md:p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-brand-100 gap-2">
+          <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-table-cells text-[#8C7355]"></i> 全日排程與插單總覽
+          </span>
+          <span class="text-[10.5px] text-brand-400 font-medium">左右滑動日期，隨時掌握每位老師的穿插空檔</span>
+        </div>
+
+        <!-- 上方橫排滑動日期按鈕列 -->
+        <div class="flex gap-2 overflow-x-auto pb-2 border-b border-dashed border-brand-200 no-scrollbar" id="overview-date-scroll-area"></div>
+        <input type="hidden" id="overview-view-date">
+
+        <!-- 類 Excel 專員直條看板畫布 -->
+        <div class="overflow-x-auto pt-1">
+          <div id="overview-grid-canvas" class="min-w-[500px] space-y-2">
+            <div class="text-center py-8 text-xs text-brand-400">正在載入全日排程總覽...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 分頁 2. 專員排班 (page-shift) -->
     <div id="page-shift" class="page space-y-4" style="display: none;">
       <div class="bg-white p-3.5 rounded-2xl border border-brand-200 shadow-sm space-y-2" id="staff-shift-selector-box">
@@ -1416,6 +1439,7 @@
         <label class="block font-bold text-brand-800 text-[11px] mb-1">勾選開放給此專員的工作台後台分頁：</label>
         <div class="grid grid-cols-3 sm:grid-cols-4 gap-1.5 p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-[11px]" id="lt-new-staff-pages-box">
           <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="calendar" checked class="lt-staff-perm-cb accent-[#8C7355]"> 日曆</label>
+          <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="overview" checked class="staff-perm-cb accent-[#8C7355]"> 總覽</label>
           <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="shift" checked class="lt-staff-perm-cb accent-[#8C7355]"> 排班</label>
           <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="customer" checked class="lt-staff-perm-cb accent-[#8C7355]"> 名單</label>
           <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="add" checked class="lt-staff-perm-cb accent-[#8C7355]"> 新增代客</label>
@@ -2214,6 +2238,7 @@
             <label class="block font-bold text-brand-800 text-[11px] mb-1">勾選開放給此專員的工作台後台分頁：</label>
             <div class="grid grid-cols-3 sm:grid-cols-4 gap-1.5 p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-[11px]" id="new-staff-pages-box">
               <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="calendar" checked class="staff-perm-cb accent-[#8C7355]"> 日曆</label>
+              <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="overview" checked class="staff-perm-cb accent-[#8C7355]"> 總覽</label>
               <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="shift" checked class="staff-perm-cb accent-[#8C7355]"> 排班</label>
               <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="customer" checked class="staff-perm-cb accent-[#8C7355]"> 名單</label>
               <label class="flex items-center gap-1 cursor-pointer font-bold text-brand-900"><input type="checkbox" value="add" checked class="staff-perm-cb accent-[#8C7355]"> 新增代客</label>
@@ -2867,6 +2892,9 @@
 <nav class="flex-1 py-1 flex items-center overflow-x-auto no-scrollbar gap-1 scroll-smooth" id="bottom-nav" style="display: none;">
   <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold" onclick="switchPage('calendar', this)">
     <i class="fa-solid fa-calendar-day text-base"></i><span class="text-[10px] mt-1">日曆</span>
+  </button>
+  <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('overview', this)">
+    <i class="fa-solid fa-table-cells text-base"></i><span class="text-[10px] mt-1">總覽</span>
   </button>
   <button class="nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium full-admin-only" onclick="switchPage('customer', this)">
     <i class="fa-solid fa-list-check text-base"></i><span class="text-[10px] mt-1">名單</span>
@@ -4537,6 +4565,10 @@ renderStoreResourcesList();
       if (pageId === 'reviews') { loadAdminReviews(); renderReviewTagsManager(); }
       if (pageId === 'slots') handleSlotRangeChange();
       if (pageId === 'subscription') renderSubscriptionUI();
+      if (pageId === 'overview') {
+  renderOverviewDateButtons();
+  renderOverviewGridCanvas();
+}
       
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -4630,6 +4662,95 @@ function handleIndustryModeChange(mode) {
       renderCalendar();
     }
 
+    // 渲染總覽分頁的上方日期滑桿
+function renderOverviewDateButtons() {
+  const dates = backendData.scheduleDates || [];
+  const scrollArea = document.getElementById('overview-date-scroll-area');
+  if (!scrollArea) return;
+
+  const currentViewDate = document.getElementById('overview-view-date')?.value || (dates[0] ? dates[0].date.replace(/\//g, '-') : '');
+  const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+  scrollArea.innerHTML = dates.map(d => {
+    const dObj = new Date(d.date);
+    const weekStr = weekDays[dObj.getDay()];
+    const dHyphen = d.date.replace(/\//g, '-');
+    const isSelected = (dHyphen === currentViewDate);
+
+    return `
+      <div class="shrink-0 px-3.5 py-2 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${
+        isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+      }" onclick="selectOverviewDateBtn('${dHyphen}')">
+        <div class="text-[9.5px] opacity-70">${weekStr}</div>
+        <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+      </div>
+    `;
+  }).join('');
+
+  if (!document.getElementById('overview-view-date').value && dates[0]) {
+    document.getElementById('overview-view-date').value = dates[0].date.replace(/\//g, '-');
+  }
+}
+
+function selectOverviewDateBtn(dHyphen) {
+  document.getElementById('overview-view-date').value = dHyphen;
+  renderOverviewDateButtons();
+  renderOverviewGridCanvas();
+}
+
+// 渲染類 Excel 總覽畫布 (直條為設計師，橫軸為時間軸)
+function renderOverviewGridCanvas() {
+  const canvas = document.getElementById('overview-grid-canvas');
+  if (!canvas) return;
+
+  const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
+  const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
+
+  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  if (staffList.length === 0) {
+    staffList.push({ id: 'solo', name: 'Solo' }, { id: 'elaine', name: 'Elaine' });
+  }
+
+  const apptsToday = (backendData.appointments || []).filter(a => a.date === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒');
+
+  // 產生時間網格 (例如 10:00 到 20:00)
+  const start = backendData.settings?.shiftStartTime || '10:00';
+  const end = backendData.settings?.shiftEndTime || '20:00';
+  const [sH] = start.split(':').map(Number);
+  const [eH] = e.split(':').map(Number); // 假設由 sH 到 eH
+
+  let gridHeaderHtml = staffList.map(st => `<div class="p-2.5 bg-brand-50 rounded-xl font-bold text-center text-xs border border-brand-200">${st.name}</div>`).join('');
+
+  // 組合每個老師當天的行程區塊
+  let columnsHtml = staffList.map(st => {
+    const staffAppts = apptsToday.filter(a => a.staffName === st.name || a.staffId === st.id || a.staffName === '不指定');
+
+    return `
+      <div class="space-y-1.5 p-2 bg-brand-50/50 rounded-2xl border border-brand-200 min-h-[300px]">
+        <div class="text-center font-bold text-xs text-brand-800 pb-1 border-b border-brand-200">${st.name} 專員看板</div>
+        ${staffAppts.length > 0 ? staffAppts.map(a => `
+          <div class="p-2.5 bg-white rounded-xl border border-amber-300 shadow-2xs space-y-1 text-xs">
+            <div class="flex justify-between items-center font-bold text-amber-950">
+              <span class="font-mono text-[#8C7355]">${a.time}</span>
+              <span class="px-1.5 py-0.2 bg-amber-100 text-amber-900 rounded text-[10px]">${a.status}</span>
+            </div>
+            <div class="font-bold text-brand-900">${a.name} <span class="text-gray-400 font-mono text-[11px]">(${a.phone})</span></div>
+            <div class="text-[11px] text-brand-700 bg-brand-50 p-1.5 rounded-lg border border-brand-100">
+              <div><b>項目：</b>${a.service}</div>${a.notes ? `<div class="text-gray-500 mt-0.5"><b>備註/穿插：</b>${a.notes}</div>` : ''}
+            </div>
+          </div>
+        `).join('') : '<div class="text-center py-10 text-gray-400 text-xs">當日無排程，全天空檔</div>'}
+      </div>
+    `;
+  }).join('');
+
+  canvas.innerHTML = `
+    <div class="grid grid-cols-${staffList.length} gap-2">
+      ${columnsHtml}
+    </div>
+  `;
+}
+    
     function showApptsInCalendar(dateStr) {
       selectedCalendarDate = dateStr;
       renderCalendar();
@@ -9745,8 +9866,8 @@ async function promptEditStaffPages(staffId) {
 
   const currentPages = staff.allowed_pages || ['calendar', 'shift'];
   const allAvailable = [
+    { id: 'overview', name: '全日總覽' }, // 🌟 補上這行
     { id: 'calendar', name: '日曆總覽' },
-    { id: 'shift', name: '個人排班' },
     { id: 'customer', name: '名單總覽' },
     { id: 'add', name: '代客卡位' },
     { id: 'boarding-schedule', name: '住宿房況' },
