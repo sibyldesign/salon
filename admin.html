@@ -9021,6 +9021,7 @@ function populateSettings() {
   setVal('cfg-line-card-theme', s.line_card_theme || 'latte');
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
+  setVal('cfg-owner-line-uid', s.owner_line_uid || '');
 
   // 2. 色系精準雙向鎖定 (資料庫優先，雙鍵快取同步)
   const localTheme = localStorage.getItem('zy_cached_theme') || localStorage.getItem('z_cached_theme');
@@ -9154,6 +9155,7 @@ const settingsPayload = {
   contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
   contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
   promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+  owner_line_uid: document.getElementById('cfg-owner-line-uid')?.value.trim() || '',
 
   // 1. 圖片、題庫與行前叮嚀 (完整寫入資料庫 JSON 欄位)
   promo_imgs: promoImgsArray.filter(Boolean),
@@ -11335,6 +11337,35 @@ function openCustomBoundSpreadsheet() {
 // ==========================================================================
 // 🚨🚨🚨【客製專用核心：結束】🚨🚨🚨
 // ==========================================================================
+
+    async function testOwnerLinePush() {
+  const token = document.getElementById('cfg-line-token')?.value.trim();
+  const ownerUid = document.getElementById('cfg-owner-line-uid')?.value.trim();
+  if (!token || !ownerUid) return Swal.fire('請完整填寫 Token 與業主 LINE UID', '', 'warning');
+
+  Swal.fire({ title: '正在發送測試推播...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        to: ownerUid,
+        messages: [{ type: "text", text: "💈 【系統測試】恭喜！業主個人 LINE 已成功連動，未來新預約將即時推播至此！" }]
+      })
+    });
+    if (res.ok) {
+      Swal.fire('連動成功！', '您的手機 LINE 已收到測試訊息。', 'success');
+    } else {
+      const err = await res.json();
+      Swal.fire('發送失敗', err.message || '請確認 Token 與 UID 是否正確', 'error');
+    }
+  } catch (e) {
+    Swal.fire('連線失敗', e.message, 'error');
+  }
+}
   </script>
 </body>
 </html>
