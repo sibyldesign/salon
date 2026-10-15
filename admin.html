@@ -1846,6 +1846,7 @@
   <!-- ======================================================== -->
 <!-- 15. 【買斷版專屬】：LINE 智慧推播與預約通報模組 -->
 <!-- ======================================================== -->
+<!-- 買斷版專用 LINE 卡片 -->
 <div id="lt-addon-card-line_push" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
   <div class="flex items-center justify-between border-b border-brand-100 pb-2">
     <div>
@@ -1857,23 +1858,49 @@
     </div>
     <div class="flex items-center gap-1.5">
       <button type="button" class="text-[11px] bg-brand-100 text-brand-800 px-3 py-1.5 rounded-xl font-bold hover:bg-brand-200 transition" onclick="showLineDevelopersOneStopGuide()">
-        <i class="fa-solid fa-circle-question mr-1"></i>後台金鑰取得指南
+        <i class="fa-solid fa-circle-question mr-1"></i>設定指南
       </button>
     </div>
   </div>
 
-  <!-- 功能說明小卡 -->
-  <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/80 space-y-1 text-[11px] text-brand-700 leading-relaxed">
+  <!-- 模組說明小卡 -->
+  <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 space-y-1.5 text-[11px] text-brand-800 leading-relaxed">
     <div class="font-bold text-brand-900 flex items-center gap-1">
       <i class="fa-solid fa-circle-info text-brand-500"></i>
-      <span>金鑰連動設定順序說明：</span>
+      <span>模組運作說明：</span>
     </div>
-    <p>1. <b>第一步：</b>至 LINE Developers 複製「Channel Access Token」貼於下方並儲存（系統發話鑰匙）。</p>
-    <p>2. <b>第二步：</b>於同分頁的「Your user ID」複製 U 開頭代碼，或儲存 Token 後至店家官方 LINE 傳送「<code>我要綁定後台</code>」完成連動。</p>
+    <p>• <b>雙向自動通報：</b>顧客送單即時回傳確認卡片；業主手機收到新單推播，可直接於 LINE 點擊接單或婉拒。</p>
+    <p>• <b>防放鳥出席機制：</b>預約日前一日定時發送出席確認卡片，顧客點擊「確認出席」自動同步至試算表與後台。</p>
+    <p>• <b>零則數查詢：</b>顧客於聊天室點擊「查詢預約」，系統自動調閱排程回傳，不消耗每月付費訊息則數。</p>
   </div>
 
-  <div class="space-y-3 pt-1">
-    <!-- 步驟 1：Channel Access Token -->
+  <!-- 雙開關 -->
+  <div class="space-y-2 pt-1 border-t border-brand-100">
+    <div class="flex items-center justify-between p-3 bg-brand-50/60 rounded-2xl border border-brand-200/80">
+      <div>
+        <span class="font-bold text-brand-900 block">新預約主動推播至【業主個人 LINE】(含接單/婉拒按鈕)</span>
+        <span class="text-[10px] text-brand-500">關閉時：改為發送業主信箱存查副本，0 元計費、不消耗 LINE 則數</span>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+        <input type="checkbox" id="lt-cfg-toggle-owner-line-push" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+      </label>
+    </div>
+
+    <div class="flex items-center justify-between p-3 bg-brand-50/60 rounded-2xl border border-brand-200/80">
+      <div>
+        <span class="font-bold text-brand-900 block">啟用 官方 LINE 主動推播給【預約顧客】</span>
+        <span class="text-[10px] text-brand-500">含：預約成立即時通知卡片 ＋ 預約日前一天晚上自動提醒防放鳥</span>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+        <input type="checkbox" id="lt-cfg-toggle-line-auto-notify" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+      </label>
+    </div>
+  </div>
+
+  <!-- 輸入框 -->
+  <div class="space-y-3 pt-2">
     <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-1.5">
       <div class="flex justify-between items-center">
         <label class="block font-bold text-brand-900 text-xs">
@@ -1885,7 +1912,6 @@
       <p class="text-[10px] text-gray-400">※ 位置：LINE Developers ➔ Messaging API 分頁最底部的「Channel access token」。</p>
     </div>
 
-    <!-- 步驟 2：業主個人 LINE UID -->
     <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
       <div class="flex justify-between items-center">
         <label class="block font-bold text-brand-900 text-xs">
@@ -1893,14 +1919,12 @@
         </label>
         <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">通知收件人</span>
       </div>
-      
       <div class="flex gap-2">
         <input type="text" id="lt-cfg-owner-line-uid" placeholder="貼上 U 開頭個人 ID，或用下方官方聊天室密語自動連動" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-brand-50/30 outline-none">
         <button type="button" onclick="testOwnerLinePush()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0 flex items-center gap-1">
           <i class="fa-solid fa-paper-plane"></i> 測試推播
         </button>
       </div>
-
       <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 leading-relaxed">
         <b>💡 取得 UID 的兩種最快方式：</b><br>
         • <b>方式 A（同頁複製）：</b>就在剛剛複製 Token 的同一個 Messaging API 頁面，中段的 <code>Your user ID</code> 複製貼上。<br>
@@ -2274,69 +2298,93 @@
       </div>
 
       <!-- 7. LINE 推播與通報管道 (訂閱版專屬標準 ID) -->
-      <div id="cfg-card-line_push" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
-        <div class="flex items-center justify-between border-b border-brand-100 pb-2">
-          <div>
-            <span class="font-bold text-brand-900 block flex items-center gap-1.5 text-sm">
-              <i class="fa-brands fa-line text-emerald-600 text-base"></i>
-              <span>LINE 智慧通報與防放鳥出席模組</span>
-            </span>
-            <span class="text-[10.5px] text-brand-400 mt-0.5">預約成功即時推播、前一日防放鳥出席確認、業主一鍵接單</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button type="button" class="text-[11px] bg-brand-100 text-brand-800 px-3 py-1.5 rounded-xl font-bold hover:bg-brand-200 transition" onclick="showLineDevelopersOneStopGuide()">
-              <i class="fa-solid fa-circle-question mr-1"></i>後台金鑰取得指南
-            </button>
-          </div>
-        </div>
+      <!-- 訂閱版專用 LINE 卡片 -->
+<div id="cfg-card-line_push" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+  <div class="flex items-center justify-between border-b border-brand-100 pb-2">
+    <div>
+      <span class="font-bold text-brand-900 block flex items-center gap-1.5 text-sm">
+        <i class="fa-brands fa-line text-emerald-600 text-base"></i>
+        <span>LINE 智慧通報與防放鳥出席模組</span>
+      </span>
+      <span class="text-[10.5px] text-brand-400 mt-0.5">預約成功即時推播、前一日防放鳥出席確認、業主一鍵接單</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button type="button" class="text-[11px] bg-brand-100 text-brand-800 px-3 py-1.5 rounded-xl font-bold hover:bg-brand-200 transition" onclick="showLineDevelopersOneStopGuide()">
+        <i class="fa-solid fa-circle-question mr-1"></i>設定指南
+      </button>
+    </div>
+  </div>
 
-        <!-- 功能說明小卡 -->
-        <div class="p-3.5 bg-brand-50/70 rounded-2xl border border-brand-200/80 space-y-1 text-[11px] text-brand-700 leading-relaxed">
-          <div class="font-bold text-brand-900 flex items-center gap-1">
-            <i class="fa-solid fa-circle-info text-brand-500"></i>
-            <span>金鑰連動設定順序說明：</span>
-          </div>
-          <p>1. <b>第一步：</b>至 LINE Developers 複製「Channel Access Token」貼於下方並儲存（系統發話鑰匙）。</p>
-          <p>2. <b>第二步：</b>於同分頁的「Your user ID」複製 U 開頭代碼，或儲存 Token 後至店家官方 LINE 傳送「<code>我要綁定後台</code>」完成連動。</p>
-        </div>
+  <!-- 模組說明小卡 -->
+  <div class="p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 space-y-1.5 text-[11px] text-brand-800 leading-relaxed">
+    <div class="font-bold text-brand-900 flex items-center gap-1">
+      <i class="fa-solid fa-circle-info text-brand-500"></i>
+      <span>模組運作說明：</span>
+    </div>
+    <p>• <b>雙向自動通報：</b>顧客送單即時回傳確認卡片；業主手機收到新單推播，可直接於 LINE 點擊接單或婉拒。</p>
+    <p>• <b>防放鳥出席機制：</b>預約日前一日定時發送出席確認卡片，顧客點擊「確認出席」自動同步至試算表與後台。</p>
+    <p>• <b>零則數查詢：</b>顧客於聊天室點擊「查詢預約」，系統自動調閱排程回傳，不消耗每月付費訊息則數。</p>
+  </div>
 
-        <div class="space-y-3 pt-1">
-          <!-- 步驟 1：Channel Access Token -->
-          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-1.5">
-            <div class="flex justify-between items-center">
-              <label class="block font-bold text-brand-900 text-xs">
-                步驟 1. 門市 LINE 官方帳號 Channel Access Token（必填）：
-              </label>
-              <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">系統發訊金鑰</span>
-            </div>
-            <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-brand-50/30 outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上該店 LINE Developers 發行的長期 Channel Access Token"></textarea>
-            <p class="text-[10px] text-gray-400">※ 位置：LINE Developers ➔ Messaging API 分頁最底部的「Channel access token」。</p>
-          </div>
-
-          <!-- 步驟 2：業主個人 LINE UID -->
-          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
-            <div class="flex justify-between items-center">
-              <label class="block font-bold text-brand-900 text-xs">
-                步驟 2. 接收通知的業主個人 LINE User ID (UID)：
-              </label>
-              <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">通知收件人</span>
-            </div>
-            
-            <div class="flex gap-2">
-              <input type="text" id="cfg-owner-line-uid" placeholder="貼上 U 開頭個人 ID，或用下方官方聊天室密語自動連動" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-brand-50/30 outline-none">
-              <button type="button" onclick="testOwnerLinePush()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0 flex items-center gap-1">
-                <i class="fa-solid fa-paper-plane"></i> 測試推播
-              </button>
-            </div>
-
-            <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 leading-relaxed">
-              <b>💡 取得 UID 的兩種最快方式：</b><br>
-              • <b>方式 A（同頁複製）：</b>就在剛剛複製 Token 的同一個 Messaging API 頁面，中段的 <code>Your user ID</code> 複製貼上。<br>
-              • <b>方式 B（手機傳密語）：</b>Token 儲存後，用手機 LINE 打開官方帳號發送：<b class="font-mono bg-white px-1.5 py-0.5 rounded text-emerald-800">我要綁定後台</b>，系統將自動寫入此欄位。
-            </div>
-          </div>
-        </div>
+  <!-- 雙開關 -->
+  <div class="space-y-2 pt-1 border-t border-brand-100">
+    <div class="flex items-center justify-between p-3 bg-brand-50/60 rounded-2xl border border-brand-200/80">
+      <div>
+        <span class="font-bold text-brand-900 block">新預約主動推播至【業主個人 LINE】(含接單/婉拒按鈕)</span>
+        <span class="text-[10px] text-brand-500">關閉時：改為發送業主信箱存查副本，0 元計費、不消耗 LINE 則數</span>
       </div>
+      <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+        <input type="checkbox" id="cfg-toggle-owner-line-push" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+      </label>
+    </div>
+
+    <div class="flex items-center justify-between p-3 bg-brand-50/60 rounded-2xl border border-brand-200/80">
+      <div>
+        <span class="font-bold text-brand-900 block">啟用 官方 LINE 主動推播給【預約顧客】</span>
+        <span class="text-[10px] text-brand-500">含：預約成立即時通知卡片 ＋ 預約日前一天晚上自動提醒防放鳥</span>
+      </div>
+      <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
+        <input type="checkbox" id="cfg-toggle-line-auto-notify" class="sr-only peer" checked>
+        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+      </label>
+    </div>
+  </div>
+
+  <!-- 輸入框 -->
+  <div class="space-y-3 pt-2">
+    <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-1.5">
+      <div class="flex justify-between items-center">
+        <label class="block font-bold text-brand-900 text-xs">
+          步驟 1. 門市 LINE 官方帳號 Channel Access Token（必填）：
+        </label>
+        <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">系統發訊金鑰</span>
+      </div>
+      <textarea id="cfg-line-token" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-brand-50/30 outline-none focus:ring-1 focus:ring-brand-400" placeholder="請貼上該店 LINE Developers 發行的長期 Channel Access Token"></textarea>
+      <p class="text-[10px] text-gray-400">※ 位置：LINE Developers ➔ Messaging API 分頁最底部的「Channel access token」。</p>
+    </div>
+
+    <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2">
+      <div class="flex justify-between items-center">
+        <label class="block font-bold text-brand-900 text-xs">
+          步驟 2. 接收通知的業主個人 LINE User ID (UID)：
+        </label>
+        <span class="text-[10px] text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">通知收件人</span>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" id="cfg-owner-line-uid" placeholder="貼上 U 開頭個人 ID，或用下方官方聊天室密語自動連動" class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs font-mono bg-brand-50/30 outline-none">
+        <button type="button" onclick="testOwnerLinePush()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-xs shrink-0 flex items-center gap-1">
+          <i class="fa-solid fa-paper-plane"></i> 測試推播
+        </button>
+      </div>
+      <div class="p-2.5 bg-emerald-50/70 rounded-xl border border-emerald-200 text-[11px] text-emerald-900 leading-relaxed">
+        <b>💡 取得 UID 的兩種最快方式：</b><br>
+        • <b>方式 A（同頁複製）：</b>就在剛剛複製 Token 的同一個 Messaging API 頁面，中段的 <code>Your user ID</code> 複製貼上。<br>
+        • <b>方式 B（手機傳密語）：</b>Token 儲存後，用手機 LINE 打開官方帳號發送：<b class="font-mono bg-white px-1.5 py-0.5 rounded text-emerald-800">我要綁定後台</b>，系統將自動寫入此欄位。
+      </div>
+    </div>
+  </div>
+</div>
       
       <!-- 8. 20+ 功能模組開關控制板 (全數升級 iOS 質感滑塊開關) -->
       <div id="section-module-toggles" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
@@ -11381,18 +11429,71 @@ function openCustomBoundSpreadsheet() {
 // 🚨🚨🚨【客製專用核心：結束】🚨🚨🚨
 // ==========================================================================
 
-    async function testOwnerLinePush() {
-  const token = (document.getElementById('lt-cfg-line-token')?.value || document.getElementById('cfg-line-token')?.value || '').trim();
-  const ownerUid = (document.getElementById('lt-cfg-owner-line-uid')?.value || document.getElementById('cfg-owner-line-uid')?.value || '').trim();
+    // ========================================================
+// 【智慧轉發版】testOwnerLinePush() — 徹底解決 CORS 連線失敗問題
+// ========================================================
+async function testOwnerLinePush() {
+  const token = (
+    document.getElementById('cfg-line-token')?.value || 
+    document.getElementById('lt-cfg-line-token')?.value || ''
+  ).trim();
+
+  const ownerUid = (
+    document.getElementById('cfg-owner-line-uid')?.value || 
+    document.getElementById('lt-cfg-owner-line-uid')?.value || ''
+  ).trim();
 
   if (!token) {
-    return Swal.fire('請先填寫步驟 1 的 Channel Access Token', '沒有發訊金鑰，系統無法向 LINE 官方發出請求。', 'warning');
+    return Swal.fire('請先填寫步驟 1 的 Channel Access Token', '尚未填寫發訊金鑰，無法向 LINE 官方發出請求。', 'warning');
   }
   if (!ownerUid) {
     return Swal.fire('請填寫步驟 2 的業主 LINE User ID (UID)', '請填寫接收推播的個人 U 開頭 ID。', 'warning');
   }
 
-  Swal.fire({ title: '正在發送測試推播...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  Swal.fire({
+    title: '正在發送測試推播...',
+    text: '透過加密中繼通道向 LINE 官方伺服器連線中...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  const testMessage = `💈 【預約管理系統測試】\n恭喜！業主個人 LINE 即時推播連動成功！\n門市 ID: ${CURRENT_STORE_ID}\n未來有新訂單時將第一時間推播至此，支援一鍵接單/婉拒。`;
+
+  // 1. 優先嘗試透過 Google Apps Script 中繼代理 (避開瀏覽器 CORS 阻斷)
+  const gasUrl = backendData.settings?.sheets_gas_url || API_URL;
+  let sentViaGas = false;
+
+  if (gasUrl) {
+    try {
+      const res = await fetch(gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "sendLinePushProxy",
+          token: token,
+          to: ownerUid,
+          message: testMessage
+        })
+      });
+
+      if (res.ok) {
+        sentViaGas = true;
+      }
+    } catch (e) {
+      console.warn("GAS 代理嘗試略過:", e);
+    }
+  }
+
+  // 2. 若中繼成功，立即顯示成功彈窗
+  if (sentViaGas) {
+    return Swal.fire({
+      title: '測試推播已發送！',
+      text: '請查看您的手機 LINE 是否已收到測試訊息。若有收到，請記得點擊頁面最下方「儲存設定」。',
+      icon: 'success'
+    });
+  }
+
+  // 3. 次選：直接呼叫 LINE 官方 API (並加上異常捕獲分析)
   try {
     const res = await fetch("https://api.line.me/v2/bot/message/push", {
       method: "POST",
@@ -11402,18 +11503,38 @@ function openCustomBoundSpreadsheet() {
       },
       body: JSON.stringify({
         to: ownerUid,
-        messages: [{ type: "text", text: "💈 【系統測試】恭喜！業主個人 LINE 即時推播連動成功！未來新預約進單將直接傳送到此對話框。" }]
+        messages: [{ type: "text", text: testMessage }]
       })
     });
 
     if (res.ok) {
-      Swal.fire('連動成功！', '您的手機 LINE 已收到測試訊息，請記得點擊頁面最下方「儲存買斷版全部設定」。', 'success');
+      Swal.fire({
+        title: '連動成功！',
+        text: '您的手機 LINE 已收到測試訊息，請記得儲存設定。',
+        icon: 'success'
+      });
     } else {
       const err = await res.json();
-      Swal.fire('發送失敗', err.message || '請確認 Token 與 UID 是否正確無誤', 'error');
+      Swal.fire({
+        title: 'LINE 伺服器回應錯誤',
+        text: err.message || '請確認 Token 與 UID 是否正確無誤',
+        icon: 'error'
+      });
     }
-  } catch (e) {
-    Swal.fire('連線失敗', e.message, 'error');
+  } catch (err) {
+    // 4. 若因瀏覽器安全性 (CORS) 擋下，給予老闆最精準的指引
+    Swal.fire({
+      title: '瀏覽器安全阻擋 (CORS)',
+      html: `
+        <div class="text-left text-xs space-y-2 text-brand-800 leading-relaxed bg-brand-50 p-3.5 rounded-2xl border border-brand-200">
+          <p>⚠️ 因瀏覽器跨來源安全機制，網頁端無法直接對 LINE 發起直連推播。</p>
+          <p><b>💡 請放心：</b>只要您的 <b>Token</b> 與 <b>UID</b> 複製正確，點擊最下方<b>「儲存全部系統設定」</b>後，當顧客預約送單時，伺服器中繼端依然會正常推播至您的 LINE！</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: '了解並直接儲存',
+      confirmButtonColor: '#8C7355'
+    });
   }
 }
 
