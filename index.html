@@ -313,6 +313,15 @@
           <!-- 舊客自動帶入歡迎提示 -->
           <div id="welcome-msg" class="hidden mt-1.5 px-1 flex items-center gap-1 text-xs font-bold text-theme-primary" aria-live="polite"></div>
 
+          <!-- 🌟【買斷標配】電話查詢歷史預約快捷按鈕 -->
+          <div id="frontHistoryQuerySection" class="mt-2 flex justify-between items-center text-xs">
+            <span class="text-[11px] text-brand-400"></span>
+            <button type="button" onclick="openFrontCustomerHistoryModal()" class="px-3 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px] transition flex items-center gap-1 shadow-2xs">
+              <i class="fa-solid fa-clock-rotate-left text-brand-500"></i>
+              <span>查詢歷史預約</span>
+            </button>
+          </div>
+          
           <!-- 會員儲值金與包卡即時資產卡片 -->
           <div id="memberWalletCard" class="hidden mt-2 p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 space-y-1.5 text-xs shadow-2xs">
             <div class="flex items-center justify-between font-bold text-amber-950">
@@ -565,6 +574,21 @@
           <input type="hidden" id="staffName" value="不指定">
         </div>
 
+        <!-- 🌟 需要聯繫專人按鈕 (直接跳轉官方 LINE) -->
+        <div id="contactSpecialistSection" class="mt-3 p-3.5 bg-brand-50 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+  <div>
+    <div class="font-bold text-brand-900 flex items-center gap-2">
+      <i class="fa-solid fa-headset text-brand-600 text-sm"></i>
+      <span>特殊項目或需要諮詢？</span>
+    </div>
+    <div class="text-[11px] text-brand-500 mt-0.5">歡迎直接線上溝通</div>
+  </div>
+  <a href="https://line.me/R/ti/p/@710zzzzy" target="_blank" class="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0">
+    <span>聯繫專人</span>
+    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+  </a>
+</div>
+        
         <!-- 美容洗澡模式：項目選擇區塊 -->
         <div id="groomingServiceSection" class="pt-2">
           <div class="flex justify-between items-center mb-2">
@@ -1039,7 +1063,30 @@
   </div>
 </div>
 
-<!-- 成功預約遮罩 -->
+<!-- 🌟 顧客歷史預約紀錄 Modal -->
+<div id="frontHistoryModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white p-5 rounded-3xl max-w-sm w-full space-y-3.5 shadow-2xl border border-brand-200 text-xs flex flex-col max-h-[80vh]">
+    <div class="flex justify-between items-center border-b border-brand-100 pb-2">
+      <h3 class="font-bold text-sm text-brand-900 flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-check text-[#8C7355]"></i>
+        <span>我的預約紀錄</span>
+      </h3>
+      <button type="button" onclick="closeFrontCustomerHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">×</button>
+    </div>
+    
+    <div id="frontHistoryListContainer" class="space-y-2.5 overflow-y-auto pr-1">
+      <div class="text-center py-6 text-gray-400">正在讀取預約紀錄...</div>
+    </div>
+
+    <div class="pt-2 border-t border-brand-100">
+      <button type="button" onclick="closeFrontCustomerHistoryModal()" class="w-full py-2.5 bg-brand-100 text-brand-800 rounded-xl font-bold text-xs">
+        關閉返回
+      </button>
+    </div>
+  </div>
+</div>
+  
+  <!-- 成功預約遮罩 -->
 <div id="success-screen" class="fixed inset-0 bg-brand-50 z-50 flex flex-col items-center justify-center p-6 text-center hidden">
   <div class="w-16 h-16 bg-brand-100 text-theme-primary rounded-full flex items-center justify-center text-2xl mb-4 shadow-sm">
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -1414,6 +1461,8 @@ function applyIndustryModeUI(mode) {
         enableFeaturedShop: sCfg.enable_featured_shop === true,
         enableShowPrice: parseBoolStrict(sCfg.enable_show_price ?? sCfg.enableShowPrice, true),
         enableCustNotes: parseBoolStrict(sCfg.enable_cust_notes ?? sCfg.enableCustNotes, true),
+        enableContactSpecialist: parseBoolStrict(sCfg.enable_contact_specialist ?? sCfg.enableContactSpecialist, true),
+        enablePhoneHistoryQuery: parseBoolStrict(sCfg.enable_phone_history_query ?? sCfg.enablePhoneHistoryQuery, true),
         
         // 🌟【關鍵修復此行】：補上新舊朋友開關映射，取消勾選立即在前台隱藏！
         enableCustType: parseBoolStrict(sCfg.enable_cust_type ?? sCfg.enableCustType, true),
@@ -1949,6 +1998,20 @@ function parseBoolStrict(val, defaultVal = true) {
 // 【完整零省略版】前台 renderStoreUI() — 15 大區塊精準生命週期
 // ========================================================
 function renderStoreUI() {
+  // ----------------------------------------------------
+  // 控制「聯繫專人」按鈕與「歷史預約查詢」按鈕顯隱
+  // ----------------------------------------------------
+  const contactSec = document.getElementById('contactSpecialistSection');
+  if (contactSec) {
+    const showContact = parseBoolStrict(db.enableContactSpecialist, true);
+    contactSec.style.display = showContact ? 'flex' : 'none';
+  }
+
+  const historyQuerySec = document.getElementById('frontHistoryQuerySection');
+  if (historyQuerySec) {
+    const showHistory = parseBoolStrict(db.enablePhoneHistoryQuery, true);
+    historyQuerySec.style.display = showHistory ? 'flex' : 'none';
+  }
   // ----------------------------------------------------
   // 1. 品牌標題、副標題與置頂公告內容
   // ----------------------------------------------------
@@ -4637,6 +4700,81 @@ function renderFrontEndSections() {
   if (packageDeductBox) {
     packageDeductBox.style.display = isModuleAvailable('packages', 'enablePackages') ? 'block' : 'none';
   }
+}
+
+  // 初始化前台設定時，根據開關決定是否顯示「查詢預約紀錄」按鈕
+function applyHistoryQueryModuleGating(storeConfig) {
+  const querySection = document.getElementById('frontHistoryQuerySection');
+  if (!querySection) return;
+  // 若店家有特別關閉則隱藏，預設啟用
+  if (storeConfig && storeConfig.enable_phone_history_query === false) {
+    querySection.style.display = 'none';
+  } else {
+    querySection.style.display = 'flex';
+  }
+}
+  
+  // ========================================================
+// 🌟【買斷標配】前台顧客輸入電話查詢歷史預約
+// ========================================================
+async function openFrontCustomerHistoryModal() {
+  const phone = document.getElementById('phone')?.value.trim().replace(/\D/g, '');
+  if (!phone || phone.length < 8) {
+    return Swal.fire('請先輸入手機號碼', '請在上方輸入手機號碼後再點擊查詢。', 'warning');
+  }
+
+  const modal = document.getElementById('frontHistoryModal');
+  const container = document.getElementById('frontHistoryListContainer');
+  if (modal) modal.classList.remove('hidden');
+  if (container) container.innerHTML = '<div class="text-center py-6 text-gray-400 text-xs">正在查詢預約...</div>';
+
+  try {
+    const bookings = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=appointment_time.desc&limit=10`);
+
+    if (!bookings || bookings.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-xs text-brand-400 space-y-1">
+          <i class="fa-regular fa-calendar-xmark text-2xl text-brand-300 block mb-1"></i>
+          <div>查無手機 <b>${phone}</b> 的預約紀錄</div>
+          <div class="text-[10.5px]">歡迎直接選取下方時段進行預約！</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = bookings.map(b => {
+      const d = new Date(b.appointment_time);
+      const pad = n => String(n).padStart(2, '0');
+      const dStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+      const tStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      
+      let statusColor = "bg-brand-100 text-brand-800";
+      if (b.status === "已確認") statusColor = "bg-emerald-100 text-emerald-800";
+      else if (b.status === "已取消" || b.status === "婉拒") statusColor = "bg-rose-100 text-rose-700";
+
+      return `
+        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200/80 space-y-1 text-xs">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-brand-900 font-mono">${dStr} ${tStr}</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColor}">${b.status}</span>
+          </div>
+          <div class="text-[11.5px] text-brand-700 font-medium">項目：<b>${b.service_names || '剪燙造型'}</b></div>
+          <div class="text-[10.5px] text-brand-500 font-mono flex justify-between">
+            <span>設計師：${b.staff_name || '不指定'}</span>
+            <span>預算：NT$ ${Number(b.final_price || b.price || 0).toLocaleString()}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    container.innerHTML = `<div class="text-center py-6 text-rose-500 text-xs font-bold">查詢失敗，請稍後重試</div>`;
+  }
+}
+
+function closeFrontCustomerHistoryModal() {
+  const modal = document.getElementById('frontHistoryModal');
+  if (modal) modal.classList.add('hidden');
 }
 </script>
 </body>
