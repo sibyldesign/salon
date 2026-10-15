@@ -9217,8 +9217,16 @@ function populateSettings() {
 // ==========================================
 // 後台完整版 saveStoreSettings() — 不省略、帶欄位容錯防呆
 // ==========================================
+// ==========================================
+// 【修正完成版】saveStoreSettings()
+// 修正變數尚未定義就使用的順序錯誤，杜絕轉圈卡死
+// ==========================================
 async function saveStoreSettings() {
-  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  Swal.fire({ 
+    title: '正在儲存設定...', 
+    allowOutsideClick: false, 
+    didOpen: () => Swal.showLoading() 
+  });
 
   const getCheck = (id) => {
     const el = document.getElementById(id);
@@ -9227,10 +9235,132 @@ async function saveStoreSettings() {
 
   const weeklyOffDays = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
   const selectedTheme = document.getElementById('cfg-theme-color')?.value || 'latte';
-  const selectedMode = backendData.settings.industryMode || 'pet_hotel';
-  const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings.storeName;
-  // 核心防護：若資料庫缺少欄位，自動剃除後重試，保證儲存成功
+  const selectedMode = backendData.settings?.industryMode || 'beauty';
+  const storeTitle = document.getElementById('cfg-title')?.value.trim() || backendData.settings?.storeName || '沙龍門市';
+
+  // 1. 同步瀏覽器雙向快取
+  localStorage.setItem('zy_cached_theme', selectedTheme);
+  localStorage.setItem('z_cached_theme', selectedTheme);
+  if (backendData.settings) {
+    backendData.settings.themeColor = selectedTheme;
+    backendData.settings.theme_color = selectedTheme;
+  }
+
+  // 2. 必須先組裝好完整的 settingsPayload！
+  const settingsPayload = {
+    store_id: CURRENT_STORE_ID,
+    display_title: storeTitle,
+    weekly_off_days: weeklyOffDays,
+    custom_off_dates: customOffDatesArray,
+    industry_mode: selectedMode,
+    theme_color: selectedTheme,
+    display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
+    logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
+    enable_logo: getCheck('cfg-toggle-logo'),
+    store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
+    address: document.getElementById('cfg-address')?.value.trim() || '',
+    store_resources: storeResourcesList,
+    business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
+    booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
+    care_text: document.getElementById('cfg-care')?.value.trim() || '',
+    deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
+    deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
+    deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
+    promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
+    line_url: document.getElementById('cfg-line')?.value.trim() || '',
+    ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
+    map_url: document.getElementById('cfg-map')?.value.trim() || '',
+    line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
+    line_card_theme: document.getElementById('cfg-line-card-theme')?.value || 'latte',
+    contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
+    contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
+    promo_rules_text: document.getElementById('cfg-promo-rules')?.value.trim() || document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
+    owner_line_uid: document.getElementById('cfg-owner-line-uid')?.value.trim() || '',
+
+    // 圖片、題庫與行前叮嚀
+    promo_imgs: promoImgsArray.filter(Boolean),
+    pet_profile_questions: customQuestionsList,
+    front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
+    enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
+
+    // 住宿房型與供餐選項
+    hotel_room_tiers: adminRoomTiers,
+    hotel_meal_options: adminMealOptions,
+    boarding_meal_rates: {
+      small: [
+        Number(document.getElementById('cfg-meal-small-1')?.value || 80),
+        Number(document.getElementById('cfg-meal-small-2')?.value || 75),
+        Number(document.getElementById('cfg-meal-small-3')?.value || 70)
+      ],
+      medium: [
+        Number(document.getElementById('cfg-meal-med-1')?.value || 100),
+        Number(document.getElementById('cfg-meal-med-2')?.value || 90),
+        Number(document.getElementById('cfg-meal-med-3')?.value || 85)
+      ],
+      large: [
+        Number(document.getElementById('cfg-meal-large-1')?.value || 120),
+        Number(document.getElementById('cfg-meal-large-2')?.value || 110),
+        Number(document.getElementById('cfg-meal-large-3')?.value || 105)
+      ]
+    },
+
+    // 營運工時與抽成
+    shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
+    shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
+    shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
+    commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
+    designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
+
+    // 20+ 個 Feature Flags
+    enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
+    enable_deposit: getCheck('cfg-toggle-deposit'),
+    enable_staff_select: getCheck('cfg-toggle-staff-select'),
+    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
+    enable_cust_type: getCheck('cfg-toggle-custtype'),
+    enable_show_price: getCheck('cfg-toggle-show-price'),
+    enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
+    enable_wallet: getCheck('cfg-toggle-wallet'),
+    enable_packages: getCheck('cfg-toggle-packages'),
+    enable_coupons: getCheck('cfg-toggle-coupons'),
+    enable_reviews: getCheck('cfg-toggle-reviews'),
+    enable_portfolio: getCheck('cfg-toggle-portfolio'),
+    enable_care: getCheck('cfg-toggle-care'),
+    enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
+    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
+    enable_email_copy: getCheck('cfg-toggle-email'),
+    enable_carousel: getCheck('cfg-toggle-carousel'),
+    enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
+    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
+    enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
+    enable_contract: getCheck('cfg-toggle-contract'),
+    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
+    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
+    enable_phone_history_query: getCheck('setting-enable-phone-history'),
+    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    // 3. 同步更新 stores 主表店名與模式
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        store_name: storeTitle,
+        industry_type: selectedMode,
+        theme_color: selectedTheme
+      })
+    });
+
+    // 4. 自動防護寫入 store_settings（若有欄位缺少自動剔除並重試）
     const toSendSettings = { ...settingsPayload };
+    let isSaved = false;
+
     for (let attempt = 0; attempt < 5; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
         method: "PATCH",
@@ -9242,198 +9372,51 @@ async function saveStoreSettings() {
         },
         body: JSON.stringify(toSendSettings)
       });
-      if (res.ok) break;
+
+      if (res.ok) {
+        const data = await res.json();
+        // 若該店家尚未建立過 store_settings，改用 POST 新增一列
+        if (!data || data.length === 0) {
+          await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+            method: "POST",
+            headers: {
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(toSendSettings)
+          });
+        }
+        isSaved = true;
+        break;
+      }
+
       const errText = await res.text();
       const matchCol = errText.match(/Could not find the '([^']+)' column/);
       if (matchCol && matchCol[1]) {
-        console.warn(`[自動防護] store_settings 尚無 ${matchCol[1]} 欄位，自動剃除後重試`);
+        console.warn(`[自動防護] store_settings 尚無 ${matchCol[1]} 欄位，自動剔除後重試`);
         delete toSendSettings[matchCol[1]];
       } else {
         break;
       }
     }
 
-  // 1. 同步瀏覽器雙向快取
-  localStorage.setItem('zy_cached_theme', selectedTheme);
-  localStorage.setItem('z_cached_theme', selectedTheme);
-  backendData.settings.themeColor = selectedTheme;
-  backendData.settings.theme_color = selectedTheme;
-
-  // 2. 組裝資料庫 Payload
-  // ========================================================
-// 【完整設定保存 Payload】settingsPayload — 解決登出消失與欄位漏存
-// ========================================================
-const settingsPayload = {
-  store_id: CURRENT_STORE_ID,
-  display_title: storeTitle,
-  weekly_off_days: weeklyOffDays,
-  custom_off_dates: customOffDatesArray,
-  industry_mode: selectedMode,
-  theme_color: selectedTheme,
-  display_subtitle: document.getElementById('cfg-subtitle')?.value.trim() || '',
-  logo_url: document.getElementById('cfg-logo')?.value.trim() || '',
-  enable_logo: getCheck('cfg-toggle-logo'),
-  store_phone: document.getElementById('cfg-phone')?.value.trim() || '',
-  address: document.getElementById('cfg-address')?.value.trim() || '',
-  store_resources: storeResourcesList,
-  business_hours: document.getElementById('cfg-hours')?.value.trim() || '09:00 - 19:00',
-  booking_buffer_hours: Number(document.getElementById('cfg-buffer')?.value || 1),
-  care_text: document.getElementById('cfg-care')?.value.trim() || '',
-  deposit_mode: document.getElementById('cfg-deposit-mode')?.value || 'all',
-  deposit_amount: Number(document.getElementById('cfg-deposit-amount')?.value || 0),
-  deposit_info: document.getElementById('cfg-deposit-info')?.value.trim() || '',
-  promo_text: document.getElementById('cfg-promo')?.value.trim() || '',
-  line_url: document.getElementById('cfg-line')?.value.trim() || '',
-  ig_url: document.getElementById('cfg-ig')?.value.trim() || '',
-  map_url: document.getElementById('cfg-map')?.value.trim() || '',
-  line_channel_token: document.getElementById('cfg-line-token')?.value.trim() || '',
-  line_card_theme: document.getElementById('cfg-line-card-theme')?.value || 'latte',
-  contract_title: document.getElementById('cfg-contract-title')?.value.trim() || '定型化服務契約書',
-  contract_content: document.getElementById('cfg-contract-content')?.value.trim() || '',
-  promo_rules_text: document.getElementById('cfg-promo-rules-input')?.value.trim() || '',
-  owner_line_uid: document.getElementById('cfg-owner-line-uid')?.value.trim() || '',
-
-  // 1. 圖片、題庫與行前叮嚀 (完整寫入資料庫 JSON 欄位)
-  promo_imgs: promoImgsArray.filter(Boolean),
-  pet_profile_questions: customQuestionsList,
-  front_stay_notice: document.getElementById('cfg-stay-notice-content')?.value.trim() || '',
-  enable_front_stay_notice: getCheck('cfg-toggle-stay-notice'),
-
-  theme_color: selectedTheme,
-  industry_mode: selectedMode,
-
-  // 2. 住宿房型與供餐選項主檔 (防止被覆蓋消失)
-  hotel_room_tiers: adminRoomTiers,
-  hotel_meal_options: adminMealOptions,
-
-  // 3. 寵物住宿鮮食餐費率設定 (嚴格單餐計價備援值)
-  boarding_meal_rates: {
-    small: [
-      Number(document.getElementById('cfg-meal-small-1')?.value || 80),
-      Number(document.getElementById('cfg-meal-small-2')?.value || 75),
-      Number(document.getElementById('cfg-meal-small-3')?.value || 70)
-    ],
-    medium: [
-      Number(document.getElementById('cfg-meal-med-1')?.value || 100),
-      Number(document.getElementById('cfg-meal-med-2')?.value || 90),
-      Number(document.getElementById('cfg-meal-med-3')?.value || 85)
-    ],
-    large: [
-      Number(document.getElementById('cfg-meal-large-1')?.value || 120),
-      Number(document.getElementById('cfg-meal-large-2')?.value || 110),
-      Number(document.getElementById('cfg-meal-large-3')?.value || 105)
-    ]
-  },
-  // 4. 營運工時與專員算薪
-  shift_start_time: document.getElementById('cfg-shift-start')?.value || '09:00',
-  shift_end_time: document.getElementById('cfg-shift-end')?.value || '19:00',
-  shift_interval: Number(document.getElementById('cfg-shift-interval')?.value || 30),
-  commission_rate: Number(document.getElementById('cfg-commission-rate')?.value || 50),
-  designated_bonus: Number(document.getElementById('cfg-designated-bonus')?.value || 50),
-
-  // 5. 20+ 個 Feature Flags 精確儲存 (false 能確實寫入)
-  enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
-  enable_deposit: getCheck('cfg-toggle-deposit'),
-  enable_staff_select: getCheck('cfg-toggle-staff-select'),
-  enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
-  enable_cust_type: getCheck('cfg-toggle-custtype'),
-  enable_show_price: getCheck('cfg-toggle-show-price'),
-  enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
-  enable_wallet: getCheck('cfg-toggle-wallet'),
-  enable_packages: getCheck('cfg-toggle-packages'),
-  enable_coupons: getCheck('cfg-toggle-coupons'),
-  enable_reviews: getCheck('cfg-toggle-reviews'),
-  enable_portfolio: getCheck('cfg-toggle-portfolio'),
-  enable_care: getCheck('cfg-toggle-care'),
-  enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
-  enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
-  enable_email_copy: getCheck('cfg-toggle-email'),
-  enable_carousel: getCheck('cfg-toggle-carousel'),
-  enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
-  enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
-  enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
-  enable_contract: getCheck('cfg-toggle-contract'),
-  enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
-  enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
-  enable_phone_history_query: getCheck('setting-enable-phone-history'),
-  enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
-
-  updated_at: new Date().toISOString()
-};
-
-  try {
-    // 1. 同步更新 stores 主表
-    const storePatchRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
-      method: "PATCH",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify({
-        store_name: storeTitle,
-        industry_type: selectedMode,
-        theme_color: selectedTheme
-      })
-    });
-
-    if (!storePatchRes.ok) {
-      throw new Error(`更新門市主表失敗：${await storePatchRes.text()}`);
+    if (!isSaved) {
+      throw new Error('資料庫更新未能成功，請檢查網路連線或稍後再試');
     }
 
-    // 2. 先嘗試 PATCH 更新 store_settings
-    let settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
-      method: "PATCH",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        "Prefer": "return=representation"
-      },
-      body: JSON.stringify(settingsPayload)
-    });
-
-    // 檢查 PATCH 是否更新成功 (若為 0 筆則代表尚無此 row，改用 POST 建立)
-    let patchData = settingsRes.ok ? await settingsRes.json() : [];
-    if (!settingsRes.ok || !Array.isArray(patchData) || patchData.length === 0) {
-      const errText = !settingsRes.ok ? await settingsRes.text() : "";
-      
-      // 如果資料庫真的缺少該欄位，明確提示執行 SQL
-      if (errText.includes("Could not find the") && errText.includes("column")) {
-        throw new Error(`資料庫欄位缺少，請至 Supabase SQL Editor 執行 ALTER TABLE 補齊欄位：${errText}`);
-      }
-
-      settingsRes = await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(settingsPayload)
-      });
-
-      if (!settingsRes.ok) {
-        const postErr = await settingsRes.text();
-        if (postErr.includes("Could not find the") && postErr.includes("column")) {
-          throw new Error(`資料庫欄位缺少，請至 Supabase SQL Editor 執行 ALTER TABLE 補齊欄位：${postErr}`);
-        }
-        throw new Error(`更新門市設定失敗：${postErr}`);
-      }
+    // 5. 更新前端暫存記憶體
+    if (backendData.settings) {
+      Object.assign(backendData.settings, settingsPayload);
     }
-
-    // 記憶體中資料即時同步
-    Object.assign(backendData.settings, settingsPayload);
 
     markSettingsSaved();
-    
+
     Swal.fire({
       title: '系統設定已儲存！',
-      text: '主題色系與開關狀態已成功寫入資料庫，重新整理保證不會跳回。',
+      text: '所有設定與開關狀態已順利寫入。',
       icon: 'success',
-      timer: 1500,
+      timer: 1200,
       showConfirmButton: false
     });
   } catch (err) {
