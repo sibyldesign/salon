@@ -4435,6 +4435,9 @@ renderStoreResourcesList();
     renderBoardingDateButtons();
     renderStaffCheckboxesForService(); // 啟動服務項目專員多選框
     populateServiceResourceDropdown(); // 啟動設備下拉選單
+    applyStaffRoleNavigation();
+
+    if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
     
     // 【關鍵修復】：資料庫黑名單下載完畢後，立即重繪當日日曆卡片，消除時序競爭
     if (selectedCalendarDate) {
@@ -9368,6 +9371,7 @@ function renderStaffManager(targetPrefix = '') {
           </div>
         </div>
         <div class="flex gap-1.5 items-center shrink-0">
+          <button type="button" onclick="promptEditStaffPages('${s.id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold text-[11px] transition">分權</button>
           <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
             <i class="fa-solid fa-link text-[10px]"></i> 複製工作台
           </button>
@@ -9747,25 +9751,52 @@ async function promptEditStaffPages(staffId) {
 }
 
 // 專員登入時，根據授權動態控制底部選單
+// ========================================================
+// 專員登入時：嚴格依據勾選的 allowed_pages 控制導覽列與跳轉
+// ========================================================
 function applyStaffRoleNavigation() {
   if (!CURRENT_STAFF_PARAM || CURRENT_STAFF_PARAM === 'all') return;
 
-  const staff = (backendData.settings?.staffList || []).find(s => s.id === CURRENT_STAFF_PARAM);
-  const allowedPages = (staff && staff.allowed_pages) ? staff.allowed_pages : ['calendar', 'shift'];
+  const staffList = backendData.settings?.staffList || [];
+  const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM || s.name === CURRENT_STAFF_PARAM);
+  
+  // 1. 取得此專員勾選開放的分頁（若從未勾選過，預設僅開放日曆與排班）
+  const allowedPages = (staff && Array.isArray(staff.allowed_pages) && staff.allowed_pages.length > 0)
+    ? staff.allowed_pages
+    : ['calendar', 'shift'];
 
-  // 遍歷底部分頁按鈕，只顯示有被勾選的頁面
+  // 2. 專員絕對禁止存取的管理員專用模組
+  const forbiddenModules = ['inventory', 'revenue', 'transactions', 'services', 'search', 'marketing', 'subscription', 'settings'];
+
+  // 3. 嚴格過濾底部導覽列按鈕
   document.querySelectorAll('#bottom-nav .nav-item').forEach(btn => {
     const onclickStr = btn.getAttribute('onclick') || '';
+    
+    // 設定按鈕 (routeToSettingsPage) 與方案按鈕一律強制隱藏
+    if (onclickStr.includes('routeToSettingsPage') || btn.id === 'nav-btn-subscription') {
+      btn.style.setProperty('display', 'none', 'important');
+      return;
+    }
+
     const match = onclickStr.match(/switchPage\('([^']+)'/);
     if (match && match[1]) {
       const pageId = match[1];
-      if (allowedPages.includes(pageId)) {
+      // 必須在專員勾選的名單內，且不可為老闆專用頁面
+      if (allowedPages.includes(pageId) && !forbiddenModules.includes(pageId)) {
         btn.style.setProperty('display', 'flex', 'important');
       } else {
         btn.style.setProperty('display', 'none', 'important');
       }
     }
   });
+
+  // 4. 防呆跳轉：若當前頁面不在允許名單內，自動切換至第一順位的合法頁面
+  const currentPageId = document.querySelector('.page[style*="block"]')?.id?.replace('page-', '') || 'calendar';
+  if (!allowedPages.includes(currentPageId)) {
+    const firstAllowed = allowedPages[0] || 'calendar';
+    const firstNavBtn = document.querySelector(`#bottom-nav [onclick*="'${firstAllowed}'"]`);
+    switchPage(firstAllowed, firstNavBtn);
+  }
 }
 
 // ========================================================
