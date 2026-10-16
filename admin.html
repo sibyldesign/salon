@@ -4941,15 +4941,18 @@ function getServiceMorandiColor(serviceName) {
 }
 
 // ========================================================
-// 【戰鬥升級版】quickInsertBooking() — 姓名/電話/LINE擇一、服務下拉連動
+// 【智慧升級版】quickInsertBooking() — 姓名/電話快查 ＋ 重名防呆阻斷
 // ========================================================
+let matchedCustomerCandidate = null; // 暫存唯一命中的舊客檔案
+
 function quickInsertBooking(date, time, staffId, staffName) {
+  matchedCustomerCandidate = null;
   const serviceList = (backendData.services || []).filter(s => s.isActive !== false);
   
   let serviceOptionsHtml = serviceList.map(s => {
     return `<option value="${s.name}" data-duration="${s.duration || 60}" data-price="${s.price || 0}">${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`;
   }).join('');
-  serviceOptionsHtml = `<option value="">-- 請選擇服務項目 (自動帶出時間與金額) --</option>` + serviceOptionsHtml + `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
+  serviceOptionsHtml = `<option value="">-- 請選擇服務項目 --</option>` + serviceOptionsHtml + `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
 
   Swal.fire({
     title: '⚡ 快速插單排程',
@@ -4960,23 +4963,29 @@ function quickInsertBooking(date, time, staffId, staffName) {
           <div>專員：<b class="text-brand-900">${staffName}</b></div>
         </div>
 
-        <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2">
-          <div class="text-[11px] font-bold text-amber-900">顧客身分 (姓名/電話/LINE 擇一即可)：</div>
+        <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
+          <div class="text-[11px] font-bold text-amber-900 flex justify-between items-center">
+            <span>顧客資料 (可只填姓名或電話，系統自動比對)：</span>
+          </div>
+
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[10px] text-gray-500 mb-0.5">聯絡手機</label>
-              <input id="quick-ins-phone" class="swal2-input !m-0 !w-full text-xs font-mono" placeholder="0912345678" oninput="onQuickInsertPhoneInput(this.value)">
+              <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名</label>
+              <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="例如：王小美" oninput="debounceQuickCustomerSearch()">
             </div>
             <div>
-              <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名</label>
-              <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs" placeholder="輸入顧客姓名">
+              <label class="block text-[10px] text-gray-500 mb-0.5">聯絡手機</label>
+              <input id="quick-ins-phone" class="swal2-input !m-0 !w-full text-xs font-mono" placeholder="0912345678" oninput="debounceQuickCustomerSearch()">
             </div>
           </div>
+
           <div>
-            <label class="block text-[10px] text-gray-500 mb-0.5">LINE 稱呼 / 暱稱</label>
-            <input id="quick-ins-line" class="swal2-input !m-0 !w-full text-xs" placeholder="例：小美 / 官方LINE名稱">
+            <label class="block text-[10px] text-gray-500 mb-0.5">LINE 顯示名稱</label>
+            <input id="quick-ins-line" class="swal2-input !m-0 !w-full text-xs" placeholder="例：小美">
           </div>
-          <div id="quick-ins-match-hint" class="text-[10px] text-emerald-700 font-bold min-h-[14px]"></div>
+
+          <!-- 即時智慧比對提示框 -->
+          <div id="quick-ins-match-hint" class="text-[11px] font-bold min-h-[16px] leading-tight"></div>
         </div>
 
         <div>
@@ -5004,13 +5013,12 @@ function quickInsertBooking(date, time, staffId, staffName) {
     cancelButtonText: '取消',
     confirmButtonColor: '#8C7355',
     didOpen: () => {
-      // 預設將焦點置於手機框
-      document.getElementById('quick-ins-phone')?.focus();
+      document.getElementById('quick-ins-name')?.focus();
     },
     preConfirm: () => {
-      const phone = document.getElementById('quick-ins-phone')?.value.trim() || '';
       let name = document.getElementById('quick-ins-name')?.value.trim() || '';
-      const line = document.getElementById('quick-ins-line')?.value.trim() || '';
+      let phone = document.getElementById('quick-ins-phone')?.value.trim() || '';
+      let line = document.getElementById('quick-ins-line')?.value.trim() || '';
       
       const sel = document.getElementById('quick-ins-service-select');
       let service = sel?.value;
@@ -5018,20 +5026,31 @@ function quickInsertBooking(date, time, staffId, staffName) {
         service = document.getElementById('quick-ins-custom-service')?.value.trim();
       }
 
-      // 戰場防呆：姓名、手機、LINE 三者至少填寫一項
       if (!name && !phone && !line) {
-        Swal.showValidationMessage('姓名、手機、LINE 名稱請擇一填寫！');
+        Swal.showValidationMessage('姓名、手機或 LINE 至少需填寫一項！');
         return false;
       }
       if (!service) {
-        Swal.showValidationMessage('請選取或填寫施作服務項目！');
+        Swal.showValidationMessage('請選取施作服務項目！');
         return false;
       }
 
-      // 若未填姓名，以有填寫的資訊作為顯示名稱
-      if (!name) {
-        name = line || (phone ? `顧客(${phone.slice(-4)})` : '現場顧客');
+      // 🌟 核心防呆：若命中同名多筆，且尚未填寫電話，強制阻斷！
+      const hintText = document.getElementById('quick-ins-match-hint')?.innerText || '';
+      if (hintText.includes('⚠️ 偵測到多位同名顧客') && (!phone || phone.length < 8)) {
+        Swal.showValidationMessage('偵測到多位同名顧客，請補填手機號碼以精準指定！');
+        return false;
       }
+
+      // 若命中唯一舊客，但手機或 LINE 欄位留空，自動補齊
+      if (matchedCustomerCandidate) {
+        if (!name) name = matchedCustomerCandidate.name;
+        if (!phone) phone = matchedCustomerCandidate.phone;
+        if (!line && matchedCustomerCandidate.line_name) line = matchedCustomerCandidate.line_name;
+      }
+
+      if (!name) name = line || (phone ? `顧客(${phone.slice(-4)})` : '現場顧客');
+      if (!phone) phone = '0900000000'; // 確定無資料且無同名爭議時之保底
 
       return {
         name,
@@ -5048,7 +5067,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
       const payload = {
         store_id: CURRENT_STORE_ID,
         customer_name: r.value.name,
-        customer_phone: r.value.phone || '0900000000',
+        customer_phone: r.value.phone,
         line_name: r.value.line,
         service_names: r.value.service,
         price: r.value.price,
@@ -5057,7 +5076,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
         staff_id: staffId,
         staff_name: staffName,
         status: '已確認',
-        notes: `現場快速插單 (預估耗時: ${r.value.duration}分)`
+        notes: `現場快速插單 (耗時: ${r.value.duration}分)`
       };
       await directSupabaseUpsert('bookings', payload, 'id');
       await fetchDataAndRender();
@@ -5065,6 +5084,67 @@ function quickInsertBooking(date, time, staffId, staffName) {
       Swal.fire({ title: '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
     }
   });
+}
+
+// 防抖搜尋：支援姓名 / 電話 / LINE 即時智慧判定
+let searchCustomerTimer = null;
+function debounceQuickCustomerSearch() {
+  clearTimeout(searchCustomerTimer);
+  searchCustomerTimer = setTimeout(checkQuickCustomerMatch, 350);
+}
+
+async function checkQuickCustomerMatch() {
+  const nameInput = document.getElementById('quick-ins-name');
+  const phoneInput = document.getElementById('quick-ins-phone');
+  const lineInput = document.getElementById('quick-ins-line');
+  const hintEl = document.getElementById('quick-ins-match-hint');
+
+  if (!hintEl) return;
+
+  const nameVal = nameInput ? nameInput.value.trim() : '';
+  const phoneVal = phoneInput ? phoneInput.value.trim().replace(/\D/g, '') : '';
+
+  matchedCustomerCandidate = null;
+
+  // 1. 若已經填寫完整電話，優先精準鎖定
+  if (phoneVal.length >= 8) {
+    const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}`);
+    if (custs && custs.length > 0) {
+      const c = custs[0];
+      matchedCustomerCandidate = c;
+      if (nameInput && !nameInput.value) nameInput.value = c.name || '';
+      if (lineInput && !lineInput.value && c.line_name) lineInput.value = c.line_name;
+      hintEl.className = 'text-[11px] font-bold text-emerald-700 leading-tight';
+      hintEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> 已鎖定唯一顧客：${c.name} (${c.phone})`;
+      return;
+    }
+  }
+
+  // 2. 顧客只填寫「姓名」時的比對邏輯
+  if (nameVal && nameVal.length >= 2) {
+    const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&name=eq.${encodeURIComponent(nameVal)}`);
+    
+    if (custs && custs.length > 1) {
+      // ⚠️ 情況 A：有多位同名顧客
+      hintEl.className = 'text-[11px] font-bold text-rose-600 leading-tight animate-pulse';
+      hintEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ⚠️ 門市有 ${custs.length} 位同名「${nameVal}」！請補填手機號碼以精準指定。`;
+      matchedCustomerCandidate = null;
+      return;
+    } else if (custs && custs.length === 1) {
+      // ✓ 情況 B：剛好只有 1 位
+      const c = custs[0];
+      matchedCustomerCandidate = c;
+      if (phoneInput && !phoneInput.value) phoneInput.value = c.phone || '';
+      if (lineInput && !lineInput.value && c.line_name) lineInput.value = c.line_name;
+      hintEl.className = 'text-[11px] font-bold text-emerald-700 leading-tight';
+      hintEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> 已自動帶入舊客檔案：${c.name} (${c.phone})`;
+      return;
+    }
+  }
+
+  // 查無資料
+  hintEl.className = 'text-[10px] text-gray-400 font-normal';
+  hintEl.innerText = nameVal ? '新客建檔 (無歷史紀錄)' : '';
 }
 
 // 插單下拉選單連動帶出時長與金額
@@ -5115,7 +5195,7 @@ async function onQuickInsertPhoneInput(phoneVal) {
 }
 
 // ========================================================
-// 【莫蘭迪色卡總覽】renderOverviewGridCanvas() — 全日直條排程
+// 【自適應排版版】renderOverviewGridCanvas() — 單人全螢幕填滿免左右滑動
 // ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
@@ -5126,8 +5206,10 @@ function renderOverviewGridCanvas() {
 
   let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (staffList.length === 0) {
-    staffList = [{ id: 'staff_1', name: '專員 A' }, { id: 'staff_2', name: '專員 B' }];
+    staffList = [{ id: 'staff_1', name: '專員' }];
   }
+
+  const isSingleStaff = (staffList.length === 1);
 
   const startTime = backendData.settings?.shiftStartTime || '09:00';
   const endTime = backendData.settings?.shiftEndTime || '19:00';
@@ -5146,13 +5228,18 @@ function renderOverviewGridCanvas() {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
+  // 寬度類別：單人時 w-full min-w-0 (適應手機螢幕)；多人時 min-w-[130px]
+  const colClass = isSingleStaff 
+    ? "flex-1 min-w-0 px-2 py-2" 
+    : "flex-1 min-w-[130px] px-2 py-2";
+
   let headerHtml = `
     <div class="sticky top-0 z-20 flex bg-white border-b border-brand-200 shadow-2xs">
-      <div class="w-16 shrink-0 py-2.5 text-center text-[11px] font-bold text-brand-400 border-r border-brand-100 bg-brand-50/50">時間</div>
+      <div class="w-14 shrink-0 py-2.5 text-center text-[10.5px] font-bold text-brand-400 border-r border-brand-100 bg-brand-50/50">時間</div>
       ${staffList.map(st => `
-        <div class="flex-1 min-w-[125px] py-2.5 px-2 text-center border-r border-brand-100 last:border-r-0">
-          <div class="w-7 h-7 mx-auto rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs mb-1">
-            <i class="fa-solid fa-user-tie text-[11px]"></i>
+        <div class="${colClass} text-center border-r border-brand-100 last:border-r-0">
+          <div class="w-6 h-6 mx-auto rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs mb-0.5">
+            <i class="fa-solid fa-user-tie text-[10px]"></i>
           </div>
           <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
         </div>
@@ -5163,8 +5250,8 @@ function renderOverviewGridCanvas() {
   let rowsHtml = '';
   timeSlots.forEach(slot => {
     rowsHtml += `
-      <div class="flex border-b border-brand-100 min-h-[48px] hover:bg-brand-50/20 transition">
-        <div class="w-16 shrink-0 flex items-center justify-center text-[10.5px] font-mono text-brand-400 font-bold border-r border-brand-100 bg-brand-50/20">${slot}</div>
+      <div class="flex border-b border-brand-100 min-h-[46px] hover:bg-brand-50/20 transition">
+        <div class="w-14 shrink-0 flex items-center justify-center text-[10.5px] font-mono text-brand-400 font-bold border-r border-brand-100 bg-brand-50/20">${slot}</div>
         ${staffList.map(st => {
           const matchedAppt = apptsToday.find(a => {
             const aStaff = String(a.staffName || '').trim();
@@ -5175,24 +5262,23 @@ function renderOverviewGridCanvas() {
           if (matchedAppt) {
             const safeService = (matchedAppt.service || '').replace(/'/g, "\\'");
             const safeName = (matchedAppt.name || '').replace(/'/g, "\\'");
-            // 動態取得莫蘭迪色卡
             const colorTheme = getServiceMorandiColor(matchedAppt.service);
 
             return `
-              <div class="flex-1 min-w-[125px] p-1 border-r border-brand-100 last:border-r-0" style="background-color: ${colorTheme.lightBg};">
-                <div class="h-full p-2 rounded-xl shadow-2xs text-[10.5px] cursor-pointer hover:opacity-90 transition space-y-0.5 border" style="background-color: ${colorTheme.bg}; color:${colorTheme.text}; border-color: ${colorTheme.border};" onclick="openCheckoutModal('${matchedAppt.id}', '${safeName}', '${matchedAppt.phone}', '${safeService}',${Number(matchedAppt.price || 0)})">
-                  <div class="font-bold truncate flex justify-between items-center">
-                    <span class="truncate">${matchedAppt.name}</span>
-                    <span class="text-[9px] px-1 py-0.2 rounded bg-black/20 text-white font-mono">${colorTheme.tag}</span>
+              <div class="${colClass} p-1 border-r border-brand-100 last:border-r-0" style="background-color: ${colorTheme.lightBg};">
+                <div class="h-full p-2 rounded-xl shadow-2xs text-[11px] cursor-pointer hover:opacity-90 transition space-y-0.5 border" style="background-color: ${colorTheme.bg}; color:${colorTheme.text}; border-color: ${colorTheme.border};" onclick="openCheckoutModal('${matchedAppt.id}', '${safeName}', '${matchedAppt.phone}', '${safeService}',${Number(matchedAppt.price || 0)})">
+                  <div class="font-bold flex justify-between items-center gap-1">
+                    <span class="truncate text-xs">${matchedAppt.name}</span>
+                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-black/20 text-white font-mono shrink-0">${colorTheme.tag}</span>
                   </div>
-                  <div class="text-[9.5px] opacity-90 truncate">${matchedAppt.service}</div>
+                  <div class="text-[10px] opacity-90 truncate leading-tight">${matchedAppt.service}</div>
                 </div>
               </div>
             `;
           }
 
           return `
-            <div class="flex-1 min-w-[125px] p-1 border-r border-brand-100 last:border-r-0 cursor-pointer hover:bg-emerald-50/40 transition group flex items-center justify-center" onclick="quickInsertBooking('${targetDateSlash}', '${slot}', '${st.id}', '${st.name}')">
+            <div class="${colClass} p-1 border-r border-brand-100 last:border-r-0 cursor-pointer hover:bg-emerald-50/40 transition group flex items-center justify-center" onclick="quickInsertBooking('${targetDateSlash}', '${slot}', '${st.id}', '${st.name}')">
               <span class="text-[10px] text-brand-300 opacity-0 group-hover:opacity-100 transition font-bold">+ 插單</span>
             </div>
           `;
@@ -5201,8 +5287,10 @@ function renderOverviewGridCanvas() {
     `;
   });
 
+  // 容器寬度：若單人則移除強制 min-w-[500px]，採用 w-full 自適應手機螢幕
+  canvas.className = isSingleStaff ? "w-full space-y-2" : "min-w-[500px] space-y-2";
   canvas.innerHTML = `
-    <div class="bg-white rounded-2xl border border-brand-200 overflow-x-auto shadow-sm">
+    <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-sm w-full">
       ${headerHtml}
       <div class="divide-y divide-brand-50">${rowsHtml}</div>
     </div>
