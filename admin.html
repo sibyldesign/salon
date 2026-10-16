@@ -9565,36 +9565,100 @@ if (peakChartBox) {
       }
     }
 
-    function handleSlotRangeChange() {
-      const startVal = document.getElementById('slot-start-date')?.value;
-      const endVal = document.getElementById('slot-end-date')?.value;
-      if (!startVal) return;
+    // ========================================================
+// 【升級版】handleSlotRangeChange() — 每日日期旁新增「全選 / 取消」按鈕
+// ========================================================
+function handleSlotRangeChange() {
+  const startVal = document.getElementById('slot-start-date')?.value;
+  const endVal = document.getElementById('slot-end-date')?.value;
+  if (!startVal) return;
 
-      pendingSlotsList = [];
-      renderPendingSlotsList();
+  pendingSlotsList = [];
+  renderPendingSlotsList();
 
-      const container = document.getElementById('slot-picker-checkboxes');
-      const times = ["10:00", "11:30", "13:00", "14:30", "16:00", "17:30", "19:00"];
-      const startDate = new Date(startVal);
-      const endDate = endVal ? new Date(endVal) : new Date(startVal);
+  const container = document.getElementById('slot-picker-checkboxes');
+  if (!container) return;
 
-      let daysList = [];
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
+  // 預設常見時段 (或自動讀取營業設定)
+  const startTime = backendData.settings?.shiftStartTime || '09:00';
+  const endTime = backendData.settings?.shiftEndTime || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || 30);
+  
+  const [sH, sM] = startTime.split(':').map(Number);
+  const [eH, eM] = endTime.split(':').map(Number);
+  const times = [];
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    times.push(`${hh}:${mm}`);
+  }
+
+  const startDate = new Date(startVal);
+  const endDate = endVal ? new Date(endVal) : new Date(startVal);
+
+  const daysList = [];
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
+  }
+
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+  container.innerHTML = daysList.map(dayStr => {
+    const dObj = new Date(dayStr.replace(/\//g, '-'));
+    const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekDays[dObj.getDay()]})`;
+
+    return `
+      <!-- 日期表頭 + 當日全選按鈕 -->
+      <div class="col-span-full flex justify-between items-center bg-brand-50/80 px-3 py-2 rounded-xl border border-brand-200 mt-2">
+        <span class="font-bold text-xs text-brand-900 flex items-center gap-1.5 font-mono">
+          <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
+          <span>${dayStr} ${weekStr}</span>
+        </span>
+        <button type="button" onclick="toggleSelectAllDateSlots('${dayStr}', this)" class="px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs">
+          ＋ 當日全選
+        </button>
+      </div>
+
+      <!-- 該日各時段勾選格 -->
+      ${times.map(t => `
+        <label class="p-2 bg-white rounded-xl border border-brand-200 flex items-center justify-between cursor-pointer hover:border-[#8C7355] transition text-xs shadow-2xs">
+          <span class="font-bold font-mono text-brand-900">${t}</span>
+          <input type="checkbox" value="${t}" data-date="${dayStr}" onchange="toggleSlotPick('${dayStr}', '${t}', this)" class="slot-cb-${dayStr.replace(/\//g, '')} accent-[#8C7355] w-3.5 h-3.5 rounded">
+        </label>
+      `).join('')}
+    `;
+  }).join('');
+}
+
+// 支援一鍵全選 / 取消全選指定日期的時段
+function toggleSelectAllDateSlots(dayStr, btn) {
+  const cleanDayClass = dayStr.replace(/\//g, '');
+  const checkboxes = document.querySelectorAll(`.slot-cb-${cleanDayClass}`);
+  if (!checkboxes || checkboxes.length === 0) return;
+
+  // 判定目前是否已經全部勾選
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  const targetState = !allChecked;
+
+  checkboxes.forEach(cb => {
+    cb.checked = targetState;
+    const t = cb.value;
+    if (targetState) {
+      if (!pendingSlotsList.some(s => s.date === dayStr && s.time === t)) {
+        pendingSlotsList.push({ date: dayStr, time: t });
       }
-
-      container.innerHTML = daysList.map(dayStr => `
-        <div class="col-span-full font-bold text-xs text-brand-900 mt-2 pb-1 border-b border-brand-200">
-          📅 ${dayStr}
-        </div>
-        ${times.map(t => `
-          <label class="p-2 bg-brand-50 rounded-xl border border-brand-200 flex items-center justify-between cursor-pointer hover:bg-brand-100 transition">
-            <span class="font-bold text-xs font-mono">${t}</span>
-            <input type="checkbox" value="${t}" data-date="${dayStr}" onchange="toggleSlotPick('${dayStr}', '${t}', this)" class="accent-[#8C7355]">
-          </label>
-        `).join('')}
-      `).join('');
+    } else {
+      pendingSlotsList = pendingSlotsList.filter(s => !(s.date === dayStr && s.time === t));
     }
+  });
+
+  btn.innerText = targetState ? '✕ 取消全選' : '＋ 當日全選';
+  btn.className = targetState
+    ? "px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs"
+    : "px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs";
+
+  renderPendingSlotsList();
+}
 
     function toggleSlotPick(d, t, cb) {
       if (cb.checked) pendingSlotsList.push({ date: d, time: t });
