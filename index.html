@@ -755,6 +755,23 @@
           <input type="hidden" id="date">
         </div>
 
+        <!-- 顧客前台「近期空檔快速選單」莫蘭迪卡片結構範例 -->
+<div class="space-y-2 p-3 bg-[#FDFBF7] rounded-2xl border border-[#EBE5DF]">
+  <div class="text-xs font-bold text-[#68523A] flex items-center gap-1.5">
+    <i class="fa-solid fa-wand-magic-sparkles text-[#8C7355]"></i> 近期可約空檔：
+  </div>
+  <div class="grid grid-cols-2 gap-2 text-xs">
+    <button type="button" class="p-2.5 rounded-xl border border-[#D0E0D6] bg-[#F0F5F2] text-[#2D4536] font-bold text-left hover:shadow-xs transition" onclick="selectSlotDirect('2026/10/18', '14:00')">
+      <div class="text-[10px] text-[#607466]">10/18 (六)</div>
+      <div class="text-sm font-mono font-black">14:00 可約</div>
+    </button>
+    <button type="button" class="p-2.5 rounded-xl border border-[#D0E0D6] bg-[#F0F5F2] text-[#2D4536] font-bold text-left hover:shadow-xs transition" onclick="selectSlotDirect('2026/10/20', '11:00')">
+      <div class="text-[10px] text-[#607466]">10/20 (一)</div>
+      <div class="text-sm font-mono font-black">11:00 可約</div>
+    </button>
+  </div>
+</div>
+        
         <!-- 6. 美容預約時段 -->
         <div id="timePickerSection" class="pt-2">
           <label class="block text-xs font-bold text-brand-800 mb-2">預約時段</label>
@@ -4775,6 +4792,40 @@ async function openFrontCustomerHistoryModal() {
 function closeFrontCustomerHistoryModal() {
   const modal = document.getElementById('frontHistoryModal');
   if (modal) modal.classList.add('hidden');
+}
+
+  // 在前台頁面載入時初始化 LIFF
+let customerLineUid = "";
+let customerLineName = "";
+
+window.addEventListener("DOMContentLoaded", async () => {
+  if (typeof liff !== "undefined") {
+    try {
+      await liff.init({ liffId: "您的LIFF-ID" }); // 填入 Line Console 建立之 LIFF ID
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        customerLineUid = profile.userId;       // 自動取得 U 開頭 UID
+        customerLineName = profile.displayName; // 自動取得 LINE 暱稱
+        
+        // 若表單有 LINE 暱稱輸入框，自動填入
+        const lineInput = document.getElementById("cust-line");
+        if (lineInput && !lineInput.value) lineInput.value = customerLineName;
+      }
+    } catch (e) {
+      console.warn("LIFF 初始化略過 (非 LINE 環境打開):", e);
+    }
+  }
+});
+
+// 送單時將 customerLineUid 一併存入 payload
+function getBookingPayload() {
+  return {
+    customer_name: document.getElementById("cust-name").value.trim(),
+    customer_phone: document.getElementById("cust-phone").value.trim(),
+    line_user_id: customerLineUid, // 🌟 關鍵：全系統自動認客的核心欄位
+    line_name: customerLineName || document.getElementById("cust-line")?.value || "",
+    // ... 其他欄位保持不變
+  };
 }
 </script>
 </body>
