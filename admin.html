@@ -1293,6 +1293,7 @@
     <div>
       <label class="block font-bold text-brand-800 mb-1 text-[11px]">前台可約時段切分間隔：</label>
       <select id="lt-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-bold">
+        <option value="15">每 15 分鐘為一格時段</option>
         <option value="30">每 30 分鐘為一格時段</option>
         <option value="60">每 60 分鐘為一格時段</option>
       </select>
@@ -2093,6 +2094,7 @@
           <div>
             <label class="block font-bold text-brand-800 mb-1 text-[11px]">前台可約時段切分間隔：</label>
             <select id="cfg-shift-interval" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none font-bold">
+              <option value="15">每 15 分鐘為一格時段</option>
               <option value="30">每 30 分鐘為一格時段</option>
               <option value="60">每 60 分鐘為一格時段</option>
             </select>
@@ -3141,21 +3143,6 @@
       return (item.colors || []).map(c => `
         <span class="w-3.5 h-3.5 rounded-full inline-block border border-black/10 shadow-2xs" style="background-color: ${c};" title="${c}"></span>
       `).join('');
-    }
-
-    // 色票預覽渲染函式
-    function previewSelectedThemeColor(themeKey) {
-      const safeKey = (themeKey && THEME_PALETTES[themeKey]) ? themeKey : 'latte';
-      const t = THEME_PALETTES[safeKey];
-      const nameEl = document.getElementById('theme-preview-name');
-      const chipsEl = document.getElementById('theme-color-chips');
-
-      if (nameEl) nameEl.innerText = `${t.name}：`;
-      if (chipsEl) {
-        chipsEl.innerHTML = t.colors.map(c => `
-          <span class="w-5 h-5 rounded-full border border-black/10 shadow-2xs inline-block transition transform hover:scale-110" style="background-color: ${c};" title="${c}"></span>
-        `).join('');
-      }
     }
     
     // 模式切換確認函式
@@ -4712,71 +4699,182 @@ function selectOverviewDateBtn(dHyphen) {
   renderOverviewGridCanvas();
 }
 
-// 渲染類 Excel 總覽畫布 (直條為設計師，橫軸為時間軸)
 // 渲染類 Excel 總覽畫布 (多租戶動態讀取專員名冊，預設顯示 A專員 / B專員)
    function renderOverviewGridCanvas() {
-     const canvas = document.getElementById('overview-grid-canvas');
-     if (!canvas) return;
+  const canvas = document.getElementById('overview-grid-canvas');
+  if (!canvas) return;
 
-     const viewDateHyphen = document.getElementById('overview-view-date')?.value || '';
-     if (!viewDateHyphen) {
-       canvas.innerHTML = '<div class="text-center py-8 text-xs text-brand-400">請先選取上方日期</div>';
-       return;
-     }
+  const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
+  const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-     const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
+  // 1. 動態抓取專員名冊
+  let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  if (staffList.length === 0) {
+    staffList = [{ id: 'staff_1', name: '專員 A' }, { id: 'staff_2', name: '專員 B' }];
+  }
 
-     // 🌟 多租戶動態抓取該店專員名冊 (排除全店不指定的 'all')
-     let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-     
-     // 若該店尚未登記專員，預設以「A專員」、「B專員」作為動態範例
-     if (staffList.length === 0) {
-       staffList = [
-         { id: 'staff_a', name: 'A專員' },
-         { id: 'staff_b', name: 'B專員' }
-       ];
-     }
+  // 2. 依營業時間與切分間隔計算時段清單 (支援 15/30/60 分鐘)
+  const startTime = backendData.settings?.shiftStartTime || '09:00';
+  const endTime = backendData.settings?.shiftEndTime || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || 15);
 
-     const apptsToday = (backendData.appointments || []).filter(a => {
-       const aDateClean = (a.date || '').replace(/-/g, '/');
-       return aDateClean === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
-     });
-     
-     // 組合每個專員當天的行程區塊
-     let columnsHtml = staffList.map(st => {
-       const staffAppts = apptsToday.filter(a => {
-         const sName = String(a.staffName || '').trim();
-         const targetStName = String(st.name || '').trim();
-         return sName === targetStName || a.staffId === st.id || sName === '不指定' || !sName;
-       });
-       
-       return `
-         <div class="space-y-2 p-3 bg-brand-50/50 rounded-2xl border border-brand-200 min-h-[350px]">
-           <div class="text-center font-bold text-xs text-brand-900 pb-1.5 border-b border-brand-200">${st.name} 看板</div>
-           <div class="space-y-2">
-             ${staffAppts.length > 0 ? staffAppts.map(a => `
-               <div class="p-3 bg-white rounded-xl border border-amber-300 shadow-2xs space-y-1 text-xs">
-                 <div class="flex justify-between items-center font-bold text-amber-950">
-                   <span class="font-mono text-[#8C7355] text-sm">${a.time}</span>
-                   <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10px] font-bold">${a.status}</span>
-                 </div>
-                 <div class="font-bold text-brand-900 text-sm">${a.name} <span class="text-gray-400 font-mono text-xs font-normal">(${a.phone})</span></div>
-                 <div class="text-[11.5px] text-brand-800 bg-brand-50/80 p-2 rounded-lg border border-brand-100 space-y-0.5">
-                   <div><b>項目：</b>${a.service}</div>${a.notes ? `<div class="text-gray-600 mt-0.5"><b>備註/穿插：</b>${a.notes}</div>` : ''}
-                 </div>
-               </div>
-             `).join('') : '<div class="text-center py-16 text-gray-400 text-xs">當日無排程，全天空檔</div>'}
-           </div>
-         </div>
-       `;
-     }).join('');
+  const [sH, sM] = startTime.split(':').map(Number);
+  const [eH, eM] = endTime.split(':').map(Number);
+  const timeSlots = [];
+  for (let m = sH * 60 + sM; m < eH * 60 + eM; m += interval) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    timeSlots.push(`${hh}:${mm}`);
+  }
 
-     canvas.innerHTML = `
-       <div class="grid grid-cols-1 sm:grid-cols-${Math.min(staffList.length, 3)} gap-3">
-         ${columnsHtml}
-       </div>
-     `;
-   }
+  // 3. 撈取當日未取消預約
+  const apptsToday = (backendData.appointments || []).filter(a => {
+    return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
+  });
+
+  // 4. 表頭：專員頭像與姓名
+  let headerHtml = `
+    <div class="sticky top-0 z-20 flex bg-white border-b border-brand-200">
+      <div class="w-16 shrink-0 py-2.5 text-center text-[11px] font-bold text-brand-400 border-r border-brand-100 bg-brand-50/50">時間</div>
+      ${staffList.map(st => `
+        <div class="flex-1 min-w-[120px] py-2.5 px-2 text-center border-r border-brand-100 last:border-r-0">
+          <div class="w-7 h-7 mx-auto rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs mb-1">
+            <i class="fa-solid fa-user-tie text-[11px]"></i>
+          </div>
+          <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // 5. 表身：時間縱軸與預約色塊網格
+  let rowsHtml = '';
+  timeSlots.forEach(slot => {
+    rowsHtml += `
+      <div class="flex border-b border-brand-100 min-h-[46px] hover:bg-brand-50/30 transition">
+        <div class="w-16 shrink-0 flex items-center justify-center text-[10.5px] font-mono text-brand-400 font-bold border-r border-brand-100 bg-brand-50/20">${slot}</div>
+        ${staffList.map(st => {
+          const matchedAppt = apptsToday.find(a => {
+            const aStaff = String(a.staffName || '').trim();
+            const isStaffMatch = (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
+            return isStaffMatch && a.time === slot;
+          });
+
+          if (matchedAppt) {
+            const safeService = (matchedAppt.service || '').replace(/'/g, "\\'");
+            const safeName = (matchedAppt.name || '').replace(/'/g, "\\'");
+            return `
+              <div class="flex-1 min-w-[120px] p-1 border-r border-brand-100 last:border-r-0 bg-amber-50/50">
+                <div class="h-full p-1.5 bg-[#8C7355] text-white rounded-xl shadow-2xs text-[10.5px] cursor-pointer hover:opacity-90 transition space-y-0.5" onclick="openCheckoutModal('${matchedAppt.id}', '${safeName}', '${matchedAppt.phone}', '${safeService}',${Number(matchedAppt.price || 0)})">
+                  <div class="font-bold truncate flex justify-between items-center">
+                    <span>${matchedAppt.name}</span>
+                    <span class="text-[9px] opacity-80 font-mono">${matchedAppt.time}</span>
+                  </div>
+                  <div class="text-[9.5px] opacity-90 truncate">${matchedAppt.service}</div>
+                </div>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="flex-1 min-w-[120px] p-1 border-r border-brand-100 last:border-r-0 cursor-pointer hover:bg-emerald-50/40 transition group flex items-center justify-center" onclick="quickInsertBooking('${targetDateSlash}', '${slot}', '${st.id}', '${st.name}')">
+              <span class="text-[10px] text-brand-300 opacity-0 group-hover:opacity-100 transition font-bold">+ 插單</span>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  });
+
+  canvas.innerHTML = `
+    <div class="bg-white rounded-2xl border border-brand-200 overflow-x-auto shadow-sm">
+      ${headerHtml}
+      <div class="divide-y divide-brand-50">${rowsHtml}</div>
+    </div>
+  `;
+}
+    
+// 快速點格插單彈窗 (無需跳頁、3 秒完成臨時/非常態項目登記)
+function quickInsertBooking(date, time, staffId, staffName) {
+  Swal.fire({
+    title: '快速排程插單',
+    html: `
+      <div class="text-left text-xs space-y-2.5 font-sans">
+        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-brand-800 font-mono">
+          <div>排定時段：<b class="text-brand-900">${date} ${time}</b></div>
+          <div>服務專員：<b class="text-brand-900">${staffName}</b></div>
+        </div>
+        <div>
+          <label class="font-bold block mb-1">顧客姓名 *</label>
+          <input id="quick-ins-name" class="swal2-input text-xs" placeholder="輸入顧客姓名">
+        </div>
+        <div>
+          <label class="font-bold block mb-1">聯絡手機 *</label>
+          <input id="quick-ins-phone" class="swal2-input text-xs font-mono" placeholder="0912345678">
+        </div>
+        <div>
+          <label class="font-bold block mb-1">服務項目 *</label>
+          <input id="quick-ins-service" class="swal2-input text-xs" placeholder="例: 修瀏海、抓造型、染髮諮詢">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold block mb-1">預估時長</label>
+            <select id="quick-ins-duration" class="swal2-input text-xs font-bold">
+              <option value="15">15 分鐘</option>
+              <option value="30">30 分鐘</option>
+              <option value="60" selected>60 分鐘</option>
+            </select>
+          </div>
+          <div>
+            <label class="font-bold block mb-1">費用預算 (NT$)</label>
+            <input type="number" id="quick-ins-price" class="swal2-input text-xs font-mono" value="0">
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確認插單排程',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => {
+      const name = document.getElementById('quick-ins-name').value.trim();
+      const phone = document.getElementById('quick-ins-phone').value.trim();
+      const service = document.getElementById('quick-ins-service').value.trim();
+      if (!name || !phone || !service) {
+        Swal.showValidationMessage('姓名、電話與項目為必填！');
+        return false;
+      }
+      return {
+        name,
+        phone,
+        service,
+        duration: Number(document.getElementById('quick-ins-duration').value || 15),
+        price: Number(document.getElementById('quick-ins-price').value || 0)
+      };
+    }
+  }).then(async r => {
+    if (r.isConfirmed && r.value) {
+      Swal.showLoading();
+      const payload = {
+        store_id: CURRENT_STORE_ID,
+        customer_name: r.value.name,
+        customer_phone: r.value.phone,
+        service_names: r.value.service,
+        price: r.value.price,
+        final_price: r.value.price,
+        appointment_time: `${date.replace(/\//g, '-')}T${time}:00+08:00`,
+        staff_id: staffId,
+        staff_name: staffName,
+        status: '已確認',
+        notes: `現場快速插單 (耗時: ${r.value.duration}分)`
+      };
+      await directSupabaseUpsert('bookings', payload, 'id');
+      await fetchDataAndRender();
+      renderOverviewGridCanvas();
+      Swal.fire({ title: '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+    }
+  });
+}
     
     function showApptsInCalendar(dateStr) {
       selectedCalendarDate = dateStr;
@@ -5344,7 +5442,7 @@ function renderSingleCardHTML(a) {
       const sD = new Date(rawTime);
       if (!isNaN(sD.getTime())) {
         const pad = n => String(n).padStart(2, '0');
-        finalSignedTime = `${sD.getFullYear()}/${pad(sD.getMonth() + 1)}/${pad(sD.getDate())}${pad(sD.getHours())}:${pad(sD.getMinutes())}:${pad(sD.getSeconds())}`;
+        finalSignedTime = `${sD.getFullYear()}/${pad(sD.getMonth() + 1)}/${pad(sD.getDate())} ${pad(sD.getHours())}:${pad(sD.getMinutes())}:${pad(sD.getSeconds())}`;
       }
     }
   }
@@ -7662,30 +7760,6 @@ if (enableBomDeduct) {
       });
     }
 
-    // ==========================================
-    // 13. 後台手動新增預約排程 (支援寵物美容＋住宿多時段)
-    // ==========================================
-    function toggleQuickBookingFields() {
-      const mode = document.querySelector('input[name="quick-booking-mode"]:checked')?.value || 'grooming';
-      const groomingBox = document.getElementById('quick-grooming-time-box');
-      const hotelBox = document.getElementById('quick-hotel-time-box');
-      const hotelGroomingOptions = document.getElementById('quick-hotel-grooming-options');
-
-      if (mode === 'grooming') {
-        groomingBox.classList.remove('hidden');
-        hotelBox.classList.add('hidden');
-      } else if (mode === 'hotel') {
-        groomingBox.classList.add('hidden');
-        hotelBox.classList.remove('hidden');
-        if (hotelGroomingOptions) hotelGroomingOptions.classList.add('hidden');
-      } else if (mode === 'both') {
-        groomingBox.classList.remove('hidden');
-        hotelBox.classList.remove('hidden');
-        if (hotelGroomingOptions) hotelGroomingOptions.classList.remove('hidden');
-      }
-      calcAdminQuickSummary();
-    }
-
     function renderQuickAddServices() {
       const staffGrid = document.getElementById('admin-quick-staff-grid');
       if (staffGrid) {
@@ -7965,70 +8039,74 @@ function calcAdminQuickSlots() {
       };
 
       try {
-        const res = await directSupabaseUpsert('bookings', payload, 'id');
-        const newBookingId = (res && res[0]) ? res[0].id : null;
+        // 🌟 嚴格店家隔離：只有「這理髮型」或「有購買試算表模組」的店家才同步試算表
+        const realCurrentStoreName = backendData.settings?.storeName || backendData.storeInfo?.store_name || "門市預約系統";
+        const storeSlug = backendData.storeInfo?.slug || '';
+        const isZheliStore = realCurrentStoreName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+        const hasSheetsAddon = (backendData.storeInfo?.allowed_modules || []).includes('sheets_sync');
 
-        // 🌟 同步直通派發至 Google 試算表（點亮當日看板 + 歸納顧客資料庫）
-        try {
-          const zheliGasUrl = backendData.settings?.sheets_gas_url || 
-                              localStorage.getItem(`zy_gas_url_${CURRENT_STORE_ID}`) || 
-                              "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
-          const zheliSheetId = backendData.settings?.sheets_spreadsheet_id || 
-                               localStorage.getItem(`zy_sheets_id_${CURRENT_STORE_ID}`) || 
-                               "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+        if (isZheliStore || hasSheetsAddon) {
+          try {
+            const zheliGasUrl = backendData.settings?.sheets_gas_url || 
+                                localStorage.getItem(`zy_gas_url_${CURRENT_STORE_ID}`) || 
+                                API_URL;
+            const zheliSheetId = backendData.settings?.sheets_spreadsheet_id || 
+                                 localStorage.getItem(`zy_sheets_id_${CURRENT_STORE_ID}`);
 
-          let adminStaffCode = document.getElementById('quick-staff-name')?.value?.trim() || '不指定';
-          if (adminStaffCode === '不指定' || adminStaffCode === 'all' || !adminStaffCode) {
-            adminStaffCode = 'no';
+            if (zheliGasUrl && zheliSheetId) {
+              let adminStaffCode = document.getElementById('quick-staff-name')?.value?.trim() || '不指定';
+              if (adminStaffCode === '不指定' || adminStaffCode === 'all' || !adminStaffCode) {
+                adminStaffCode = 'no';
+              }
+
+              let adminSvcCode = 'C';
+              const sUpper = String(service || '').toUpperCase();
+              if (sUpper.includes('燙') || sUpper.includes('縮毛') || sUpper.includes('P')) {
+                adminSvcCode = 'P';
+              } else if (sUpper.includes('L剪') || sUpper.includes('長剪') || sUpper.includes('長髮') || sUpper.includes('設計剪')) {
+                adminSvcCode = 'L';
+              } else {
+                adminSvcCode = 'C';
+              }
+
+              let safeAdminPhone = String(phone || '').replace(/\D/g, '');
+              if (safeAdminPhone.length === 9 && safeAdminPhone.startsWith('9')) safeAdminPhone = '0' + safeAdminPhone;
+
+              const sheetSyncPayload = {
+                action: "syncBookingToSheet",
+                store_id: CURRENT_STORE_ID,
+                store_name: realCurrentStoreName, // 🌟 動態帶入真實店名，不再寫死！
+                spreadsheet_id: zheliSheetId,
+                transaction_no: `ADM-${Date.now().toString().slice(-6)}`,
+                date: bookingDate.replace(/-/g, '/'),
+                time: bookingTime || "11:00",
+                staff_name: adminStaffCode,
+                customer_name: name,
+                phone: safeAdminPhone,
+                customer_phone: safeAdminPhone,
+                customer_type: 'old',
+                email: email || '',
+                line_name: document.getElementById('quick-line')?.value.trim() || '',
+                service_code: adminSvcCode,
+                service_name: service || '剪髮造型',
+                service: service || '剪髮造型',
+                price: Number(finalPrice || 0),
+                final_price: Number(finalPrice || 0),
+                status: "已確認",
+                notes: finalNotesArray.join(' | ')
+              };
+
+              fetch(zheliGasUrl, {
+                method: "POST",
+                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(sheetSyncPayload)
+              }).catch(err => console.warn("試算表同步略過:", err));
+            }
+          } catch (sheetErr) {
+            console.warn("試算表組裝失敗:", sheetErr);
           }
-
-          let adminSvcCode = 'C';
-          const sUpper = String(service || '').toUpperCase();
-          if (sUpper.includes('燙') || sUpper.includes('縮毛') || sUpper.includes('P')) {
-            adminSvcCode = 'P';
-          } else if (sUpper.includes('L剪') || sUpper.includes('長剪') || sUpper.includes('長髮') || sUpper.includes('設計剪')) {
-            adminSvcCode = 'L';
-          } else {
-            adminSvcCode = 'C';
-          }
-
-          let safeAdminPhone = String(phone || '').replace(/\D/g, '');
-          if (safeAdminPhone.length === 9 && safeAdminPhone.startsWith('9')) safeAdminPhone = '0' + safeAdminPhone;
-
-          const sheetSyncPayload = {
-            action: "syncBookingToSheet",
-            store_id: CURRENT_STORE_ID,
-            store_name: "這理髮型",
-            spreadsheet_id: zheliSheetId,
-            transaction_no: `ADM-${Date.now().toString().slice(-6)}`,
-            date: bookingDate.replace(/-/g, '/'),
-            time: bookingTime || "11:00",
-            staff_name: adminStaffCode,
-            customer_name: name,
-            phone: safeAdminPhone,
-            customer_phone: safeAdminPhone,
-            customer_type: 'old',
-            email: email || '',
-            line_name: document.getElementById('quick-line')?.value.trim() || '',
-            service_code: adminSvcCode,
-            service_name: service || '剪髮造型',
-            service: service || '剪髮造型',
-            price: Number(finalPrice || 0),
-            final_price: Number(finalPrice || 0),
-            status: "已確認",
-            notes: finalNotesArray.join(' | ')
-          };
-
-          fetch(zheliGasUrl, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify(sheetSyncPayload)
-          }).catch(err => console.warn("試算表同步略過:", err));
-        } catch (sheetErr) {
-          console.warn("試算表組裝失敗:", sheetErr);
         }
-
         Swal.fire({
           title: '預約排程已建立成功！',
           text: '資料已同步寫入排程看板與顧客庫，是否現場手寫簽署定型化合約？',
@@ -11538,200 +11616,6 @@ function showLineDevelopersOneStopGuide() {
     confirmButtonColor: '#8C7355'
   });
 }  
-  
-  // 點擊後透過 LINE LIFF 或 授權登入取得老闆 UID 並自動存入資料庫
-async function loginWithLineForOwnerBinding() {
-  if (typeof liff !== 'undefined' && liff.isInClient()) {
-    // 若本來就在 LINE 內開啓，直接秒速抓取
-    try {
-      await liff.init({ liffId: "您的LIFF-ID" }); // 填入您的 LINE LIFF ID
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
-      }
-      const profile = await liff.getProfile();
-      const myUid = profile.userId;
-      
-      // 自動存入資料庫
-      await saveOwnerUidToDatabase(myUid);
-    } catch (e) {
-      Swal.fire('抓取失敗', e.message, 'error');
-    }
-  } else {
-    // 若在一般瀏覽器，直接提示老闆或透過最簡單的彈窗輸入您的 UID (或使用授權網址)
-    const { value: uidInput } = await Swal.fire({
-      title: '輸入您的 LINE User ID',
-      text: '您可以傳送「查詢我的ID」給官方機器人取得，或直接在此貼上您的 U... 開頭 ID：',
-      input: 'text',
-      inputPlaceholder: 'U7a9de3e44632bd2...',
-      showCancelButton: true,
-      confirmButtonText: '確定綁定',
-      confirmButtonColor: '#06C755'
-    });
-
-    if (uidInput) {
-      await saveOwnerUidToDatabase(uidInput.trim());
-    }
-  }
-}
-
-async function saveOwnerUidToDatabase(uid) {
-  Swal.showLoading();
-  try {
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
-      owner_line_uid: uid,
-      updated_at: new Date().toISOString()
-    });
-    
-    document.getElementById('owner-line-status-badge').className = "px-2 py-0.5 bg-emerald-500 text-white rounded-full font-bold text-[10px]";
-    document.getElementById('owner-line-status-badge').innerText = "✓ 已成功綁定";
-    
-    Swal.fire({
-      title: 'LINE 業主帳號綁定成功！',
-      text: `已成功將您的 LINE (UID: ${uid}) 設為本門市通知對象。`,
-      icon: 'success'
-    });
-  } catch (e) {
-    Swal.fire('儲存失敗', e.message, 'error');
-  }
-}
-
-    function showFindLineUidGuide() {
-  Swal.fire({
-    title: '如何取得您的個人 LINE User ID？',
-    html: `
-      <div class="text-left text-xs space-y-2.5 leading-relaxed font-sans">
-        <div class="p-3 bg-brand-50 rounded-xl border border-brand-200">
-          <b>方法一（最快，電腦版 LINE）：</b><br>
-          打開電腦版 LINE ➔ 左下角「設定 (齒輪)」 ➔ 「關於 LINE」 ➔ 即可複製<b>使用者 ID</b>（U 開頭）。
-        </div>
-        <div class="p-3 bg-brand-50 rounded-xl border border-brand-200">
-          <b>方法二（手機版 LINE）：</b><br>
-          到好友頁面點擊自己 ➔ 點選「分享」或「產生連結」，將網址貼到記事本，網址結尾 <code class="bg-white px-1 font-mono text-brand-900">/Uxxxxxxxx...</code> 的部分就是您的 UID！
-        </div>
-      </div>
-    `,
-    confirmButtonText: '了解',
-    confirmButtonColor: '#8C7355'
-  });
-}
-
-    // 1. 點擊按鈕後導向 LINE 官方授權頁面
-function loginWithLineForOwnerBinding() {
-  const channelId = "您的LINE_LOGIN_CHANNEL_ID"; // 填入您的 LINE Login Channel ID
-  const redirectUri = window.location.href.split('?')[0]; // 當前管理後台網址
-  const state = CURRENT_STORE_ID; // 夾帶目前店家 ID
-
-  const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
-  
-  // 導向 LINE 授權
-  window.location.href = lineAuthUrl;
-}
-
-// 2. 頁面載入時檢查網址是否有帶回 ?code= (代表老闆剛剛授權同意回來)
-window.addEventListener('DOMContentLoaded', async () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get('code');
-  const stateStoreId = urlParams.get('state');
-
-  if (code && stateStoreId) {
-    Swal.fire({
-      title: '正在綁定 LINE 帳號...',
-      text: '請稍候，正在為您同步個人 LINE ID 到系統中',
-      allowOutsideClick: false,
-      didOpen: () => Swal.showLoading()
-    });
-
-    try {
-      const redirectUri = window.location.href.split('?')[0];
-      const res = await callBackendApi({
-        action: 'exchangeLineAuthCode',
-        store_id: stateStoreId,
-        code: code,
-        redirectUri: redirectUri
-      });
-
-      if (res.status === 'SUCCESS') {
-        // 清除網址上的 code 參數
-        window.history.replaceState({}, document.title, redirectUri);
-        
-        // 自動填入畫面的輸入框
-        const uidInput = document.getElementById('cfg-owner-line-uid');
-        if (uidInput) uidInput.value = res.ownerUid;
-
-        Swal.fire({
-          title: '🎉 LINE 業主綁定成功！',
-          text: `已成功將您的 LINE 帳號 (${res.displayName}) 連結至本門市。`,
-          icon: 'success'
-        });
-      } else {
-        throw new Error(res.error || '授權交換失敗');
-      }
-    } catch (e) {
-      Swal.fire('綁定異常', e.message, 'error');
-    }
-  }
-});
-
-    function generateOwnerBindCode() {
-  const storeId = CURRENT_STORE_ID;
-  const bindText = `綁定店家 ${storeId}`;
-  
-  Swal.fire({
-    title: '您的專屬綁定指令已產生',
-    html: `
-      <div class="text-left text-xs space-y-2 font-sans">
-        <p class="text-gray-600">請複製以下方框內的文字，並直接貼到我們的<b>官方 LINE 聊天室</b>傳送即可：</p>
-        <div class="p-3 bg-brand-50 border border-brand-200 rounded-xl font-mono font-bold text-brand-900 select-all text-center" id="bind-code-text">
-          ${bindText}
-        </div>
-        <p class="text-[10px] text-gray-400 text-center">※ 傳送後，系統會自動在 LINE 回覆「連動成功」，並將您的 ID 存入系統。</p>
-      </div>
-    `,
-    confirmButtonText: '複製指令',
-    confirmButtonColor: '#06C755',
-    showCancelButton: true,
-    cancelButtonText: '關閉'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      navigator.clipboard.writeText(bindText).then(() => {
-        Swal.fire({
-          title: '已複製到剪貼簿！',
-          text: '請直接至官方 LINE 聊天室貼上發送即可完成綁定。',
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
-      });
-    }
-  });
-}
-
-    async function manualBindOwnerUidPrompt() {
-  const { value: uid } = await Swal.fire({
-    title: '綁定業主 LINE UID',
-    text: '請向您的 LINE 好友或透過網頁版工具取得 U 開頭的使用者 ID 並貼於下方：',
-    input: 'text',
-    inputPlaceholder: '例如：U7a9de3e44632bd2ac...',
-    showCancelButton: true,
-    confirmButtonText: '立即綁定並測試',
-    confirmButtonColor: '#8C7355'
-  });
-
-  if (uid && uid.trim().startsWith('U')) {
-    const cleanUid = uid.trim();
-    document.getElementById('cfg-owner-line-uid').value = cleanUid;
-    
-    // 直接呼叫儲存
-    Swal.fire({
-      title: '已填入 UID！',
-      text: '請點擊頁面最下方的「儲存設定」，即可完成全面連動。',
-      icon: 'success'
-    });
-  } else if (uid) {
-    Swal.fire('格式錯誤', 'LINE User ID 應該是以英文大寫「U」開頭的一長串亂碼，請重新確認。', 'warning');
-  }
-}
   </script>
 </body>
 </html>
