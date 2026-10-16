@@ -755,20 +755,17 @@
           <input type="hidden" id="date">
         </div>
 
-        <!-- 顧客前台「近期空檔快速選單」莫蘭迪卡片結構範例 -->
-<div class="space-y-2 p-3 bg-[#FDFBF7] rounded-2xl border border-[#EBE5DF]">
-  <div class="text-xs font-bold text-[#68523A] flex items-center gap-1.5">
-    <i class="fa-solid fa-wand-magic-sparkles text-[#8C7355]"></i> 近期可約空檔：
+        <!-- 顧客前台「近期可約空檔」智慧動態運算容器 -->
+<div class="space-y-2 p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 shadow-2xs my-3">
+  <div class="flex justify-between items-center text-xs font-bold text-brand-900">
+    <span class="flex items-center gap-1.5">
+      <i class="fa-solid fa-wand-magic-sparkles text-theme-primary"></i> 近期可約空檔速查
+    </span>
+    <span class="text-[10px] text-brand-400 font-normal">點選直接帶入預約</span>
   </div>
-  <div class="grid grid-cols-2 gap-2 text-xs">
-    <button type="button" class="p-2.5 rounded-xl border border-[#D0E0D6] bg-[#F0F5F2] text-[#2D4536] font-bold text-left hover:shadow-xs transition" onclick="selectSlotDirect('2026/10/18', '14:00')">
-      <div class="text-[10px] text-[#607466]">10/18 (六)</div>
-      <div class="text-sm font-mono font-black">14:00 可約</div>
-    </button>
-    <button type="button" class="p-2.5 rounded-xl border border-[#D0E0D6] bg-[#F0F5F2] text-[#2D4536] font-bold text-left hover:shadow-xs transition" onclick="selectSlotDirect('2026/10/20', '11:00')">
-      <div class="text-[10px] text-[#607466]">10/20 (一)</div>
-      <div class="text-sm font-mono font-black">11:00 可約</div>
-    </button>
+  <!-- 動態渲染注入點 -->
+  <div id="quick-available-slots-container" class="grid grid-cols-2 gap-2 text-xs pt-1">
+    <div class="col-span-2 text-center py-3 text-xs text-brand-400">正在智慧計算可約空檔...</div>
   </div>
 </div>
         
@@ -1467,6 +1464,8 @@ function applyIndustryModeUI(mode) {
         ig: sCfg.ig_url || "#",
         line: sCfg.line_url || "#",
         map: sCfg.map_url || "#",
+        weeklyOffDays: weeklyOffDays,
+        customOffDates: customOffDates,
         
         // 🌟 標配開關（加入蛇形與駝峰兼容，後台取消勾選前台必定為 false）
         enableEmailCopy: parseBoolStrict(sCfg.enable_email_copy ?? sCfg.enableEmailCopy, true),
@@ -2338,6 +2337,7 @@ function renderStoreUI() {
   renderFrontCalendar();
   updateDepositSectionDisplay();
   recalcSmartCheckoutLayout();
+  renderIntelligentAvailableSlots(document.getElementById('staffId')?.value || 'all');
 }
 
 // ========================================================
@@ -3643,6 +3643,7 @@ function updateDepositSectionDisplay() {
     document.getElementById('staffId').value = id;
     document.getElementById('staffName').value = name;
     calculateTimesLocally();
+    renderIntelligentAvailableSlots(id);
   }
 
   // 監聽手機輸入長度
@@ -4295,6 +4296,9 @@ function applyFrontEndMarketingControls(storeInfo) {
   }
 }
 
+// ========================================================
+// 【完整修復版】預約表單送出（含「這理髮型」專屬客製化與隔離防護）
+// ========================================================
 document.getElementById('bookForm').onsubmit = async function(e) {
   e.preventDefault();
 
@@ -4307,8 +4311,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   if (!nameVal) return Swal.fire('請填寫預約人姓名', '', 'warning');
   if (!phoneVal || phoneVal.replace(/\D/g, '').length < 8) return Swal.fire('請填寫正確的手機號碼', '', 'warning');
 
-  // 在 bookForm.onsubmit 驗證完手機後加入：
-  // 終端黑名單阻斷校驗
+  // 黑名單阻斷校驗
   const blacklistCheck = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}&is_blacklisted=eq.true`);
   if (blacklistCheck && blacklistCheck.length > 0) {
     return Swal.fire({
@@ -4318,11 +4321,12 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       confirmButtonColor: '#8C7355'
     });
   }
+
   let sVal = "";
   let dValRaw = "";
   let tVal = "";
 
-  // 2. 寵物模式基本防呆（動態毛孩遍歷，徹底防範刪除區塊後的索引懸空與報錯）
+  // 2. 寵物模式基本防呆
   if (db.industryType !== 'beauty') {
     const p1Name = document.getElementById('petName')?.value.trim();
     const p1Breed = document.getElementById('petBreed')?.value.trim();
@@ -4332,7 +4336,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     if (!p1Breed) return Swal.fire('請填寫毛孩品種', '例如：柴犬、貴賓、米克斯', 'warning');
     if (isNaN(p1Weight) || p1Weight <= 0) return Swal.fire('請填寫毛孩體重 (kg)', '', 'warning');
 
-    // A. 處理固定存在的「毛孩 1」
     const p1Age = document.getElementById('petAge')?.value.trim() || '';
     const p1Gender = document.getElementById('petGender')?.value || '';
     const p1Notes = document.getElementById('petPersonality')?.value.trim() || '';
@@ -4340,11 +4343,9 @@ document.getElementById('bookForm').onsubmit = async function(e) {
 
     notesArray.push(`【毛孩1: ${p1Name} / ${p1Breed} / ${p1Weight}kg / ${p1Age}歲 / ${p1Gender} / 項目: ${p1Svcs || '現場確認'} / 備註: ${p1Notes}】`);
 
-    // B. 動態遍歷畫面上實際存在的額外毛孩（若使用者新增又刪除，此處只遍歷留存的區塊，不依賴計數器）
     const extraPetBlocks = document.querySelectorAll('#additionalPetsContainer [id^="pet-block-"]');
     extraPetBlocks.forEach((block, idx) => {
-      const blockId = block.id; // 例: pet-block-2
-      const blockIdx = blockId.replace('pet-block-', '');
+      const blockIdx = block.id.replace('pet-block-', '');
       const pName = document.getElementById(`petName_${blockIdx}`)?.value.trim();
       if (!pName) return;
 
@@ -4355,11 +4356,10 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       const pNotes = document.getElementById(`petPersonality_${blockIdx}`)?.value.trim() || '';
       const pSvcs = Array.from(document.querySelectorAll(`.pet-${blockIdx}-svc:checked, .pet-${blockIdx}-addon:checked`)).map(cb => cb.value).join(', ');
 
-      const displayNum = idx + 2; // 接續毛孩 1，重新排列為毛孩 2、毛孩 3...
+      const displayNum = idx + 2;
       notesArray.push(`【毛孩${displayNum}: ${pName} / ${pBreed} / ${pWeight}kg / ${pAge}歲 / ${pGender} / 項目: ${pSvcs || '現場確認'} / 備註: ${pNotes}】`);
     });
 
-    // C. 門市接送地址檢查
     if (document.getElementById('chkNeedShuttle')?.checked) {
       const sAddr = document.getElementById('shuttleAddress')?.value.trim();
       if (!sAddr) return Swal.fire('勾選接送請務必填寫詳細地址', '', 'warning');
@@ -4368,7 +4368,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     }
   }
 
-  // 3. 【核心防呆】：住宿起訖日 與 美容項目時段 嚴格阻斷 (附加美容獨立成項目，不污染備註)
+  // 3. 住宿 / 美容時段檢驗
   if (activeBookingSubMode === 'boarding') {
     const inDate = document.getElementById('hotelCheckInDate')?.value;
     const inTime = document.getElementById('hotelCheckInTime')?.value;
@@ -4385,9 +4385,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const roomTier = document.querySelector('input[name="hotelRoomTier"]:checked')?.getAttribute('data-name') || '套房';
     const mealOpt = document.querySelector('input[name="mealPlanOption"]:checked')?.getAttribute('data-name') || '自備飼料';
 
-    // 關鍵重構：將附加洗護正式列入施作項目清單 (service_names)
     let serviceItemsList = [`寵物度假住宿 (${diffNights}晚 - ${roomTier})`];
-    
     if (document.getElementById('chkHotelBathCheckin')?.checked) {
       const inSvc = document.getElementById('hotelBathInServiceSelect')?.value || '進房基礎清潔洗護';
       serviceItemsList.push(`入住洗護: ${inSvc}`);
@@ -4400,7 +4398,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     sVal = serviceItemsList.join(' ＋ ');
     notesArray.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房 ｜ 供餐: ${mealOpt}】`);
   } else {
-    // 美業與純美容：【嚴格防呆】必須選項目、選日期、選時段
     const selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
     if (selectedBoxes.length === 0) return Swal.fire('尚未選擇施作項目！', '請至少勾選一項服務項目才能送出預約', 'warning');
     sVal = selectedBoxes.map(el => el.value).join(', ');
@@ -4411,7 +4408,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     if (!tVal) return Swal.fire('尚未選擇預約時段！', '請點選下方開放之時段膠囊按鈕', 'warning');
   }
 
-  // 4. 【核心防呆】：定型化契約與親筆手寫簽名
+  // 4. 定型化契約與親筆簽名
   if (db.enableContract === true) {
     const hasAgreed = document.getElementById('hasAgreedContract')?.value === 'true';
     if (!hasAgreed) return Swal.fire('尚未閱讀服務條款', '請點擊【閱讀服務條款】滑動至底部點選確認同意', 'warning');
@@ -4422,12 +4419,12 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   btn.disabled = true;
   btn.innerText = "正在送出預約申請...";
 
-  // 5. 【杜絕天價】：抓取單一標準數字（如 450），絕不拼接前後數字！
+  // 5. 抓取預估費用
   const summaryBoxText = document.getElementById('summary-final-total')?.innerText || '';
   const numMatches = summaryBoxText.match(/\d[\d,]*/g);
   let finalBasePrice = 0;
   if (numMatches && numMatches.length > 0) {
-    finalBasePrice = Number(numMatches[0].replace(/,/g, '')); // 永遠只取第一個數字 450
+    finalBasePrice = Number(numMatches[0].replace(/,/g, ''));
   }
   const cleanPriceRangeText = (numMatches && numMatches.length >= 2)
     ? `NT$ ${numMatches[0]} ~ ${numMatches[1]}`
@@ -4435,7 +4432,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
 
   notesArray.push(`【現場預算試算: ${cleanPriceRangeText}】`);
 
-  // 6. 方案加購與抵扣細項文字（供後台卡片解析標籤）
+  // 6. 附加方案備註文字
   const pkgSel = document.getElementById('addon-package-select');
   const walSel = document.getElementById('addon-wallet-select');
   if (pkgSel && pkgSel.value !== 'none') notesArray.push(`【現場加購包卡: ${pkgSel.options[pkgSel.selectedIndex]?.text}】`);
@@ -4445,7 +4442,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   if (activeCoupon) notesArray.push(`【折扣碼: ${activeCoupon.code}】`);
   if (emailVal) notesArray.push(`Email: ${emailVal}`);
 
-  // 自訂問卷
   document.querySelectorAll('#customQuestionsContainer input[data-custom-q]').forEach(inp => {
     if (inp.value.trim()) notesArray.push(`【${inp.getAttribute('data-custom-q')}: ${inp.value.trim()}】`);
   });
@@ -4469,7 +4465,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     line_name: guestLineUid || document.getElementById('lineName')?.value.trim() || '',
     notes: notesArray.join(' | '),
     service_names: sVal,
-    price: finalBasePrice, // 【純淨數字 450，徹底消滅 450600】
+    price: finalBasePrice,
     appointment_time: appointmentIso,
     staff_id: document.getElementById('staffId')?.value || 'all',
     staff_name: document.getElementById('staffName')?.value || '不指定',
@@ -4493,7 +4489,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const resData = await res.json();
     const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
-    // 1. 同步顧客主檔 (覆寫最新姓名、信箱、LINE 暱稱)
+    // 同步顧客主檔
     await directSupabaseUpsert('customers', {
       store_id: CURRENT_STORE_ID,
       phone: phoneVal,
@@ -4503,7 +4499,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       updated_at: new Date().toISOString()
     }, 'store_id,phone');
 
-    // 2. 寵物模式：完整覆寫名下所有毛孩資料庫欄位
+    // 寵物資料同步
     if (db.industryType !== 'beauty') {
       const p1Name = document.getElementById('petName')?.value.trim();
       if (p1Name) {
@@ -4525,7 +4521,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
         }, 'id');
       }
 
-      // 同步額外毛孩 (毛孩 2、毛孩 3...)
       const extraBlocks = document.querySelectorAll('#additionalPetsContainer [id^="pet-block-"]');
       for (let block of extraBlocks) {
         const bIdx = block.id.replace('pet-block-', '');
@@ -4547,30 +4542,20 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       }
     }
 
-    // ------------------------------------------------------------------------
-    // 客製！！！1. 整理通訊、服務代碼與老闆專屬代號
-    // ------------------------------------------------------------------------
+    // ==========================================================================
+    // 🚨🚨🚨【客製專用：這理髮型 - 試算表與 C/L/P 服務代碼轉換引擎】🚨🚨🚨
+    // ==========================================================================
     const isNewCust = (document.getElementById('custType')?.value === 'new');
     const staffVal = document.getElementById('staffName')?.value?.trim() || '';
     const isDesignated = (document.getElementById('staffId')?.value !== 'all' && staffVal !== '不指定' && staffVal !== '');
     
-    // 【老闆專屬代碼規則落實】：
-    // 新客不指定 -> Newno
-    // 新客指定   -> 若指定 Elaine 記為 New指(Elaine) 供看板精準分流至 F~G 欄；指定 Solo 或其他記為 New指
-    // 舊客不指定 -> no
-    // 舊客指定   -> 直接填寫專員名稱 (例如: Solo, Elaine)
     let staffCode = 'no';
     if (isNewCust) {
-      if (isDesignated) {
-        staffCode = staffVal.includes('Elaine') ? 'New指(Elaine)' : 'New指';
-      } else {
-        staffCode = 'Newno';
-      }
+      staffCode = (isDesignated && staffVal.includes('Elaine')) ? 'New指(Elaine)' : (isDesignated ? 'New指' : 'Newno');
     } else if (isDesignated) {
       staffCode = staffVal;
     }
 
-    // 【服務代碼轉換規則落實】：剪髮 C、長剪 L、燙髮/縮毛 P
     let shortServiceCode = 'C';
     const svcUpper = String(sVal || '').toUpperCase();
     if (svcUpper.includes('燙') || svcUpper.includes('縮毛') || svcUpper.includes('P') || svcUpper.includes('PERM')) {
@@ -4585,21 +4570,17 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const formattedDate = String(dValRaw || '').replace(/-/g, '/');
     const targetTime = tVal || '11:00';
 
-    // 手機號碼格式化：強制補齊開頭 0 (10 碼)，避免試算表吃掉 0
     let safePhone = String(phoneVal || '').replace(/\D/g, '');
     if (safePhone.length === 9 && safePhone.startsWith('9')) safePhone = '0' + safePhone;
 
-    // 【修改此處】：強制指定這理髮型的母表 ID，避免變數延遲讀取失敗
-    const targetSpreadsheetId = "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+    const isZheliStore = (CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb') ||
+                         Boolean(db.storeName && db.storeName.includes('這理'));
+    const currentActualStoreName = db.storeName || "沙龍門市";
 
-    // ------------------------------------------------------------------------
-    // 2. 單一原子 Webhook 派發（發送確認信 + 試算表三表同步 + LINE通知）
-    // ------------------------------------------------------------------------
     const webhookPayload = {
       action: "submitBooking",
       store_id: CURRENT_STORE_ID,
-      store_name: "這理髮型",
-      spreadsheet_id: "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ", // ★ 補齊此行，確保試算表 100% 寫入
+      store_name: currentActualStoreName,
       transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
       date: formattedDate,
       time: targetTime,
@@ -4622,8 +4603,14 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       notes: notesArray.join(' | ')
     };
 
+    // 只有「這理髮型」才附帶母表 ID 進行試算表串接
+    if (isZheliStore) {
+      webhookPayload.spreadsheet_id = "1aK-0xN6FjKO3iWzEuBJJZNiB2fbS9jYbzYuKS7qxWgQ";
+    }
+    // 🚨🚨🚨【客製專用：這理髮型 - 結束】🚨🚨🚨
+    // ==========================================================================
+
     try {
-      // 加上 await 確保請求確實離開瀏覽器通道送達 GAS
       await fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
@@ -4634,10 +4621,8 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     } catch (e) {
       console.warn("通知發送異常:", e);
     }
-    
-    // ------------------------------------------------------------------------
-    // 3. 成功預約畫面導向與訂金提示
-    // ------------------------------------------------------------------------
+
+    // 成功畫面導向與訂金提示
     const isNeedDeposit = db.enableDeposit && ((db.depositMode === 'all') || (db.depositMode === 'new_only' && document.getElementById('custType')?.value === 'new'));
 
     if (isNeedDeposit && db.depositAmount > 0 && !isReportedDeposit) {
@@ -4668,6 +4653,7 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       document.getElementById('booking-ui').style.display = 'none';
       document.getElementById('success-screen').classList.remove('hidden');
     }
+
   } catch (err) {
     console.error("預約送單失敗:", err);
     Swal.fire('預約傳送失敗', err.message || '連線逾時，請稍後重試', 'error');
@@ -4829,7 +4815,7 @@ function getBookingPayload() {
 }
 
   // ========================================================
-// 【智慧計算】動態計算專員近期可約空檔（杜絕寫死假資料）
+// 【智慧計算】動態計算專員近期可約空檔（接入前台 db 資料結構）
 // ========================================================
 function renderIntelligentAvailableSlots(targetStaffId = 'all') {
   const container = document.getElementById('quick-available-slots-container');
@@ -4841,9 +4827,9 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   // 1. 取得店家營業起訖與間隔
-  const startTime = storeSettings.shift_start_time || storeSettings.shiftStartTime || '09:00';
-  const endTime = storeSettings.shift_end_time || storeSettings.shiftEndTime || '19:00';
-  const interval = Number(storeSettings.shift_interval || storeSettings.shiftInterval || 30);
+  const startTime = db.shiftStartTime || '09:00';
+  const endTime = db.shiftEndTime || '19:00';
+  const interval = Number(db.shiftInterval || 30);
   const [sH, sM] = startTime.split(':').map(Number);
   const [eH, eM] = endTime.split(':').map(Number);
 
@@ -4853,13 +4839,13 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
   }
 
   // 2. 取得公休日清單
-  const weeklyOff = Array.isArray(storeSettings.weekly_off_days) ? storeSettings.weekly_off_days : [];
-  const customOff = Array.isArray(storeSettings.custom_off_dates) ? storeSettings.custom_off_dates : [];
-  const schedules = storeSettings.staff_schedules || {};
+  const weeklyOff = Array.isArray(db.weeklyOffDays) ? db.weeklyOffDays : [];
+  const customOff = Array.isArray(db.customOffDates) ? db.customOffDates : [];
+  const schedules = db.staffSchedules || {};
 
-  // 3. 取得目前已約滿之紀錄 (日期+時段+專員 Set)
+  // 3. 取得目前已約滿之紀錄
   const bookedSet = new Set();
-  (allExistingBookings || []).forEach(b => {
+  (db.futureBookings || []).forEach(b => {
     if (b.status === '已取消' || b.status === '婉拒') return;
     if (!b.appointment_time) return;
     const d = new Date(b.appointment_time);
@@ -4867,7 +4853,7 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
     const tStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const sId = b.staff_id || 'all';
     bookedSet.add(`${dStr}_${tStr}_${sId}`);
-    bookedSet.add(`${dStr}_${tStr}_all`); // 全店時段佔用
+    bookedSet.add(`${dStr}_${tStr}_all`);
   });
 
   const availableList = [];
@@ -4879,17 +4865,14 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
     const dSlash = `${target.getFullYear()}/${pad(target.getMonth() + 1)}/${pad(target.getDate())}`;
     const dHyphen = dSlash.replace(/\//g, '-');
 
-    // 排除門市公休
     if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dHyphen)) {
       continue;
     }
 
     for (let t of standardSlots) {
       const slotMs = new Date(`${dHyphen}T${t}:00+08:00`).getTime();
-      // 排除過去的時間 (含 1 小時緩衝)
-      if (slotMs <= nowMs + (60 * 60 * 1000)) continue;
+      if (slotMs <= nowMs + (60 * 60 * 1000)) continue; // 排除過去時間
 
-      // 檢查排班是否有開班
       let isOpen = false;
       if (targetStaffId !== 'all') {
         const staffKey = `${targetStaffId}_${dSlash}`;
@@ -4899,7 +4882,6 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
         isOpen = schedules[allKey] ? (schedules[allKey][t] === true) : true;
       }
 
-      // 檢查是否已被預約
       const isBooked = bookedSet.has(`${dSlash}_${t}_${targetStaffId}`);
 
       if (isOpen && !isBooked) {
@@ -4911,7 +4893,6 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
         });
       }
 
-      // 取前 6 席最熱門空檔即可
       if (availableList.length >= 6) break;
     }
     if (availableList.length >= 6) break;
@@ -4920,17 +4901,17 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
   // 5. 渲染莫蘭迪空檔按鈕
   if (availableList.length === 0) {
     container.innerHTML = `
-      <div class="col-span-full text-center py-3 text-xs text-brand-400 bg-white/70 rounded-2xl border border-dashed border-brand-200">
-        近期 14 天內時段熱門全滿，請直接點選日曆查看後續日期
+      <div class="col-span-2 text-center py-3 text-xs text-brand-400 bg-white/70 rounded-2xl border border-dashed border-brand-200">
+        近期時段熱門全滿，請直接點選日曆查看後續日期
       </div>
     `;
     return;
   }
 
   container.innerHTML = availableList.map(item => `
-    <button type="button" onclick="selectQuickSlotDirect('${item.date}', '${item.time}')" class="p-2.5 rounded-2xl border border-brand-200 bg-white hover:border-[#8C7355] hover:bg-brand-50/70 transition shadow-2xs text-left group">
-      <div class="text-[10px] text-brand-500 font-bold group-hover:text-[#8C7355]">${item.displayDate} ${item.weekStr}</div>
-      <div class="text-sm font-black font-mono text-brand-900 group-hover:text-[#8C7355] mt-0.5 flex justify-between items-center">
+    <button type="button" onclick="selectQuickSlotDirect('${item.date}', '${item.time}')" class="p-2.5 rounded-2xl border border-brand-200 bg-white hover:border-theme-primary hover:bg-brand-50/70 transition shadow-2xs text-left group">
+      <div class="text-[10px] text-brand-500 font-bold group-hover:text-theme-primary">${item.displayDate} ${item.weekStr}</div>
+      <div class="text-sm font-black font-mono text-brand-900 group-hover:text-theme-primary mt-0.5 flex justify-between items-center">
         <span>${item.time}</span>
         <span class="text-[9.5px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">可約</span>
       </div>
@@ -4938,17 +4919,16 @@ function renderIntelligentAvailableSlots(targetStaffId = 'all') {
   `).join('');
 }
 
-// 點擊空檔直接定位日曆與時段
+// 點選空檔直接定位日曆與時段
 function selectQuickSlotDirect(dateSlash, timeStr) {
-  // 自動填入前台日期與時段並切換至下一步
-  const dateInput = document.getElementById('selected-date-input');
-  const timeInput = document.getElementById('selected-time-input');
-  if (dateInput) dateInput.value = dateSlash;
-  if (timeInput) timeInput.value = timeStr;
-
-  if (typeof highlightSelectedSlotUI === 'function') {
-    highlightSelectedSlotUI(dateSlash, timeStr);
-  }
+  selectDate(dateSlash);
+  setTimeout(() => {
+    const pill = Array.from(document.querySelectorAll('.time-pill')).find(el => el.innerText.trim() === timeStr);
+    if (pill) {
+      selectTimePill(timeStr, pill);
+      pill.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, 100);
   Swal.fire({
     title: '已挑選時段！',
     text: `預約時段：${dateSlash} ${timeStr}`,
