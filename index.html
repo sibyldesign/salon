@@ -737,46 +737,110 @@
           </div>
         </div>
 
-        <!-- 5. 美容預約單日日曆 -->
-        <div id="calendarPickerSection" class="pt-2">
-          <label class="block text-xs font-bold text-brand-800 mb-2">預約日期</label>
-          <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-sm">
-            <div class="flex justify-between items-center px-4 py-2.5 bg-brand-50 border-b border-brand-200">
-              <button type="button" class="text-theme-primary font-bold p-1 hover:text-brand-900" onclick="changeMonth(-1)">
-                <i class="fa-solid fa-chevron-left text-xs"></i>
-              </button>
-              <div id="cal-month-year" class="text-xs font-bold text-brand-800">讀取中...</div>
-              <button type="button" class="text-theme-primary font-bold p-1 hover:text-brand-900" onclick="changeMonth(1)">
-                <i class="fa-solid fa-chevron-right text-xs"></i>
-              </button>
-            </div>
-            <div class="grid grid-cols-7 gap-px bg-brand-200 text-center" id="cal-grid"></div>
-          </div>
-          <input type="hidden" id="date">
-        </div>
-
-        <!-- 顧客前台「近期可約空檔」智慧動態運算容器 -->
-<div class="space-y-2 p-3.5 bg-brand-50/80 rounded-2xl border border-brand-200 shadow-2xs my-3">
-  <div class="flex justify-between items-center text-xs font-bold text-brand-900">
-    <span class="flex items-center gap-1.5">
-      <i class="fa-solid fa-wand-magic-sparkles text-theme-primary"></i> 近期可約空檔速查
+        <!-- ======================================================== -->
+<!-- 🌟【已選預約時段常駐確認卡】（點選後立即高亮提示，絕不忘記選了何時） -->
+<!-- ======================================================== -->
+<div id="selectedSlotSummaryCard" class="my-3 p-4 rounded-3xl border transition-all duration-300 bg-brand-50/90 border-brand-200 shadow-2xs">
+  <div class="flex justify-between items-center">
+    <span class="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+      <i class="fa-solid fa-calendar-check text-theme-primary text-sm"></i>
+      <span>目前選定時段</span>
     </span>
-    <span class="text-[10px] text-brand-400 font-normal">點選直接帶入預約</span>
+    <span id="slotSelectedBadge" class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-stone-200 text-stone-600">
+      尚未選擇時段
+    </span>
   </div>
-  <!-- 動態渲染注入點 -->
-  <div id="quick-available-slots-container" class="grid grid-cols-2 gap-2 text-xs pt-1">
-    <div class="col-span-2 text-center py-3 text-xs text-brand-400">正在智慧計算可約空檔...</div>
+  
+  <!-- 未選狀態提示 -->
+  <div id="slotUnselectedNotice" class="text-[11px] text-brand-400 py-1.5 font-medium">
+    請於下方點選方便的日期與預約時段
+  </div>
+
+  <!-- 已選狀態詳細展示 -->
+  <div id="slotSelectedDetails" class="hidden pt-2 border-t border-brand-200/70 mt-2 space-y-1 text-xs">
+    <div class="flex justify-between items-center">
+      <span class="text-brand-600 font-bold">預約日期：</span>
+      <b class="text-brand-900 font-mono text-sm" id="dispSelectedDate">--</b>
+    </div>
+    <div class="flex justify-between items-center">
+      <span class="text-brand-600 font-bold">預約時段：</span>
+      <b class="text-theme-primary font-mono text-base font-black" id="dispSelectedTime">--</b>
+    </div>
+    <div class="flex justify-between items-center">
+      <span class="text-brand-600 font-bold">服務專員：</span>
+      <span class="text-brand-800 font-bold" id="dispSelectedStaff">不指定</span>
+    </div>
   </div>
 </div>
-        
-        <!-- 6. 美容預約時段 -->
-        <div id="timePickerSection" class="pt-2">
-          <label class="block text-xs font-bold text-brand-800 mb-2">預約時段</label>
-          <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5" id="timePillGrid">
-            <div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">請先選擇服務項目與日期</div>
-          </div>
-          <input type="hidden" id="time">
-        </div>
+
+<!-- ======================================================== -->
+<!-- 方案 B：月曆式可約狀態點點通 (Availability Heatmap) -->
+<!-- ======================================================== -->
+<div id="calendarPickerSection" class="pt-2">
+  <div class="flex justify-between items-center mb-2 px-0.5">
+    <label class="block text-xs font-bold text-brand-800">選擇預約日期 (月曆總覽)</label>
+    <div class="flex items-center gap-2 text-[10px] text-brand-400 font-medium">
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> 可預約</span>
+      <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-stone-300"></span> 額滿/休</span>
+    </div>
+  </div>
+  
+  <div class="border border-brand-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+    <div class="flex justify-between items-center px-4 py-2.5 bg-brand-50 border-b border-brand-200">
+      <button type="button" class="text-theme-primary font-bold p-1 hover:text-brand-900 transition" onclick="changeMonth(-1)">
+        <i class="fa-solid fa-chevron-left text-xs"></i>
+      </button>
+      <div id="cal-month-year" class="text-xs font-bold text-brand-800 font-mono">讀取中...</div>
+      <button type="button" class="text-theme-primary font-bold p-1 hover:text-brand-900 transition" onclick="changeMonth(1)">
+        <i class="fa-solid fa-chevron-right text-xs"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-7 gap-px bg-brand-200 text-center" id="cal-grid"></div>
+  </div>
+  <input type="hidden" id="date">
+</div>
+
+<!-- ======================================================== -->
+<!-- 方案 A：未來 14 天橫向滑動帶 (Ribbon Bar) -->
+<!-- ======================================================== -->
+<div class="pt-4 space-y-2">
+  <div class="flex justify-between items-center px-0.5">
+    <span class="text-xs font-bold text-brand-800 flex items-center gap-1.5">
+      <i class="fa-solid fa-clock-rotate-left text-theme-primary"></i>
+      <span>近期空檔快選</span>
+    </span>
+    <span class="text-[10px] text-brand-400 font-medium">左右滑動快速切換</span>
+  </div>
+  
+  <div class="flex gap-2 overflow-x-auto pb-2 no-scrollbar" id="horizontalDateRibbon">
+    <!-- JS 動態生成 14 天日期膠囊 -->
+  </div>
+</div>
+
+<!-- ======================================================== -->
+<!-- 方案 A：時段區間過濾標籤（早/中/晚收納 15 分鐘極密時段） -->
+<!-- ======================================================== -->
+<div id="timePickerSection" class="pt-3 space-y-2.5">
+  <div class="flex justify-between items-center px-0.5">
+    <label class="block text-xs font-bold text-brand-800">選擇時段</label>
+    
+    <!-- 早中晚快捷過濾 -->
+    <div class="flex gap-1 bg-brand-100/70 p-1 rounded-xl" id="timePeriodFilterBar">
+      <button type="button" onclick="filterTimeSlotsByPeriod('ALL', this)" class="time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-white text-brand-900 shadow-2xs">全部</button>
+      <button type="button" onclick="filterTimeSlotsByPeriod('MORNING', this)" class="time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold text-brand-600 hover:text-brand-900">上午</button>
+      <button type="button" onclick="filterTimeSlotsByPeriod('AFTERNOON', this)" class="time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold text-brand-600 hover:text-brand-900">下午</button>
+      <button type="button" onclick="filterTimeSlotsByPeriod('EVENING', this)" class="time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold text-brand-600 hover:text-brand-900">晚上</button>
+    </div>
+  </div>
+  
+  <!-- 15 分鐘時段格子網格 -->
+  <div class="grid grid-cols-3 sm:grid-cols-4 gap-2" id="timePillGrid">
+    <div class="col-span-full text-center py-5 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">
+      請先選擇服務項目與日期
+    </div>
+  </div>
+  <input type="hidden" id="time">
+</div>
 
         <!-- 7. 特殊需求備註 -->
         <div id="custNotesWrapper" class="my-4">
@@ -2338,6 +2402,8 @@ function renderStoreUI() {
   updateDepositSectionDisplay();
   recalcSmartCheckoutLayout();
   renderIntelligentAvailableSlots(document.getElementById('staffId')?.value || 'all');
+  renderHorizontalDateRibbon();
+  updateSelectedSlotSummaryUI();
 }
 
 // ========================================================
@@ -2890,6 +2956,104 @@ function renderHotelTimeGrid(type, dateStr) {
   // ========================================================
 // 【視覺優化】前台日曆：公休日淺灰底色 ＋ 清楚文字區隔
 // ========================================================
+function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
+  if (!dStr) return [];
+  const dSlash = dStr.replace(/-/g, '/');
+  const dHyphen = dSlash.replace(/\//g, '-');
+
+  // 1. 公休日判定
+  const dObj = new Date(dSlash);
+  const dayOfWeek = dObj.getDay();
+  const weeklyOff = Array.isArray(db.weeklyOffDays) ? db.weeklyOffDays : [];
+  const customOff = Array.isArray(db.customOffDates) ? db.customOffDates : [];
+  if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dHyphen)) {
+    return [];
+  }
+
+  // 2. 時段總池與間隔 (支援 15/30 分鐘)
+  const [sH, sM] = (db.shiftStartTime || "09:00").split(':').map(Number);
+  const [eH, eM] = (db.shiftEndTime || "19:00").split(':').map(Number);
+  const interval = Number(db.shiftInterval || 15);
+  const startMin = sH * 60 + sM;
+  const endMin = eH * 60 + eM;
+
+  // 3. 施作耗時
+  const allChecked = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
+  let totalDuration = 0;
+  let hasGroupB = false;
+  allChecked.forEach(cb => {
+    totalDuration += Number(cb.getAttribute('data-duration') || 60);
+    const foundSvc = (db.services || []).find(s => s.name === cb.value);
+    if (foundSvc && (foundSvc.type === 'Group_B' || foundSvc.service_type === 'Group_B')) hasGroupB = true;
+  });
+  if (totalDuration === 0) totalDuration = 60;
+
+  // 4. 當前時間與緩衝過濾
+  const now = new Date();
+  const todaySlash = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}`;
+  const isToday = (dSlash === todaySlash);
+  const currentMinutesNow = now.getHours() * 60 + now.getMinutes();
+  const bufferMinutes = (Number(db.bookingBufferHours) || 1) * 60;
+
+  // 5. 當日已成立之預約衝突比對
+  const dayAppts = (db.futureBookings || []).filter(a => {
+    return a.appointment_time && a.appointment_time.startsWith(dHyphen) && a.status !== '已取消' && a.status !== '婉拒';
+  });
+
+  const schedules = db.staffSchedules || {};
+  const availableSlots = [];
+
+  for (let m = startMin; m <= endMin; m += interval) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    const timeFormatted = `${hh}:${mm}`;
+
+    // A. 班表是否開放
+    let isShiftOpen = false;
+    if (targetStaffId !== 'all') {
+      const staffKey = `${targetStaffId}_${dSlash}`;
+      isShiftOpen = (schedules[staffKey] && schedules[staffKey][timeFormatted] === true);
+    } else {
+      const allStoreKey = `all_${dSlash}`;
+      if (schedules[allStoreKey] && schedules[allStoreKey][timeFormatted] === true) {
+        isShiftOpen = true;
+      } else {
+        const staffList = (db.staffList || []).filter(s => s.id !== 'all');
+        for (let s of staffList) {
+          if (schedules[`${s.id}_${dSlash}`] && schedules[`${s.id}_${dSlash}`][timeFormatted] === true) {
+            isShiftOpen = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!isShiftOpen) continue;
+    if (isToday && (m < (currentMinutesNow + bufferMinutes))) continue;
+    if (m + totalDuration > endMin + interval) continue;
+
+    // B. 撞期衝突排查
+    let isConflict = false;
+    const sameStaffAppts = dayAppts.filter(a => targetStaffId === 'all' || a.staff_id === targetStaffId || a.staffId === targetStaffId);
+    for (let a of sameStaffAppts) {
+      const aDate = new Date(a.appointment_time);
+      const aStart = aDate.getHours() * 60 + aDate.getMinutes();
+      const aEnd = aStart + 60;
+      if (Math.max(m, aStart) < Math.min(m + totalDuration, aEnd)) {
+        isConflict = true;
+        break;
+      }
+    }
+    if (isConflict) continue;
+
+    availableSlots.push(timeFormatted);
+  }
+
+  return availableSlots;
+}
+
+// ========================================================
+// 方案 B：升級版前台日曆 (含莫蘭迪空檔狀態指示點)
+// ========================================================
 function renderFrontCalendar() {
   const grid = document.getElementById('cal-grid');
   if (!grid) return;
@@ -2901,45 +3065,224 @@ function renderFrontCalendar() {
   for (let i = 0; i < firstDay; i++) html += `<div class="bg-white py-3"></div>`;
   
   const selectedDate = document.getElementById('date').value;
+  const currentStaffId = document.getElementById('staffId')?.value || 'all';
   const now = new Date();
   const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   for (let i = 1; i <= daysInMonth; i++) {
-    let dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
-    let thisCellDate = new Date(currentYear, currentMonth, i);
-    let isPast = (thisCellDate < todayZero);
-    
-    // 嚴格判定：若後台完全沒設公休名單，則只要不是過去日一律可預約
-    let isAvailable = !isPast;
-    if (Array.isArray(db.availableDates) && db.availableDates.length > 0) {
-      isAvailable = !isPast && db.availableDates.includes(dStr);
-    }
-    
-    let isActive = (dStr === selectedDate);
-    
-    if (isAvailable) {
+    const dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
+    const thisCellDate = new Date(currentYear, currentMonth, i);
+    const isPast = (thisCellDate < todayZero);
+    const isActive = (dStr === selectedDate);
+
+    // 計算當日可用時段數
+    const slots = (!isPast) ? getAvailableSlotsForDate(dStr, currentStaffId) : [];
+    const hasSlots = slots.length > 0;
+
+    if (!isPast && hasSlots) {
+      // 有空檔：顯示小綠點
       html += `
-        <div class="py-2.5 text-xs font-bold cursor-pointer transition ${
+        <div class="py-2 text-xs font-bold cursor-pointer transition flex flex-col items-center justify-center rounded-xl ${
           isActive 
-            ? 'bg-theme-primary text-white font-extrabold shadow-inner rounded-xl' 
-            : 'bg-white text-gray-900 hover:bg-brand-100 rounded-xl'
+            ? 'bg-theme-primary text-white font-black shadow-inner scale-102' 
+            : 'bg-white text-brand-900 hover:bg-brand-100/70'
         }" onclick="selectDate('${dStr}')">
-          ${i}
+          <span>${i}</span>
+          <span class="w-1.5 h-1.5 rounded-full mt-0.5 ${isActive ? 'bg-white' : 'bg-emerald-600'}"></span>
         </div>`;
     } else {
-      const isStoreOff = !isPast; // 未來但不可選，代表是門市公休
+      // 額滿或公休
+      const isStoreOff = !isPast;
       html += `
         <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none ${
-          isStoreOff 
-            ? 'bg-stone-100 text-stone-400 border border-stone-200' 
-            : 'bg-stone-50 text-stone-300 opacity-50'
+          isStoreOff ? 'bg-stone-100 text-stone-400 border border-stone-200/60' : 'bg-stone-50 text-stone-300 opacity-50'
         }">
-          <span class="${isStoreOff ? 'line-through text-[11px] text-stone-400 font-bold' : ''}">${i}</span>
-          ${isStoreOff ? '<span class="text-[9px] font-bold text-stone-400 scale-90">休</span>' : ''}
+          <span class="${isStoreOff ? 'line-through text-[11px]' : ''}">${i}</span>
+          ${isStoreOff ? '<span class="text-[8.5px] font-bold text-stone-400 mt-0.5">滿</span>' : ''}
         </div>`;
     }
   }
   grid.innerHTML = html;
+}
+
+// ========================================================
+// 方案 A：未來 14 天橫向滑動快選帶 (Ribbon Bar)
+// ========================================================
+function renderHorizontalDateRibbon() {
+  const container = document.getElementById('horizontalDateRibbon');
+  if (!container) return;
+
+  const currentSelectedDate = document.getElementById('date')?.value;
+  const currentStaffId = document.getElementById('staffId')?.value || 'all';
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+  let ribbonHtml = '';
+
+  for (let i = 0; i < 14; i++) {
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const dSlash = `${target.getFullYear()}/${pad(target.getMonth() + 1)}/${pad(target.getDate())}`;
+    const weekStr = weekDays[target.getDay()];
+    const isSelected = (dSlash === currentSelectedDate);
+
+    const slots = getAvailableSlotsForDate(dSlash, currentStaffId);
+    const isAvailable = slots.length > 0;
+
+    if (isAvailable) {
+      ribbonHtml += `
+        <button type="button" onclick="selectDate('${dSlash}')" class="shrink-0 px-3.5 py-2 rounded-2xl border text-center transition flex flex-col items-center justify-center min-w-[72px] shadow-2xs ${
+          isSelected 
+            ? 'bg-theme-primary text-white border-theme-primary shadow-sm scale-102' 
+            : 'bg-white border-brand-200 text-brand-900 hover:bg-brand-50'
+        }">
+          <span class="text-[10px] opacity-75 font-medium">${weekStr}</span>
+          <span class="text-sm font-black font-mono mt-0.5">${pad(target.getMonth() + 1)}/${pad(target.getDate())}</span>
+          <span class="text-[9px] px-1.5 py-0.2 rounded-full font-bold mt-1 ${
+            isSelected ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+          }">剩 ${slots.length} 席</span>
+        </button>
+      `;
+    } else {
+      ribbonHtml += `
+        <div class="shrink-0 px-3 py-2 rounded-2xl border border-stone-200 bg-stone-100 text-stone-400 text-center flex flex-col items-center justify-center min-w-[68px] opacity-60 cursor-not-allowed select-none">
+          <span class="text-[9.5px]">${weekStr}</span>
+          <span class="text-xs font-mono font-bold line-through mt-0.5">${pad(target.getMonth() + 1)}/${pad(target.getDate())}</span>
+          <span class="text-[8.5px] mt-1 text-stone-400 font-bold">額滿</span>
+        </div>
+      `;
+    }
+  }
+
+  container.innerHTML = ribbonHtml;
+}
+
+// ========================================================
+// 方案 A：早 / 中 / 晚時段區間過濾引擎
+// ========================================================
+let currentActivePeriodFilter = 'ALL';
+let currentDayAllAvailableSlots = [];
+
+function filterTimeSlotsByPeriod(period, btnEl) {
+  currentActivePeriodFilter = period;
+  
+  document.querySelectorAll('.time-filter-btn').forEach(btn => {
+    btn.className = 'time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold text-brand-600 hover:text-brand-900 transition';
+  });
+  if (btnEl) {
+    btnEl.className = 'time-filter-btn px-2 py-0.5 rounded-lg text-[10.5px] font-bold bg-white text-brand-900 shadow-2xs transition';
+  }
+
+  renderFilteredTimePills();
+}
+
+function renderFilteredTimePills() {
+  const grid = document.getElementById('timePillGrid');
+  if (!grid) return;
+
+  const currentSelectedTime = document.getElementById('time')?.value || '';
+
+  let displaySlots = currentDayAllAvailableSlots;
+  if (currentActivePeriodFilter === 'MORNING') {
+    displaySlots = displaySlots.filter(t => parseInt(t.split(':')[0], 10) < 12);
+  } else if (currentActivePeriodFilter === 'AFTERNOON') {
+    displaySlots = displaySlots.filter(t => {
+      const h = parseInt(t.split(':')[0], 10);
+      return h >= 12 && h < 18;
+    });
+  } else if (currentActivePeriodFilter === 'EVENING') {
+    displaySlots = displaySlots.filter(t => parseInt(t.split(':')[0], 10) >= 18);
+  }
+
+  if (displaySlots.length === 0) {
+    grid.innerHTML = '<div class="col-span-full text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">該時段區間無開放空檔，請切換其他區間</div>';
+    return;
+  }
+
+  grid.innerHTML = displaySlots.map(t => {
+    const isSelected = (t === currentSelectedTime);
+    return `
+      <div class="time-pill py-2.5 text-center text-xs font-bold rounded-2xl border transition cursor-pointer shadow-2xs ${
+        isSelected ? 'selected bg-theme-primary text-white border-theme-primary shadow-sm scale-102' : 'bg-white hover:bg-brand-50 text-brand-900 border-brand-200'
+      }" onclick="selectTimePill('${t}', this)">
+        ${t}
+      </div>
+    `;
+  }).join('');
+}
+
+// 點選日期觸發連動
+function selectDate(dStr) {
+  document.getElementById('date').value = dStr;
+  const currentStaffId = document.getElementById('staffId')?.value || 'all';
+
+  renderFrontCalendar();
+  renderHorizontalDateRibbon();
+
+  currentDayAllAvailableSlots = getAvailableSlotsForDate(dStr, currentStaffId);
+  renderFilteredTimePills();
+  updateSelectedSlotSummaryUI();
+}
+
+// 點選時段膠囊按鈕
+function selectTimePill(timeStr, el) {
+  document.querySelectorAll('.time-pill').forEach(p => {
+    p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-2xl border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-2xs";
+  });
+  el.className = "time-pill selected py-2.5 text-center text-xs font-bold rounded-2xl border border-theme-primary bg-theme-primary text-white cursor-pointer shadow-sm transition scale-102";
+  document.getElementById('time').value = timeStr;
+
+  updateSelectedSlotSummaryUI();
+}
+
+// ========================================================
+// 🌟【常駐確認卡】已選預約時段摘要 UI 即時更新
+// ========================================================
+function updateSelectedSlotSummaryUI() {
+  const dVal = document.getElementById('date')?.value || '';
+  const tVal = document.getElementById('time')?.value || '';
+  const staffName = document.getElementById('staffName')?.value || '不指定';
+
+  const card = document.getElementById('selectedSlotSummaryCard');
+  const badge = document.getElementById('slotSelectedBadge');
+  const notice = document.getElementById('slotUnselectedNotice');
+  const details = document.getElementById('slotSelectedDetails');
+  
+  const dispDate = document.getElementById('dispSelectedDate');
+  const dispTime = document.getElementById('dispSelectedTime');
+  const dispStaff = document.getElementById('dispSelectedStaff');
+
+  if (dVal && tVal) {
+    const dObj = new Date(dVal);
+    const weekMap = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+    const weekStr = isNaN(dObj.getDay()) ? '' : ` (${weekMap[dObj.getDay()]})`;
+
+    if (notice) notice.classList.add('hidden');
+    if (details) details.classList.remove('hidden');
+
+    if (badge) {
+      badge.innerText = '✓ 時段已選定';
+      badge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-800 animate-pulse';
+    }
+
+    if (dispDate) dispDate.innerText = `${dVal} ${weekStr}`;
+    if (dispTime) dispTime.innerText = tVal;
+    if (dispStaff) dispStaff.innerText = staffName;
+
+    if (card) {
+      card.className = "my-3 p-4 rounded-3xl border-2 transition-all duration-300 bg-amber-50/70 border-amber-300 shadow-xs";
+    }
+  } else {
+    if (notice) notice.classList.remove('hidden');
+    if (details) details.classList.add('hidden');
+    if (badge) {
+      badge.innerText = '尚未選擇時段';
+      badge.className = 'text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-stone-200 text-stone-600';
+    }
+    if (card) {
+      card.className = "my-3 p-4 rounded-3xl border transition-all duration-300 bg-brand-50/90 border-brand-200 shadow-2xs";
+    }
+  }
 }
 
   function changeMonth(dir) {
@@ -2947,12 +3290,6 @@ function renderFrontCalendar() {
     if (currentMonth > 11) { currentMonth = 0; currentYear++; }
     if (currentMonth < 0) { currentMonth = 11; currentYear--; }
     renderFrontCalendar();
-  }
-
-  function selectDate(dStr) {
-    document.getElementById('date').value = dStr;
-    renderFrontCalendar();
-    calculateTimesLocally();
   }
 
   // ========================================================
@@ -3138,14 +3475,6 @@ const resourceMaxCapacity = {};
     ? html 
     : '<div class="col-span-full text-center py-4 text-xs text-rose-500 bg-rose-50 rounded-2xl border border-rose-200 font-bold">該時段無專員或設備滿載，請選其他時段</div>';
 }
-
-  function selectTimePill(timeStr, el) {
-    document.querySelectorAll('.time-pill').forEach(p => {
-      p.className = "time-pill py-2.5 text-center text-xs font-bold rounded-full border border-brand-200 bg-white text-brand-900 cursor-pointer hover:border-theme-primary transition shadow-xs";
-    });
-    el.className = "time-pill selected py-2.5 text-center text-xs font-bold rounded-full border border-theme-primary bg-theme-primary text-white cursor-pointer shadow-md transition";
-    document.getElementById('time').value = timeStr;
-  }
 
   // ========================================================
 // 【智慧安全計價核心】防止無資產客人勾選折抵 + 包卡精準對應防虧損
@@ -3644,6 +3973,11 @@ function updateDepositSectionDisplay() {
     document.getElementById('staffName').value = name;
     calculateTimesLocally();
     renderIntelligentAvailableSlots(id);
+    renderFrontCalendar();
+  renderHorizontalDateRibbon();
+  if (document.getElementById('date')?.value) {
+    selectDate(document.getElementById('date').value);
+  }
   }
 
   // 監聽手機輸入長度
