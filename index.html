@@ -4827,6 +4827,136 @@ function getBookingPayload() {
     // ... 其他欄位保持不變
   };
 }
+
+  // ========================================================
+// 【智慧計算】動態計算專員近期可約空檔（杜絕寫死假資料）
+// ========================================================
+function renderIntelligentAvailableSlots(targetStaffId = 'all') {
+  const container = document.getElementById('quick-available-slots-container');
+  if (!container) return;
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const nowMs = now.getTime();
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+  // 1. 取得店家營業起訖與間隔
+  const startTime = storeSettings.shift_start_time || storeSettings.shiftStartTime || '09:00';
+  const endTime = storeSettings.shift_end_time || storeSettings.shiftEndTime || '19:00';
+  const interval = Number(storeSettings.shift_interval || storeSettings.shiftInterval || 30);
+  const [sH, sM] = startTime.split(':').map(Number);
+  const [eH, eM] = endTime.split(':').map(Number);
+
+  const standardSlots = [];
+  for (let m = sH * 60 + sM; m < eH * 60 + eM; m += interval) {
+    standardSlots.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+  }
+
+  // 2. 取得公休日清單
+  const weeklyOff = Array.isArray(storeSettings.weekly_off_days) ? storeSettings.weekly_off_days : [];
+  const customOff = Array.isArray(storeSettings.custom_off_dates) ? storeSettings.custom_off_dates : [];
+  const schedules = storeSettings.staff_schedules || {};
+
+  // 3. 取得目前已約滿之紀錄 (日期+時段+專員 Set)
+  const bookedSet = new Set();
+  (allExistingBookings || []).forEach(b => {
+    if (b.status === '已取消' || b.status === '婉拒') return;
+    if (!b.appointment_time) return;
+    const d = new Date(b.appointment_time);
+    const dStr = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`;
+    const tStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const sId = b.staff_id || 'all';
+    bookedSet.add(`${dStr}_${tStr}_${sId}`);
+    bookedSet.add(`${dStr}_${tStr}_all`); // 全店時段佔用
+  });
+
+  const availableList = [];
+
+  // 4. 智慧推算未來 14 天內的真實可用時段
+  for (let i = 0; i < 14; i++) {
+    const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const dayOfWeek = target.getDay();
+    const dSlash = `${target.getFullYear()}/${pad(target.getMonth() + 1)}/${pad(target.getDate())}`;
+    const dHyphen = dSlash.replace(/\//g, '-');
+
+    // 排除門市公休
+    if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dHyphen)) {
+      continue;
+    }
+
+    for (let t of standardSlots) {
+      const slotMs = new Date(`${dHyphen}T${t}:00+08:00`).getTime();
+      // 排除過去的時間 (含 1 小時緩衝)
+      if (slotMs <= nowMs + (60 * 60 * 1000)) continue;
+
+      // 檢查排班是否有開班
+      let isOpen = false;
+      if (targetStaffId !== 'all') {
+        const staffKey = `${targetStaffId}_${dSlash}`;
+        isOpen = schedules[staffKey] ? (schedules[staffKey][t] === true) : true;
+      } else {
+        const allKey = `all_${dSlash}`;
+        isOpen = schedules[allKey] ? (schedules[allKey][t] === true) : true;
+      }
+
+      // 檢查是否已被預約
+      const isBooked = bookedSet.has(`${dSlash}_${t}_${targetStaffId}`);
+
+      if (isOpen && !isBooked) {
+        availableList.push({
+          date: dSlash,
+          displayDate: `${pad(target.getMonth() + 1)}/${pad(target.getDate())}`,
+          weekStr: `(${weekDays[dayOfWeek]})`,
+          time: t
+        });
+      }
+
+      // 取前 6 席最熱門空檔即可
+      if (availableList.length >= 6) break;
+    }
+    if (availableList.length >= 6) break;
+  }
+
+  // 5. 渲染莫蘭迪空檔按鈕
+  if (availableList.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full text-center py-3 text-xs text-brand-400 bg-white/70 rounded-2xl border border-dashed border-brand-200">
+        近期 14 天內時段熱門全滿，請直接點選日曆查看後續日期
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = availableList.map(item => `
+    <button type="button" onclick="selectQuickSlotDirect('${item.date}', '${item.time}')" class="p-2.5 rounded-2xl border border-brand-200 bg-white hover:border-[#8C7355] hover:bg-brand-50/70 transition shadow-2xs text-left group">
+      <div class="text-[10px] text-brand-500 font-bold group-hover:text-[#8C7355]">${item.displayDate} ${item.weekStr}</div>
+      <div class="text-sm font-black font-mono text-brand-900 group-hover:text-[#8C7355] mt-0.5 flex justify-between items-center">
+        <span>${item.time}</span>
+        <span class="text-[9.5px] px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-bold">可約</span>
+      </div>
+    </button>
+  `).join('');
+}
+
+// 點擊空檔直接定位日曆與時段
+function selectQuickSlotDirect(dateSlash, timeStr) {
+  // 自動填入前台日期與時段並切換至下一步
+  const dateInput = document.getElementById('selected-date-input');
+  const timeInput = document.getElementById('selected-time-input');
+  if (dateInput) dateInput.value = dateSlash;
+  if (timeInput) timeInput.value = timeStr;
+
+  if (typeof highlightSelectedSlotUI === 'function') {
+    highlightSelectedSlotUI(dateSlash, timeStr);
+  }
+  Swal.fire({
+    title: '已挑選時段！',
+    text: `預約時段：${dateSlash} ${timeStr}`,
+    icon: 'success',
+    timer: 800,
+    showConfirmButton: false
+  });
+}
 </script>
 </body>
 </html>
