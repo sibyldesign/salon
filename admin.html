@@ -11285,7 +11285,6 @@ async function saveLifetimeStoreSettings() {
   const storeTitle = getVal('lt-title') || backendData.settings?.storeName || '沙龍門市';
 
   // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定並存入本地快取備份】🚨🚨🚨
-  // ⚠️ 警告：此區塊為「這理髮型」試算表同步專屬核心，請勿任意更動或刪除！
   const rawSheetInput = getVal('lt-custom-sheets-id');
   const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
@@ -11303,12 +11302,10 @@ async function saveLifetimeStoreSettings() {
   const chosenEndTime = getVal('lt-shift-end') || '19:00';
   const chosenInterval = Number(getVal('lt-shift-interval') || 30);
 
-  // 抓取 LINE Token、UID 與卡片外觀
   const lineTokenVal = getVal('lt-cfg-line-token');
   const ownerUidVal = getVal('lt-cfg-owner-line-uid');
   const lineCardTheme = getVal('lt-setting-line-card-theme') || 'latte';
 
-  // 雙重持久化快取
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
 
@@ -11338,12 +11335,10 @@ async function saveLifetimeStoreSettings() {
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
 
-    // LINE 推播金鑰與外觀色系
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
     line_card_theme: lineCardTheme,
 
-    // LINE 7 大子開關設定
     enable_owner_line_push: getCheck('lt-cfg-toggle-owner-line-push'),
     enable_line_one_click_audit: getCheck('lt-cfg-toggle-line-one-click'),
     enable_owner_deposit_notify: getCheck('lt-cfg-toggle-owner-deposit-notify'),
@@ -11352,7 +11347,6 @@ async function saveLifetimeStoreSettings() {
     enable_line_menu_query: getCheck('lt-cfg-toggle-menu-query'),
     enable_pet_pickup_notify: getCheck('lt-cfg-toggle-pet-pickup'),
 
-    // 門市流程與前台展示開關
     enable_staff_select: getCheck('lt-toggle-staff-select'),
     enable_multi_staff_schedule: getCheck('lt-toggle-multi-staff-schedule'),
     enable_cust_type: getCheck('lt-toggle-custtype'),
@@ -11369,7 +11363,6 @@ async function saveLifetimeStoreSettings() {
     enable_cancel_reason: getCheck('lt-toggle-cancel-reason'),
     enable_email_copy: getCheck('lt-toggle-email'),
 
-    // 加購模組設定（若有顯示）
     commission_rate: Number(getVal('lt-cfg-commission-rate') || 50),
     designated_bonus: Number(getVal('lt-cfg-designated-bonus') || 50),
 
@@ -11383,7 +11376,6 @@ async function saveLifetimeStoreSettings() {
     updated_at: new Date().toISOString()
   };
 
-  // 定型化合約模組
   if (!document.getElementById('lt-addon-card-contract')?.classList.contains('hidden')) {
     payload.contract_title = getVal('lt-contract-title') || '定型化服務契約書';
     payload.contract_content = getVal('lt-contract-content');
@@ -11434,7 +11426,6 @@ async function saveLifetimeStoreSettings() {
       body: JSON.stringify({ store_name: storeTitle, theme_color: selectedTheme })
     });
 
-    // 更新記憶體資料
     if (backendData.settings) {
       Object.assign(backendData.settings, payload);
     }
