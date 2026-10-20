@@ -4462,11 +4462,27 @@ async function fetchDataAndRender() {
       appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
         const d = new Date(b.appointment_time);
         const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
+        
+        // 🌟【關鍵修復】：補回 matchedDuration 計算邏輯，甘特圖依時長跨格延伸核心
+        let matchedDuration = 60;
+        const durMatch = (b.notes || '').match(/時長:\s*(\d+)分/);
+        if (durMatch) {
+          matchedDuration = Number(durMatch[1]);
+        } else if (b.service_names) {
+          const sNames = b.service_names.split(',');
+          let calcD = 0;
+          sNames.forEach(sn => {
+            const f = (services || []).find(s => (s.service_name || s.name) === sn.trim());
+            if (f) calcD += Number(f.duration_minutes || f.duration || 60);
+          });
+          if (calcD > 0) matchedDuration = calcD;
+        }
+
         return {
           id: b.id,
           date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
           time: timeStr,
-          duration: matchedDuration, // 👈 成功補入甘特圖所需時長！
+          duration: matchedDuration, // 👈 現在已安全定義，不再噴錯白屏！
           name: b.customer_name,
           phone: b.customer_phone,
           customer_type: b.customer_type || 'old',
@@ -4907,14 +4923,22 @@ function setOverviewZoomMode(mode) {
   renderOverviewGridCanvas();
 }
 
+// 🌟【關鍵補齊】：專員切換函式（解決 ReferenceError: switchOverviewStaffTab is not defined）
+function switchOverviewStaffTab(staffId) {
+  currentOverviewStaffTab = staffId;
+  renderOverviewGridCanvas();
+}
+
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
 
+  // 🌟【關鍵修復】：宣告 currentRole，防止甘特圖畫布崩潰
+  const currentRole = CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all' ? 'staff' : (window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner');
+
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 🌟【專員隔離修復】：同時讀取 CURRENT_STAFF_PARAM 與 LocalStorage
   let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
 
@@ -5045,7 +5069,7 @@ function renderOverviewGridCanvas() {
 
       // 判定是否為寵美毛孩
       let petTag = '';
-      if (backendData.settings?.industryType !== 'beauty') {
+      if (isPetMode) {
         const match = (a.notes || '').match(/【毛孩(?:\d+)?:?\s*([^/ \]]+)/);
         if (match && match[1]) petTag = `🐾${match[1]}`;
       }
@@ -8733,6 +8757,10 @@ async function adminQuickCheckCustomer(phoneVal) {
         notes: finalNotesArray.join(' | '),
         status: '已確認'
       };
+
+      // 🌟【關鍵修復】：必須將預約實體寫入 Supabase 資料表並取得真實 newBookingId！
+      const res = await directSupabaseUpsert('bookings', payload, 'id');
+      const newBookingId = (Array.isArray(res) && res[0]) ? res[0].id : (res ? res.id : null);
 
       try {
         // 🌟 嚴格店家隔離：只有「這理髮型」或「有購買試算表模組」的店家才同步試算表
