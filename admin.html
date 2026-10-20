@@ -5082,25 +5082,37 @@ function renderOverviewGridCanvas() {
   }).join('');
 
   // 渲染畫布（最左側時間欄 sticky 固定）
+  // 4. 終極加固：強制最左側時間欄 100% 釘住 (Sticky Left-0)
   canvas.innerHTML = controlsHtml + `
     <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-xs">
-      <div class="overflow-x-auto relative">
-        <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white">
-          <div class="w-12 shrink-0 py-2 text-center text-[11px] font-bold text-brand-500 bg-brand-50 border-r border-brand-200 sticky left-0 z-40">
+      <div class="overflow-x-auto relative no-scrollbar" style="-webkit-overflow-scrolling: touch;">
+        
+        <!-- 頂部專員表頭 -->
+        <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white min-w-max">
+          <!-- 左上角「時間」固定格 -->
+          <div style="width: 52px; min-width: 52px; position: sticky; left: 0; z-index: 40;" 
+               class="shrink-0 py-2.5 text-center text-[11px] font-black text-brand-700 bg-[#FDFBF7] border-r border-brand-200 shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)]">
             時間
           </div>
-          <div class="flex flex-1 min-w-0">
+          <!-- 右側各專員名稱欄 -->
+          <div class="flex">
             ${headerColsHtml}
           </div>
         </div>
-        <div class="flex relative" style="height: ${totalTimelineHeight}px;">
-          <div class="w-12 shrink-0 bg-brand-50 border-r border-brand-200 sticky left-0 z-20 select-none">
+
+        <!-- 下方時間軸與行程內容 -->
+        <div class="flex min-w-max relative" style="height: ${totalTimelineHeight}px;">
+          <!-- 🌟 左側時間軸（強制釘住，純色實底遮罩，右滑絕不穿透） -->
+          <div style="width: 52px; min-width: 52px; position: sticky; left: 0; z-index: 25;" 
+               class="shrink-0 bg-[#FDFBF7] border-r border-brand-200 select-none shadow-[3px_0_6px_-2px_rgba(0,0,0,0.08)]">
             ${timeLabelsHtml}
           </div>
-          <div class="flex flex-1 min-w-0 relative">
+          <!-- 右側專員排程欄 -->
+          <div class="flex relative">
             ${staffColumnsHtml}
           </div>
         </div>
+
       </div>
     </div>
   `;
