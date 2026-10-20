@@ -4327,9 +4327,9 @@ async function adminQuickCheckCustomer(phoneVal) {
   }
 }
     
-    // ==========================================
-    // 3. 全域資料載入與同步 (完整支援住宿、色系、指定獎金與 20+ 模組)
-    // ==========================================
+    // ========================================================
+// 【修復升級】fetchDataAndRender — 解決 sInfo TDZ 語法崩潰，保證設定秒回填
+// ========================================================
 async function fetchDataAndRender() {
   const dispStoreId = document.getElementById('disp-current-store-id');
   if (dispStoreId && CURRENT_STORE_ID) {
@@ -4344,22 +4344,26 @@ async function fetchDataAndRender() {
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
       directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`),
       directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`),
-      directSupabaseFetch(`inventory_items?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`) // 🌟 補上這行
+      directSupabaseFetch(`inventory_items?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`)
     ]);
 
-    // 若資料庫有資料則載入，否則保留預設範本
+    // 🌟【關鍵修正 1】：第一時間宣告並指派 sInfo 與 sCfg，杜絕 TDZ 崩潰！
+    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+    const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+
+    // 庫存品項緩存
     if (invRes && invRes.length > 0) {
       allInventoryItems = invRes;
     }
 
-    // 在 fetchDataAndRender() 的 Promise.all 執行完成後替換以下這行：
-blacklistedPhonesSet = new Set(
+    // 黑名單快取建立
+    blacklistedPhonesSet = new Set(
       (custsRes || [])
         .filter(c => c.is_blacklisted === true)
         .map(c => getCleanPhone(c.phone))
     );
     
-    // 1. 【停權與過期嚴格阻斷】
+    // 1. 【停權與過期阻斷】(此時 sInfo 已安全宣告，不再報錯)
     if (sInfo.plan_status === 'locked' || sInfo.plan_status === 'expired') {
       sessionStorage.clear();
       const screen = document.getElementById('admin-maintenance-screen');
@@ -4396,22 +4400,23 @@ blacklistedPhonesSet = new Set(
       }
     } catch(e) {}
 
-    const sCfg = (settings && settings.length > 0) ? settings[0] : {};
-    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
-
+    // 供餐提示語回填
     const mealNotes = sCfg.boarding_meal_notes || {};
     const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
     setVal('cfg-meal-note-one', mealNotes.one || '安排於晚間 18:00 供餐');
     setVal('cfg-meal-note-two', mealNotes.two || '固定於早 09:00、晚 18:00 供餐');
     setVal('cfg-meal-note-three', mealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
-    
-    // 若為寵美住宿模式，確保區塊不被隱藏
+    setVal('lt-meal-note-one', mealNotes.one || '安排於晚間 18:00 供餐');
+    setVal('lt-meal-note-two', mealNotes.two || '固定於早 09:00、晚 18:00 供餐');
+    setVal('lt-meal-note-three', mealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
+
     const mealBox = document.getElementById('box-meal-notes-config');
     if (mealBox) mealBox.classList.remove('hidden');
+
     if (sCfg.store_resources && Array.isArray(sCfg.store_resources)) {
-  storeResourcesList = sCfg.store_resources;
-}
-renderStoreResourcesList();
+      storeResourcesList = sCfg.store_resources;
+    }
+    renderStoreResourcesList();
     
     // 3. 【公休日計算】
     const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days : [];
@@ -4440,7 +4445,7 @@ renderStoreResourcesList();
       stayNoticeInput.value = sCfg.front_stay_notice;
     }
     
-    // 4. 【關鍵修正】：rawMode 優先取 sInfo.industry_mode，fallback 嚴格修正為 'beauty'（不再預設為 pet_hotel）
+    // 4. 主題與營運模式判定
     const rawTheme = sCfg.theme_color || sCfg.themeColor || sInfo.theme_color || sInfo.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
     const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || localStorage.getItem('zy_cached_industry_mode') || 'beauty';
     localStorage.setItem('zy_cached_industry_mode', rawMode);
@@ -4453,7 +4458,7 @@ renderStoreResourcesList();
     };
 
     backendData = {
-      storeInfo: sInfo, // ★★★ 關鍵加入此行，確保買斷版身分永久鎖定 ★★★
+      storeInfo: sInfo,
       appointments: (bookings && bookings.length > 0) ? bookings.map(b => {
         const d = new Date(b.appointment_time);
         const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
@@ -4481,7 +4486,7 @@ renderStoreResourcesList();
           created_at: b.created_at || '',
           pet_type: b.pet_type || '小型犬',
           self_food: b.self_food !== false,
-          transaction_no: b.transaction_no || '' // 【關鍵補齊】：流水號精準映射
+          transaction_no: b.transaction_no || ''
         };
       }) : [],
 
@@ -4490,7 +4495,7 @@ renderStoreResourcesList();
       services: (services && services.length > 0) ? services.map(s => ({
         id: s.id,
         name: s.service_name || s.name,
-        category: s.category || '一般服務', // 🌟 補齊這行，重整後大分類才不會消失！
+        category: s.category || '一般服務',
         duration: Number(s.duration_minutes || s.duration || 60),
         type: s.service_type || s.type || "Group_A",
         price: s.price || 0,
@@ -4525,6 +4530,7 @@ renderStoreResourcesList();
         depositInfo: sCfg.deposit_info || "",
         depositMode: sCfg.deposit_mode || "all",
         depositAmount: Number(sCfg.deposit_amount || 0),
+        depositReportMode: sCfg.deposit_report_mode || 'both',
         promoText: sCfg.promo_text || "",
         promoRulesText: sCfg.promo_rules_text || '',
         contractTitle: sCfg.contract_title || '美容定型化契約書',
@@ -4535,6 +4541,7 @@ renderStoreResourcesList();
         packageRules: sCfg.package_rules || [],
         careRules: (sCfg.care_rules && sCfg.care_rules.length > 0) ? sCfg.care_rules : DEFAULT_CARE_RULES,
         reviewTags: sCfg.review_tags || ["細心溫柔", "完全不推銷", "手法專業", "環境極放鬆", "成效超滿意"],
+        boarding_meal_notes: sCfg.boarding_meal_notes || null,
         
         themeColor: rawTheme,
         theme_color: rawTheme,
@@ -4561,7 +4568,6 @@ renderStoreResourcesList();
         ig: sCfg.ig_url || "",
         map: sCfg.map_url || "",
         
-        // 🌟 營業時間精準對齊 (雙向命名，徹底杜絕 11:31 回滾)
         shiftStartTime: sCfg.shift_start_time || "09:00",
         shift_start_time: sCfg.shift_start_time || "09:00",
         shiftEndTime: sCfg.shift_end_time || "19:00",
@@ -4573,7 +4579,6 @@ renderStoreResourcesList();
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
-        // 🌟 通報推播與 Token 對齊 (保證買斷與訂閱皆可啟用，重整精準讀取)
         lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || "",
         line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || "",
         owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
@@ -4585,7 +4590,6 @@ renderStoreResourcesList();
         enableEmailCopy: sCfg.enable_email_copy ?? true,
         enable_email_copy: sCfg.enable_email_copy ?? true,
 
-        // 🌟 流程開關通用雙向對齊 (讀到 false 絕對不變 true)
         enableAuditBooking: sCfg.enable_audit_booking ?? true,
         enable_audit_booking: sCfg.enable_audit_booking ?? true,
         enableDeposit: sCfg.enable_deposit ?? true,
@@ -4625,12 +4629,17 @@ renderStoreResourcesList();
         enableCommissionCalc: sCfg.enable_commission_calc ?? true,
         enable_commission_calc: sCfg.enable_commission_calc ?? true,
         enableContract: sCfg.enable_contract ?? true,
-        enable_contract: sCfg.enable_contract ?? true
+        enable_contract: sCfg.enable_contract ?? true,
+
+        // 這理髮型試算表連動設定
+        sheets_spreadsheet_id: sCfg.sheets_spreadsheet_id || '',
+        sheets_gas_url: sCfg.sheets_gas_url || '',
+        enable_sheets_sync: sCfg.enable_sheets_sync !== false,
+        enable_sheets_cust_sync: sCfg.enable_sheets_cust_sync !== false
       }
     };
-    backendData.storeInfo = sInfo;
 
-    // 5. 【強制執行】：動態模式佈局切換 ＆ 買斷版模組嚴格閘道
+    // 5. 【動態模式與買斷閘道執行】
     handleIndustryModeChange(backendData.settings.industryMode);
     applyLifetimeModulesStrictGating(backendData.storeInfo);
 
@@ -4642,6 +4651,7 @@ renderStoreResourcesList();
     if (sCfg.hotel_meal_options && Array.isArray(sCfg.hotel_meal_options) && sCfg.hotel_meal_options.length > 0) {
       adminMealOptions = sCfg.hotel_meal_options;
     }
+
     renderAdminRoomTiers();
     renderAdminMealOptions();
     renderCalendar();
@@ -4653,24 +4663,29 @@ renderStoreResourcesList();
     renderBOMCheckboxes();
     renderServiceList();
     renderPortfolioList();
-    populateSettings();
+    
+    // 🌟【關鍵修正 2】：依門市身分精準回填表單（買斷版填買斷頁、訂閱版填訂閱頁）
+    if (isStoreLifetime()) {
+      populateLifetimeSettings();
+    } else {
+      populateSettings();
+    }
+
     loadMarketingCenter();
     loadAdminReviews();
     renderUploadSlots();
+    renderUploadSlots('lt');
     renderInventoryList();
     renderBoardingRoomStatus();
     renderBoardingCareChecklist();
     initSlotsLiveUrl();
     renderBoardingDateButtons();
-    renderStaffCheckboxesForService(); // 啟動服務項目專員多選框
-    populateServiceResourceDropdown(); // 啟動設備下拉選單
+    renderStaffCheckboxesForService();
+    populateServiceResourceDropdown();
     applyStaffRoleNavigation();
     renderOverviewDateButtons();
     renderOverviewGridCanvas();
 
-    if (typeof renderInventoryLogs === 'function') renderInventoryLogs();
-    
-    // 【關鍵修復】：資料庫黑名單下載完畢後，立即重繪當日日曆卡片，消除時序競爭
     if (selectedCalendarDate) {
       showApptsInCalendar(selectedCalendarDate);
     }
@@ -11458,6 +11473,11 @@ function populateLifetimeSettings() {
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
   setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  // 供餐方案自訂提示語回填
+  const ltMealNotes = s.boarding_meal_notes || {};
+  setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
+  setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
+  setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
   // 買斷版回填
 setVal('lt-setting-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
 
