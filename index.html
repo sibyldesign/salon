@@ -2780,9 +2780,6 @@ function renderDynamicMealOptions() {
     renderHotelInCalendar();
     renderHotelTimeGrid('in', dateStr);
 
-    const curTime = document.getElementById('hotelCheckInTime').value || '10:00';
-    document.getElementById('badge-checkin-summary').innerHTML = `✓ ${dateStr} ${curTime} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
-
     const inD = new Date(dateStr);
     inD.setDate(inD.getDate() + 1);
     const nextDayStr = inD.toISOString().split('T')[0];
@@ -2805,9 +2802,7 @@ function renderDynamicMealOptions() {
     renderHotelOutCalendar();
     renderHotelTimeGrid('out', dateStr);
 
-    const curTime = document.getElementById('hotelCheckOutTime').value || '18:00';
-    document.getElementById('badge-checkout-summary').innerHTML = `✓ ${dateStr} ${curTime} <i class="fa-solid fa-chevron-down text-[10px] ml-0.5"></i>`;
-    calculateBoardingDaysAndPrice();
+        calculateBoardingDaysAndPrice();
   }
 
   // 寵物住宿模式：進場與退房時段 100% 依據排班表開班
@@ -4766,35 +4761,47 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     }
   }
 
-  // 3. 住宿 / 美容時段檢驗
+  // 3. 住宿 / 美容時段檢驗與防呆修正
   if (activeBookingSubMode === 'boarding') {
     const inDate = document.getElementById('hotelCheckInDate')?.value;
     const inTime = document.getElementById('hotelCheckInTime')?.value;
     const outDate = document.getElementById('hotelCheckOutDate')?.value;
     const outTime = document.getElementById('hotelCheckOutTime')?.value;
 
-    if (!inDate || !outDate) return Swal.fire('尚未選擇住宿日期！', '請點開住宿日曆手風琴，選取「入住日期」與「退房日期」', 'warning');
+    if (!inDate || !outDate) return Swal.fire('尚未選擇住宿日期！', '請點開住宿日曆選取「入住日期」與「退房日期」', 'warning');
+    if (!inTime || !outTime) return Swal.fire('尚未選擇進退房時段！', '所選日期之進場或退房時段已額滿或過期，請重新選取', 'warning');
     if (new Date(outDate) <= new Date(inDate)) return Swal.fire('日期選取錯誤', '退房日期必須晚於入住日期', 'warning');
 
     dValRaw = inDate;
-    tVal = inTime || '10:00';
+    tVal = inTime;
 
     const diffNights = Math.max(1, Math.round((new Date(outDate) - new Date(inDate)) / (1000 * 60 * 60 * 24)));
     const roomTier = document.querySelector('input[name="hotelRoomTier"]:checked')?.getAttribute('data-name') || '套房';
-    const mealOpt = document.querySelector('input[name="mealPlanOption"]:checked')?.getAttribute('data-name') || '自備飼料';
+    
+    // 🌟【核心修復】：正確對齊 name="mealPlanOption"，不再讀取錯誤的 hotelMealPlan
+    const mealOptEl = document.querySelector('input[name="mealPlanOption"]:checked');
+    const mealOptName = mealOptEl ? (mealOptEl.getAttribute('data-name') || '自備飼料') : '自備飼料';
 
     let serviceItemsList = [`寵物度假住宿 (${diffNights}晚 - ${roomTier})`];
-    if (document.getElementById('chkHotelBathCheckin')?.checked) {
+    
+    // 🌟【核心修復】：正確對齊 HTML 中的 Checkbox ID (chkHotelBathCheckin / chkHotelBathCheckout)
+    const hasInBath = document.getElementById('chkHotelBathCheckin')?.checked;
+    const hasOutBath = document.getElementById('chkHotelBathCheckout')?.checked;
+
+    if (hasInBath) {
       const inSvc = document.getElementById('hotelBathInServiceSelect')?.value || '進房基礎清潔洗護';
       serviceItemsList.push(`入住洗護: ${inSvc}`);
+      notesArray.push('【加購: 入住清潔洗澡】');
     }
-    if (document.getElementById('chkHotelBathCheckout')?.checked) {
+    if (hasOutBath) {
       const outSvc = document.getElementById('hotelBathOutServiceSelect')?.value || '退房深層造型美容';
       serviceItemsList.push(`退房美容: ${outSvc}`);
+      notesArray.push('【加購: 退房深層美容】');
     }
 
     sVal = serviceItemsList.join(' ＋ ');
-    notesArray.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房 ｜ 供餐: ${mealOpt}】`);
+    // 🌟【核心修復】：只打包一次完整格式，杜絕重複寫入
+    notesArray.push(`【住宿排程: ${inDate} ${inTime} 入住 至 ${outDate} ${outTime} 退房 ｜ 房型: ${roomTier} ｜ 供餐: ${mealOptName}】`);
   } else {
     const selectedBoxes = Array.from(document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked, [class*="-addon"]:checked'));
     if (selectedBoxes.length === 0) return Swal.fire('尚未選擇施作項目！', '請至少勾選一項服務項目才能送出預約', 'warning');
@@ -4805,7 +4812,6 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     if (!dValRaw) return Swal.fire('尚未選擇預約日期！', '請於日曆上點選預約日期', 'warning');
     if (!tVal) return Swal.fire('尚未選擇預約時段！', '請點選下方開放之時段膠囊按鈕', 'warning');
   }
-
   // 4. 定型化契約與親筆簽名
   if (db.enableContract === true) {
     const hasAgreed = document.getElementById('hasAgreedContract')?.value === 'true';
