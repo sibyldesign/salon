@@ -5046,22 +5046,46 @@ function renderOverviewGridCanvas() {
   }
 
   // 8. 🌟【甘特圖渲染】：依時長跨格延伸色塊 (Time-span Blocks)
+  // 8. 🌟【核心升級】：甘特圖碰撞演算法 (Group A 與 Group B 重疊時自動左右並排，徹底解決疊卡遮擋)
   let staffColumnsHtml = displayStaffList.map(st => {
-    // 找出該專員當天所有預約
+    // 找出該專員當天所有預約並按開始時間排序
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
       return (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
+    }).map(a => {
+      const [aH, aM] = (a.time || '09:00').split(':').map(Number);
+      const startMin = aH * 60 + aM;
+      const dur = Number(a.duration || 60);
+      return { ...a, startMin, endMin: startMin + dur, dur };
+    }).sort((a, b) => a.startMin - b.startMin || b.dur - a.dur);
+
+    // 🌟 碰撞分組分欄計算 (計算每筆預約是排在左半邊 col:0 還是右半邊 col:1)
+    const processedAppts = [];
+    stAppts.forEach(appt => {
+      // 找出與目前預約在時段上有重疊的其他預約
+      const overlapping = processedAppts.filter(other => 
+        Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
+      );
+
+      if (overlapping.length > 0) {
+        // 有重疊：取得已被佔用的欄位索引 (0 或 1)
+        const occupiedCols = overlapping.map(o => o.colIndex);
+        const colIndex = occupiedCols.includes(0) ? 1 : 0;
+        appt.colIndex = colIndex;
+        appt.totalCols = 2; // 分為雙欄左右並排
+        // 將重疊到的卡片也同步設為雙欄
+        overlapping.forEach(o => o.totalCols = 2);
+      } else {
+        // 無重疊：獨佔全欄
+        appt.colIndex = 0;
+        appt.totalCols = 1;
+      }
+      processedAppts.push(appt);
     });
 
-    let apptCardsHtml = stAppts.map(a => {
-      // 計算起始分鐘與持續時長
-      const [aH, aM] = (a.time || '09:00').split(':').map(Number);
-      const apptStartMin = aH * 60 + aM;
-      const apptDur = Number(a.duration || 60); // 支援自訂時長，如 270 分鐘
-
-      // 換算甘特圖絕對座標 Top 與 Height
-      const topOffset = Math.max(0, ((apptStartMin - dayStartMinutes) / interval) * slotHeight);
-      const cardHeight = Math.max(slotHeight - 2, ((apptDur) / interval) * slotHeight - 2);
+    let apptCardsHtml = processedAppts.map(a => {
+      const topOffset = Math.max(0, ((a.startMin - dayStartMinutes) / interval) * slotHeight);
+      const cardHeight = Math.max(slotHeight - 2, ((a.dur) / interval) * slotHeight - 2);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
@@ -5074,22 +5098,32 @@ function renderOverviewGridCanvas() {
         if (match && match[1]) petTag = `🐾${match[1]}`;
       }
 
+      // 🌟 動態計算左右寬度與偏移位置
+      let widthStyle = "left: 4px; right: 4px;";
+      if (a.totalCols === 2) {
+        if (a.colIndex === 0) {
+          widthStyle = "left: 2px; width: calc(50% - 3px);"; // 左半欄
+        } else {
+          widthStyle = "left: calc(50% + 1px); width: calc(50% - 3px);"; // 右半欄
+        }
+      }
+
       return `
-        <div style="top: ${topOffset}px; height: ${cardHeight}px; background-color: ${colorTheme.bg}; color: ${colorTheme.text}; border-color: ${colorTheme.border}; z-index: 10;"
-             class="absolute inset-x-1 p-1 rounded-xl shadow-xs border cursor-pointer hover:opacity-95 transition overflow-hidden flex flex-col justify-between"
-             onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${apptDur})">
-          <div>
-            <div class="font-black flex justify-between items-center leading-tight ${isFitMode ? 'text-[9px]' : 'text-[11px]'}">
+        <div style="top: ${topOffset}px; height: ${cardHeight}px; ${widthStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; border-color: ${colorTheme.border}; z-index: 10;"
+             class="absolute p-1 rounded-xl shadow-xs border cursor-pointer hover:opacity-95 transition overflow-hidden flex flex-col justify-between"
+             onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur})">
+          <div class="overflow-hidden">
+            <div class="font-black flex justify-between items-center leading-tight ${isFitMode || a.totalCols === 2 ? 'text-[9.5px]' : 'text-[11px]'}">
               <span class="truncate">${a.name} ${petTag}</span>
-              <span class="font-mono text-[8.5px] opacity-80 shrink-0">${a.time}</span>
+              <span class="font-mono text-[8.5px] opacity-80 shrink-0 ml-0.5">${a.time}</span>
             </div>
-            <div class="${isFitMode ? 'text-[8px]' : 'text-[10px]'} opacity-90 truncate leading-snug mt-0.5">
+            <div class="${isFitMode || a.totalCols === 2 ? 'text-[8.5px]' : 'text-[10px]'} opacity-90 truncate leading-snug mt-0.5">
               ${a.service}
             </div>
           </div>
-          <div class="flex justify-between items-center font-mono ${isFitMode ? 'text-[7.5px]' : 'text-[9px]'} opacity-75">
-            <span>${apptDur}分</span>
-            <span>NT$${a.price || 0}</span>
+          <div class="flex justify-between items-center font-mono ${isFitMode || a.totalCols === 2 ? 'text-[8px]' : 'text-[9px]'} opacity-75">
+            <span>${a.dur}分</span>
+            <span class="truncate">NT$${a.price || 0}</span>
           </div>
         </div>
       `;
@@ -5113,7 +5147,7 @@ function renderOverviewGridCanvas() {
           }).join('')}
         </div>
 
-        <!-- 浮在上方之長條區間甘特色塊 -->
+        <!-- 浮在上方之長條區間甘特色塊 (已支援左右並排) -->
         ${apptCardsHtml}
       </div>
     `;
@@ -11585,9 +11619,9 @@ async function saveLifetimeStoreSettings() {
     display_title: storeTitle,
     boarding_meal_notes: {
       none: "自備習慣食用之乾糧飼料或罐頭分裝包",
-      one: getVal('lt-meal-note-one') || "安排於晚間 18:00 供餐",
-      two: getVal('lt-meal-note-two') || "固定於早 09:00、晚 18:00 供餐",
-      three: getVal('lt-meal-note-three') || "早 09:00、午 12:30、晚 18:00 三餐完整照護"
+      one: getVal('cfg-meal-note-one') || "安排於晚間 18:00 供餐",
+      two: getVal('cfg-meal-note-two') || "固定於早 09:00、晚 18:00 供餐",
+      three: getVal('cfg-meal-note-three') || "早 09:00、午 12:30、晚 18:00 三餐完整照護"
     },
     display_subtitle: getVal('lt-subtitle'),
     logo_url: getVal('lt-logo'),
