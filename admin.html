@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>旗艦美業沙龍與寵物管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -853,6 +853,27 @@
             </select>
           </div>
 
+          <!-- 後台供餐客製提示語設定 -->
+<div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2 mt-3">
+  <div class="font-bold text-xs text-amber-950 flex items-center gap-1.5">
+    <i class="fa-solid fa-utensils text-theme-primary"></i> 供餐方案前台自訂提示語設定
+  </div>
+  <div class="space-y-1.5 text-xs">
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日一餐提示：</label>
+      <input type="text" id="lt-meal-note-one" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 安排於晚間 18:00 供餐">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日兩餐提示：</label>
+      <input type="text" id="lt-meal-note-two" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 固定於早 09:00、晚 18:00 供餐">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日三餐提示：</label>
+      <input type="text" id="lt-meal-note-three" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 早 09:00、午 12:30、晚 18:00 三餐完整照護">
+    </div>
+  </div>
+</div>
+          
           <!-- 供餐方案 -->
           <div class="pt-2 border-t border-amber-200 space-y-1">
             <label class="block font-bold text-amber-950 text-[11px]">每日供餐安排：</label>
@@ -1751,6 +1772,27 @@
       <div id="lt-admin-room-tiers-list" class="space-y-2"></div>
     </div>
 
+    <!-- 後台供餐客製提示語設定 -->
+<div class="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/80 space-y-2 mt-3">
+  <div class="font-bold text-xs text-amber-950 flex items-center gap-1.5">
+    <i class="fa-solid fa-utensils text-theme-primary"></i> 供餐方案前台自訂提示語設定
+  </div>
+  <div class="space-y-1.5 text-xs">
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日一餐提示：</label>
+      <input type="text" id="lt-meal-note-one" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 安排於晚間 18:00 供餐">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日兩餐提示：</label>
+      <input type="text" id="lt-meal-note-two" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 固定於早 09:00、晚 18:00 供餐">
+    </div>
+    <div>
+      <label class="block text-[11px] font-bold text-amber-900 mb-0.5">一日三餐提示：</label>
+      <input type="text" id="lt-meal-note-three" class="w-full p-2 bg-white rounded-xl border border-amber-300 text-xs" placeholder="例: 早 09:00、午 12:30、晚 18:00 三餐完整照護">
+    </div>
+  </div>
+</div>
+    
     <!-- 2. 供餐方案動態列表 -->
     <div class="space-y-2 pt-2 border-t border-brand-100">
       <div class="flex justify-between items-center">
@@ -4316,9 +4358,7 @@ blacklistedPhonesSet = new Set(
         .filter(c => c.is_blacklisted === true)
         .map(c => getCleanPhone(c.phone))
     );
-
-    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
-
+    
     // 1. 【停權與過期嚴格阻斷】
     if (sInfo.plan_status === 'locked' || sInfo.plan_status === 'expired') {
       sessionStorage.clear();
@@ -4357,6 +4397,17 @@ blacklistedPhonesSet = new Set(
     } catch(e) {}
 
     const sCfg = (settings && settings.length > 0) ? settings[0] : {};
+    const sInfo = (stores && stores.length > 0) ? stores[0] : {};
+
+    const mealNotes = sCfg.boarding_meal_notes || {};
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setVal('cfg-meal-note-one', mealNotes.one || '安排於晚間 18:00 供餐');
+    setVal('cfg-meal-note-two', mealNotes.two || '固定於早 09:00、晚 18:00 供餐');
+    setVal('cfg-meal-note-three', mealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
+    
+    // 若為寵美住宿模式，確保區塊不被隱藏
+    const mealBox = document.getElementById('box-meal-notes-config');
+    if (mealBox) mealBox.classList.remove('hidden');
     if (sCfg.store_resources && Array.isArray(sCfg.store_resources)) {
   storeResourcesList = sCfg.store_resources;
 }
@@ -4461,7 +4512,7 @@ renderStoreResourcesList();
       })) : [],
 
       settings: {
-        storeName: sCfg.display_title || sInfo.store_name || "專業沙龍與寵物旗艦館",
+        storeName: sCfg.display_title || sInfo.store_name || "線上預約系統",
         subtitle: sCfg.display_subtitle || "",
         logoUrl: sCfg.logo_url || "",
         enableLogo: sCfg.enable_logo ?? true,
@@ -4822,97 +4873,221 @@ function selectOverviewDateBtn(dHyphen) {
   renderOverviewGridCanvas();
 }
 
-// 渲染類 Excel 總覽畫布 (多租戶動態讀取專員名冊，預設顯示 A專員 / B專員)
-   function renderOverviewGridCanvas() {
+// ========================================================
+// 🌟【甘特圖核心】renderOverviewGridCanvas — 支援跨格延伸、宏觀縮圖與權限隔離
+// ========================================================
+let currentOverviewZoomMode = 'scroll'; // 'scroll' (微觀可滑動) 或 'fit' (宏觀全覽縮圖)
+let currentOverviewStaffTab = 'all';
+
+function setOverviewZoomMode(mode) {
+  currentOverviewZoomMode = mode;
+  renderOverviewGridCanvas();
+}
+
+function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
 
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 動態抓取專員名冊
-  let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-  if (staffList.length === 0) {
-    staffList = [{ id: 'staff_1', name: '專員 A' }, { id: 'staff_2', name: '專員 B' }];
+  // 1. 🌟【專員權限隔離】：若登入者為一般專員，強制鎖死只顯示自己
+  let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
+
+  const currentRole = window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner';
+  const currentStaffId = window.currentStaffId || localStorage.getItem('zy_staff_id');
+
+  let allowedStaffList = rawStaffList;
+  if (currentRole === 'staff' && currentStaffId) {
+    allowedStaffList = rawStaffList.filter(s => s.id === currentStaffId);
   }
 
-  // 2. 依營業時間與切分間隔計算時段清單 (支援 15/30/60 分鐘)
-  const startTime = backendData.settings?.shiftStartTime || '09:00';
-  const endTime = backendData.settings?.shiftEndTime || '19:00';
-  const interval = Number(backendData.settings?.shiftInterval || 15);
+  // 專員切換過濾
+  let displayStaffList = allowedStaffList;
+  if (currentOverviewStaffTab !== 'all') {
+    displayStaffList = allowedStaffList.filter(s => s.id === currentOverviewStaffTab);
+  }
 
+  // 2. 營業起訖與時間刻度設定 (以 15 分鐘為一刻度基準)
+  const startTime = backendData.settings?.shiftStartTime || '09:00';
+  const endTime = backendData.settings?.shiftEndTime || '20:00';
+  const interval = 15; // 固定以 15 分鐘為最小甘特格
   const [sH, sM] = startTime.split(':').map(Number);
   const [eH, eM] = endTime.split(':').map(Number);
-  const timeSlots = [];
-  for (let m = sH * 60 + sM; m < eH * 60 + eM; m += interval) {
-    const hh = String(Math.floor(m / 60)).padStart(2, '0');
-    const mm = String(m % 60).padStart(2, '0');
-    timeSlots.push(`${hh}:${mm}`);
-  }
+  const dayStartMinutes = sH * 60 + sM;
+  const dayEndMinutes = eH * 60 + eM;
+  const totalSlotsCount = Math.ceil((dayEndMinutes - dayStartMinutes) / interval);
 
-  // 3. 撈取當日未取消預約
+  // 每 15 分鐘的高度定義 (微觀 22px，宏觀縮圖 14px)
+  const isFitMode = (currentOverviewZoomMode === 'fit');
+  const slotHeight = isFitMode ? 14 : 22; 
+  const totalTimelineHeight = totalSlotsCount * slotHeight;
+
+  // 3. 抓取當日有效預約
   const apptsToday = (backendData.appointments || []).filter(a => {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 4. 表頭：專員頭像與姓名
-  let headerHtml = `
-    <div class="sticky top-0 z-20 flex bg-white border-b border-brand-200">
-      <div class="w-16 shrink-0 py-2.5 text-center text-[11px] font-bold text-brand-400 border-r border-brand-100 bg-brand-50/50">時間</div>
-      ${staffList.map(st => `
-        <div class="flex-1 min-w-[120px] py-2.5 px-2 text-center border-r border-brand-100 last:border-r-0">
-          <div class="w-7 h-7 mx-auto rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs mb-1">
-            <i class="fa-solid fa-user-tie text-[11px]"></i>
-          </div>
-          <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
+  // 4. 頂部控制工具列（宏觀縮圖切換 ＋ 專員切換）
+  let controlsHtml = `
+    <div class="flex flex-wrap justify-between items-center gap-2 mb-2 px-1">
+      <!-- 縮放模式切換按鈕 -->
+      <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
+        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
+          <i class="fa-solid fa-arrows-left-right text-[10px]"></i> 放大微觀 (可滑動)
+        </button>
+        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
+          <i class="fa-solid fa-compress text-[10px]"></i> 宏觀全覽 (全店縮圖)
+        </button>
+      </div>
+
+      <!-- 專員快速分頁 (僅主理人可切換全部) -->
+      ${currentRole !== 'staff' ? `
+        <div class="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
+          <button type="button" onclick="switchOverviewStaffTab('all')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === 'all' ? 'bg-theme-primary text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+            全店專員 (${allowedStaffList.length})
+          </button>
+          ${allowedStaffList.map(st => `
+            <button type="button" onclick="switchOverviewStaffTab('${st.id}')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === st.id ? 'bg-theme-primary text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+              ${st.name}
+            </button>
+          `).join('')}
         </div>
-      `).join('')}
+      ` : `<span class="text-xs font-bold text-brand-600">專員專屬排程：<b>${allowedStaffList[0]?.name || ''}</b></span>`}
     </div>
   `;
 
-  // 5. 表身：時間縱軸與預約色塊網格
-  let rowsHtml = '';
-  timeSlots.forEach(slot => {
-    rowsHtml += `
-      <div class="flex border-b border-brand-100 min-h-[46px] hover:bg-brand-50/30 transition">
-        <div class="w-16 shrink-0 flex items-center justify-center text-[10.5px] font-mono text-brand-400 font-bold border-r border-brand-100 bg-brand-50/20">${slot}</div>
-        ${staffList.map(st => {
-          const matchedAppt = apptsToday.find(a => {
-            const aStaff = String(a.staffName || '').trim();
-            const isStaffMatch = (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
-            return isStaffMatch && a.time === slot;
-          });
+  // 5. 欄位寬度樣式配置
+  const staffColWidthClass = isFitMode 
+    ? "flex-1 min-w-0" // 宏觀全覽：均分寬度，塞入手機螢幕
+    : "w-[125px] shrink-0"; // 微觀：標準 125px，支援左右滑動
 
-          if (matchedAppt) {
-            const safeService = (matchedAppt.service || '').replace(/'/g, "\\'");
-            const safeName = (matchedAppt.name || '').replace(/'/g, "\\'");
-            return `
-              <div class="flex-1 min-w-[120px] p-1 border-r border-brand-100 last:border-r-0 bg-amber-50/50">
-                <div class="h-full p-1.5 bg-[#8C7355] text-white rounded-xl shadow-2xs text-[10.5px] cursor-pointer hover:opacity-90 transition space-y-0.5" onclick="openCheckoutModal('${matchedAppt.id}', '${safeName}', '${matchedAppt.phone}', '${safeService}',${Number(matchedAppt.price || 0)})">
-                  <div class="font-bold truncate flex justify-between items-center">
-                    <span>${matchedAppt.name}</span>
-                    <span class="text-[9px] opacity-80 font-mono">${matchedAppt.time}</span>
-                  </div>
-                  <div class="text-[9.5px] opacity-90 truncate">${matchedAppt.service}</div>
-                </div>
-              </div>
-            `;
-          }
+  // 6. 生成表頭 (人員列表)
+  let headerColsHtml = displayStaffList.map(st => `
+    <div class="${staffColWidthClass} text-center py-2 px-1 border-r border-brand-100 last:border-r-0 bg-white">
+      <div class="font-bold ${isFitMode ? 'text-[10px]' : 'text-xs'} text-brand-900 truncate">${st.name}</div>
+    </div>
+  `).join('');
 
-          return `
-            <div class="flex-1 min-w-[120px] p-1 border-r border-brand-100 last:border-r-0 cursor-pointer hover:bg-emerald-50/40 transition group flex items-center justify-center" onclick="quickInsertBooking('${targetDateSlash}', '${slot}', '${st.id}', '${st.name}')">
-              <span class="text-[10px] text-brand-300 opacity-0 group-hover:opacity-100 transition font-bold">+ 插單</span>
-            </div>
-          `;
-        }).join('')}
+  // 7. 生成左側時間軸刻度與背景橫線
+  let timeLabelsHtml = '';
+  let gridBgRowsHtml = '';
+
+  for (let i = 0; i < totalSlotsCount; i++) {
+    const curM = dayStartMinutes + i * interval;
+    const hh = String(Math.floor(curM / 60)).padStart(2, '0');
+    const mm = String(curM % 60).padStart(2, '0');
+    const timeFormatted = `${hh}:${mm}`;
+    const isHourMark = (mm === '00');
+
+    // 刻度文字 (每整點標記一次，其餘只標虛線)
+    timeLabelsHtml += `
+      <div style="height: ${slotHeight}px;" class="flex items-center justify-end pr-1.5 text-brand-400 font-mono ${isHourMark ? 'font-black text-brand-800' : 'opacity-40'} ${isFitMode ? 'text-[9px]' : 'text-[10.5px]'}">
+        ${isHourMark ? timeFormatted : ''}
       </div>
     `;
-  });
 
-  canvas.innerHTML = `
-    <div class="bg-white rounded-2xl border border-brand-200 overflow-x-auto shadow-sm">
-      ${headerHtml}
-      <div class="divide-y divide-brand-50">${rowsHtml}</div>
+    // 背景橫格
+    gridBgRowsHtml += `
+      <div style="height: ${slotHeight}px;" class="border-b ${isHourMark ? 'border-brand-200' : 'border-brand-100/60'} w-full"></div>
+    `;
+  }
+
+  // 8. 🌟【甘特圖渲染】：依時長跨格延伸色塊 (Time-span Blocks)
+  let staffColumnsHtml = displayStaffList.map(st => {
+    // 找出該專員當天所有預約
+    const stAppts = apptsToday.filter(a => {
+      const aStaff = String(a.staffName || '').trim();
+      return (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
+    });
+
+    let apptCardsHtml = stAppts.map(a => {
+      // 計算起始分鐘與持續時長
+      const [aH, aM] = (a.time || '09:00').split(':').map(Number);
+      const apptStartMin = aH * 60 + aM;
+      const apptDur = Number(a.duration || 60); // 支援自訂時長，如 270 分鐘
+
+      // 換算甘特圖絕對座標 Top 與 Height
+      const topOffset = Math.max(0, ((apptStartMin - dayStartMinutes) / interval) * slotHeight);
+      const cardHeight = Math.max(slotHeight - 2, ((apptDur) / interval) * slotHeight - 2);
+
+      const colorTheme = getServiceMorandiColor(a.service);
+      const safeService = (a.service || '').replace(/'/g, "\\'");
+      const safeName = (a.name || '').replace(/'/g, "\\'");
+
+      // 判定是否為寵美毛孩
+      let petTag = '';
+      if (backendData.settings?.industryType !== 'beauty') {
+        const match = (a.notes || '').match(/【毛孩(?:\d+)?:?\s*([^/ \]]+)/);
+        if (match && match[1]) petTag = `🐾${match[1]}`;
+      }
+
+      return `
+        <div style="top: ${topOffset}px; height: ${cardHeight}px; background-color: ${colorTheme.bg}; color: ${colorTheme.text}; border-color: ${colorTheme.border}; z-index: 10;"
+             class="absolute inset-x-1 p-1 rounded-xl shadow-xs border cursor-pointer hover:opacity-95 transition overflow-hidden flex flex-col justify-between"
+             onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${apptDur})">
+          <div>
+            <div class="font-black flex justify-between items-center leading-tight ${isFitMode ? 'text-[9px]' : 'text-[11px]'}">
+              <span class="truncate">${a.name} ${petTag}</span>
+              <span class="font-mono text-[8.5px] opacity-80 shrink-0">${a.time}</span>
+            </div>
+            <div class="${isFitMode ? 'text-[8px]' : 'text-[10px]'} opacity-90 truncate leading-snug mt-0.5">
+              ${a.service}
+            </div>
+          </div>
+          <div class="flex justify-between items-center font-mono ${isFitMode ? 'text-[7.5px]' : 'text-[9px]'} opacity-75">
+            <span>${apptDur}分</span>
+            <span>NT$${a.price || 0}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="${staffColWidthClass} relative border-r border-brand-100 last:border-r-0" style="height: ${totalTimelineHeight}px;">
+        <!-- 點擊背景空白處直接快速插單 -->
+        <div class="absolute inset-0 z-0 divide-y divide-transparent">
+          ${Array.from({ length: totalSlotsCount }).map((_, idx) => {
+            const m = dayStartMinutes + idx * interval;
+            const hh = String(Math.floor(m / 60)).padStart(2, '0');
+            const mm = String(m % 60).padStart(2, '0');
+            return `
+              <div style="height: ${slotHeight}px;" 
+                   class="cursor-pointer hover:bg-emerald-50/50 transition group flex items-center justify-center"
+                   onclick="quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')">
+                <span class="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition">+</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <!-- 浮在上方之長條區間甘特色塊 -->
+        ${apptCardsHtml}
+      </div>
+    `;
+  }).join('');
+
+  // 9. 組裝完整畫布結構
+  canvas.innerHTML = controlsHtml + `
+    <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-xs ${isFitMode ? 'w-full' : 'overflow-x-auto'}">
+      <!-- 固定表頭 -->
+      <div class="flex border-b border-brand-200 shadow-2xs sticky top-0 z-20 bg-white">
+        <div class="w-12 shrink-0 py-2 text-center text-[10px] font-bold text-brand-400 bg-brand-50 border-r border-brand-200">時間</div>
+        <div class="flex flex-1 ${!isFitMode ? 'min-w-[calc(125px*' + displayStaffList.length + ')]' : ''}">
+          ${headerColsHtml}
+        </div>
+      </div>
+
+      <!-- 滾動時間軸內容 -->
+      <div class="flex relative" style="height: ${totalTimelineHeight}px;">
+        <div class="w-12 shrink-0 bg-brand-50/40 border-r border-brand-200 select-none">
+          ${timeLabelsHtml}
+        </div>
+        <div class="flex flex-1 relative ${!isFitMode ? 'min-w-[calc(125px*' + displayStaffList.length + ')]' : ''}">
+          ${staffColumnsHtml}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -4941,37 +5116,45 @@ function getServiceMorandiColor(serviceName) {
 }
 
 // ========================================================
-// 【智慧升級版】quickInsertBooking() — 姓名/電話快查 ＋ 重名防呆阻斷
+// 【智慧升級】quickInsertBooking — 寵美自動長出毛孩選單＋全資料回補
 // ========================================================
-let matchedCustomerCandidate = null; // 暫存唯一命中的舊客檔案
+let currentMatchedPetsList = [];
 
 function quickInsertBooking(date, time, staffId, staffName) {
-  matchedCustomerCandidate = null;
+  currentMatchedPetsList = [];
+  const isPetMode = (backendData.settings?.industryType !== 'beauty');
   const serviceList = (backendData.services || []).filter(s => s.isActive !== false);
-  
+
   let serviceOptionsHtml = serviceList.map(s => {
     return `<option value="${s.name}" data-duration="${s.duration || 60}" data-price="${s.price || 0}">${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`;
   }).join('');
   serviceOptionsHtml = `<option value="">-- 請選擇服務項目 --</option>` + serviceOptionsHtml + `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
 
   Swal.fire({
-    title: '⚡ 快速插單排程',
+    title: '⚡ 現場快速插單',
     html: `
       <div class="text-left text-xs space-y-2.5 font-sans">
         <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-brand-800 font-mono">
-          <div>時段：<b class="text-brand-900">${date} ${time}</b></div>
-          <div>專員：<b class="text-brand-900">${staffName}</b></div>
+          <div>排入專員：<b class="text-brand-900">${staffName}</b></div>
+        </div>
+
+        <!-- 自由微調日期與時間 -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-bold mb-1 text-[11px]">排程日期</label>
+            <input type="date" id="quick-ins-date" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${date.replace(/\//g, '-')}">
+          </div>
+          <div>
+            <label class="block font-bold mb-1 text-[11px]">排程時間 (可自由微調)</label>
+            <input type="time" id="quick-ins-time" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${time}">
+          </div>
         </div>
 
         <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
-          <div class="text-[11px] font-bold text-amber-900 flex justify-between items-center">
-            <span>顧客資料 (可只填姓名或電話，系統自動比對)：</span>
-          </div>
-
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名</label>
-              <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="例如：王小美" oninput="debounceQuickCustomerSearch()">
+              <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名 *</label>
+              <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="王小美" oninput="debounceQuickCustomerSearch()">
             </div>
             <div>
               <label class="block text-[10px] text-gray-500 mb-0.5">聯絡手機</label>
@@ -4979,12 +5162,17 @@ function quickInsertBooking(date, time, staffId, staffName) {
             </div>
           </div>
 
-          <div>
-            <label class="block text-[10px] text-gray-500 mb-0.5">LINE 顯示名稱</label>
-            <input id="quick-ins-line" class="swal2-input !m-0 !w-full text-xs" placeholder="例：小美">
-          </div>
+          <!-- 🌟 寵美模式專屬：毛孩下拉選單區塊 -->
+          ${isPetMode ? `
+            <div id="quick-ins-pet-wrapper" class="space-y-1 pt-1 border-t border-amber-200/60">
+              <label class="block text-[10.5px] font-bold text-amber-950">🐾 選擇施作毛孩：</label>
+              <select id="quick-ins-pet-select" class="swal2-input !m-0 !w-full text-xs font-bold bg-white" onchange="onQuickInsertPetChange(this)">
+                <option value="NEW">＋ 現場臨時新毛孩 (下方填寫)</option>
+              </select>
+              <input id="quick-ins-new-pet-name" class="swal2-input !m-0 !w-full text-xs mt-1" placeholder="請輸入毛孩姓名 (例: 圓圓)">
+            </div>
+          ` : ''}
 
-          <!-- 即時智慧比對提示框 -->
           <div id="quick-ins-match-hint" class="text-[11px] font-bold min-h-[16px] leading-tight"></div>
         </div>
 
@@ -4998,86 +5186,76 @@ function quickInsertBooking(date, time, staffId, staffName) {
 
         <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="font-bold block mb-1">預估時長 (分鐘)</label>
-            <input type="number" id="quick-ins-duration" class="swal2-input !m-0 !w-full text-xs font-bold font-mono" value="60">
-          </div>
-          <div>
             <label class="font-bold block mb-1">費用預算 (NT$)</label>
             <input type="number" id="quick-ins-price" class="swal2-input !m-0 !w-full text-xs font-mono font-bold text-emerald-800" value="0">
+          </div>
+          <div>
+            <label class="font-bold block mb-1">時長 (分)</label>
+            <input type="number" id="quick-ins-duration" class="swal2-input !m-0 !w-full text-xs font-bold font-mono" value="60">
           </div>
         </div>
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '確認排入行程',
+    confirmButtonText: '確認排入排程',
     cancelButtonText: '取消',
     confirmButtonColor: '#8C7355',
-    didOpen: () => {
-      document.getElementById('quick-ins-name')?.focus();
-    },
     preConfirm: () => {
-      let name = document.getElementById('quick-ins-name')?.value.trim() || '';
-      let phone = document.getElementById('quick-ins-phone')?.value.trim() || '';
-      let line = document.getElementById('quick-ins-line')?.value.trim() || '';
-      
-      const sel = document.getElementById('quick-ins-service-select');
-      let service = sel?.value;
-      if (service === 'CUSTOM') {
-        service = document.getElementById('quick-ins-custom-service')?.value.trim();
-      }
+      let name = document.getElementById('quick-ins-name')?.value.trim();
+      let phone = document.getElementById('quick-ins-phone')?.value.trim();
+      const finalD = document.getElementById('quick-ins-date')?.value;
+      const finalT = document.getElementById('quick-ins-time')?.value;
 
-      if (!name && !phone && !line) {
-        Swal.showValidationMessage('姓名、手機或 LINE 至少需填寫一項！');
-        return false;
-      }
-      if (!service) {
-        Swal.showValidationMessage('請選取施作服務項目！');
+      if (!name && !phone) {
+        Swal.showValidationMessage('請至少填寫顧客姓名或手機號碼！');
         return false;
       }
 
-      // 🌟 核心防呆：若命中同名多筆，且尚未填寫電話，強制阻斷！
-      const hintText = document.getElementById('quick-ins-match-hint')?.innerText || '';
-      if (hintText.includes('⚠️ 偵測到多位同名顧客') && (!phone || phone.length < 8)) {
-        Swal.showValidationMessage('偵測到多位同名顧客，請補填手機號碼以精準指定！');
+      // 重名檢驗防呆
+      const hint = document.getElementById('quick-ins-match-hint')?.innerText || '';
+      if (hint.includes('⚠️ 門市有多位同名顧客') && (!phone || phone.length < 8)) {
+        Swal.showValidationMessage('門市有多位同名顧客，請務必補填手機號碼！');
         return false;
       }
 
-      // 若命中唯一舊客，但手機或 LINE 欄位留空，自動補齊
-      if (matchedCustomerCandidate) {
-        if (!name) name = matchedCustomerCandidate.name;
-        if (!phone) phone = matchedCustomerCandidate.phone;
-        if (!line && matchedCustomerCandidate.line_name) line = matchedCustomerCandidate.line_name;
+      // 取得毛孩名稱
+      let chosenPet = '';
+      if (isPetMode) {
+        const petSel = document.getElementById('quick-ins-pet-select')?.value;
+        chosenPet = (petSel === 'NEW') ? document.getElementById('quick-ins-new-pet-name')?.value.trim() : petSel;
       }
-
-      if (!name) name = line || (phone ? `顧客(${phone.slice(-4)})` : '現場顧客');
-      if (!phone) phone = '0900000000'; // 確定無資料且無同名爭議時之保底
 
       return {
-        name,
-        phone,
-        line,
-        service,
-        duration: Number(document.getElementById('quick-ins-duration')?.value || 60),
-        price: Number(document.getElementById('quick-ins-price')?.value || 0)
+        name: name || (phone ? `顧客(${phone.slice(-4)})` : '現場客'),
+        phone: phone || '0900000000',
+        date: finalD,
+        time: finalT,
+        petName: chosenPet,
+        service: document.getElementById('quick-ins-service-select')?.value,
+        price: Number(document.getElementById('quick-ins-price')?.value || 0),
+        duration: Number(document.getElementById('quick-ins-duration')?.value || 60)
       };
     }
   }).then(async r => {
     if (r.isConfirmed && r.value) {
       Swal.showLoading();
+      let noteText = `現場快速插單 (時長: ${r.value.duration}分)`;
+      if (r.value.petName) noteText = `【毛孩1: ${r.value.petName} / 項目: ${r.value.service}】 | ` + noteText;
+
       const payload = {
         store_id: CURRENT_STORE_ID,
         customer_name: r.value.name,
         customer_phone: r.value.phone,
-        line_name: r.value.line,
         service_names: r.value.service,
         price: r.value.price,
         final_price: r.value.price,
-        appointment_time: `${date.replace(/\//g, '-')}T${time}:00+08:00`,
+        appointment_time: `${r.value.date}T${r.value.time}:00+08:00`,
         staff_id: staffId,
         staff_name: staffName,
         status: '已確認',
-        notes: `現場快速插單 (耗時: ${r.value.duration}分)`
+        notes: noteText
       };
+
       await directSupabaseUpsert('bookings', payload, 'id');
       await fetchDataAndRender();
       renderOverviewGridCanvas();
@@ -5096,55 +5274,42 @@ function debounceQuickCustomerSearch() {
 async function checkQuickCustomerMatch() {
   const nameInput = document.getElementById('quick-ins-name');
   const phoneInput = document.getElementById('quick-ins-phone');
-  const lineInput = document.getElementById('quick-ins-line');
+  const petSelect = document.getElementById('quick-ins-pet-select');
   const hintEl = document.getElementById('quick-ins-match-hint');
-
-  if (!hintEl) return;
 
   const nameVal = nameInput ? nameInput.value.trim() : '';
   const phoneVal = phoneInput ? phoneInput.value.trim().replace(/\D/g, '') : '';
 
-  matchedCustomerCandidate = null;
+  if (phoneVal.length >= 8 || (nameVal && nameVal.length >= 2)) {
+    const query = (phoneVal.length >= 8) 
+      ? `customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}`
+      : `customers?store_id=eq.${CURRENT_STORE_ID}&name=eq.${encodeURIComponent(nameVal)}`;
 
-  // 1. 若已經填寫完整電話，優先精準鎖定
-  if (phoneVal.length >= 8) {
-    const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}`);
-    if (custs && custs.length > 0) {
-      const c = custs[0];
-      matchedCustomerCandidate = c;
-      if (nameInput && !nameInput.value) nameInput.value = c.name || '';
-      if (lineInput && !lineInput.value && c.line_name) lineInput.value = c.line_name;
-      hintEl.className = 'text-[11px] font-bold text-emerald-700 leading-tight';
-      hintEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> 已鎖定唯一顧客：${c.name} (${c.phone})`;
-      return;
-    }
-  }
+    const custs = await directSupabaseFetch(query);
 
-  // 2. 顧客只填寫「姓名」時的比對邏輯
-  if (nameVal && nameVal.length >= 2) {
-    const custs = await directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&name=eq.${encodeURIComponent(nameVal)}`);
-    
     if (custs && custs.length > 1) {
-      // ⚠️ 情況 A：有多位同名顧客
-      hintEl.className = 'text-[11px] font-bold text-rose-600 leading-tight animate-pulse';
-      hintEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ⚠️ 門市有 ${custs.length} 位同名「${nameVal}」！請補填手機號碼以精準指定。`;
-      matchedCustomerCandidate = null;
+      hintEl.className = 'text-[11px] font-bold text-rose-600 animate-pulse';
+      hintEl.innerHTML = `⚠️ 門市有多位同名顧客，請補填手機號碼！`;
       return;
     } else if (custs && custs.length === 1) {
-      // ✓ 情況 B：剛好只有 1 位
       const c = custs[0];
-      matchedCustomerCandidate = c;
-      if (phoneInput && !phoneInput.value) phoneInput.value = c.phone || '';
-      if (lineInput && !lineInput.value && c.line_name) lineInput.value = c.line_name;
-      hintEl.className = 'text-[11px] font-bold text-emerald-700 leading-tight';
-      hintEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> 已自動帶入舊客檔案：${c.name} (${c.phone})`;
+      if (phoneInput && !phoneInput.value) phoneInput.value = c.phone;
+      if (nameInput && !nameInput.value) nameInput.value = c.name;
+      hintEl.className = 'text-[11px] font-bold text-emerald-700';
+      hintEl.innerHTML = `✓ 已鎖定舊客：${c.name} (${c.phone})`;
+
+      // 🌟 若有毛孩選單，自動從資料庫把名下毛孩全部撈出來塞進選單
+      if (petSelect) {
+        const pets = await directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${c.phone}`);
+        if (pets && pets.length > 0) {
+          petSelect.innerHTML = pets.map(p => `<option value="${p.name}">🐾 ${p.name} (${p.breed || '毛孩'})</option>`).join('') + '<option value="NEW">＋ 現場登記新毛孩</option>';
+          document.getElementById('quick-ins-new-pet-name')?.classList.add('hidden');
+        }
+      }
       return;
     }
   }
-
-  // 查無資料
-  hintEl.className = 'text-[10px] text-gray-400 font-normal';
-  hintEl.innerText = nameVal ? '新客建檔 (無歷史紀錄)' : '';
+  hintEl.innerText = '';
 }
 
 // 插單下拉選單連動帶出時長與金額
@@ -5192,109 +5357,6 @@ async function onQuickInsertPhoneInput(phoneVal) {
     }
   }
   if (hintEl) hintEl.innerText = '';
-}
-
-// ========================================================
-// 【自適應排版版】renderOverviewGridCanvas() — 單人全螢幕填滿免左右滑動
-// ========================================================
-function renderOverviewGridCanvas() {
-  const canvas = document.getElementById('overview-grid-canvas');
-  if (!canvas) return;
-
-  const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
-  const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
-
-  let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-  if (staffList.length === 0) {
-    staffList = [{ id: 'staff_1', name: '專員' }];
-  }
-
-  const isSingleStaff = (staffList.length === 1);
-
-  const startTime = backendData.settings?.shiftStartTime || '09:00';
-  const endTime = backendData.settings?.shiftEndTime || '19:00';
-  const interval = Number(backendData.settings?.shiftInterval || 15);
-
-  const [sH, sM] = startTime.split(':').map(Number);
-  const [eH, eM] = endTime.split(':').map(Number);
-  const timeSlots = [];
-  for (let m = sH * 60 + sM; m < eH * 60 + eM; m += interval) {
-    const hh = String(Math.floor(m / 60)).padStart(2, '0');
-    const mm = String(m % 60).padStart(2, '0');
-    timeSlots.push(`${hh}:${mm}`);
-  }
-
-  const apptsToday = (backendData.appointments || []).filter(a => {
-    return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
-  });
-
-  // 寬度類別：單人時 w-full min-w-0 (適應手機螢幕)；多人時 min-w-[130px]
-  const colClass = isSingleStaff 
-    ? "flex-1 min-w-0 px-2 py-2" 
-    : "flex-1 min-w-[130px] px-2 py-2";
-
-  let headerHtml = `
-    <div class="sticky top-0 z-20 flex bg-white border-b border-brand-200 shadow-2xs">
-      <div class="w-14 shrink-0 py-2.5 text-center text-[10.5px] font-bold text-brand-400 border-r border-brand-100 bg-brand-50/50">時間</div>
-      ${staffList.map(st => `
-        <div class="${colClass} text-center border-r border-brand-100 last:border-r-0">
-          <div class="w-6 h-6 mx-auto rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs mb-0.5">
-            <i class="fa-solid fa-user-tie text-[10px]"></i>
-          </div>
-          <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
-  let rowsHtml = '';
-  timeSlots.forEach(slot => {
-    rowsHtml += `
-      <div class="flex border-b border-brand-100 min-h-[46px] hover:bg-brand-50/20 transition">
-        <div class="w-14 shrink-0 flex items-center justify-center text-[10.5px] font-mono text-brand-400 font-bold border-r border-brand-100 bg-brand-50/20">${slot}</div>
-        ${staffList.map(st => {
-          const matchedAppt = apptsToday.find(a => {
-            const aStaff = String(a.staffName || '').trim();
-            const isStaffMatch = (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
-            return isStaffMatch && a.time === slot;
-          });
-
-          if (matchedAppt) {
-            const safeService = (matchedAppt.service || '').replace(/'/g, "\\'");
-            const safeName = (matchedAppt.name || '').replace(/'/g, "\\'");
-            const colorTheme = getServiceMorandiColor(matchedAppt.service);
-
-            return `
-              <div class="${colClass} p-1 border-r border-brand-100 last:border-r-0" style="background-color: ${colorTheme.lightBg};">
-                <div class="h-full p-2 rounded-xl shadow-2xs text-[11px] cursor-pointer hover:opacity-90 transition space-y-0.5 border" style="background-color: ${colorTheme.bg}; color:${colorTheme.text}; border-color: ${colorTheme.border};" onclick="openCheckoutModal('${matchedAppt.id}', '${safeName}', '${matchedAppt.phone}', '${safeService}',${Number(matchedAppt.price || 0)})">
-                  <div class="font-bold flex justify-between items-center gap-1">
-                    <span class="truncate text-xs">${matchedAppt.name}</span>
-                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-black/20 text-white font-mono shrink-0">${colorTheme.tag}</span>
-                  </div>
-                  <div class="text-[10px] opacity-90 truncate leading-tight">${matchedAppt.service}</div>
-                </div>
-              </div>
-            `;
-          }
-
-          return `
-            <div class="${colClass} p-1 border-r border-brand-100 last:border-r-0 cursor-pointer hover:bg-emerald-50/40 transition group flex items-center justify-center" onclick="quickInsertBooking('${targetDateSlash}', '${slot}', '${st.id}', '${st.name}')">
-              <span class="text-[10px] text-brand-300 opacity-0 group-hover:opacity-100 transition font-bold">+ 插單</span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  });
-
-  // 容器寬度：若單人則移除強制 min-w-[500px]，採用 w-full 自適應手機螢幕
-  canvas.className = isSingleStaff ? "w-full space-y-2" : "min-w-[500px] space-y-2";
-  canvas.innerHTML = `
-    <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-sm w-full">
-      ${headerHtml}
-      <div class="divide-y divide-brand-50">${rowsHtml}</div>
-    </div>
-  `;
 }
     
     function showApptsInCalendar(dateStr) {
@@ -6444,54 +6506,81 @@ function renderCustomer() {
     // ========================================================
 // 【智慧判斷版】renderBoardingRoomStatus() — 依退房時間自動釋出房間
 // ========================================================
+// ========================================================
+// 【修復升級】renderBoardingRoomStatus — 包含頂部數據即時統計
+// ========================================================
 function renderBoardingRoomStatus() {
   const container = document.getElementById('boarding-room-grid');
   if (!container) return;
 
   const totalRooms = Number(backendData.settings?.totalHotelRooms || 8);
-  
-  // 1. 取得目前畫面檢視的日期 (格式: YYYY/MM/DD)
   const viewDateHyphen = document.getElementById('boarding-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateStr = viewDateHyphen.replace(/-/g, '/');
-  const targetDateMs = new Date(targetDateStr.replace(/\//g, '-')).getTime();
+  const targetDateMs = new Date(viewDateHyphen).getTime();
 
-  // 2. 嚴格篩選：只有在「入住日至退房日期間」的住宿訂單才算今日在宿
-  const activeBoardingAppts = (backendData.appointments || []).filter(a => {
-    if (!(a.service || '').includes('住宿') || a.status === '已取消' || a.status === '婉拒') return false;
+  // 1. 嚴格比對在宿期間
+  let currentActiveGuests = [];
+  let todayCheckoutGuests = 0;
+
+  (backendData.appointments || []).forEach(a => {
+    if (a.status === '已取消' || a.status === '婉拒' || a.status === '已結單') return;
+    if (!(a.service || '').includes('住宿') && !(a.notes || '').includes('住宿排程:')) return;
 
     const notes = a.notes || '';
-    const matchStay = notes.match(/【住宿排程:\s*([^\s]+)\s*([^\s]+)\s*入住\s*至\s*([^\s]+)\s*([^\s]+)\s*退房/);
-    
-    if (matchStay) {
-      const checkinDate = matchStay[1].replace(/-/g, '/');
-      const checkoutDate = matchStay[3].replace(/-/g, '/');
-      
-      const inMs = new Date(checkinDate.replace(/\//g, '-')).getTime();
-      const outMs = new Date(checkoutDate.replace(/\//g, '-')).getTime();
+    const match = notes.match(/住宿排程:\s*([0-9\/-]+)\s*([0-9:]+)?\s*入住\s*至\s*([0-9\/-]+)\s*([0-9:]+)?\s*退房/);
 
-      // 當前檢視日期必須大於等於入住日，且小於等於退房日
-      return (targetDateMs >= inMs && targetDateMs <= outMs);
-    } else {
-      // 若無結構化排程，預設以訂單當日比對
-      return (a.date === targetDateStr);
+    if (match) {
+      const inDate = match[1].replace(/\//g, '-');
+      const inTime = match[2] || '10:00';
+      const outDate = match[3].replace(/\//g, '-');
+      const outTime = match[4] || '18:00';
+
+      const inMs = new Date(inDate).getTime();
+      const outMs = new Date(outDate).getTime();
+
+      // 在宿判定：當前日期落在入住與退房日之間
+      if (targetDateMs >= inMs && targetDateMs <= outMs) {
+        currentActiveGuests.push({ ...a, inDate, inTime, outDate, outTime });
+      }
+
+      // 預定退宿判定：退房日剛好是檢視日
+      if (outDate === viewDateHyphen) {
+        todayCheckoutGuests++;
+      }
+    } else if (a.date === targetDateStr) {
+      currentActiveGuests.push({ ...a, inDate: targetDateStr, inTime: a.time, outDate: targetDateStr, outTime: '18:00' });
     }
   });
 
+  // 2. 🌟 即時更新頂部 3 大房況指標數字
+  const activeCountEl = document.getElementById('boarding-active-count');
+  const checkoutCountEl = document.getElementById('boarding-checkout-count');
+  const vacancyRateEl = document.getElementById('boarding-vacancy-rate');
+
+  const activeNum = currentActiveGuests.length;
+  if (activeCountEl) activeCountEl.innerText = `${activeNum} 隻`;
+  if (checkoutCountEl) checkoutCountEl.innerText = `${todayCheckoutGuests} 隻`;
+  if (vacancyRateEl) {
+    const rate = Math.max(0, Math.round(((totalRooms - activeNum) / totalRooms) * 100));
+    vacancyRateEl.innerText = `${rate}%`;
+  }
+
+  // 3. 渲染房間九宮格
   let html = '';
   for (let i = 1; i <= totalRooms; i++) {
     const roomNo = `R${String(i).padStart(2, '0')}`;
-    const appt = activeBoardingAppts[i - 1]; // 依序對應當天在宿毛孩
-    const isOccupied = Boolean(appt);
+    const guest = currentActiveGuests[i - 1];
+    const isOccupied = Boolean(guest);
 
     let realPetName = '在宿毛孩';
-    if (appt) {
-      const match = (appt.notes || '').match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
+    if (guest) {
+      const match = (guest.notes || '').match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
       if (match && match[1]) realPetName = match[1].trim();
-      else if (appt.pet_name) realPetName = appt.pet_name;
+      else if (guest.pet_name) realPetName = guest.pet_name;
     }
 
     html += `
-      <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}', ${isOccupied ? `'${appt.id}', '${realPetName}'` : 'null, null'})">
+      <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}', ${isOccupied ? `'${guest.id}', '${realPetName}', '${guest.inDate}${guest.inTime}', '${guest.outDate}${guest.outTime}'` : 'null, null, null, null'})">
         <div class="flex justify-between items-center pb-1 border-b ${isOccupied ? 'border-amber-200' : 'border-gray-100'}">
           <span class="font-bold font-mono">${roomNo}</span>
           <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${isOccupied ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'}">
@@ -6500,20 +6589,18 @@ function renderBoardingRoomStatus() {
         </div>
         <div class="mt-1.5 space-y-0.5">
           <div class="font-bold truncate text-brand-900">${isOccupied ? `🐾 ${realPetName}` : '可排入'}</div>
-          <div class="text-[10px] text-gray-500 font-mono">${isOccupied ? `家長: ${appt.name}` : '已消毒'}</div>
+          <div class="text-[10px] text-gray-500 font-mono">${isOccupied ? `家長: ${guest.name}` : '已消毒'}</div>
         </div>
       </div>
     `;
   }
   container.innerHTML = html;
 }
-  function selectBoardingDate(dStr) {
-    document.getElementById('boarding-view-date').value = dStr.replace(/\//g, '-');
-    renderBoardingRoomStatus();
-  }
 
-  // 住宿房況房間卡片點擊：提供「查看毛孩履歷」與「退房結單」
-function handleRoomCardClick(roomNo, bookingId, petName) {
+// ========================================================
+// 【修復升級】handleRoomCardClick — 完整展示入住與退宿起訖
+// ========================================================
+function handleRoomCardClick(roomNo, bookingId, petName, checkInTimeStr, checkOutTimeStr) {
   if (bookingId) {
     const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
     if (!appt) return;
@@ -6524,7 +6611,146 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
         <div class="text-left text-xs space-y-2 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950 font-sans">
           <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName || '寶貝'}</b></div>
           <div>家長資訊：<b>${appt.name}</b> <span class="font-mono text-gray-600">(${appt.phone})</span></div>
-          <div>入住排程：<b class="font-mono">${appt.date} ${appt.time}</b></div>
+          <div class="pt-1.5 border-t border-amber-200/80 space-y-1 font-mono">
+            <div class="text-emerald-800">🟢 <b>入住進場：</b>${checkInTimeStr || (appt.date + ' ' + appt.time)}</div>
+            <div class="text-rose-700">🔴 <b>預計退房：</b>${checkOutTimeStr || '待確認'}</div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: '🐾 查看毛孩詳細照護履歷',
+      denyButtonText: '辦理退宿結單',
+      cancelButtonText: '關閉',
+      confirmButtonColor: '#8C7355',
+      denyButtonColor: '#10B981'
+    }).then(r => {
+      if (r.isConfirmed) {
+        openPetProfileModal(appt.phone, petName);
+      } else if (r.isDenied) {
+        openCheckoutModal(appt.id, appt.name, appt.phone, appt.service, appt.price);
+      }
+    });
+  } else {
+    Swal.fire({
+      title: `安排毛孩入住 ${roomNo}`,
+      text: '該房間目前為空房且已消毒完成，是否前往建立代客預約排程？',
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: '前往代客排程',
+      confirmButtonColor: '#8C7355'
+    }).then(r => {
+      if (r.isConfirmed) {
+        switchPage('add', document.querySelectorAll('.nav-item')[9]);
+        document.querySelector('input[name="quick-industry-mode"][value="pet_hotel"]')?.click();
+      }
+    });
+  }
+}
+
+// ========================================================
+// 【修復升級】renderBoardingCareChecklist — 嚴格排除舊房客並附帶起訖小字
+// ========================================================
+function renderBoardingCareChecklist() {
+  const container = document.getElementById('boarding-care-checklist');
+  if (!container) return;
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayHyphen = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const todayMs = new Date(todayHyphen).getTime();
+
+  // 嚴格篩選：只有「今天真實仍在宿且未結單」的毛孩才納入放飯清單
+  const activeFeedingList = [];
+
+  (backendData.appointments || []).forEach(b => {
+    if (b.status === '已取消' || b.status === '婉拒' || b.status === '已結單') return;
+    if (!(b.service || '').includes('住宿') && !(b.notes || '').includes('住宿排程:')) return;
+
+    const notesStr = b.notes || '';
+    const matchStay = notesStr.match(/住宿排程:\s*([0-9\/-]+)\s*([0-9:]+)?\s*入住\s*至\s*([0-9\/-]+)\s*([0-9:]+)?\s*退房/);
+
+    if (matchStay) {
+      const inDate = matchStay[1].replace(/\//g, '-');
+      const inTime = matchStay[2] || '10:00';
+      const outDate = matchStay[3].replace(/\//g, '-');
+      const outTime = matchStay[4] || '18:00';
+
+      const inMs = new Date(inDate).getTime();
+      const outMs = new Date(outDate).getTime();
+
+      // 只有在入住日至退房日期間才放飯
+      if (todayMs >= inMs && todayMs <= outMs) {
+        activeFeedingList.push({ ...b, inDate, inTime, outDate, outTime });
+      }
+    }
+  });
+
+  if (activeFeedingList.length === 0) {
+    container.innerHTML = '<div class="text-center py-5 text-brand-400 text-xs">今日無在宿毛孩需要供餐</div>';
+    return;
+  }
+
+  container.innerHTML = activeFeedingList.map(b => {
+    const notesStr = b.notes || '';
+    const petMatch = notesStr.match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
+    const petName = petMatch ? petMatch[1].trim() : (b.pet_name || '毛孩');
+
+    let mealDisplay = '自備食料';
+    let isStoreMeal = false;
+    if (notesStr.includes('一日三餐')) { mealDisplay = '鮮食 (一日三餐)'; isStoreMeal = true; }
+    else if (notesStr.includes('一日兩餐')) { mealDisplay = '鮮食 (一日兩餐)'; isStoreMeal = true; }
+    else if (notesStr.includes('一日一餐')) { mealDisplay = '鮮食 (一日一餐)'; isStoreMeal = true; }
+
+    return `
+      <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2 text-xs shadow-2xs">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-amber-950 text-sm">🐾 ${petName}</span>
+              <span class="text-gray-400 text-[11px] font-medium">(${b.name} 的寶貝)</span>
+              <span class="px-2 py-0.5 ${isStoreMeal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-[10px] font-bold rounded-md">
+                ${mealDisplay}
+              </span>
+            </div>
+            <div class="text-[10px] text-gray-400 font-mono mt-1">電話：${b.phone}</div>
+          </div>
+          <div class="flex gap-3 font-bold text-xs text-brand-800 bg-brand-50/70 px-3 py-1.5 rounded-xl border border-brand-100 shrink-0">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 早 09:00</label>
+            ${mealDisplay.includes('三餐') ? '<label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 午 12:30</label>' : ''}
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 晚 18:00</label>
+          </div>
+        </div>
+        <!-- 附帶宿期小字核對 -->
+        <div class="text-[10px] text-brand-500 font-mono bg-brand-50/50 p-1.5 rounded-lg border border-brand-100">
+          📅 宿期：${b.inDate} ${b.inTime} 入住 ～ ${b.outDate} ${b.outTime} 退房
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+    
+  function selectBoardingDate(dStr) {
+    document.getElementById('boarding-view-date').value = dStr.replace(/\//g, '-');
+    renderBoardingRoomStatus();
+  }
+
+  // 住宿房況房間卡片點擊：提供「查看毛孩履歷」與「退房結單」
+function handleRoomCardClick(roomNo, bookingId, petName, checkInTimeStr, checkOutTimeStr) {
+  if (bookingId) {
+    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+    if (!appt) return;
+
+    Swal.fire({
+      title: `🏨 房號 ${roomNo} 在宿管理`,
+      html: `
+        <div class="text-left text-xs space-y-2 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950 font-sans">
+          <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName || '寶貝'}</b></div>
+          <div>家長資訊：<b>${appt.name}</b> <span class="font-mono text-gray-600">(${appt.phone})</span></div>
+          <div class="pt-1.5 border-t border-amber-200/80 space-y-1 font-mono">
+            <div class="text-emerald-800">🟢 <b>入住進場：</b>${checkInTimeStr || (appt.date + ' ' + appt.time)}</div>
+            <div class="text-rose-700">🔴 <b>預計退房：</b>${checkOutTimeStr || '待確認'}</div>
+          </div>
         </div>
       `,
       showCancelButton: true,
@@ -6604,59 +6830,83 @@ function handleRoomCardClick(roomNo, bookingId, petName) {
   }
     
     function renderBoardingCareChecklist() {
-      const container = document.getElementById('boarding-care-checklist');
-      if (!container) return;
-      const inStay = (backendData.appointments || []).filter(a => (a.service || '').includes('住宿') && a.status !== '已取消' && a.status !== '婉拒');
+  const container = document.getElementById('boarding-care-checklist');
+  if (!container) return;
 
-      if (inStay.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-brand-400 text-xs">今日無在宿毛孩供餐任務</div>';
-        return;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayHyphen = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const todayMs = new Date(todayHyphen).getTime();
+
+  // 嚴格篩選：只有「今天真實仍在宿且未結單」的毛孩才納入放飯清單
+  const activeFeedingList = [];
+
+  (backendData.appointments || []).forEach(b => {
+    if (b.status === '已取消' || b.status === '婉拒' || b.status === '已結單') return;
+    if (!(b.service || '').includes('住宿') && !(b.notes || '').includes('住宿排程:')) return;
+
+    const notesStr = b.notes || '';
+    const matchStay = notesStr.match(/住宿排程:\s*([0-9\/-]+)\s*([0-9:]+)?\s*入住\s*至\s*([0-9\/-]+)\s*([0-9:]+)?\s*退房/);
+
+    if (matchStay) {
+      const inDate = matchStay[1].replace(/\//g, '-');
+      const inTime = matchStay[2] || '10:00';
+      const outDate = matchStay[3].replace(/\//g, '-');
+      const outTime = matchStay[4] || '18:00';
+
+      const inMs = new Date(inDate).getTime();
+      const outMs = new Date(outDate).getTime();
+
+      // 只有在入住日至退房日期間才放飯
+      if (todayMs >= inMs && todayMs <= outMs) {
+        activeFeedingList.push({ ...b, inDate, inTime, outDate, outTime });
       }
-
-      container.innerHTML = inStay.map(b => {
-        const notesStr = b.notes || '';
-        
-        // 1. 正確解析毛孩名字
-        const petMatch = notesStr.match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
-        const petName = petMatch ? petMatch[1].trim() : (b.pet_name || '毛孩');
-
-        // 2. 正確判定供餐方案（抓取備註中的供餐字樣）
-        let mealDisplay = '自備食料';
-        let isStoreMeal = false;
-        if (notesStr.includes('鮮食') || notesStr.includes('供餐')) {
-          if (notesStr.includes('一日三餐')) { mealDisplay = '鮮食 (一日三餐)'; isStoreMeal = true; }
-          else if (notesStr.includes('一日兩餐')) { mealDisplay = '鮮食 (一日兩餐)'; isStoreMeal = true; }
-          else if (notesStr.includes('一日一餐')) { mealDisplay = '鮮食 (一日一餐)'; isStoreMeal = true; }
-        }
-
-        // 3. 體型級距
-        let dogSize = '小型犬';
-        if (notesStr.includes('大型犬')) dogSize = '大型犬';
-        else if (notesStr.includes('中型犬')) dogSize = '中型犬';
-        else if (notesStr.includes('貓')) dogSize = '貓咪';
-
-        return `
-          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 text-xs shadow-2xs">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="font-black text-amber-950 text-sm">🐾 ${petName}</span>
-                <span class="text-gray-400 text-[11px] font-medium">(${b.name} 的寶貝)</span>
-                <span class="px-1.5 py-0.5 bg-brand-100 text-brand-700 text-[10px] font-bold rounded">${dogSize}</span>
-                <span class="px-2 py-0.5 ${isStoreMeal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-[10.5px] font-bold rounded-md">
-                  ${mealDisplay}
-                </span>
-              </div>
-              <div class="text-[11px] text-brand-500 mt-1 font-mono">${b.phone} ｜ 房客</div>
-            </div>
-            <div class="flex gap-4 font-bold text-xs text-brand-800 bg-brand-50/60 px-3 py-1.5 rounded-xl border border-brand-100">
-              <label class="flex items-center gap-1.5 cursor-pointer hover:text-amber-700"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 早 09:00</label>
-              <label class="flex items-center gap-1.5 cursor-pointer hover:text-amber-700"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 晚 18:00</label>
-            </div>
-          </div>
-        `;
-      }).join('');
     }
+  });
 
+  if (activeFeedingList.length === 0) {
+    container.innerHTML = '<div class="text-center py-5 text-brand-400 text-xs">今日無在宿毛孩需要供餐</div>';
+    return;
+  }
+
+  container.innerHTML = activeFeedingList.map(b => {
+    const notesStr = b.notes || '';
+    const petMatch = notesStr.match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
+    const petName = petMatch ? petMatch[1].trim() : (b.pet_name || '毛孩');
+
+    let mealDisplay = '自備食料';
+    let isStoreMeal = false;
+    if (notesStr.includes('一日三餐')) { mealDisplay = '鮮食 (一日三餐)'; isStoreMeal = true; }
+    else if (notesStr.includes('一日兩餐')) { mealDisplay = '鮮食 (一日兩餐)'; isStoreMeal = true; }
+    else if (notesStr.includes('一日一餐')) { mealDisplay = '鮮食 (一日一餐)'; isStoreMeal = true; }
+
+    return `
+      <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2 text-xs shadow-2xs">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-black text-amber-950 text-sm">🐾 ${petName}</span>
+              <span class="text-gray-400 text-[11px] font-medium">(${b.name} 的寶貝)</span>
+              <span class="px-2 py-0.5 ${isStoreMeal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-[10px] font-bold rounded-md">
+                ${mealDisplay}
+              </span>
+            </div>
+            <div class="text-[10px] text-gray-400 font-mono mt-1">電話：${b.phone}</div>
+          </div>
+          <div class="flex gap-3 font-bold text-xs text-brand-800 bg-brand-50/70 px-3 py-1.5 rounded-xl border border-brand-100 shrink-0">
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 早 09:00</label>
+            ${mealDisplay.includes('三餐') ? '<label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 午 12:30</label>' : ''}
+            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 晚 18:00</label>
+          </div>
+        </div>
+        <!-- 附帶宿期小字核對 -->
+        <div class="text-[10px] text-brand-500 font-mono bg-brand-50/50 p-1.5 rounded-lg border border-brand-100">
+          📅 宿期：${b.inDate} ${b.inTime} 入住 ～ ${b.outDate} ${b.outTime} 退房
+        </div>
+      </div>
+    `;
+  }).join('');
+}
     // ==========================================
     // 8. 專員排班調度 (高對比色切換)
     // ==========================================
@@ -11396,10 +11646,16 @@ async function saveLifetimeStoreSettings() {
 
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
-
+  
   const payload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
+    boarding_meal_notes: {
+      none: "自備習慣食用之乾糧飼料或罐頭分裝包",
+      one: getVal('lt-meal-note-one') || "安排於晚間 18:00 供餐",
+      two: getVal('lt-meal-note-two') || "固定於早 09:00、晚 18:00 供餐",
+      three: getVal('lt-meal-note-three') || "早 09:00、午 12:30、晚 18:00 三餐完整照護"
+    },
     display_subtitle: getVal('lt-subtitle'),
     logo_url: getVal('lt-logo'),
     enable_logo: getCheck('lt-toggle-logo'),
@@ -12292,6 +12548,73 @@ function createThemedBookingCard(themeKey, data) {
       ]
     }
   };
+}
+
+  // ========================================================
+// 🌟【一鍵釋出時段】openAppointmentDetailModal — 支援現場快速刪單釋出
+// ========================================================
+function openAppointmentDetailModal(apptId, name, phone, service, price, time, duration) {
+  const currentRole = window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner';
+
+  Swal.fire({
+    title: `📋 預約排程明細`,
+    html: `
+      <div class="text-left text-xs space-y-2.5 p-1 font-sans">
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
+          <div class="flex justify-between items-center text-sm font-black text-brand-900">
+            <span>${name}</span>
+            <span class="text-xs text-theme-primary font-mono">${time} (${duration}分鐘)</span>
+          </div>
+          <div class="text-brand-600 font-mono">📞 電話：${phone || '無資料'}</div>
+          <div class="text-brand-800 font-bold">✂️ 項目：${service}</div>
+          <div class="text-emerald-800 font-bold font-mono">💰 實收預估：NT$ ${price.toLocaleString()} 元</div>
+        </div>
+      </div>
+    `,
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: '結帳 / 完成施作',
+    denyButtonText: '🗑️ 刪除預約 (釋出時段)', // 🌟 店長最想要的快速按鈕
+    cancelButtonText: '返回',
+    confirmButtonColor: '#8C7355',
+    denyButtonColor: '#E11D48',
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      // 導向結帳
+      openCheckoutModal(apptId, name, phone, service, price);
+    } else if (result.isDenied) {
+      // 🌟 二次確認刪除並釋出
+      const confirmDelete = await Swal.fire({
+        title: '確定要取消並釋出此時段？',
+        text: `取消後，【${name}】的時段將立即恢復為白格，供其他顧客預約或現場插單。`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '確定取消釋出',
+        cancelButtonText: '暫不更動',
+        confirmButtonColor: '#E11D48'
+      });
+
+      if (confirmDelete.isConfirmed) {
+        Swal.showLoading();
+        // 將狀態改為已取消，該時段即刻釋出
+        await directSupabasePatch('bookings', `id=eq.${apptId}`, {
+          status: '已取消',
+          cancel_reason: '現場人員於總覽手動取消並釋出時段'
+        });
+
+        // 重新拉取並重繪畫布
+        await fetchDataAndRender();
+        renderOverviewGridCanvas();
+
+        Swal.fire({
+          title: '時段已順利釋出！',
+          icon: 'success',
+          timer: 1000,
+          showConfirmButton: false
+        });
+      }
+    }
+  });
 }
   </script>
 </body>
