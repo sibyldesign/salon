@@ -4915,6 +4915,9 @@ function selectOverviewDateBtn(dHyphen) {
 // ========================================================
 // 🌟【甘特圖優化】：凍結時間軸 (sticky left-0) +「滑動」「全覽」模式
 // ========================================================
+// ========================================================
+// 🌟【甘特圖終極整合版】：凍結時間軸 (sticky) + 滑動/全覽切換 + 雙單並排防遮擋
+// ========================================================
 function setOverviewZoomMode(mode) {
   currentOverviewZoomMode = mode;
   renderOverviewGridCanvas();
@@ -4968,7 +4971,7 @@ function renderOverviewGridCanvas() {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 1. 🌟 按鈕簡化為「滑動」與「全覽」
+  // 1. 按鈕簡化為「滑動」與「全覽」
   let controlsHtml = `
     <div class="flex flex-wrap justify-between items-center gap-2 mb-2 px-1">
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
@@ -4995,17 +4998,15 @@ function renderOverviewGridCanvas() {
     </div>
   `;
 
-  // 2. 🌟 滑動模式單欄寬度提升至 200px (一專員一完整條)，全覽模式等比均分
+  // 2. 寬度樣式配置：滑動模式每專員 200px 獨立寬敞條，全覽模式彈性均分
   const staffColWidthStyle = isFitMode ? "flex: 1; min-width: 0;" : "width: 200px; min-width: 200px; flex-shrink: 0;";
 
-  // 表頭
   let headerColsHtml = displayStaffList.map(st => `
     <div style="${staffColWidthStyle}" class="text-center py-2 px-1 border-r border-brand-100 last:border-r-0 bg-white">
       <div class="font-bold ${isFitMode ? 'text-[11px]' : 'text-xs'} text-brand-900 truncate">${st.name}</div>
     </div>
   `).join('');
 
-  // 時間刻度
   let timeLabelsHtml = '';
   for (let i = 0; i < totalSlotsCount; i++) {
     const curM = dayStartMinutes + i * interval;
@@ -5020,7 +5021,7 @@ function renderOverviewGridCanvas() {
     `;
   }
 
-  // 專員預約直欄 (含 Group A/B 重疊自動左右並排)
+  // 3. 專員預約直欄（含碰撞重疊並排處理，所有字串模板嚴格保留 ${}）
   let staffColumnsHtml = displayStaffList.map(st => {
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
@@ -5115,11 +5116,11 @@ function renderOverviewGridCanvas() {
     `;
   }).join('');
 
-  // 3. 🌟【核心關鍵】：將外層設為 overflow-x-auto，時間欄設為 sticky left-0 z-30
+  // 4. 凍結最左側時間欄 (sticky left-0)
   canvas.innerHTML = controlsHtml + `
     <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-xs">
       <div class="overflow-x-auto relative">
-        <!-- 頂部表頭 (時間標籤同樣鎖在最左側) -->
+        <!-- 頂部表頭 -->
         <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white">
           <div class="w-14 shrink-0 py-2 text-center text-[11px] font-bold text-brand-500 bg-brand-50 border-r border-brand-200 sticky left-0 z-40 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">
             時間
@@ -5129,7 +5130,7 @@ function renderOverviewGridCanvas() {
           </div>
         </div>
 
-        <!-- 內容本體 (最左側時間欄 sticky 凍結) -->
+        <!-- 內容主體 -->
         <div class="flex relative" style="height: ${totalTimelineHeight}px;">
           <div class="w-14 shrink-0 bg-brand-50/95 border-r border-brand-200 sticky left-0 z-20 select-none shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] backdrop-blur-xs">
             ${timeLabelsHtml}
