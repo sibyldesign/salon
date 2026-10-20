@@ -3029,8 +3029,8 @@
         </button>
       </div>
 
-      <!-- 17. 門市核心營運模式切換 (重大設定) -->
-      <div id="section-industry-mode-switch" class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6">
+      <!-- 17. 門市核心營運模式切換 (僅供訂閱版/管理員除錯使用，買斷版永久隱藏) -->
+      <div id="section-industry-mode-switch" class="bg-amber-50/60 p-5 rounded-3xl border border-amber-300 shadow-sm space-y-3 mt-6 sub-only-mode-switch">
         <div class="flex items-center justify-between border-b border-amber-200 pb-2">
           <div>
             <span class="text-xs font-bold text-amber-950 block flex items-center gap-1.5">
@@ -4764,31 +4764,32 @@ async function fetchDataAndRender() {
     }
 
     // ========================================================
-// 【商業營運模式切換器】精確控制前台版型、分頁導覽與後台卡片顯隱
+// 【修復加固版】handleIndustryModeChange — 純美業徹底消滅所有寵物模組與分頁
 // ========================================================
 function handleIndustryModeChange(mode) {
-  const isPetGrooming = (mode === 'pet_grooming');
-  const isPetHotel = (mode === 'pet_hotel');
-  const isBeauty = (mode === 'beauty');
+  const currentMode = mode || backendData.settings?.industryMode || backendData.storeInfo?.industry_type || 'beauty';
+  const isBeauty = (currentMode === 'beauty');
+  const isPetGrooming = (currentMode === 'pet_grooming');
+  const isPetHotel = (currentMode === 'pet_hotel');
 
-  // 1. 底部分頁按鈕顯隱
+  // 1. 底部分頁導覽列嚴格控制
   const navBoarding = document.getElementById('nav-btn-boarding');
   const navPets = document.getElementById('nav-btn-pets');
+
+  // 純美業模式：住宿與毛孩分頁 100% 徹底拔除！
   if (navBoarding) navBoarding.style.setProperty('display', isPetHotel ? 'flex' : 'none', 'important');
-  if (navPets) navPets.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'flex' : 'none', 'important');
+  if (navPets) navPets.style.setProperty('display', (!isBeauty && (isPetGrooming || isPetHotel)) ? 'flex' : 'none', 'important');
 
-  // 2. 設定分頁內部寵物相關大卡片顯隱 (純美業模式下 100% 徹底隱形)
-  const hotelSettings = document.getElementById('section-pet-hotel-settings');
-  const petQuestions = document.getElementById('section-pet-questions-manager');
-  
-  if (hotelSettings) {
-    hotelSettings.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
-  }
-  if (petQuestions) {
-    petQuestions.style.setProperty('display', (isPetGrooming || isPetHotel) ? 'block' : 'none', 'important');
-  }
+  // 2. 設定分頁內部寵物專屬卡片 (純美業下永遠 display: none !important)
+  const hotelSettingsSub = document.getElementById('section-pet-hotel-settings');
+  const petQuestionsSub = document.getElementById('section-pet-questions-manager');
+  const hotelSettingsLt = document.getElementById('lt-section-pet-hotel-settings');
 
-  // 3. 代客預約 (page-add) 模式切換器自適應
+  if (hotelSettingsSub) hotelSettingsSub.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+  if (petQuestionsSub) petQuestionsSub.style.setProperty('display', (!isBeauty) ? 'block' : 'none', 'important');
+  if (hotelSettingsLt) hotelSettingsLt.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+
+  // 3. 代客卡位 (page-add) 模式切換器與寵物欄位
   const quickModeBox = document.querySelector('input[name="quick-industry-mode"]')?.closest('.p-3\\.5');
   const petFieldsBox = document.getElementById('quick-pet-fields-box');
   const hotelRangeBox = document.getElementById('quick-hotel-range-box');
@@ -4805,10 +4806,16 @@ function handleIndustryModeChange(mode) {
     if (quickModeBox) quickModeBox.style.removeProperty('display');
   }
 
-  // 4. 更新設定頁面底端的模式徽章
+  // 4. 若當前分頁停留在已被隱藏的「住宿」或「毛孩」，自動跳回「日曆」
+  const curPage = document.querySelector('.page[style*="block"]')?.id;
+  if (isBeauty && (curPage === 'page-boarding-schedule' || curPage === 'page-pets')) {
+    switchPage('calendar', document.querySelector('[onclick*="\'calendar\'"]'));
+  }
+
+  // 5. 更新模式狀態文字徽章
   const modeBadge = document.getElementById('current-mode-display-badge');
   const modeNames = { 'beauty': '純美業版', 'pet_grooming': '寵物純美容', 'pet_hotel': '寵物美容＋住宿' };
-  if (modeBadge) modeBadge.innerText = `當前：${modeNames[mode] || mode}`;
+  if (modeBadge) modeBadge.innerText = `當前：${modeNames[currentMode] || currentMode}`;
 }
 
     // ==========================================
@@ -11855,17 +11862,21 @@ function applyMarketingInnerSectionsGating() {
 // ========================================================
 // 🌟 全系統模組嚴格閘道（排班永久常駐標配，絕不隱藏！）
 // ========================================================
+// ========================================================
+// 🌟【終極加固版】全系統模組嚴格閘道（買斷版禁止出現三模式切換 ＆ 美業嚴格無寵物）
+// ========================================================
 function applyLifetimeModulesStrictGating(storeInfo) {
-  const sInfo = storeInfo || backendData.storeInfo;
-  if (!sInfo) return;
-
+  const sInfo = storeInfo || backendData.storeInfo || {};
   const isLifetime = isStoreLifetime();
   const allowed = Array.isArray(sInfo.allowed_modules) ? sInfo.allowed_modules : [];
-  const activeMode = sInfo.industry_mode || sInfo.industry_type || backendData.settings?.industryMode || 'beauty';
+  
+  // 嚴格判定模式：若為純美業，絕不允許出現任何寵物模組
+  const activeMode = sInfo.industry_type || sInfo.industry_mode || backendData.settings?.industryMode || 'beauty';
+  const isBeauty = (activeMode === 'beauty');
 
   const navSubBtn = document.getElementById('nav-btn-subscription');
+  const modeSwitchSection = document.getElementById('section-industry-mode-switch');
 
-  // 通用輔助隱藏函式
   const setNavVisible = (selector, isVisible) => {
     document.querySelectorAll(selector).forEach(el => {
       el.style.setProperty('display', isVisible ? 'flex' : 'none', 'important');
@@ -11874,109 +11885,87 @@ function applyLifetimeModulesStrictGating(storeInfo) {
 
   if (isLifetime) {
     // ----------------------------------------------------
-    // A. 買斷版徹底隱藏「方案與訂閱」
+    // A. 買斷版絕對封殺「方案與訂閱」與「三種模式切換」
     // ----------------------------------------------------
     if (navSubBtn) navSubBtn.style.setProperty('display', 'none', 'important');
+    if (modeSwitchSection) modeSwitchSection.style.setProperty('display', 'none', 'important');
 
     // ----------------------------------------------------
-    // B. 【核心修正】：底部分頁導覽列（標配永久顯示，加購嚴格過濾）
+    // B. 底部分頁導覽列（標配永久在線，加購模組審查）
     // ----------------------------------------------------
-    // 1. 核心標配：日曆、名單、排班、服務、查詢、新增、設定（永久常駐，絕不隱藏）
     setNavVisible('[onclick*="\'calendar\'"]', true);
     setNavVisible('[onclick*="\'customer\'"]', true);
-    setNavVisible('[data-admin-module="shift"], [onclick*="\'shift\'"]', true); // 🌟 保證排班分頁永久在線！
+    setNavVisible('[data-admin-module="shift"], [onclick*="\'shift\'"]', true); // 排班標配常駐
     setNavVisible('[data-admin-module="services"], [onclick*="\'services\'"]', true);
     setNavVisible('[onclick*="\'search\'"]', true);
     setNavVisible('[onclick*="\'add\'"]', true);
     setNavVisible('[onclick*="routeToSettingsPage"]', true);
 
-    // 2. 加購模組分頁：總管有開通才顯示
+    // 加購模組分頁
     setNavVisible('[data-admin-module="inventory"], [onclick*="\'inventory\'"]', allowed.includes('inventory'));
     setNavVisible('#bottom-nav [data-admin-module="revenue"], #bottom-nav [onclick*="\'revenue\'"], #bottom-nav [onclick*="\'transactions\'"]', allowed.includes('revenue'));
     setNavVisible('[data-admin-module="care"], [onclick*="\'care\'"]', allowed.includes('care'));
     setNavVisible('[data-admin-module="reviews"], [onclick*="\'reviews\'"]', allowed.includes('reviews'));
     setNavVisible('[data-admin-module="slots"], [onclick*="\'slots\'"]', allowed.includes('slots'));
 
-    // 3. 寵物專屬分頁（需同時符合模式與模組開通）
-    setNavVisible('#nav-btn-pets', (activeMode !== 'beauty') && allowed.includes('pets'));
+    // 🌟【核心要求】：美業模式下，寵物分頁（毛孩、住宿）絕對強制為 false！
+    setNavVisible('#nav-btn-pets', !isBeauty && allowed.includes('pets'));
     setNavVisible('#nav-btn-boarding', (activeMode === 'pet_hotel') && allowed.includes('boarding'));
 
-    // 4. 行銷大分頁按鈕：儲值、包卡、折扣碼「至少開通一項」才出現
+    // 行銷分頁（儲值、包卡、折扣碼至少開一項才顯示）
     const hasAnyMarketing = allowed.includes('wallet') || allowed.includes('packages') || allowed.includes('coupons');
     setNavVisible('[data-admin-module="marketing_tools"], [onclick*="\'marketing\'"]', hasAnyMarketing);
 
     // ----------------------------------------------------
-    // C. 行銷分頁內部 (#page-marketing)：未開通的卡片連根拔除
+    // C. 買斷設定頁 (#page-settings-lifetime) 內部卡片顯隱
     // ----------------------------------------------------
-    const hideBlock = (id, isVisible) => {
+    const hideLtCard = (id, isVisible) => {
       const el = document.getElementById(id);
       if (el) el.style.setProperty('display', isVisible ? 'block' : 'none', 'important');
     };
-    hideBlock('mkt-block-wallet', allowed.includes('wallet'));
-    hideBlock('mkt-block-packages', allowed.includes('packages'));
-    hideBlock('mkt-block-coupons', allowed.includes('coupons'));
 
-    // ----------------------------------------------------
-    // D. 買斷設定頁 (#page-settings-lifetime) 中的加購卡片顯隱
-    // ----------------------------------------------------
-    const toggleCard = (id, isVisible) => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.classList.toggle('hidden', !isVisible);
-        el.style.setProperty('display', isVisible ? 'block' : 'none', 'important');
-      }
-    };
-    toggleCard('lt-addon-card-revenue', allowed.includes('revenue'));
-    // 強制讓 LINE 推播模組卡片在買斷版設定頁隨時顯示
-const linePushCard = document.getElementById('lt-addon-card-line_push');
-if (linePushCard) {
-  linePushCard.classList.remove('hidden');
-  linePushCard.style.setProperty('display', 'block', 'important');
-}
-    toggleCard('lt-addon-card-contract', allowed.includes('contract'));
+    hideLtCard('lt-addon-card-revenue', allowed.includes('revenue'));
+    hideLtCard('lt-addon-card-contract', allowed.includes('contract'));
+    hideLtCard('lt-addon-card-line_push', true); // LINE 推播模組永久開放
 
-    // ----------------------------------------------------
-    // E. 開關列深度隱藏（未加購的項目，連開關的整行標籤都抹除）
-    // ----------------------------------------------------
-    const hideToggleRow = (inputCheckboxId, isVisible) => {
-      const cb = document.getElementById(inputCheckboxId);
-      const row = cb ? cb.closest('label') : null;
-      if (row) {
-        row.style.setProperty('display', isVisible ? 'flex' : 'none', 'important');
-      }
-    };
+    // 住宿卡片：美業模式下 100% 強制隱藏
+    hideLtCard('lt-section-pet-hotel-settings', !isBeauty && (activeMode === 'pet_hotel'));
 
-    // ----------------------------------------------------
-    // F. 這理髮型試算表連動模組閘道
-    // ----------------------------------------------------
+    // 試算表連動模組（這理髮型專用）
     const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
     if (customSheetsCard) {
       const storeName = sInfo.store_name || backendData.settings?.storeName || '';
       const storeSlug = sInfo.slug || '';
       const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
       const hasSheets = allowed.includes('sheets_sync') || allowed.includes('google_sheets') || allowed.includes('sheets') || isZheli;
-      toggleCard('custom-addon-hair-sheets-sync', hasSheets);
+      customSheetsCard.style.setProperty('display', hasSheets ? 'block' : 'none', 'important');
     }
 
   } else {
     // ----------------------------------------------------
-    // 訂閱版：方案按鈕恢復顯示，所有功能導覽按鈕 100% 全開
+    // 訂閱版：恢復顯示模式切換與方案按鈕，但寵物分頁依然受 activeMode 約束！
     // ----------------------------------------------------
     if (navSubBtn) navSubBtn.style.removeProperty('display');
+    if (modeSwitchSection) modeSwitchSection.style.removeProperty('display');
+
     document.querySelectorAll('#bottom-nav .nav-item').forEach(el => {
       el.style.removeProperty('display');
     });
 
-    // 訂閱版不顯示特定客製試算表卡片
-    const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
-    if (customSheetsCard) {
-      customSheetsCard.classList.add('hidden');
-      customSheetsCard.style.setProperty('display', 'none', 'important');
-    }
+    // 即使在訂閱版，若為純美業，也絕不可出現毛孩與住宿
+    setNavVisible('#nav-btn-pets', !isBeauty);
+    setNavVisible('#nav-btn-boarding', (activeMode === 'pet_hotel'));
   }
 
   // 同步連動代客新增與結單彈窗之加購選項
-  syncAddonControlsAvailability(allowed.includes('wallet'), allowed.includes('packages'), allowed.includes('coupons'));
+  syncAddonControlsAvailability(
+    isLifetime ? allowed.includes('wallet') : (backendData.settings?.enable_wallet !== false),
+    isLifetime ? allowed.includes('packages') : (backendData.settings?.enable_packages !== false),
+    isLifetime ? allowed.includes('coupons') : (backendData.settings?.enable_coupons !== false)
+  );
+
+  // 再次觸發模式佈局確保無死角
+  handleIndustryModeChange(activeMode);
 }
 // ========================================================
 // 3. 代客下單 (page-add) 與 結單彈窗 (checkoutModal) 智慧連動
