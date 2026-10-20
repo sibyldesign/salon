@@ -4913,17 +4913,13 @@ function selectOverviewDateBtn(dHyphen) {
 }
 
 // ========================================================
-// 🌟【甘特圖核心】renderOverviewGridCanvas — 支援跨格延伸、宏觀縮圖與權限隔離
+// 🌟【甘特圖優化】：凍結時間軸 (sticky left-0) +「滑動」「全覽」模式
 // ========================================================
-let currentOverviewZoomMode = 'scroll'; // 'scroll' (微觀可滑動) 或 'fit' (宏觀全覽縮圖)
-let currentOverviewStaffTab = 'all';
-
 function setOverviewZoomMode(mode) {
   currentOverviewZoomMode = mode;
   renderOverviewGridCanvas();
 }
 
-// 🌟【關鍵補齊】：專員切換函式（解決 ReferenceError: switchOverviewStaffTab is not defined）
 function switchOverviewStaffTab(staffId) {
   currentOverviewStaffTab = staffId;
   renderOverviewGridCanvas();
@@ -4933,9 +4929,7 @@ function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
 
-  // 🌟【關鍵修復】：宣告 currentRole，防止甘特圖畫布崩潰
   const currentRole = CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all' ? 'staff' : (window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner');
-
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
@@ -4944,111 +4938,90 @@ function renderOverviewGridCanvas() {
 
   const activeStaffParam = CURRENT_STAFF_PARAM || window.currentStaffId || localStorage.getItem('zy_staff_id');
   let allowedStaffList = rawStaffList;
-  
   if (activeStaffParam && activeStaffParam !== 'all') {
     allowedStaffList = rawStaffList.filter(s => s.id === activeStaffParam || s.name === activeStaffParam);
     if (allowedStaffList.length === 0) allowedStaffList = rawStaffList;
   }
 
-  // 2. 🌟【模式判斷修復】：修正為 industryMode，不再使用未定義的 industryType
   const currentIndustryMode = backendData.settings?.industryMode || backendData.storeInfo?.industry_type || 'beauty';
   const isPetMode = (currentIndustryMode !== 'beauty');
 
-  // 專員切換過濾
   let displayStaffList = allowedStaffList;
   if (currentOverviewStaffTab !== 'all') {
     displayStaffList = allowedStaffList.filter(s => s.id === currentOverviewStaffTab);
   }
 
-  // 2. 營業起訖與時間刻度設定 (以 15 分鐘為一刻度基準)
   const startTime = backendData.settings?.shiftStartTime || '09:00';
   const endTime = backendData.settings?.shiftEndTime || '20:00';
-  const interval = 15; // 固定以 15 分鐘為最小甘特格
+  const interval = 15;
   const [sH, sM] = startTime.split(':').map(Number);
   const [eH, eM] = endTime.split(':').map(Number);
   const dayStartMinutes = sH * 60 + sM;
   const dayEndMinutes = eH * 60 + eM;
   const totalSlotsCount = Math.ceil((dayEndMinutes - dayStartMinutes) / interval);
 
-  // 每 15 分鐘的高度定義 (微觀 22px，宏觀縮圖 14px)
   const isFitMode = (currentOverviewZoomMode === 'fit');
-  const slotHeight = isFitMode ? 14 : 22; 
+  const slotHeight = isFitMode ? 16 : 22; 
   const totalTimelineHeight = totalSlotsCount * slotHeight;
 
-  // 3. 抓取當日有效預約
   const apptsToday = (backendData.appointments || []).filter(a => {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 4. 頂部控制工具列（宏觀縮圖切換 ＋ 專員切換）
+  // 1. 🌟 按鈕簡化為「滑動」與「全覽」
   let controlsHtml = `
     <div class="flex flex-wrap justify-between items-center gap-2 mb-2 px-1">
-      <!-- 縮放模式切換按鈕 -->
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
-        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
-          <i class="fa-solid fa-arrows-left-right text-[10px]"></i> 放大微觀 (可滑動)
+        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
+          <i class="fa-solid fa-arrows-left-right text-[10px] mr-1"></i>滑動
         </button>
-        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
-          <i class="fa-solid fa-compress text-[10px]"></i> 宏觀全覽 (全店縮圖)
+        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-white text-brand-900 shadow-2xs' : 'text-brand-600 hover:text-brand-900'}">
+          <i class="fa-solid fa-table-columns text-[10px] mr-1"></i>全覽
         </button>
       </div>
 
-      <!-- 專員快速分頁 (僅主理人可切換全部) -->
       ${currentRole !== 'staff' ? `
         <div class="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
-          <button type="button" onclick="switchOverviewStaffTab('all')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === 'all' ? 'bg-theme-primary text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
-            全店專員 (${allowedStaffList.length})
+          <button type="button" onclick="switchOverviewStaffTab('all')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === 'all' ? 'bg-[#8C7355] text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+            全體 (${allowedStaffList.length})
           </button>
           ${allowedStaffList.map(st => `
-            <button type="button" onclick="switchOverviewStaffTab('${st.id}')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === st.id ? 'bg-theme-primary text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+            <button type="button" onclick="switchOverviewStaffTab('${st.id}')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === st.id ? 'bg-[#8C7355] text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
               ${st.name}
             </button>
           `).join('')}
         </div>
-      ` : `<span class="text-xs font-bold text-brand-600">專員專屬排程：<b>${allowedStaffList[0]?.name || ''}</b></span>`}
+      ` : `<span class="text-xs font-bold text-brand-600">專員：<b>${allowedStaffList[0]?.name || ''}</b></span>`}
     </div>
   `;
 
-  // 5. 欄位寬度樣式配置
-  const staffColWidthClass = isFitMode 
-    ? "flex-1 min-w-0" // 宏觀全覽：均分寬度，塞入手機螢幕
-    : "w-[125px] shrink-0"; // 微觀：標準 125px，支援左右滑動
+  // 2. 🌟 滑動模式單欄寬度提升至 200px (一專員一完整條)，全覽模式等比均分
+  const staffColWidthStyle = isFitMode ? "flex: 1; min-width: 0;" : "width: 200px; min-width: 200px; flex-shrink: 0;";
 
-  // 6. 生成表頭 (人員列表)
+  // 表頭
   let headerColsHtml = displayStaffList.map(st => `
-    <div class="${staffColWidthClass} text-center py-2 px-1 border-r border-brand-100 last:border-r-0 bg-white">
-      <div class="font-bold ${isFitMode ? 'text-[10px]' : 'text-xs'} text-brand-900 truncate">${st.name}</div>
+    <div style="${staffColWidthStyle}" class="text-center py-2 px-1 border-r border-brand-100 last:border-r-0 bg-white">
+      <div class="font-bold ${isFitMode ? 'text-[11px]' : 'text-xs'} text-brand-900 truncate">${st.name}</div>
     </div>
   `).join('');
 
-  // 7. 生成左側時間軸刻度與背景橫線
+  // 時間刻度
   let timeLabelsHtml = '';
-  let gridBgRowsHtml = '';
-
   for (let i = 0; i < totalSlotsCount; i++) {
     const curM = dayStartMinutes + i * interval;
     const hh = String(Math.floor(curM / 60)).padStart(2, '0');
     const mm = String(curM % 60).padStart(2, '0');
-    const timeFormatted = `${hh}:${mm}`;
     const isHourMark = (mm === '00');
 
-    // 刻度文字 (每整點標記一次，其餘只標虛線)
     timeLabelsHtml += `
-      <div style="height: ${slotHeight}px;" class="flex items-center justify-end pr-1.5 text-brand-400 font-mono ${isHourMark ? 'font-black text-brand-800' : 'opacity-40'} ${isFitMode ? 'text-[9px]' : 'text-[10.5px]'}">
-        ${isHourMark ? timeFormatted : ''}
+      <div style="height: ${slotHeight}px;" class="flex items-center justify-center font-mono ${isHourMark ? 'font-black text-brand-900' : 'opacity-30 text-[9px]'} ${isFitMode ? 'text-[9.5px]' : 'text-[11px]'}">
+        ${isHourMark ? `${hh}:${mm}` : '·'}
       </div>
-    `;
-
-    // 背景橫格
-    gridBgRowsHtml += `
-      <div style="height: ${slotHeight}px;" class="border-b ${isHourMark ? 'border-brand-200' : 'border-brand-100/60'} w-full"></div>
     `;
   }
 
-  // 8. 🌟【甘特圖渲染】：依時長跨格延伸色塊 (Time-span Blocks)
-  // 8. 🌟【核心升級】：甘特圖碰撞演算法 (Group A 與 Group B 重疊時自動左右並排，徹底解決疊卡遮擋)
+  // 專員預約直欄 (含 Group A/B 重疊自動左右並排)
   let staffColumnsHtml = displayStaffList.map(st => {
-    // 找出該專員當天所有預約並按開始時間排序
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
       return (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
@@ -5059,24 +5032,18 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin || b.dur - a.dur);
 
-    // 🌟 碰撞分組分欄計算 (計算每筆預約是排在左半邊 col:0 還是右半邊 col:1)
     const processedAppts = [];
     stAppts.forEach(appt => {
-      // 找出與目前預約在時段上有重疊的其他預約
       const overlapping = processedAppts.filter(other => 
         Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
       );
 
       if (overlapping.length > 0) {
-        // 有重疊：取得已被佔用的欄位索引 (0 或 1)
         const occupiedCols = overlapping.map(o => o.colIndex);
-        const colIndex = occupiedCols.includes(0) ? 1 : 0;
-        appt.colIndex = colIndex;
-        appt.totalCols = 2; // 分為雙欄左右並排
-        // 將重疊到的卡片也同步設為雙欄
+        appt.colIndex = occupiedCols.includes(0) ? 1 : 0;
+        appt.totalCols = 2;
         overlapping.forEach(o => o.totalCols = 2);
       } else {
-        // 無重疊：獨佔全欄
         appt.colIndex = 0;
         appt.totalCols = 1;
       }
@@ -5091,20 +5058,18 @@ function renderOverviewGridCanvas() {
       const safeService = (a.service || '').replace(/'/g, "\\'");
       const safeName = (a.name || '').replace(/'/g, "\\'");
 
-      // 判定是否為寵美毛孩
       let petTag = '';
       if (isPetMode) {
         const match = (a.notes || '').match(/【毛孩(?:\d+)?:?\s*([^/ \]]+)/);
         if (match && match[1]) petTag = `🐾${match[1]}`;
       }
 
-      // 🌟 動態計算左右寬度與偏移位置
       let widthStyle = "left: 4px; right: 4px;";
       if (a.totalCols === 2) {
         if (a.colIndex === 0) {
-          widthStyle = "left: 2px; width: calc(50% - 3px);"; // 左半欄
+          widthStyle = "left: 2px; width: calc(50% - 3px);";
         } else {
-          widthStyle = "left: calc(50% + 1px); width: calc(50% - 3px);"; // 右半欄
+          widthStyle = "left: calc(50% + 1px); width: calc(50% - 3px);";
         }
       }
 
@@ -5130,8 +5095,7 @@ function renderOverviewGridCanvas() {
     }).join('');
 
     return `
-      <div class="${staffColWidthClass} relative border-r border-brand-100 last:border-r-0" style="height: ${totalTimelineHeight}px;">
-        <!-- 點擊背景空白處直接快速插單 -->
+      <div style="${staffColWidthStyle} height: ${totalTimelineHeight}px;" class="relative border-r border-brand-100 last:border-r-0">
         <div class="absolute inset-0 z-0 divide-y divide-transparent">
           ${Array.from({ length: totalSlotsCount }).map((_, idx) => {
             const m = dayStartMinutes + idx * interval;
@@ -5139,38 +5103,40 @@ function renderOverviewGridCanvas() {
             const mm = String(m % 60).padStart(2, '0');
             return `
               <div style="height: ${slotHeight}px;" 
-                   class="cursor-pointer hover:bg-emerald-50/50 transition group flex items-center justify-center"
+                   class="cursor-pointer hover:bg-emerald-50/50 transition group flex items-center justify-center border-b border-brand-100/50"
                    onclick="quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')">
                 <span class="text-[9px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition">+</span>
               </div>
             `;
           }).join('')}
         </div>
-
-        <!-- 浮在上方之長條區間甘特色塊 (已支援左右並排) -->
         ${apptCardsHtml}
       </div>
     `;
   }).join('');
 
-  // 9. 組裝完整畫布結構
+  // 3. 🌟【核心關鍵】：將外層設為 overflow-x-auto，時間欄設為 sticky left-0 z-30
   canvas.innerHTML = controlsHtml + `
-    <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-xs ${isFitMode ? 'w-full' : 'overflow-x-auto'}">
-      <!-- 固定表頭 -->
-      <div class="flex border-b border-brand-200 shadow-2xs sticky top-0 z-20 bg-white">
-        <div class="w-12 shrink-0 py-2 text-center text-[10px] font-bold text-brand-400 bg-brand-50 border-r border-brand-200">時間</div>
-        <div class="flex flex-1 ${!isFitMode ? 'min-w-[calc(125px*' + displayStaffList.length + ')]' : ''}">
-          ${headerColsHtml}
+    <div class="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-xs">
+      <div class="overflow-x-auto relative">
+        <!-- 頂部表頭 (時間標籤同樣鎖在最左側) -->
+        <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white">
+          <div class="w-14 shrink-0 py-2 text-center text-[11px] font-bold text-brand-500 bg-brand-50 border-r border-brand-200 sticky left-0 z-40 shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)]">
+            時間
+          </div>
+          <div class="flex flex-1 min-w-0">
+            ${headerColsHtml}
+          </div>
         </div>
-      </div>
 
-      <!-- 滾動時間軸內容 -->
-      <div class="flex relative" style="height: ${totalTimelineHeight}px;">
-        <div class="w-12 shrink-0 bg-brand-50/40 border-r border-brand-200 select-none">
-          ${timeLabelsHtml}
-        </div>
-        <div class="flex flex-1 relative ${!isFitMode ? 'min-w-[calc(125px*' + displayStaffList.length + ')]' : ''}">
-          ${staffColumnsHtml}
+        <!-- 內容本體 (最左側時間欄 sticky 凍結) -->
+        <div class="flex relative" style="height: ${totalTimelineHeight}px;">
+          <div class="w-14 shrink-0 bg-brand-50/95 border-r border-brand-200 sticky left-0 z-20 select-none shadow-[2px_0_4px_-1px_rgba(0,0,0,0.06)] backdrop-blur-xs">
+            ${timeLabelsHtml}
+          </div>
+          <div class="flex flex-1 min-w-0 relative">
+            ${staffColumnsHtml}
+          </div>
         </div>
       </div>
     </div>
