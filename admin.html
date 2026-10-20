@@ -4466,6 +4466,7 @@ async function fetchDataAndRender() {
           id: b.id,
           date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
           time: timeStr,
+          duration: matchedDuration, // 👈 成功補入甘特圖所需時長！
           name: b.customer_name,
           phone: b.customer_phone,
           customer_type: b.customer_type || 'old',
@@ -4913,17 +4914,21 @@ function renderOverviewGridCanvas() {
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 🌟【專員權限隔離】：若登入者為一般專員，強制鎖死只顯示自己
+  // 1. 🌟【專員隔離修復】：同時讀取 CURRENT_STAFF_PARAM 與 LocalStorage
   let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
 
-  const currentRole = window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner';
-  const currentStaffId = window.currentStaffId || localStorage.getItem('zy_staff_id');
-
+  const activeStaffParam = CURRENT_STAFF_PARAM || window.currentStaffId || localStorage.getItem('zy_staff_id');
   let allowedStaffList = rawStaffList;
-  if (currentRole === 'staff' && currentStaffId) {
-    allowedStaffList = rawStaffList.filter(s => s.id === currentStaffId);
+  
+  if (activeStaffParam && activeStaffParam !== 'all') {
+    allowedStaffList = rawStaffList.filter(s => s.id === activeStaffParam || s.name === activeStaffParam);
+    if (allowedStaffList.length === 0) allowedStaffList = rawStaffList;
   }
+
+  // 2. 🌟【模式判斷修復】：修正為 industryMode，不再使用未定義的 industryType
+  const currentIndustryMode = backendData.settings?.industryMode || backendData.storeInfo?.industry_type || 'beauty';
+  const isPetMode = (currentIndustryMode !== 'beauty');
 
   // 專員切換過濾
   let displayStaffList = allowedStaffList;
@@ -6602,7 +6607,7 @@ function renderBoardingRoomStatus() {
     }
 
     html += `
-      <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}', ${isOccupied ? `'${guest.id}', '${realPetName}', '${guest.inDate}${guest.inTime}', '${guest.outDate}${guest.outTime}'` : 'null, null, null, null'})">
+      <div class="p-3 rounded-2xl border transition text-xs shadow-xs cursor-pointer ${isOccupied ? 'bg-amber-50/90 border-amber-300' : 'bg-white border-brand-200'}" onclick="handleRoomCardClick('${roomNo}',${isOccupied ? `'${guest.id}', '${realPetName}', '${guest.inDate} ${guest.inTime}', '${guest.outDate} ${guest.outTime}'` : 'null, null, null, null'})">
         <div class="flex justify-between items-center pb-1 border-b ${isOccupied ? 'border-amber-200' : 'border-gray-100'}">
           <span class="font-bold font-mono">${roomNo}</span>
           <span class="px-1.5 py-0.2 rounded text-[10px] font-bold ${isOccupied ? 'bg-amber-200 text-amber-900' : 'bg-emerald-100 text-emerald-800'}">
@@ -6757,55 +6762,6 @@ function renderBoardingCareChecklist() {
     renderBoardingRoomStatus();
   }
 
-  // 住宿房況房間卡片點擊：提供「查看毛孩履歷」與「退房結單」
-function handleRoomCardClick(roomNo, bookingId, petName, checkInTimeStr, checkOutTimeStr) {
-  if (bookingId) {
-    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
-    if (!appt) return;
-
-    Swal.fire({
-      title: `🏨 房號 ${roomNo} 在宿管理`,
-      html: `
-        <div class="text-left text-xs space-y-2 bg-amber-50 p-4 rounded-2xl border border-amber-200 text-amber-950 font-sans">
-          <div>目前在宿毛孩：<b class="text-base text-amber-900">🐾 ${petName || '寶貝'}</b></div>
-          <div>家長資訊：<b>${appt.name}</b> <span class="font-mono text-gray-600">(${appt.phone})</span></div>
-          <div class="pt-1.5 border-t border-amber-200/80 space-y-1 font-mono">
-            <div class="text-emerald-800">🟢 <b>入住進場：</b>${checkInTimeStr || (appt.date + ' ' + appt.time)}</div>
-            <div class="text-rose-700">🔴 <b>預計退房：</b>${checkOutTimeStr || '待確認'}</div>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      showDenyButton: true,
-      confirmButtonText: '🐾 查看毛孩詳細照護履歷',
-      denyButtonText: '辦理退宿結單',
-      cancelButtonText: '關閉',
-      confirmButtonColor: '#8C7355',
-      denyButtonColor: '#10B981'
-    }).then(r => {
-      if (r.isConfirmed) {
-        openPetProfileModal(appt.phone, petName);
-      } else if (r.isDenied) {
-        openCheckoutModal(appt.id, appt.name, appt.phone, appt.service, appt.price);
-      }
-    });
-  } else {
-    Swal.fire({
-      title: `安排毛孩入住 ${roomNo}`,
-      text: '該房間目前為空房且已消毒完成，是否前往建立代客預約排程？',
-      icon: 'info',
-      showCancelButton: true,
-      confirmButtonText: '前往代客排程',
-      confirmButtonColor: '#8C7355'
-    }).then(r => {
-      if (r.isConfirmed) {
-        switchPage('add', document.querySelectorAll('.nav-item')[9]);
-        document.querySelector('input[name="quick-industry-mode"][value="pet_hotel"]')?.click();
-      }
-    });
-  }
-}
-
     // 渲染今日專車接送清單
   function renderBoardingShuttleChecklist() {
     const container = document.getElementById('boarding-shuttle-checklist');
@@ -6851,84 +6807,6 @@ function handleRoomCardClick(roomNo, bookingId, petName, checkInTimeStr, checkOu
     }).join('');
   }
     
-    function renderBoardingCareChecklist() {
-  const container = document.getElementById('boarding-care-checklist');
-  if (!container) return;
-
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const todayHyphen = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const todayMs = new Date(todayHyphen).getTime();
-
-  // 嚴格篩選：只有「今天真實仍在宿且未結單」的毛孩才納入放飯清單
-  const activeFeedingList = [];
-
-  (backendData.appointments || []).forEach(b => {
-    if (b.status === '已取消' || b.status === '婉拒' || b.status === '已結單') return;
-    if (!(b.service || '').includes('住宿') && !(b.notes || '').includes('住宿排程:')) return;
-
-    const notesStr = b.notes || '';
-    const matchStay = notesStr.match(/住宿排程:\s*([0-9\/-]+)\s*([0-9:]+)?\s*入住\s*至\s*([0-9\/-]+)\s*([0-9:]+)?\s*退房/);
-
-    if (matchStay) {
-      const inDate = matchStay[1].replace(/\//g, '-');
-      const inTime = matchStay[2] || '10:00';
-      const outDate = matchStay[3].replace(/\//g, '-');
-      const outTime = matchStay[4] || '18:00';
-
-      const inMs = new Date(inDate).getTime();
-      const outMs = new Date(outDate).getTime();
-
-      // 只有在入住日至退房日期間才放飯
-      if (todayMs >= inMs && todayMs <= outMs) {
-        activeFeedingList.push({ ...b, inDate, inTime, outDate, outTime });
-      }
-    }
-  });
-
-  if (activeFeedingList.length === 0) {
-    container.innerHTML = '<div class="text-center py-5 text-brand-400 text-xs">今日無在宿毛孩需要供餐</div>';
-    return;
-  }
-
-  container.innerHTML = activeFeedingList.map(b => {
-    const notesStr = b.notes || '';
-    const petMatch = notesStr.match(/【毛孩(?:\d*):\s*([^/ \n\r】]+)/);
-    const petName = petMatch ? petMatch[1].trim() : (b.pet_name || '毛孩');
-
-    let mealDisplay = '自備食料';
-    let isStoreMeal = false;
-    if (notesStr.includes('一日三餐')) { mealDisplay = '鮮食 (一日三餐)'; isStoreMeal = true; }
-    else if (notesStr.includes('一日兩餐')) { mealDisplay = '鮮食 (一日兩餐)'; isStoreMeal = true; }
-    else if (notesStr.includes('一日一餐')) { mealDisplay = '鮮食 (一日一餐)'; isStoreMeal = true; }
-
-    return `
-      <div class="p-3.5 bg-white rounded-2xl border border-brand-200 space-y-2 text-xs shadow-2xs">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-black text-amber-950 text-sm">🐾 ${petName}</span>
-              <span class="text-gray-400 text-[11px] font-medium">(${b.name} 的寶貝)</span>
-              <span class="px-2 py-0.5 ${isStoreMeal ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'} text-[10px] font-bold rounded-md">
-                ${mealDisplay}
-              </span>
-            </div>
-            <div class="text-[10px] text-gray-400 font-mono mt-1">電話：${b.phone}</div>
-          </div>
-          <div class="flex gap-3 font-bold text-xs text-brand-800 bg-brand-50/70 px-3 py-1.5 rounded-xl border border-brand-100 shrink-0">
-            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 早 09:00</label>
-            ${mealDisplay.includes('三餐') ? '<label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 午 12:30</label>' : ''}
-            <label class="flex items-center gap-1 cursor-pointer"><input type="checkbox" class="accent-[#8C7355] w-3.5 h-3.5"> 晚 18:00</label>
-          </div>
-        </div>
-        <!-- 附帶宿期小字核對 -->
-        <div class="text-[10px] text-brand-500 font-mono bg-brand-50/50 p-1.5 rounded-lg border border-brand-100">
-          📅 宿期：${b.inDate} ${b.inTime} 入住 ～ ${b.outDate} ${b.outTime} 退房
-        </div>
-      </div>
-    `;
-  }).join('');
-}
     // ==========================================
     // 8. 專員排班調度 (高對比色切換)
     // ==========================================
@@ -12624,6 +12502,15 @@ function openAppointmentDetailModal(apptId, name, phone, service, price, time, d
       }
     }
   });
+}
+
+    function onQuickInsertPetChange(selectEl) {
+  const isNew = (selectEl.value === 'NEW');
+  const newNameInput = document.getElementById('quick-ins-new-pet-name');
+  if (newNameInput) {
+    newNameInput.classList.toggle('hidden', !isNew);
+    if (isNew) newNameInput.focus();
+  }
 }
   </script>
 </body>
