@@ -4924,6 +4924,9 @@ function switchOverviewStaffTab(staffId) {
   renderOverviewGridCanvas();
 }
 
+// ========================================================
+// 🌟【甘特圖格頂對齊版】：每小時精準四格 + 卡片像素級貼齊實線與虛線
+// ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
@@ -4998,7 +5001,7 @@ function renderOverviewGridCanvas() {
     </div>
   `;
 
-  // 4. 左側時間軸標籤生成（對齊整點實線）
+  // 4. 🌟【核心修復】：時間軸以「格頂 (border-t)」為刻度線基準，保證每小時完整 4 格！
   let timeLabelsHtml = '';
   for (let i = 0; i < totalSlotsCount; i++) {
     const curM = dayStartMinutes + i * interval;
@@ -5008,12 +5011,12 @@ function renderOverviewGridCanvas() {
 
     timeLabelsHtml += `
       <div style="height: ${slotHeight}px; box-sizing: border-box;" 
-           class="flex items-center justify-center font-mono select-none ${
+           class="relative flex items-start justify-center font-mono select-none ${
              isHourMark 
-               ? 'font-black text-brand-900 text-[10.5px] border-b border-[#D5C7BC] bg-[#F9F6F0]' 
-               : 'text-brand-300 text-[8px] border-b border-dashed border-[#EBE5DF]'
+               ? 'border-t-2 border-[#8C7355] bg-[#F7F3EE]' 
+               : 'border-t border-dashed border-[#D5C7BC]/60'
            }">
-        ${isHourMark ? `${hh}:${mm}` : '·'}
+        ${isHourMark ? `<span class="font-black text-brand-900 text-[10px] leading-none pt-0.5">${hh}:${mm}</span>` : '<span class="text-brand-300 text-[8px] leading-none pt-1">·</span>'}
       </div>
     `;
   }
@@ -5055,10 +5058,10 @@ function renderOverviewGridCanvas() {
     });
 
     let apptCardsHtml = processedAppts.map(a => {
-      // 🌟【精準頂部與高度運算】：精準對齊 15 分鐘刻度與實線
+      // 🌟【精準頂部運算】：因為刻度線在格頂，所以 offset 直接精準貼齊頂部格線！
       const slotUnitsFromStart = (a.startMin - dayStartMinutes) / interval;
-      const topOffset = Math.round(slotUnitsFromStart * slotHeight);
-      const cardHeight = Math.max(slotHeight - 2, Math.round((a.dur / interval) * slotHeight) - 2);
+      const topOffset = slotUnitsFromStart * slotHeight;
+      const cardHeight = Math.max(slotHeight - 2, (a.dur / interval) * slotHeight - 2);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
@@ -5094,7 +5097,7 @@ function renderOverviewGridCanvas() {
 
     return `
       <div style="${staffColStyle} height: ${totalTimelineHeight}px; box-sizing: border-box;" class="relative border-r border-[#E5DDD5] last:border-r-0">
-        <!-- 背景刻度線 (與時間軸完全相同的 height 與 border，保證水平線 100% 齊平) -->
+        <!-- 背景刻度線（改為 border-t，與時間軸格頂 100% 絕對連貫齊平） -->
         <div class="absolute inset-0 z-0">
           ${Array.from({ length: totalSlotsCount }).map((_, idx) => {
             const m = dayStartMinutes + idx * interval;
@@ -5104,7 +5107,7 @@ function renderOverviewGridCanvas() {
             return `
               <div style="height: ${slotHeight}px; box-sizing: border-box;"
                    class="cursor-pointer hover:bg-brand-100/40 transition ${
-                     isHourLine ? 'border-b border-[#D5C7BC]' : 'border-b border-dashed border-[#EBE5DF]'
+                     isHourLine ? 'border-t-2 border-[#8C7355]/70 bg-brand-50/20' : 'border-t border-dashed border-[#D5C7BC]/50'
                    }"
                    onclick="quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')">
               </div>
@@ -5116,8 +5119,7 @@ function renderOverviewGridCanvas() {
     `;
   }).join('');
 
-  // 6. 🌟【改回上上一動架構】：同一 overflow-x 容器內部的實體 position: sticky; left: 0;
-  // 保持格線 100% 同行，同時加上純色 background-color 與右緣立體陰影
+  // 6. 上上一動的實體 Sticky Left-0 容器架構
   canvas.innerHTML = controlsHtml + `
     <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative overflow-hidden">
       <div class="overflow-x-auto relative" style="-webkit-overflow-scrolling: touch;">
@@ -5136,7 +5138,7 @@ function renderOverviewGridCanvas() {
 
         <!-- 下方畫布主體 -->
         <div class="flex ${isFitMode ? 'w-full' : 'min-w-max'} relative" style="height: ${totalTimelineHeight}px;">
-          <!-- 🌟 左側時間軸（上上一動架構：position: sticky; left: 0; 帶陰影不透明） -->
+          <!-- 左側時間軸（上上一動架構：position: sticky; left: 0; 不透明奶茶底色） -->
           <div style="width: 52px; min-width: 52px; position: sticky; left: 0; z-index: 25; background-color: #FDFBF7; box-sizing: border-box;" 
                class="shrink-0 border-r border-[#D5C7BC] select-none shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
             ${timeLabelsHtml}
