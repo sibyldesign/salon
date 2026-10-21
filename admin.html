@@ -4912,7 +4912,7 @@ function selectOverviewDateBtn(dHyphen) {
 }
 
 // ========================================================
-// 🌟【甘特圖精準對齊版】：上上一動 Sticky 凍結 + 15分/整點像素級齊平
+// 🌟【甘特圖終極重構版】：全屏真正「單一手機螢幕」免滾動看完全店全日
 // ========================================================
 function setOverviewZoomMode(mode) {
   currentOverviewZoomMode = mode;
@@ -4924,9 +4924,6 @@ function switchOverviewStaffTab(staffId) {
   renderOverviewGridCanvas();
 }
 
-// ========================================================
-// 🌟【甘特圖格頂對齊版】：每小時精準四格 + 卡片像素級貼齊實線與虛線
-// ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
@@ -4934,7 +4931,7 @@ function renderOverviewGridCanvas() {
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 專員隔離判定
+  // 1. 專員隔離判定 (專員登入只顯示自己，店長登入顯示全體)
   let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
 
@@ -4952,47 +4949,64 @@ function renderOverviewGridCanvas() {
     displayStaffList = allowedStaffList.filter(s => s.id === currentOverviewStaffTab);
   }
 
-  // 2. 時段設定 (09:00 - 20:00，以 15 分鐘為最小刻度)
-  const startTime = backendData.settings?.shiftStartTime || '09:00';
-  const endTime = backendData.settings?.shiftEndTime || '20:00';
+  // 2. 營業時段對齊整點 (:00)
+  const rawStartTime = backendData.settings?.shiftStartTime || '09:00';
+  const rawEndTime = backendData.settings?.shiftEndTime || '20:00';
   const interval = 15;
-  const [sH, sM] = startTime.split(':').map(Number);
-  const [eH, eM] = endTime.split(':').map(Number);
-  const dayStartMinutes = sH * 60 + sM;
-  const dayEndMinutes = eH * 60 + eM;
-  const totalSlotsCount = Math.ceil((dayEndMinutes - dayStartMinutes) / interval);
 
-  // 3. 刻度高度計算
+  const [rawSH, rawSM] = rawStartTime.split(':').map(Number);
+  const [rawEH, rawEM] = rawEndTime.split(':').map(Number);
+  const storeOpenMinutes = rawSH * 60 + rawSM;
+  const storeCloseMinutes = rawEH * 60 + rawEM;
+
+  const timelineStartMinutes = rawSH * 60; // 即使 11:30 營業，也自動向下取整到 11:00 起算
+  const timelineEndMinutes = (rawEM > 0) ? (rawEH + 1) * 60 : rawEH * 60;
+  const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
+  const totalHoursCount = (timelineEndMinutes - timelineStartMinutes) / 60;
+
+  // 3. 🌟【全屏真正單一手機畫面】：
+  // 全屏模式 (isFitMode)：高度依手機可視高度縮放（calc(100vh - 270px)），完全不需要上下滾動！
+  // 滑動模式 (!isFitMode)：標準大格高度（每小時 88px），每位專員固定 180px 橫向大滑動
   const isFitMode = (currentOverviewZoomMode === 'fit');
-  const slotHeight = isFitMode ? 16 : 22; // 每個 15 分鐘的高度 (px)
-  const totalTimelineHeight = totalSlotsCount * slotHeight;
+  
+  // 計算全屏時每個 15 分鐘的高度
+  let slotHeight = 22;
+  let totalTimelineHeight = totalSlotsCount * slotHeight;
+  
+  if (isFitMode) {
+    // 依手機高度動態計算，讓整天剛好占滿手機目前可視區
+    const availableScreenHeight = Math.max(380, window.innerHeight - 300);
+    slotHeight = Math.max(8.5, availableScreenHeight / totalSlotsCount);
+    totalTimelineHeight = availableScreenHeight;
+  }
 
-  // 專員直欄寬度
-  const staffColStyle = isFitMode ? "flex: 1; min-width: 0;" : "width: 190px; min-width: 190px; flex-shrink: 0;";
+  // 寬度樣式：全屏時強制 flex-1 (全部專員平分 100% 手機寬度，絕不溢出)；滑動時固定 180px
+  const staffColStyle = isFitMode ? "flex: 1 1 0%; min-width: 0;" : "width: 180px; min-width: 180px; flex-shrink: 0;";
+  const timeColWidth = isFitMode ? 40 : 50;
 
   const apptsToday = (backendData.appointments || []).filter(a => {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 控制列
+  // 控制列按鈕
   let controlsHtml = `
-    <div class="flex justify-between items-center mb-2.5 px-1">
+    <div class="flex justify-between items-center mb-2 px-1">
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
-        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
+        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
           <i class="fa-solid fa-arrows-left-right text-[10px] mr-1"></i>滑動檢視
         </button>
-        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
-          <i class="fa-solid fa-table-columns text-[10px] mr-1"></i>全屏一覽
+        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
+          <i class="fa-solid fa-compress text-[10px] mr-1"></i>全屏一覽
         </button>
       </div>
 
       ${!isStaffLoggedIn ? `
         <div class="flex gap-1 overflow-x-auto no-scrollbar py-0.5 max-w-[55%]">
-          <button type="button" onclick="switchOverviewStaffTab('all')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === 'all' ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+          <button type="button" onclick="switchOverviewStaffTab('all')" class="px-2 py-0.5 rounded-full text-[10.5px] font-bold shrink-0 transition ${currentOverviewStaffTab === 'all' ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
             全體 (${allowedStaffList.length})
           </button>
           ${allowedStaffList.map(st => `
-            <button type="button" onclick="switchOverviewStaffTab('${st.id}')" class="px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 transition ${currentOverviewStaffTab === st.id ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
+            <button type="button" onclick="switchOverviewStaffTab('${st.id}')" class="px-2 py-0.5 rounded-full text-[10.5px] font-bold shrink-0 transition ${currentOverviewStaffTab === st.id ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white border border-brand-200 text-brand-800'}">
               ${st.name}
             </button>
           `).join('')}
@@ -5001,10 +5015,10 @@ function renderOverviewGridCanvas() {
     </div>
   `;
 
-  // 4. 🌟【核心修復】：時間軸以「格頂 (border-t)」為刻度線基準，保證每小時完整 4 格！
+  // 4. 左側時間軸生成（整點頂線實線，每小時精準 4 格）
   let timeLabelsHtml = '';
   for (let i = 0; i < totalSlotsCount; i++) {
-    const curM = dayStartMinutes + i * interval;
+    const curM = timelineStartMinutes + i * interval;
     const hh = String(Math.floor(curM / 60)).padStart(2, '0');
     const mm = String(curM % 60).padStart(2, '0');
     const isHourMark = (mm === '00');
@@ -5014,20 +5028,21 @@ function renderOverviewGridCanvas() {
            class="relative flex items-start justify-center font-mono select-none ${
              isHourMark 
                ? 'border-t-2 border-[#8C7355] bg-[#F7F3EE]' 
-               : 'border-t border-dashed border-[#D5C7BC]/60'
+               : 'border-t border-dashed border-[#D5C7BC]/50 bg-[#FDFBF7]'
            }">
-        ${isHourMark ? `<span class="font-black text-brand-900 text-[10px] leading-none pt-0.5">${hh}:${mm}</span>` : '<span class="text-brand-300 text-[8px] leading-none pt-1">·</span>'}
+        ${isHourMark ? `<span class="font-black text-brand-900 ${isFitMode ? 'text-[8.5px]' : 'text-[10px]'} leading-none pt-0.5">${hh}:${mm}</span>` : `<span class="text-brand-300 ${isFitMode ? 'text-[6px]' : 'text-[8px]'} leading-none pt-0.5">·</span>`}
       </div>
     `;
   }
 
-  // 5. 專員直欄與預約生成
+  // 5. 專員直欄表頭生成
   let headerColsHtml = displayStaffList.map(st => `
-    <div style="${staffColStyle}" class="text-center py-2.5 px-1 border-r border-[#E5DDD5] last:border-r-0 bg-white">
-      <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
+    <div style="${staffColStyle}" class="text-center py-2 px-1 border-r border-[#E5DDD5] last:border-r-0 bg-white">
+      <div class="font-bold ${isFitMode ? 'text-[11px]' : 'text-xs'} text-brand-900 truncate">${st.name}</div>
     </div>
   `).join('');
 
+  // 6. 專員排程內容生成
   let staffColumnsHtml = displayStaffList.map(st => {
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
@@ -5039,13 +5054,12 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin);
 
-    // Group A/B 同時段碰撞運算
+    // 碰撞重疊運算 (Group A/B 同時段並排)
     const processedAppts = [];
     stAppts.forEach(appt => {
       const overlapping = processedAppts.filter(other =>
         Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
       );
-
       if (overlapping.length > 0) {
         appt.colIndex = overlapping.some(o => o.colIndex === 0) ? 1 : 0;
         appt.totalCols = 2;
@@ -5058,35 +5072,34 @@ function renderOverviewGridCanvas() {
     });
 
     let apptCardsHtml = processedAppts.map(a => {
-      // 🌟【精準頂部運算】：因為刻度線在格頂，所以 offset 直接精準貼齊頂部格線！
-      const slotUnitsFromStart = (a.startMin - dayStartMinutes) / interval;
+      const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
-      const cardHeight = Math.max(slotHeight - 2, (a.dur / interval) * slotHeight - 2);
+      const cardHeight = Math.max(slotHeight - 1, (a.dur / interval) * slotHeight - 1);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
       const safeName = (a.name || '').replace(/'/g, "\\'");
 
-      // 瘦身並排樣式
-      let posStyle = "left: 3px; right: 3px;";
+      // 並排瘦身
+      let posStyle = "left: 2px; right: 2px;";
       if (a.totalCols === 2) {
         posStyle = (a.colIndex === 0)
-          ? "left: 2px; width: calc(47% - 2px);"
-          : "left: calc(52% + 1px); width: calc(47% - 2px);";
+          ? "left: 1px; width: calc(50% - 2px);"
+          : "left: calc(50% + 1px); width: calc(50% - 2px);";
       }
 
       return `
         <div style="top: ${topOffset}px; height: ${cardHeight}px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
-             class="absolute p-1 rounded-lg shadow-xs border border-white/30 cursor-pointer hover:opacity-90 transition overflow-hidden flex flex-col justify-between"
+             class="absolute p-1 rounded-md shadow-xs border border-white/30 cursor-pointer hover:opacity-90 transition overflow-hidden flex flex-col justify-between"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur})">
           <div class="overflow-hidden">
-            <div class="font-bold flex justify-between items-center leading-tight ${isFitMode || a.totalCols === 2 ? 'text-[8.5px]' : 'text-[10px]'}">
+            <div class="font-bold flex justify-between items-center leading-tight ${isFitMode ? 'text-[8px]' : 'text-[10px]'}">
               <span class="truncate">${a.name}</span>
-              <span class="font-mono text-[8px] opacity-80 shrink-0 ml-0.5">${a.time}</span>
+              ${!isFitMode ? `<span class="font-mono text-[8px] opacity-80 shrink-0 ml-0.5">${a.time}</span>` : ''}
             </div>
-            ${cardHeight > 24 ? `<div class="${isFitMode || a.totalCols === 2 ? 'text-[8px]' : 'text-[9px]'} opacity-90 truncate leading-snug mt-0.5">${a.service}</div>` : ''}
+            ${cardHeight > (isFitMode ? 16 : 22) ? `<div class="${isFitMode ? 'text-[7.5px]' : 'text-[9px]'} opacity-90 truncate leading-tight mt-0.5">${a.service}</div>` : ''}
           </div>
-          ${cardHeight > 34 ? `
+          ${!isFitMode && cardHeight > 32 ? `
             <div class="flex justify-between items-center font-mono text-[7.5px] opacity-75">
               <span>${a.dur}分</span> <span>$${a.price || 0}</span>
             </div>
@@ -5097,19 +5110,21 @@ function renderOverviewGridCanvas() {
 
     return `
       <div style="${staffColStyle} height: ${totalTimelineHeight}px; box-sizing: border-box;" class="relative border-r border-[#E5DDD5] last:border-r-0">
-        <!-- 背景刻度線（改為 border-t，與時間軸格頂 100% 絕對連貫齊平） -->
+        <!-- 背景刻度線網格 (非營業時段自動反灰) -->
         <div class="absolute inset-0 z-0">
           ${Array.from({ length: totalSlotsCount }).map((_, idx) => {
-            const m = dayStartMinutes + idx * interval;
+            const m = timelineStartMinutes + idx * interval;
             const hh = String(Math.floor(m / 60)).padStart(2, '0');
             const mm = String(m % 60).padStart(2, '0');
             const isHourLine = (mm === '00');
+            const isClosedSlot = (m < storeOpenMinutes || m >= storeCloseMinutes);
+
             return `
               <div style="height: ${slotHeight}px; box-sizing: border-box;"
-                   class="cursor-pointer hover:bg-brand-100/40 transition ${
-                     isHourLine ? 'border-t-2 border-[#8C7355]/70 bg-brand-50/20' : 'border-t border-dashed border-[#D5C7BC]/50'
+                   class="transition ${ isHourLine ? 'border-t-2 border-[#8C7355]/70' : 'border-t border-dashed border-[#D5C7BC]/50' } ${
+                     isClosedSlot ? 'bg-gray-100/70' : 'hover:bg-brand-100/40 cursor-pointer'
                    }"
-                   onclick="quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')">
+                   onclick="${isClosedSlot ? `Swal.fire('非營業時段', '門市營業時間為 ${rawStartTime} ~ ${rawEndTime}', 'info')` : `quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')`}">
               </div>
             `;
           }).join('')}
@@ -5119,32 +5134,33 @@ function renderOverviewGridCanvas() {
     `;
   }).join('');
 
-  // 6. 上上一動的實體 Sticky Left-0 容器架構
+  // 7. 🌟【全屏免滾動 vs 滑動滾動 雙軌容器架構】：
+  // 全屏時：容器強制 w-full，完全取消 overflow-x-auto，所有專員與全營業時段「剛好 100% 塞在一個手機螢幕內」！
+  // 滑動時：容器保持 overflow-x-auto，時間軸使用 position: sticky 釘住
   canvas.innerHTML = controlsHtml + `
-    <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative overflow-hidden">
-      <div class="overflow-x-auto relative" style="-webkit-overflow-scrolling: touch;">
+    <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative ${isFitMode ? 'w-full overflow-hidden' : ''}">
+      <div class="${isFitMode ? 'w-full' : 'overflow-x-auto relative'}" style="-webkit-overflow-scrolling: touch;">
         
-        <!-- 頂部表頭列 -->
+        <!-- 表頭 (專員名稱列) -->
         <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white ${isFitMode ? 'w-full' : 'min-w-max'}">
-          <!-- 左上角「時間」固定格 -->
-          <div style="width: 52px; min-width: 52px; position: sticky; left: 0; z-index: 40; background-color: #FDFBF7; box-sizing: border-box;" 
-               class="shrink-0 py-2.5 text-center text-[10.5px] font-black text-brand-700 border-r border-[#D5C7BC] shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
+          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: sticky; left: 0; z-index: 40; background-color: #FDFBF7; box-sizing: border-box;" 
+               class="shrink-0 py-2 text-center ${isFitMode ? 'text-[9.5px]' : 'text-[10.5px]'} font-black text-brand-700 border-r border-[#D5C7BC] shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
             時間
           </div>
-          <div class="flex flex-1">
+          <div class="flex flex-1 min-w-0">
             ${headerColsHtml}
           </div>
         </div>
 
-        <!-- 下方畫布主體 -->
+        <!-- 畫布內容主體 (全屏時一屏顯示完全天) -->
         <div class="flex ${isFitMode ? 'w-full' : 'min-w-max'} relative" style="height: ${totalTimelineHeight}px;">
-          <!-- 左側時間軸（上上一動架構：position: sticky; left: 0; 不透明奶茶底色） -->
-          <div style="width: 52px; min-width: 52px; position: sticky; left: 0; z-index: 25; background-color: #FDFBF7; box-sizing: border-box;" 
-               class="shrink-0 border-r border-[#D5C7BC] select-none shadow-[2px_0_5px_rgba(0,0,0,0.06)]">
+          <!-- 左側時間軸 -->
+          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: sticky; left: 0; z-index: 25; background-color: #FDFBF7; box-sizing: border-box;" 
+               class="shrink-0 border-r border-[#D5C7BC] select-none shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
             ${timeLabelsHtml}
           </div>
-          <!-- 右側專員排程直欄 -->
-          <div class="flex flex-1 relative">
+          <!-- 右側專員排程區 -->
+          <div class="flex flex-1 min-w-0 relative">
             ${staffColumnsHtml}
           </div>
         </div>
