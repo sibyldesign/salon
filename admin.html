@@ -4930,6 +4930,9 @@ function switchOverviewStaffTab(staffId) {
   renderOverviewGridCanvas();
 }
 
+// ========================================================
+// 🌟【甘特圖專業修復版】：修復幽靈重複複製 + 真·時間軸凍結 + 全屏一頁看完全員
+// ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
@@ -4937,7 +4940,7 @@ function renderOverviewGridCanvas() {
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 專員名單判定 (專員登入看自己，店長看全體)
+  // 1. 專員隔離判定 (專員登入看自己，店長看全體)
   let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
 
@@ -4950,7 +4953,7 @@ function renderOverviewGridCanvas() {
     if (allowedStaffList.length === 0) allowedStaffList = [{ id: activeStaffParam, name: '我的排程' }];
   }
 
-  // 🌟【核心關鍵】：全屏模式下強制顯示所有專員；只有滑動版才允許切換個別專員
+  // 🌟 全屏模式強制顯示所有專員；滑動模式才支援單一切換
   const isFitMode = (currentOverviewZoomMode === 'fit');
   let displayStaffList = allowedStaffList;
   if (!isFitMode && !isStaffLoggedIn && currentOverviewStaffTab !== 'all') {
@@ -4971,29 +4974,29 @@ function renderOverviewGridCanvas() {
   const timelineEndMinutes = (rawEM > 0) ? (rawEH + 1) * 60 : rawEH * 60;
   const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
 
-  // 3. 尺寸規格精準設定 (全屏高度適應一屏 / 滑動細長緊湊)
+  // 3. 尺寸與直欄規格
   const slotHeight = isFitMode ? 14 : 20; 
   const totalTimelineHeight = totalSlotsCount * slotHeight;
   
-  // 🌟【色塊瘦身】：全屏時各專員平分 100% 手機寬度；滑動版每欄僅 110px 窄版精巧
+  // 🌟【色塊收窄】：全屏均分 100% 畫面；滑動版每欄收窄至 105px（精巧細長）
   const staffColStyle = isFitMode 
     ? "flex: 1 1 0%; min-width: 0;" 
-    : "width: 110px; min-width: 110px; flex-shrink: 0;";
+    : "width: 105px; min-width: 105px; flex-shrink: 0;";
 
-  const timeColWidth = isFitMode ? 40 : 46;
+  const timeColWidth = isFitMode ? 38 : 46;
 
   const apptsToday = (backendData.appointments || []).filter(a => {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 上方控制按鈕
+  // 控制列按鈕
   let controlsHtml = `
     <div class="flex justify-between items-center mb-2 px-1">
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
-        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
+        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
           <i class="fa-solid fa-arrows-left-right text-[10px] mr-1"></i>滑動檢視
         </button>
-        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
+        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
           <i class="fa-solid fa-compress text-[10px] mr-1"></i>全屏一覽
         </button>
       </div>
@@ -5013,7 +5016,7 @@ function renderOverviewGridCanvas() {
     </div>
   `;
 
-  // 4. 左側時間軸標籤生成 (純色底 + 實線邊框)
+  // 4. 左側時間軸標籤生成
   let timeLabelsHtml = '';
   for (let i = 0; i < totalSlotsCount; i++) {
     const curM = timelineStartMinutes + i * interval;
@@ -5028,23 +5031,31 @@ function renderOverviewGridCanvas() {
                ? 'border-t-2 border-[#8C7355] bg-[#F7F3EE]' 
                : 'border-t border-dashed border-[#D5C7BC]/50 bg-[#FDFBF7]'
            }">
-        ${isHourMark ? `<span class="font-black text-brand-900 ${isFitMode ? 'text-[8.5px]' : 'text-[9.5px]'} leading-none tracking-tight">${hh}:${mm}</span>` : `<span class="text-brand-300 text-[7px] leading-none">·</span>`}
+        ${isHourMark ? `<span class="font-black text-brand-900 ${isFitMode ? 'text-[8px]' : 'text-[9.5px]'} leading-none tracking-tight">${hh}:${mm}</span>` : `<span class="text-brand-300 text-[6.5px] leading-none">·</span>`}
       </div>
     `;
   }
 
   // 5. 專員直欄表頭
   let headerColsHtml = displayStaffList.map(st => `
-    <div style="${staffColStyle}" class="text-center py-2 px-1 border-r border-[#E5DDD5] last:border-r-0 bg-white">
-      <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
+    <div style="${staffColStyle}" class="text-center py-2 px-0.5 border-r border-[#E5DDD5] last:border-r-0 bg-white">
+      <div class="font-bold text-[11px] text-brand-900 truncate">${st.name}</div>
     </div>
   `).join('');
 
-  // 6. 專員直欄與預約生成 (🌟 核心：僅保留「名字」與「項目」)
-  let staffColumnsHtml = displayStaffList.map(st => {
+  // 6. 專員直欄與預約生成 (🌟 徹底修復：幽靈複製問題 + 僅保留名字與項目)
+  let staffColumnsHtml = displayStaffList.map((st, staffIdx) => {
+    // 🌟【防幽靈複製核心】：
+    // 1. 若該預約有明確指定設計師，嚴格比對姓名或 ID。
+    // 2. 若預約為「不指定」，僅分派給第一位專員（staffIdx === 0），絕不重複排給全員！
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
-      return (aStaff === st.name || a.staffId === st.id || aStaff === '不指定' || !aStaff);
+      const aStaffId = String(a.staffId || '').trim();
+      
+      const isDirectMatch = (aStaff === st.name || (aStaffId && aStaffId === st.id));
+      const isUnassigned = (!aStaff || aStaff === '不指定' || aStaffId === 'all');
+
+      return isDirectMatch || (isUnassigned && staffIdx === 0);
     }).map(a => {
       const [aH, aM] = (a.time || '09:00').split(':').map(Number);
       const startMin = aH * 60 + aM;
@@ -5052,7 +5063,7 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin);
 
-    // 碰撞重疊計算 (Group A/B 同時段並排)
+    // 碰撞重疊運算 (Group A/B 同時段並排)
     const processedAppts = [];
     stAppts.forEach(appt => {
       const overlapping = processedAppts.filter(other =>
@@ -5078,24 +5089,24 @@ function renderOverviewGridCanvas() {
       const safeService = (a.service || '').replace(/'/g, "\\'");
       const safeName = (a.name || '').replace(/'/g, "\\'");
 
-      // 🌟【精準瘦身寬度】：雙單各自佔 48%，單單左右留安全邊隙 2px
-      let posStyle = "left: 2px; right: 2px;";
+      // 🌟【卡片極致收窄】：雙單各自佔 48%，單單左右留安全邊距 1.5px
+      let posStyle = "left: 1.5px; right: 1.5px;";
       if (a.totalCols === 2) {
         posStyle = (a.colIndex === 0)
           ? "left: 1px; width: calc(48% - 1px);"
           : "left: calc(52% + 1px); width: calc(48% - 1px);";
       }
 
-      // 🌟【僅保留：名字 ＋ 項目】完全刪除時間、時長、金額，文字絕對不截斷！
+      // 🌟【僅保留：名字 ＋ 項目】完全刪除時間、時長、金額
       return `
         <div style="top: ${topOffset}px; height: ${cardHeight}px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
-             class="absolute p-1 rounded-md shadow-2xs border border-white/30 cursor-pointer hover:opacity-90 transition overflow-hidden flex flex-col justify-start"
+             class="absolute p-0.5 rounded shadow-2xs border border-white/30 cursor-pointer hover:opacity-90 transition overflow-hidden flex flex-col justify-start"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur})">
-          <div class="font-bold text-[9px] leading-tight truncate font-sans">
+          <div class="font-bold ${isFitMode ? 'text-[8px]' : 'text-[9px]'} leading-tight truncate font-sans">
             ${a.name}
           </div>
           ${cardHeight > 18 ? `
-            <div class="text-[8px] opacity-90 truncate leading-tight font-sans mt-0.5">
+            <div class="${isFitMode ? 'text-[7px]' : 'text-[8px]'} opacity-90 truncate leading-tight font-sans mt-0.5">
               ${a.service}
             </div>
           ` : ''}
@@ -5129,15 +5140,17 @@ function renderOverviewGridCanvas() {
     `;
   }).join('');
 
-  // 7. 渲染畫布 (全屏時絕對貼合寬度 w-full 不溢出；滑動版保有 110px 窄版美感)
+  // 7. 🌟【真·時間軸凍結容器架構】：
+  // 移除破壞 sticky 的 overflow-hidden，使用獨立的滾動容器與明確的 left: 0 定位
   canvas.innerHTML = controlsHtml + `
-    <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative ${isFitMode ? 'w-full overflow-hidden' : ''}">
-      <div class="${isFitMode ? 'w-full' : 'overflow-x-auto relative'}" style="-webkit-overflow-scrolling: touch;">
+    <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative">
+      <div class="${isFitMode ? 'w-full overflow-hidden' : 'overflow-x-auto relative'}" style="-webkit-overflow-scrolling: touch;">
         
-        <!-- 表頭 (專員名稱列) -->
-        <div class="flex border-b border-brand-200 sticky top-0 z-30 bg-white ${isFitMode ? 'w-full' : 'min-w-max'}">
-          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: sticky; left: 0; z-index: 40; background-color: #FDFBF7; box-sizing: border-box;" 
-               class="shrink-0 py-2 text-center text-[10px] font-black text-brand-700 border-r border-[#D5C7BC] shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+        <!-- 表頭 -->
+        <div class="flex border-b border-brand-200 sticky top-0 z-40 bg-white ${isFitMode ? 'w-full' : 'min-w-max'}">
+          <!-- 左上角時間固定方塊 -->
+          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: -webkit-sticky; position: sticky; left: 0; z-index: 50; background-color: #FDFBF7; box-sizing: border-box;" 
+               class="shrink-0 py-2 text-center text-[10px] font-black text-brand-700 border-r border-[#D5C7BC] shadow-[3px_0_5px_rgba(0,0,0,0.06)]">
             時間
           </div>
           <div class="flex flex-1 min-w-0">
@@ -5145,14 +5158,14 @@ function renderOverviewGridCanvas() {
           </div>
         </div>
 
-        <!-- 畫布主體 -->
+        <!-- 畫布內容主體 -->
         <div class="flex ${isFitMode ? 'w-full' : 'min-w-max'} relative" style="height: ${totalTimelineHeight}px;">
-          <!-- 左側時間軸 -->
-          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: sticky; left: 0; z-index: 25; background-color: #FDFBF7; box-sizing: border-box;" 
-               class="shrink-0 border-r border-[#D5C7BC] select-none shadow-[2px_0_4px_rgba(0,0,0,0.05)]">
+          <!-- 🌟 左側時間軸（真實強效凍結：position: sticky; left: 0; 不透明奶茶底） -->
+          <div style="width: ${timeColWidth}px; min-width: ${timeColWidth}px; position: -webkit-sticky; position: sticky; left: 0; z-index: 30; background-color: #FDFBF7; box-sizing: border-box;" 
+               class="shrink-0 border-r border-[#D5C7BC] select-none shadow-[3px_0_5px_rgba(0,0,0,0.06)]">
             ${timeLabelsHtml}
           </div>
-          <!-- 右側專員直欄 -->
+          <!-- 右側各專員排程區 -->
           <div class="flex flex-1 min-w-0 relative">
             ${staffColumnsHtml}
           </div>
