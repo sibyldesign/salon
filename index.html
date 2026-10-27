@@ -1481,6 +1481,20 @@ function applyIndustryModeUI(mode) {
         resolvedTheme = dbThemeCfg;
       }
 
+  // 🌟 安全解析：支援 JSON 字串或陣列格式，過濾空字串
+      let parsedPromoImgs = [];
+      if (sCfg.promo_imgs) {
+        if (Array.isArray(sCfg.promo_imgs)) {
+          parsedPromoImgs = sCfg.promo_imgs.filter(u => u && typeof u === 'string' && u.trim());
+        } else if (typeof sCfg.promo_imgs === 'string') {
+          try {
+            parsedPromoImgs = JSON.parse(sCfg.promo_imgs).filter(u => u && u.trim());
+          } catch(e) {
+            parsedPromoImgs = sCfg.promo_imgs.split('\n').filter(u => u && u.trim());
+          }
+        }
+      }
+
       const rawMode = sCfg.industry_mode || sCfg.industryMode || sInfo.industry_type || 'pet_hotel';
 
       localStorage.setItem('zy_cached_theme', resolvedTheme);
@@ -1520,7 +1534,7 @@ function applyIndustryModeUI(mode) {
         logoUrl: sCfg.logo_url || "",
         storePhone: sCfg.store_phone || "",
         promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
-        promoImgs: (sCfg.promo_imgs && sCfg.promo_imgs.filter(Boolean).length > 0) ? sCfg.promo_imgs.filter(Boolean) : [],
+        promoImgs: parsedPromoImgs,
         address: sCfg.address || "門市服務據點",
         businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
         bookingBufferHours: Number(sCfg.booking_buffer_hours ?? 1),
@@ -1528,6 +1542,9 @@ function applyIndustryModeUI(mode) {
         pet_profile_questions: sCfg.pet_profile_questions || [],
         front_stay_notice: sCfg.front_stay_notice || '',
         enable_front_stay_notice: sCfg.enable_front_stay_notice !== false,
+        lineChannelToken: sCfg.line_channel_token || '',
+        ownerLineUid: sCfg.owner_line_uid || '',
+        lineCardTheme: sCfg.line_card_theme || 'latte',
         ig: sCfg.ig_url || "#",
         line: sCfg.line_url || "#",
         map: sCfg.map_url || "#",
@@ -5020,6 +5037,10 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       email: emailVal,
       customer_email: emailVal,
       customerEmail: emailVal,
+      line_channel_token: db.lineChannelToken || sCfg.line_channel_token || '',
+      owner_line_uid: db.ownerLineUid || sCfg.owner_line_uid || '',
+      line_card_theme: db.lineCardTheme || sCfg.line_card_theme || 'latte',
+      customer_line_uid: guestLineUid || '',
       line_name: cleanLineName,
       service_code: shortServiceCode,
       service_name: sVal,
