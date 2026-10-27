@@ -2042,20 +2042,6 @@
   </div>
 </div>
   
-  <div class="space-y-1.5 p-3.5 bg-brand-50/60 rounded-2xl border border-brand-200/80">
-  <label class="block font-bold text-xs text-brand-900">LINE 官方卡片色系風格 (燕麥/莫蘭迪系列)</label>
-  <select id="setting-line-card-theme" class="w-full p-2 bg-white rounded-xl border border-brand-200 text-xs text-brand-800">
-    <option value="latte">大地燕麥暖棕 (Latte)</option>
-    <option value="matcha">日系抹茶茶木 (Matcha)</option>
-    <option value="noir">經典極簡黑白 (Noir)</option>
-    <option value="navy">韓系霧霾灰藍 (Navy)</option>
-    <option value="rose">法式慕粉煙燻 (Rose Mauve)</option>
-    <option value="sage">莫蘭迪鼠尾草綠 (Sage Green)</option>
-    <option value="pekoe">培茶冷灰白 (Pekoe Grey)</option>
-  </select>
-  <div class="text-[10.5px] text-brand-400">系統發送給客人的預約成功與提醒卡片將同步切換為此色系</div>
-</div>
-
   <!-- ======================================================== -->
   <!-- 16. 【加購模組卡片 C】：定型化契約條款編輯 (加購 contract 時自動展示) -->
   <!-- ======================================================== -->
@@ -4620,19 +4606,23 @@ async function fetchDataAndRender() {
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
-        lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
+        // 🌟【完整補齊】：LINE 模組設定與 7 大開關完整加載，刷新不再重置
         line_card_theme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
-        ownerEmail: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
+        lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
         owner_email: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
+        ownerEmail: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
+        lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || "",
+        line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || "",
+        owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || "",
+        ownerLineUid: sCfg.owner_line_uid || sCfg.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || "",
         
-        lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || "",
-        line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || "",
-        owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
-        ownerLineUid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
-        enableOwnerLinePush: sCfg.enable_owner_line_push ?? true,
-        enable_owner_line_push: sCfg.enable_owner_line_push ?? true,
-        enableLineAutoNotify: sCfg.enable_line_auto_notify ?? false,
-        enable_line_auto_notify: sCfg.enable_line_auto_notify ?? false,
+        enable_owner_line_push: sCfg.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_line_one_click_audit: sCfg.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_owner_deposit_notify: sCfg.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_cust_instant_notify: sCfg.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_line_auto_notify: sCfg.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true'),
+        enable_line_menu_query: sCfg.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_pet_pickup_notify: sCfg.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false'),
         enableEmailCopy: sCfg.enable_email_copy ?? true,
         enable_email_copy: sCfg.enable_email_copy ?? true,
 
@@ -11501,17 +11491,22 @@ function populateLifetimeSettings() {
   setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
   setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
   
-// 🌟【關鍵補齊】：完整回填 7 大 LINE 子開關，切換分頁不再被重置為預設
-  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
-  setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? s.enableLineOneClickAudit, true);
+// 🌟【精準回填】：確保卡片風格、業主信箱與 7 大開關精準回填至介面
+  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+
+  setVal('lt-setting-line-card-theme', effectiveCardTheme);
+  setVal('cfg-line-card-theme', effectiveCardTheme);
+  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
+  setVal('cfg-owner-email', effectiveOwnerEmail);
+
+  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push, true);
+  setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit, true);
   setCheck('lt-cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify, true);
   setCheck('lt-cfg-toggle-cust-instant-notify', s.enable_cust_instant_notify, true);
-  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, true);
+  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify, false);
   setCheck('lt-cfg-toggle-menu-query', s.enable_line_menu_query, true);
   setCheck('lt-cfg-toggle-pet-pickup', s.enable_pet_pickup_notify, true);
-  // 在回填函式中加入：
-setVal('lt-cfg-owner-email', s.owner_email || '');
-setVal('cfg-owner-email', s.owner_email || '');
   
   // 買斷版回填
 setVal('lt-setting-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
@@ -11701,22 +11696,21 @@ async function saveLifetimeStoreSettings() {
   const lineTokenVal = getVal('lt-cfg-line-token');
   const ownerUidVal = getVal('lt-cfg-owner-line-uid');
   const lineCardTheme = getVal('lt-setting-line-card-theme') || 'latte';
-  const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
-  // 🌟【關鍵修復】：買斷版卡片風格與信箱回填 (支援資料庫 ➔ 記憶體 ➔ LocalStorage)
-  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
-  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+  const ownerEmailVal = getVal('lt-cfg-owner-email');
 
-  setVal('lt-setting-line-card-theme', effectiveCardTheme);
-  setVal('setting-line-card-theme', effectiveCardTheme);
-  setVal('cfg-line-card-theme', effectiveCardTheme);
-
-  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
-  setVal('cfg-owner-email', effectiveOwnerEmail);
-
+  // 雙重存檔：同步寫入 LocalStorage，即使資料庫 Schema 未開欄位也能長久保存
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
+  
+  localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-line-push'));
+  localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-one-click'));
+  localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-deposit-notify'));
+  localStorage.setItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-cust-instant-notify'));
+  localStorage.setItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-auto-notify'));
+  localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-menu-query'));
+  localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-pet-pickup'));
   
   const payload = {
     store_id: CURRENT_STORE_ID,
@@ -12415,10 +12409,12 @@ function openCustomBoundSpreadsheet() {
     // ========================================================
 // 🌟【修復版】testOwnerLinePush — 精確鎖定當前頁面業主 UID，直發業主對話框
 // ========================================================
+// ========================================================
+// 🌟【升級版】testOwnerLinePush — 目標 UID 防呆確認 + 主題卡片發送
+// ========================================================
 async function testOwnerLinePush() {
   const isLt = isStoreLifetime() || (document.getElementById('page-settings-lifetime')?.style.display !== 'none');
   
-  // 依當前顯示分頁，精確抓取使用者眼前輸入框的值
   let token = isLt
     ? (document.getElementById('lt-cfg-line-token')?.value || document.getElementById('cfg-line-token')?.value || '')
     : (document.getElementById('cfg-line-token')?.value || document.getElementById('lt-cfg-line-token')?.value || '');
@@ -12427,6 +12423,10 @@ async function testOwnerLinePush() {
     ? (document.getElementById('lt-cfg-owner-line-uid')?.value || document.getElementById('cfg-owner-line-uid')?.value || '')
     : (document.getElementById('cfg-owner-line-uid')?.value || document.getElementById('lt-cfg-owner-line-uid')?.value || '');
 
+  const cardTheme = isLt
+    ? (document.getElementById('lt-setting-line-card-theme')?.value || 'latte')
+    : (document.getElementById('cfg-line-card-theme')?.value || 'latte');
+
   token = token.trim();
   ownerUid = ownerUid.trim();
 
@@ -12434,30 +12434,52 @@ async function testOwnerLinePush() {
     return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
   }
   if (!ownerUid) {
-    return Swal.fire('請填寫業主個人的 LINE User ID (UID)', '請填入以 U 開頭的個人識別碼', 'warning');
+    return Swal.fire({
+      title: '請填寫接收推播的業主 UID',
+      html: `
+        <div class="text-left text-xs space-y-1.5 p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed">
+          <p><b>⚠️ 重要說明：</b></p>
+          <p>LINE 訊息只能推播到「接收者本人的手機，與該官方帳號的對話框內」。</p>
+          <p>若填寫的是您的 UID，就會傳到您的手機；<b>若要讓業主收到，此處必須填寫「業主本人的 LINE UID (U開頭字串)」</b>！</p>
+        </div>
+      `,
+      icon: 'info'
+    });
   }
 
-  // 雙向同步更新畫面上的所有輸入框與快取，避免下次讀取舊資料
-  const setElVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  setElVal('lt-cfg-line-token', token);
-  setElVal('cfg-line-token', token);
-  setElVal('lt-cfg-owner-line-uid', ownerUid);
-  setElVal('cfg-owner-line-uid', ownerUid);
+  // 彈窗確認目標對象，杜絕誤傳
+  const confirmResult = await Swal.fire({
+    title: '確認測試推播對象',
+    html: `
+      <div class="text-left text-xs bg-brand-50 p-3.5 rounded-2xl border border-brand-200 text-brand-900 space-y-2">
+        <div>• <b>接收者 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
+        <div>• <b>套用卡片風格：</b><span class="font-bold text-[#8C7355]">${getThemeName(cardTheme)}</span></div>
+        <p class="text-[11px] text-gray-500 pt-1 border-t">※ 該接收者必須已加入該店官方 LINE 為好友，訊息將即時送達該對話框。</p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '確定發送測試卡片',
+    cancelButtonText: '修改 UID',
+    confirmButtonColor: '#8C7355'
+  });
 
+  if (!confirmResult.isConfirmed) return;
+
+  // 雙向同步儲存至 LocalStorage
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, token);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUid);
+  localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, cardTheme);
 
   Swal.fire({
     title: '正在發送測試推播...',
-    html: `<div class="text-xs text-gray-500 font-mono">目標對象 UID: ${ownerUid}</div>`,
+    html: `<div class="text-xs text-gray-500 font-mono">目標 UID: ${ownerUid}</div>`,
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading()
   });
 
-  const testMessage = `💈 【預約系統連線測試】\n恭喜！業主個人 LINE 即時推播連動成功！\n門市代碼: ${CURRENT_STORE_ID}\n未來有新進預約時，系統將直接發送即時接單卡片至此對話框！`;
+  const testMessage = `💈 【預約系統連線測試】\n門市代碼：${CURRENT_STORE_ID}\n卡片風格：${getThemeName(cardTheme)}\n恭喜！業主端推播通知設定成功！新預約成立時將即時收到接單卡片！`;
 
   try {
-    // 🌟 強制使用 LINE 代理端點 API_URL，絕不誤走試算表 webhook
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -12465,20 +12487,32 @@ async function testOwnerLinePush() {
         action: "sendLinePushProxy",
         token: token,
         to: ownerUid,
-        message: testMessage
+        toUid: ownerUid,
+        userId: ownerUid,
+        targetUid: ownerUid,
+        themeKey: cardTheme,
+        cardType: "ownerTest",
+        message: testMessage,
+        data: {
+          storeName: backendData.settings?.storeName || "門市預約中心",
+          customerName: "測試顧客 (小美)",
+          serviceName: "精緻造型剪髮",
+          appointmentTime: "明日 14:00",
+          themeKey: cardTheme
+        }
       })
     });
 
     const result = await res.json();
 
-    if (result.status === "SUCCESS") {
+    if (result.status === "SUCCESS" || result.success === true) {
       Swal.fire({
         title: '🎉 測試推播已送達！',
         html: `
-          <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1 font-sans">
-            <div>• <b>連線結果：</b>官方 LINE 已順利發出訊息</div>
-            <div>• <b>發送目標 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-            <div class="pt-1 text-[11px] text-emerald-700">請開啟該業主個人 LINE 帳號，確認是否已在官方帳號視窗收到通知。</div>
+          <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1">
+            <div>• <b>目標 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
+            <div>• <b>卡片風格：</b>${getThemeName(cardTheme)}</div>
+            <div class="pt-1 text-[11px] text-emerald-700">請開啟接收該 UID 的 LINE 帳號，確認官方帳號聊天室是否已收到即時通知。</div>
           </div>
         `,
         icon: 'success'
@@ -12491,8 +12525,8 @@ async function testOwnerLinePush() {
             <div><b>官方回應：</b>${result.response || result.message}</div>
             <div class="pt-1 text-[10.5px] font-sans text-rose-700">
               請確認：<br>
-              1. 該 Token 是否屬於該官方帳號且未過期？<br>
-              2. 接收者 UID (${ownerUid}) 是否已加入該官方帳號好友？
+              1. 接收者 (${ownerUid}) 是否已加入該官方帳號好友？<br>
+              2. Channel Access Token 是否有效且未過期？
             </div>
           </div>
         `,
