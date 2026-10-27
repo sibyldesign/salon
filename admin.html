@@ -11457,9 +11457,16 @@ function routeToSettingsPage(btnEl) {
 }
 
     // ========================================================
-// 3. 買斷版專用資料回填與加購模組卡片獨立開關（已修正閉合語法與空值覆蓋問題）
+// 1. 買斷版專用資料回填與模組展開 (已修復誤觸未儲存與讀取覆蓋問題)
 // ========================================================
 function populateLifetimeSettings() {
+  const ltPage = document.getElementById('page-settings-lifetime');
+  // 🌟【防呆核心】：回填資料前暫時卸載監聽器，防止瀏覽器填入時自動觸發「未儲存提示條」
+  if (ltPage) {
+    ltPage.oninput = null;
+    ltPage.onchange = null;
+  }
+
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
@@ -11493,7 +11500,7 @@ function populateLifetimeSettings() {
   setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
   setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
 
-  // 🌟【精準回填】：卡片色系風格與業主信箱（資料庫 ➔ stores ➔ 本地快取多重防護）
+  // 🌟【精準回填】：LINE 憑證、卡片色系與信箱 (4 層備援：資料庫 ➔ stores 表 ➔ 門市快取 ➔ 全域快取)
   const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || 'latte';
   const effectiveOwnerEmail = s.owner_email || s.ownerEmail || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || '';
   const effectiveLineToken = s.line_channel_token || s.lineChannelToken || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || '';
@@ -11508,14 +11515,14 @@ function populateLifetimeSettings() {
   setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
   setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
-  // LINE 7 大獨立子開關回填
-  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push, true);
-  setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit, true);
-  setCheck('lt-cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify, true);
-  setCheck('lt-cfg-toggle-cust-instant-notify', s.enable_cust_instant_notify, true);
-  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify, false);
-  setCheck('lt-cfg-toggle-menu-query', s.enable_line_menu_query, true);
-  setCheck('lt-cfg-toggle-pet-pickup', s.enable_pet_pickup_notify, true);
+  // LINE 7 大獨立子開關回填 (資料庫優先 ➔ 快取 ➔ 預設值)
+  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('lt-cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('lt-cfg-toggle-cust-instant-notify', s.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true'), false);
+  setCheck('lt-cfg-toggle-menu-query', s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('lt-cfg-toggle-pet-pickup', s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false'), true);
 
   // 2. 標配前台預約流程開關
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
@@ -11646,17 +11653,17 @@ function populateLifetimeSettings() {
   markLifetimeSettingsSaved();
   markSettingsSaved();
 
-  const ltPage = document.getElementById('page-settings-lifetime');
-  if (ltPage) {
-    ltPage.oninput = markLifetimeSettingsUnsaved;
-    ltPage.onchange = markLifetimeSettingsUnsaved;
-  }
+  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽使用者輸入
+  setTimeout(() => {
+    if (ltPage) {
+      ltPage.oninput = markLifetimeSettingsUnsaved;
+      ltPage.onchange = markLifetimeSettingsUnsaved;
+    }
+  }, 300);
 }
-    // ========================================================
-// 4. 買斷版專用儲存邏輯 (精確綁定 Token 與 UID，重整絕對不消失)
+
 // ========================================================
-// ========================================================
-// 4. 買斷版專用儲存邏輯 (精確綁定 Token 與 UID，重整絕對不消失)
+// 2. 買斷版專用儲存邏輯 (雙重資料表保險 + 支援排除無效欄位)
 // ========================================================
 async function saveLifetimeStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -11779,9 +11786,26 @@ async function saveLifetimeStoreSettings() {
   };
 
   try {
+    // 🌟【第一道保險】：優先將核心通報憑證直接寫入 stores 原生資料表 (保證永久保存不遺失)
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        store_name: storeTitle,
+        theme_color: selectedTheme,
+        owner_email: ownerEmailVal,
+        owner_line_uid: ownerUidVal,
+        line_channel_token: lineTokenVal
+      })
+    });
+
+    // 🌟【第二道保險】：寫入 store_settings，支援最多 35 次容錯自動剝除無效欄位
     const toSend = { ...payload };
-    // 放大重試次數至 25 次，確保剔除所有資料表未定義欄位後能正常完成儲存
-    for (let attempt = 0; attempt < 25; attempt++) {
+    for (let attempt = 0; attempt < 35; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
         method: "PATCH",
         headers: {
@@ -11818,31 +11842,23 @@ async function saveLifetimeStoreSettings() {
       }
     }
 
-    // 🌟【雙重保障】：將核心通報設定同步寫入 stores 資料表
-    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
-      method: "PATCH",
-      headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        store_name: storeTitle,
-        theme_color: selectedTheme,
-        owner_email: ownerEmailVal,
-        owner_line_uid: ownerUidVal,
-        line_channel_token: lineTokenVal
-      })
-    });
-
+    // 更新記憶體物件
     if (backendData.settings) {
       Object.assign(backendData.settings, payload);
+    }
+    if (backendData.storeInfo) {
+      backendData.storeInfo.line_channel_token = lineTokenVal;
+      backendData.storeInfo.owner_line_uid = ownerUidVal;
+      backendData.storeInfo.owner_email = ownerEmailVal;
     }
 
     markLifetimeSettingsSaved();
     markSettingsSaved();
-    Swal.fire({ title: '買斷版設定已成功儲存！', text: '設定已更新，重整不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
+    Swal.fire({ title: '買斷版設定已成功儲存！', text: '設定已更新，重整網頁不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
   }
 }
-
     // ========================================================
 // 1. 全域行銷內部區塊顯隱控制 (按總管開通的模組決定)
 // ========================================================
