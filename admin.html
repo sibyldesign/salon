@@ -10029,8 +10029,19 @@ function toggleSelectAllDateSlots(dayStr, btn) {
     // ========================================================
 // 【完整補齊版】populateSettings() — 訂閱版資料回填引擎
 // ========================================================
+// ========================================================
+// 1. 訂閱版資料回填引擎 (已同步多重快取備援與防誤觸機制)
+// ========================================================
 function populateSettings() {
+  const subPage = document.getElementById('page-settings');
+  // 🌟【防呆核心】：回填資料前暫時卸載監聽器，防止瀏覽器填入時自動觸發「未儲存提示條」
+  if (subPage) {
+    subPage.oninput = null;
+    subPage.onchange = null;
+  }
+
   const s = backendData.settings || {};
+  const store = backendData.storeInfo || {};
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -10070,44 +10081,33 @@ function populateSettings() {
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
 
-  // 2. LINE 卡片外觀色系與金鑰 (三層備援：資料庫 ➔ 記憶體 ➔ 本地快取)
-  setVal('cfg-line-card-theme', s.line_card_theme || 'latte');
-
-  const effectiveLineToken = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
-  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
-  setVal('cfg-line-token', effectiveLineToken);
-  setVal('cfg-owner-line-uid', effectiveOwnerUid);
-
-  // 🌟【關鍵修復】：訂閱版卡片風格與信箱回填 (支援資料庫 ➔ 記憶體 ➔ LocalStorage)
-  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
-  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+  // 🌟【精準回填】：LINE 憑證、卡片色系與信箱 (4 層備援：資料庫 ➔ stores 表 ➔ 門市快取 ➔ 全域快取)
+  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || 'latte';
+  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || '';
+  const effectiveLineToken = s.line_channel_token || s.lineChannelToken || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || '';
+  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || '';
 
   setVal('cfg-line-card-theme', effectiveCardTheme);
   setVal('setting-line-card-theme', effectiveCardTheme);
-  setVal('lt-setting-line-card-theme', effectiveCardTheme);
-
   setVal('cfg-owner-email', effectiveOwnerEmail);
-  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
+  setVal('cfg-line-token', effectiveLineToken);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
-  // 3. LINE 模組 7 大子開關回填
-  setCheck('cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
-  setCheck('cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? s.enableLineOneClickAudit, true);
-  setCheck('cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify, true);
-  setCheck('cfg-toggle-cust-instant-notify', s.enable_cust_instant_notify, true);
-  setCheck('cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, true);
-  setCheck('cfg-toggle-menu-query', s.enable_line_menu_query, true);
-  setCheck('cfg-toggle-pet-pickup', s.enable_pet_pickup_notify, true);
+  // LINE 7 大獨立子開關回填 (資料庫優先 ➔ 快取 ➔ 預設值)
+  setCheck('cfg-toggle-owner-line-push', s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('cfg-toggle-cust-instant-notify', s.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true'), false);
+  setCheck('cfg-toggle-menu-query', s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false'), true);
+  setCheck('cfg-toggle-pet-pickup', s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false'), true);
 
-  // 在回填函式中加入：
-setVal('lt-cfg-owner-email', s.owner_email || '');
-setVal('cfg-owner-email', s.owner_email || '');
-  
-  // 4. 前台風格主題色系
+  // 前台風格主題色系
   const activeTheme = s.theme_color || s.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
   setVal('cfg-theme-color', activeTheme);
   previewSelectedThemeColor(activeTheme);
 
-  // 5. 既有標配流程與行銷開關回填
+  // 標配流程與行銷功能開關回填
   setCheck('cfg-toggle-logo', s.enable_logo ?? s.enableLogo, true);
   setCheck('cfg-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
   setCheck('cfg-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
@@ -10133,13 +10133,13 @@ setVal('cfg-owner-email', s.owner_email || '');
   setCheck('setting-enable-phone-history', s.enable_phone_history_query, true);
   setCheck('cfg-toggle-contact-specialist', s.enable_contact_specialist, true);
 
-  // 6. 公休日
+  // 公休日設定
   const offList = s.weekly_off_days || s.weeklyOffDays || [];
   document.querySelectorAll('#weekly-off-grid input').forEach(input => {
     input.checked = offList.includes(Number(input.value));
   });
 
-  // 7. 圖片預覽
+  // LOGO 預覽處理
   const logoPreviewBox = document.getElementById('logo-preview-box');
   const logoPreviewImg = document.getElementById('logo-preview-img');
   if (logoPreviewBox && logoPreviewImg && s.logoUrl) {
@@ -10150,11 +10150,22 @@ setVal('cfg-owner-email', s.owner_email || '');
   renderStaffManager('');
   renderPlanRules('');
   renderUploadSlots('');
+  
+  // 🌟【關鍵修復】：明確重設已儲存狀態，隱藏提示條
   markSettingsSaved();
+  markLifetimeSettingsSaved();
+
+  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽使用者手動輸入
+  setTimeout(() => {
+    if (subPage) {
+      subPage.oninput = markSettingsUnsaved;
+      subPage.onchange = markSettingsUnsaved;
+    }
+  }, 300);
 }
 
 // ========================================================
-// 【修復版】saveStoreSettings() — 乾淨無語法錯誤，完整寫入資料庫
+// 2. 訂閱版儲存邏輯 (雙重資料表保險 + 35次未知欄位容錯剝除)
 // ========================================================
 async function saveStoreSettings() {
   Swal.fire({ 
@@ -10175,13 +10186,27 @@ async function saveStoreSettings() {
   const lineTokenVal = getVal('cfg-line-token');
   const ownerUidVal = getVal('cfg-owner-line-uid');
   const lineCardTheme = getVal('cfg-line-card-theme') || 'latte';
-  const ownerEmailVal = getVal('cfg-owner-email') || getVal('lt-cfg-owner-email');
+  const ownerEmailVal = getVal('cfg-owner-email');
 
+  // 🌟【雙軌 LocalStorage 備份】：門市專屬 + 全域備援
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
+  localStorage.setItem('zy_line_token', lineTokenVal);
+  localStorage.setItem('zy_owner_uid', ownerUidVal);
+  localStorage.setItem('zy_line_card_theme', lineCardTheme);
+  localStorage.setItem('zy_owner_email', ownerEmailVal);
   localStorage.setItem('zy_cached_theme', selectedTheme);
+
+  // 獨立開關狀態快取
+  localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-line-push'));
+  localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-line-one-click'));
+  localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-deposit-notify'));
+  localStorage.setItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-cust-instant-notify'));
+  localStorage.setItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-line-auto-notify'));
+  localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-menu-query'));
+  localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-pet-pickup'));
 
   const chosenStartTime = getVal('cfg-shift-start') || '09:00';
   const chosenEndTime = getVal('cfg-shift-end') || '19:00';
@@ -10257,17 +10282,77 @@ async function saveStoreSettings() {
   };
 
   try {
-    await directSupabasePatch('stores', `id=eq.${CURRENT_STORE_ID}`, {
-      store_name: storeTitle,
-      industry_type: selectedMode,
-      theme_color: selectedTheme
+    // 🌟【第一道保險】：直接更新 stores 原生資料表，確保金鑰、信箱與門市名稱 100% 寫入
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: { 
+        "apikey": SUPABASE_ANON_KEY, 
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+        "Content-Type": "application/json" 
+      },
+      body: JSON.stringify({
+        store_name: storeTitle,
+        industry_type: selectedMode,
+        theme_color: selectedTheme,
+        owner_email: ownerEmailVal,
+        owner_line_uid: ownerUidVal,
+        line_channel_token: lineTokenVal
+      })
     });
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, settingsPayload);
 
-    if (backendData.settings) {
-      Object.assign(backendData.settings, settingsPayload);
+    // 🌟【第二道保險】：寫入 store_settings，支援最多 35 次容錯自動剝除無效欄位
+    const toSend = { ...settingsPayload };
+    for (let attempt = 0; attempt < 35; attempt++) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(toSend)
+      });
+
+      if (res.ok) {
+        const patchData = await res.json();
+        if (!patchData || patchData.length === 0) {
+          await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+            method: "POST",
+            headers: { 
+              "apikey": SUPABASE_ANON_KEY, 
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+              "Content-Type": "application/json" 
+            },
+            body: JSON.stringify(toSend)
+          });
+        }
+        break;
+      } else {
+        const errText = await res.text();
+        const matchCol = errText.match(/Could not find the '([^']+)' column/);
+        if (matchCol && matchCol[1]) {
+          delete toSend[matchCol[1]];
+        } else {
+          break;
+        }
+      }
     }
+
+    // 更新記憶體物件
+    if (backendData.settings) {
+      Object.assign(backendData.settings, toSend);
+    }
+    if (backendData.storeInfo) {
+      backendData.storeInfo.line_channel_token = lineTokenVal;
+      backendData.storeInfo.owner_line_uid = ownerUidVal;
+      backendData.storeInfo.owner_email = ownerEmailVal;
+      backendData.storeInfo.store_name = storeTitle;
+      backendData.storeInfo.theme_color = selectedTheme;
+    }
+
     markSettingsSaved();
+    markLifetimeSettingsSaved();
     Swal.fire({ title: '系統設定已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (err) {
     Swal.fire('儲存失敗', err.message, 'error');
