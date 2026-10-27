@@ -4620,6 +4620,11 @@ async function fetchDataAndRender() {
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
+        lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
+        line_card_theme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
+        ownerEmail: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
+        owner_email: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
+        
         lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || "",
         line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || "",
         owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || "",
@@ -10082,6 +10087,17 @@ function populateSettings() {
   setVal('cfg-line-token', effectiveLineToken);
   setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
+  // 🌟【關鍵修復】：訂閱版卡片風格與信箱回填 (支援資料庫 ➔ 記憶體 ➔ LocalStorage)
+  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+
+  setVal('cfg-line-card-theme', effectiveCardTheme);
+  setVal('setting-line-card-theme', effectiveCardTheme);
+  setVal('lt-setting-line-card-theme', effectiveCardTheme);
+
+  setVal('cfg-owner-email', effectiveOwnerEmail);
+  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
+
   // 3. LINE 模組 7 大子開關回填
   setCheck('cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
   setCheck('cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? s.enableLineOneClickAudit, true);
@@ -10172,6 +10188,8 @@ async function saveStoreSettings() {
 
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
+  localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
+  localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
   localStorage.setItem('zy_cached_theme', selectedTheme);
 
   const chosenStartTime = getVal('cfg-shift-start') || '09:00';
@@ -11684,9 +11702,21 @@ async function saveLifetimeStoreSettings() {
   const ownerUidVal = getVal('lt-cfg-owner-line-uid');
   const lineCardTheme = getVal('lt-setting-line-card-theme') || 'latte';
   const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
+  // 🌟【關鍵修復】：買斷版卡片風格與信箱回填 (支援資料庫 ➔ 記憶體 ➔ LocalStorage)
+  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+
+  setVal('lt-setting-line-card-theme', effectiveCardTheme);
+  setVal('setting-line-card-theme', effectiveCardTheme);
+  setVal('cfg-line-card-theme', effectiveCardTheme);
+
+  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
+  setVal('cfg-owner-email', effectiveOwnerEmail);
 
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
+  localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
+  localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
   
   const payload = {
     store_id: CURRENT_STORE_ID,
