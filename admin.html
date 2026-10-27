@@ -4606,15 +4606,15 @@ async function fetchDataAndRender() {
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
 
-        // 🌟【完整補齊】：LINE 模組設定與 7 大開關完整加載，刷新不再重置
-        line_card_theme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
-        lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || "latte",
-        owner_email: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
-        ownerEmail: sCfg.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || "",
-        lineChannelToken: sCfg.line_channel_token || sCfg.lineChannelToken || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || "",
-        line_channel_token: sCfg.line_channel_token || sCfg.lineChannelToken || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || "",
-        owner_line_uid: sCfg.owner_line_uid || sCfg.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || "",
-        ownerLineUid: sCfg.owner_line_uid || sCfg.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || "",
+        // 🌟【關鍵修復】：LINE 模組與信箱 4 層雙軌讀取 (資料庫優先 ➔ stores表備份 ➔ 獨立快取 ➔ 全域快取)
+        line_card_theme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || "latte",
+        lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || "latte",
+        owner_email: sCfg.owner_email || sInfo.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || "",
+        ownerEmail: sCfg.owner_email || sInfo.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || "",
+        lineChannelToken: sCfg.line_channel_token || sInfo.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || "",
+        line_channel_token: sCfg.line_channel_token || sInfo.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || "",
+        owner_line_uid: sCfg.owner_line_uid || sInfo.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || "",
+        ownerLineUid: sCfg.owner_line_uid || sInfo.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || "",
         
         enable_owner_line_push: sCfg.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'),
         enable_line_one_click_audit: sCfg.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'),
@@ -4623,6 +4623,7 @@ async function fetchDataAndRender() {
         enable_line_auto_notify: sCfg.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true'),
         enable_line_menu_query: sCfg.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false'),
         enable_pet_pickup_notify: sCfg.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false'),
+        
         enableEmailCopy: sCfg.enable_email_copy ?? true,
         enable_email_copy: sCfg.enable_email_copy ?? true,
 
@@ -11474,7 +11475,7 @@ function populateLifetimeSettings() {
     el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 營業時間（精確帶入儲存值，杜絕跳回）
+  // 1. 營業時間與基礎設定
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
@@ -11485,21 +11486,29 @@ function populateLifetimeSettings() {
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
   setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+
   // 供餐方案自訂提示語回填
   const ltMealNotes = s.boarding_meal_notes || {};
   setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
   setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
   setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
-  
-// 🌟【精準回填】：確保卡片風格、業主信箱與 7 大開關精準回填至介面
-  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
-  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+
+  // 🌟【精準回填】：卡片色系風格與業主信箱（資料庫 ➔ stores ➔ 本地快取多重防護）
+  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || 'latte';
+  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || '';
+  const effectiveLineToken = s.line_channel_token || s.lineChannelToken || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || '';
+  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || '';
 
   setVal('lt-setting-line-card-theme', effectiveCardTheme);
   setVal('cfg-line-card-theme', effectiveCardTheme);
   setVal('lt-cfg-owner-email', effectiveOwnerEmail);
   setVal('cfg-owner-email', effectiveOwnerEmail);
+  setVal('lt-cfg-line-token', effectiveLineToken);
+  setVal('cfg-line-token', effectiveLineToken);
+  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
+  // LINE 7 大獨立子開關回填
   setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push, true);
   setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit, true);
   setCheck('lt-cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify, true);
@@ -11507,14 +11516,8 @@ function populateLifetimeSettings() {
   setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify, false);
   setCheck('lt-cfg-toggle-menu-query', s.enable_line_menu_query, true);
   setCheck('lt-cfg-toggle-pet-pickup', s.enable_pet_pickup_notify, true);
-  
-  // 買斷版回填
-setVal('lt-setting-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
 
-// 訂閱版回填
-setVal('cfg-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
-
-  // 2. 標配前台開關（精確讀取 false）
+  // 2. 標配前台預約流程開關
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
   setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
   setCheck('lt-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
@@ -11526,7 +11529,7 @@ setVal('cfg-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
   setCheck('lt-toggle-phone-history', s.enable_phone_history_query, true);
   setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist, true);
 
-  // 3. 標配自動化開關
+  // 3. 標配自動化輔助開關
   setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
   setCheck('lt-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
   setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? s.enableQuickContact, true);
@@ -11582,22 +11585,11 @@ setVal('cfg-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
 
-  // 🌟 通報推播與管道回填（LINE / Email 完整啟用，雙重持久化）
   const linePushCard = document.getElementById('lt-addon-card-line_push');
   if (linePushCard) {
     linePushCard.classList.remove('hidden');
     linePushCard.style.setProperty('display', 'block', 'important');
   }
-
-  // 優先抓取資料庫 ➔ 記憶體 ➔ LocalStorage 快取
-  const effectiveLineToken = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
-  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
-
-  setVal('lt-cfg-line-token', effectiveLineToken);
-  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
-
-  setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? s.enableOwnerLinePush, true);
-  setCheck('lt-cfg-toggle-line-auto-notify', s.enable_line_auto_notify ?? s.enableLineAutoNotify, false);
 
   if (allowed.includes('contract')) {
     setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
@@ -11606,9 +11598,7 @@ setVal('cfg-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
   if (allowed.includes('wallet')) renderPlanRules('lt');
   if (allowed.includes('packages')) renderPlanRules('lt');
 
-  // ==========================================================================
   // 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
-  // ==========================================================================
   const storeName = store.store_name || s.storeName || '';
   const storeSlug = store.slug || '';
   const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
@@ -11652,7 +11642,10 @@ setVal('cfg-line-card-theme', s.line_card_theme || s.lineCardTheme || 'latte');
   }
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
+  // 關閉所有未儲存提示條
   markLifetimeSettingsSaved();
+  markSettingsSaved();
+
   const ltPage = document.getElementById('page-settings-lifetime');
   if (ltPage) {
     ltPage.oninput = markLifetimeSettingsUnsaved;
@@ -11675,7 +11668,7 @@ async function saveLifetimeStoreSettings() {
   const selectedTheme = getVal('lt-theme-color') || 'latte';
   const storeTitle = getVal('lt-title') || backendData.settings?.storeName || '沙龍門市';
 
-  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定並存入本地快取備份】🚨🚨🚨
+  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定】🚨🚨🚨
   const rawSheetInput = getVal('lt-custom-sheets-id');
   const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
@@ -11687,23 +11680,27 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_gas_url_${CURRENT_STORE_ID}`, gasUrl);
   localStorage.setItem(`zy_sheets_sync_${CURRENT_STORE_ID}`, enableSheetsSync);
   localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
-  // 🚨🚨🚨【客製專用：這理髮型 - 結束】🚨🚨🚨
+  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
   const chosenStartTime = getVal('lt-shift-start') || '09:00';
   const chosenEndTime = getVal('lt-shift-end') || '19:00';
   const chosenInterval = Number(getVal('lt-shift-interval') || 30);
 
-  const lineTokenVal = getVal('lt-cfg-line-token');
-  const ownerUidVal = getVal('lt-cfg-owner-line-uid');
-  const lineCardTheme = getVal('lt-setting-line-card-theme') || 'latte';
-  const ownerEmailVal = getVal('lt-cfg-owner-email');
+  const lineTokenVal = getVal('lt-cfg-line-token') || getVal('cfg-line-token');
+  const ownerUidVal = getVal('lt-cfg-owner-line-uid') || getVal('cfg-owner-line-uid');
+  const lineCardTheme = getVal('lt-setting-line-card-theme') || getVal('cfg-line-card-theme') || 'latte';
+  const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
 
-  // 雙重存檔：同步寫入 LocalStorage，即使資料庫 Schema 未開欄位也能長久保存
+  // 雙軌 LocalStorage 備份 (門市專屬 + 全域備援)
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
-  
+  localStorage.setItem('zy_line_token', lineTokenVal);
+  localStorage.setItem('zy_owner_uid', ownerUidVal);
+  localStorage.setItem('zy_line_card_theme', lineCardTheme);
+  localStorage.setItem('zy_owner_email', ownerEmailVal);
+
   localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-line-push'));
   localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-one-click'));
   localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-deposit-notify'));
@@ -11711,18 +11708,12 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-auto-notify'));
   localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-menu-query'));
   localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-pet-pickup'));
-  
+
   const payload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
     promo_imgs: promoImgsArray.filter(u => u && u.trim()),
     owner_email: ownerEmailVal,
-    boarding_meal_notes: {
-      none: "自備習慣食用之乾糧飼料或罐頭分裝包",
-      one: getVal('cfg-meal-note-one') || "安排於晚間 18:00 供餐",
-      two: getVal('cfg-meal-note-two') || "固定於早 09:00、晚 18:00 供餐",
-      three: getVal('cfg-meal-note-three') || "早 09:00、午 12:30、晚 18:00 三餐完整照護"
-    },
     display_subtitle: getVal('lt-subtitle'),
     logo_url: getVal('lt-logo'),
     enable_logo: getCheck('lt-toggle-logo'),
@@ -11777,24 +11768,20 @@ async function saveLifetimeStoreSettings() {
     commission_rate: Number(getVal('lt-cfg-commission-rate') || 50),
     designated_bonus: Number(getVal('lt-cfg-designated-bonus') || 50),
 
-    // 🚨🚨🚨【客製專用：這理髮型 - 試算表連動設定存入資料庫】🚨🚨🚨
+    // 🚨🚨🚨【客製專用：這理髮型 - 試算表連動設定】🚨🚨🚨
     sheets_spreadsheet_id: cleanSheetId,
     sheets_gas_url: gasUrl,
     enable_sheets_sync: enableSheetsSync,
     enable_sheets_cust_sync: enableSheetsCustSync,
-    // 🚨🚨🚨【客製專用：這理髮型 - 結束】🚨🚨🚨
+    // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
     updated_at: new Date().toISOString()
   };
 
-  if (!document.getElementById('lt-addon-card-contract')?.classList.contains('hidden')) {
-    payload.contract_title = getVal('lt-contract-title') || '定型化服務契約書';
-    payload.contract_content = getVal('lt-contract-content');
-  }
-
   try {
     const toSend = { ...payload };
-    for (let attempt = 0; attempt < 5; attempt++) {
+    // 放大重試次數至 25 次，確保剔除所有資料表未定義欄位後能正常完成儲存
+    for (let attempt = 0; attempt < 25; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
         method: "PATCH",
         headers: {
@@ -11831,10 +11818,17 @@ async function saveLifetimeStoreSettings() {
       }
     }
 
+    // 🌟【雙重保障】：將核心通報設定同步寫入 stores 資料表
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ store_name: storeTitle, theme_color: selectedTheme })
+      body: JSON.stringify({
+        store_name: storeTitle,
+        theme_color: selectedTheme,
+        owner_email: ownerEmailVal,
+        owner_line_uid: ownerUidVal,
+        line_channel_token: lineTokenVal
+      })
     });
 
     if (backendData.settings) {
@@ -11842,6 +11836,7 @@ async function saveLifetimeStoreSettings() {
     }
 
     markLifetimeSettingsSaved();
+    markSettingsSaved();
     Swal.fire({ title: '買斷版設定已成功儲存！', text: '設定已更新，重整不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
@@ -12415,69 +12410,63 @@ function openCustomBoundSpreadsheet() {
 async function testOwnerLinePush() {
   const isLt = isStoreLifetime() || (document.getElementById('page-settings-lifetime')?.style.display !== 'none');
   
-  let token = isLt
-    ? (document.getElementById('lt-cfg-line-token')?.value || document.getElementById('cfg-line-token')?.value || '')
-    : (document.getElementById('cfg-line-token')?.value || document.getElementById('lt-cfg-line-token')?.value || '');
-
-  let ownerUid = isLt
-    ? (document.getElementById('lt-cfg-owner-line-uid')?.value || document.getElementById('cfg-owner-line-uid')?.value || '')
-    : (document.getElementById('cfg-owner-line-uid')?.value || document.getElementById('lt-cfg-owner-line-uid')?.value || '');
-
-  const cardTheme = isLt
-    ? (document.getElementById('lt-setting-line-card-theme')?.value || 'latte')
-    : (document.getElementById('cfg-line-card-theme')?.value || 'latte');
-
-  token = token.trim();
-  ownerUid = ownerUid.trim();
+  let token = (document.getElementById(isLt ? 'lt-cfg-line-token' : 'cfg-line-token')?.value || '').trim();
+  let ownerUid = (document.getElementById(isLt ? 'lt-cfg-owner-line-uid' : 'cfg-owner-line-uid')?.value || '').trim();
+  const cardTheme = (document.getElementById(isLt ? 'lt-setting-line-card-theme' : 'cfg-line-card-theme')?.value || 'latte').trim();
 
   if (!token) {
     return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
   }
-  if (!ownerUid) {
-    return Swal.fire({
-      title: '請填寫接收推播的業主 UID',
-      html: `
-        <div class="text-left text-xs space-y-1.5 p-2 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed">
-          <p><b>⚠️ 重要說明：</b></p>
-          <p>LINE 訊息只能推播到「接收者本人的手機，與該官方帳號的對話框內」。</p>
-          <p>若填寫的是您的 UID，就會傳到您的手機；<b>若要讓業主收到，此處必須填寫「業主本人的 LINE UID (U開頭字串)」</b>！</p>
-        </div>
-      `,
-      icon: 'info'
-    });
-  }
 
-  // 彈窗確認目標對象，杜絕誤傳
-  const confirmResult = await Swal.fire({
-    title: '確認測試推播對象',
+  // 🌟 明確彈窗讓您核對與替換目標 UID，避免誤發給自己
+  const { value: targetUid } = await Swal.fire({
+    title: '確認測試推播目標 LINE UID',
     html: `
-      <div class="text-left text-xs bg-brand-50 p-3.5 rounded-2xl border border-brand-200 text-brand-900 space-y-2">
-        <div>• <b>接收者 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-        <div>• <b>套用卡片風格：</b><span class="font-bold text-[#8C7355]">${getThemeName(cardTheme)}</span></div>
-        <p class="text-[11px] text-gray-500 pt-1 border-t">※ 該接收者必須已加入該店官方 LINE 為好友，訊息將即時送達該對話框。</p>
+      <div class="text-left text-xs space-y-2.5 p-1 text-brand-900 font-sans">
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed text-[11px]">
+          <b>⚠️ 為什麼之前會傳到您個人的對話框？</b><br>
+          LINE 推播是根據輸入框填寫的 UID 發送。若欄位內填的是您自己的 UID，訊息就會發給您。<br>
+          <b>若要讓「店家業主」收到，請在此輸入「業主本人的 LINE UID」！</b>
+        </div>
+        <div>
+          <label class="block font-bold text-brand-800 mb-1">接收測試推播之 LINE UID (U開頭)：</label>
+          <input id="swal-target-uid" class="swal2-input text-xs font-mono font-bold" value="${ownerUid}" placeholder="請貼上業主 U 開頭個人 ID">
+        </div>
+        <div class="text-[10.5px] text-gray-500">
+          💡 業主如何查自己的 UID？只需請業主用個人 LINE 傳送「<b>查詢我的ID</b>」給官方帳號即可獲取。
+        </div>
       </div>
     `,
     showCancelButton: true,
     confirmButtonText: '確定發送測試卡片',
-    cancelButtonText: '修改 UID',
-    confirmButtonColor: '#8C7355'
+    cancelButtonText: '取消',
+    confirmButtonColor: '#8C7355',
+    preConfirm: () => {
+      const u = document.getElementById('swal-target-uid')?.value.trim();
+      if (!u || !u.startsWith('U')) {
+        Swal.showValidationMessage('請輸入正確且以 U 開頭的 LINE User ID！');
+        return false;
+      }
+      return u;
+    }
   });
 
-  if (!confirmResult.isConfirmed) return;
+  if (!targetUid) return;
 
-  // 雙向同步儲存至 LocalStorage
-  localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, token);
+  // 將確認後的 UID 寫回介面與快取
+  ownerUid = targetUid;
+  const setElVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  setElVal('lt-cfg-owner-line-uid', ownerUid);
+  setElVal('cfg-owner-line-uid', ownerUid);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUid);
-  localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, cardTheme);
+  localStorage.setItem('zy_owner_uid', ownerUid);
 
   Swal.fire({
     title: '正在發送測試推播...',
-    html: `<div class="text-xs text-gray-500 font-mono">目標 UID: ${ownerUid}</div>`,
+    html: `<div class="text-xs text-gray-500 font-mono">發送目標 UID: ${ownerUid}</div>`,
     allowOutsideClick: false,
     didOpen: () => Swal.showLoading()
   });
-
-  const testMessage = `💈 【預約系統連線測試】\n門市代碼：${CURRENT_STORE_ID}\n卡片風格：${getThemeName(cardTheme)}\n恭喜！業主端推播通知設定成功！新預約成立時將即時收到接單卡片！`;
 
   try {
     const res = await fetch(API_URL, {
@@ -12487,31 +12476,28 @@ async function testOwnerLinePush() {
         action: "sendLinePushProxy",
         token: token,
         to: ownerUid,
-        toUid: ownerUid,
-        userId: ownerUid,
-        targetUid: ownerUid,
-        themeKey: cardTheme,
         cardType: "ownerTest",
-        message: testMessage,
+        themeKey: cardTheme,
         data: {
-          storeName: backendData.settings?.storeName || "門市預約中心",
-          customerName: "測試顧客 (小美)",
-          serviceName: "精緻造型剪髮",
-          appointmentTime: "明日 14:00",
-          themeKey: cardTheme
+          name: "預約測試顧客 (小美)",
+          phone: "0912-345-678",
+          date: "明日",
+          time: "14:00",
+          service: "剪燙造型設計",
+          price: 1200,
+          staffName: "指定設計師"
         }
       })
     });
 
     const result = await res.json();
-
-    if (result.status === "SUCCESS" || result.success === true) {
+    if (result.status === "SUCCESS") {
       Swal.fire({
         title: '🎉 測試推播已送達！',
         html: `
           <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1">
             <div>• <b>目標 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-            <div>• <b>卡片風格：</b>${getThemeName(cardTheme)}</div>
+            <div>• <b>卡片風格：</b>${cardTheme}</div>
             <div class="pt-1 text-[11px] text-emerald-700">請開啟接收該 UID 的 LINE 帳號，確認官方帳號聊天室是否已收到即時通知。</div>
           </div>
         `,
@@ -12519,17 +12505,8 @@ async function testOwnerLinePush() {
       });
     } else {
       Swal.fire({
-        title: `LINE 官方伺服器退件 (${result.code || '驗證失敗'})`,
-        html: `
-          <div class="text-left text-xs bg-rose-50 p-3 rounded-xl border border-rose-200 text-rose-900 font-mono space-y-1">
-            <div><b>官方回應：</b>${result.response || result.message}</div>
-            <div class="pt-1 text-[10.5px] font-sans text-rose-700">
-              請確認：<br>
-              1. 接收者 (${ownerUid}) 是否已加入該官方帳號好友？<br>
-              2. Channel Access Token 是否有效且未過期？
-            </div>
-          </div>
-        `,
+        title: 'LINE 伺服器退件',
+        html: `<div class="text-left text-xs text-rose-800 bg-rose-50 p-2.5 rounded-xl border border-rose-200 font-mono">${result.response || result.message}</div>`,
         icon: 'error'
       });
     }
