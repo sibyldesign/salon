@@ -10032,6 +10032,9 @@ function toggleSelectAllDateSlots(dayStr, btn) {
 // ========================================================
 // 1. 訂閱版資料回填引擎 (已同步多重快取備援與防誤觸機制)
 // ========================================================
+// ========================================================
+// 1. 訂閱版資料回填引擎 (已排除全域 UID 污染與誤觸警示條)
+// ========================================================
 function populateSettings() {
   const subPage = document.getElementById('page-settings');
   // 🌟【防呆核心】：回填資料前暫時卸載監聽器，防止瀏覽器填入時自動觸發「未儲存提示條」
@@ -10081,11 +10084,11 @@ function populateSettings() {
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
 
-  // 🌟【精準回填】：LINE 憑證、卡片色系與信箱 (4 層備援：資料庫 ➔ stores 表 ➔ 門市快取 ➔ 全域快取)
-  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || 'latte';
-  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || '';
-  const effectiveLineToken = s.line_channel_token || s.lineChannelToken || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || '';
-  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || '';
+  // 🌟【關鍵修復】：僅讀取帶有門市 ID 的快取與資料庫，徹底杜絕跨店讀到個人 UID
+  const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
+  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
 
   setVal('cfg-line-card-theme', effectiveCardTheme);
   setVal('setting-line-card-theme', effectiveCardTheme);
@@ -10093,7 +10096,7 @@ function populateSettings() {
   setVal('cfg-line-token', effectiveLineToken);
   setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
-  // LINE 7 大獨立子開關回填 (資料庫優先 ➔ 快取 ➔ 預設值)
+  // LINE 7 大獨立子開關回填 (資料庫優先 ➔ 門市專屬快取 ➔ 預設值)
   setCheck('cfg-toggle-owner-line-push', s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'), true);
   setCheck('cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'), true);
   setCheck('cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false'), true);
@@ -10107,7 +10110,7 @@ function populateSettings() {
   setVal('cfg-theme-color', activeTheme);
   previewSelectedThemeColor(activeTheme);
 
-  // 標配流程與行銷功能開關回填
+  // 標配流程與模組功能開關回填
   setCheck('cfg-toggle-logo', s.enable_logo ?? s.enableLogo, true);
   setCheck('cfg-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
   setCheck('cfg-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
@@ -10139,7 +10142,7 @@ function populateSettings() {
     input.checked = offList.includes(Number(input.value));
   });
 
-  // LOGO 預覽處理
+  // LOGO 預覽
   const logoPreviewBox = document.getElementById('logo-preview-box');
   const logoPreviewImg = document.getElementById('logo-preview-img');
   if (logoPreviewBox && logoPreviewImg && s.logoUrl) {
@@ -10151,7 +10154,7 @@ function populateSettings() {
   renderPlanRules('');
   renderUploadSlots('');
   
-  // 🌟【關鍵修復】：明確重設已儲存狀態，隱藏提示條
+  // 🌟【關鍵修復】：明確解除未儲存提示條狀態
   markSettingsSaved();
   markLifetimeSettingsSaved();
 
@@ -10188,18 +10191,14 @@ async function saveStoreSettings() {
   const lineCardTheme = getVal('cfg-line-card-theme') || 'latte';
   const ownerEmailVal = getVal('cfg-owner-email');
 
-  // 🌟【雙軌 LocalStorage 備份】：門市專屬 + 全域備援
+  // 🌟【精準隔離快取】：僅寫入帶有當前門市 ID 的項目，不再寫入未加字尾的全域變數
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
-  localStorage.setItem('zy_line_token', lineTokenVal);
-  localStorage.setItem('zy_owner_uid', ownerUidVal);
-  localStorage.setItem('zy_line_card_theme', lineCardTheme);
-  localStorage.setItem('zy_owner_email', ownerEmailVal);
   localStorage.setItem('zy_cached_theme', selectedTheme);
 
-  // 獨立開關狀態快取
+  // 獨立子開關快取
   localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-line-push'));
   localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-line-one-click'));
   localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-deposit-notify'));
@@ -11546,7 +11545,6 @@ function routeToSettingsPage(btnEl) {
 // ========================================================
 function populateLifetimeSettings() {
   const ltPage = document.getElementById('page-settings-lifetime');
-  // 🌟【防呆核心】：回填資料前暫時卸載監聽器，防止瀏覽器填入時自動觸發「未儲存提示條」
   if (ltPage) {
     ltPage.oninput = null;
     ltPage.onchange = null;
@@ -11567,7 +11565,7 @@ function populateLifetimeSettings() {
     el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 營業時間與基礎設定
+  // 1. 基礎營業設定
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
@@ -11579,17 +11577,16 @@ function populateLifetimeSettings() {
   setVal('lt-buffer', s.bookingBufferHours || 1);
   setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
 
-  // 供餐方案自訂提示語回填
   const ltMealNotes = s.boarding_meal_notes || {};
   setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
   setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
   setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
 
-  // 🌟【精準回填】：LINE 憑證、卡片色系與信箱 (4 層備援：資料庫 ➔ stores 表 ➔ 門市快取 ➔ 全域快取)
-  const effectiveCardTheme = s.line_card_theme || s.lineCardTheme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || 'latte';
-  const effectiveOwnerEmail = s.owner_email || s.ownerEmail || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || '';
-  const effectiveLineToken = s.line_channel_token || s.lineChannelToken || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || '';
-  const effectiveOwnerUid = s.owner_line_uid || s.ownerLineUid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || '';
+  // 🌟【關鍵除蟲】：僅鎖定「當前門市 ID」之資料，徹底廢除全域 zy_owner_uid，絕不 cross-store 繼承您的個人 UID！
+  const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
+  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
 
   setVal('lt-setting-line-card-theme', effectiveCardTheme);
   setVal('cfg-line-card-theme', effectiveCardTheme);
@@ -11600,7 +11597,7 @@ function populateLifetimeSettings() {
   setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
   setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
-  // LINE 7 大獨立子開關回填 (資料庫優先 ➔ 快取 ➔ 預設值)
+  // LINE 7 大獨立開關
   setCheck('lt-cfg-toggle-owner-line-push', s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'), true);
   setCheck('lt-cfg-toggle-line-one-click', s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'), true);
   setCheck('lt-cfg-toggle-owner-deposit-notify', s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false'), true);
@@ -11609,31 +11606,29 @@ function populateLifetimeSettings() {
   setCheck('lt-cfg-toggle-menu-query', s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false'), true);
   setCheck('lt-cfg-toggle-pet-pickup', s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false'), true);
 
-  // 2. 標配前台預約流程開關
-  setCheck('lt-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
-  setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
-  setCheck('lt-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
-  setCheck('lt-toggle-show-price', s.enable_show_price ?? s.enableShowPrice, true);
-  setCheck('lt-toggle-cust-notes', s.enable_cust_notes ?? s.enableCustNotes, true);
-  setCheck('lt-toggle-portfolio', s.enable_portfolio ?? s.enablePortfolio, true);
-  setCheck('lt-toggle-care', s.enable_care ?? s.enableCare, true);
-  setCheck('lt-toggle-carousel', s.enable_carousel ?? s.enableCarousel, true);
-  setCheck('lt-toggle-phone-history', s.enable_phone_history_query, true);
-  setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist, true);
+  // 標配前台預約開關
+  setCheck('lt-toggle-staff-select', s.enable_staff_select ?? true, true);
+  setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? true, true);
+  setCheck('lt-toggle-custtype', s.enable_cust_type ?? true, true);
+  setCheck('lt-toggle-show-price', s.enable_show_price ?? true, true);
+  setCheck('lt-toggle-cust-notes', s.enable_cust_notes ?? true, true);
+  setCheck('lt-toggle-portfolio', s.enable_portfolio ?? true, true);
+  setCheck('lt-toggle-care', s.enable_care ?? true, true);
+  setCheck('lt-toggle-carousel', s.enable_carousel ?? true, true);
+  setCheck('lt-toggle-phone-history', s.enable_phone_history_query ?? true, true);
+  setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist ?? true, true);
+  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
+  setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
+  setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? true, true);
+  setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? true, true);
+  setCheck('lt-toggle-email', s.enable_email_copy ?? true, true);
+  setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? true, true);
 
-  // 3. 標配自動化輔助開關
-  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
-  setCheck('lt-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
-  setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? s.enableQuickContact, true);
-  setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? s.enableCancelReason, true);
-  setCheck('lt-toggle-email', s.enable_email_copy ?? s.enableEmailCopy, true);
-  setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? s.enableLineOneClickAudit, true);
-
-  // 4. 保養叮嚀與品牌資料
+  // 品牌資料外觀
   setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
   setVal('lt-title', s.storeName || '');
   setVal('lt-subtitle', s.subtitle || '');
-  setCheck('lt-toggle-logo', s.enable_logo ?? s.enableLogo, true);
+  setCheck('lt-toggle-logo', s.enable_logo ?? true, true);
   setVal('lt-logo', s.logoUrl || '');
   setVal('lt-phone', s.storePhone || '');
   setVal('lt-address', s.address || '');
@@ -11643,7 +11638,6 @@ function populateLifetimeSettings() {
   setVal('lt-ig', s.ig || '');
   setVal('lt-map', s.map || '');
 
-  // 5. 專員名冊與公休日
   renderStaffManager('lt');
   const storeIdDisp = document.getElementById('lt-disp-current-store-id');
   if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
@@ -11653,25 +11647,20 @@ function populateLifetimeSettings() {
   });
   renderUploadSlots('lt');
 
-  // 6. 寵物住宿模式連動
-  const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
-  if (petHotelCard) {
-    const isPetHotel = (currentMode === 'pet_hotel');
-    petHotelCard.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
-    if (isPetHotel) {
-      setVal('lt-cfg-stay-notice-content', s.front_stay_notice || '');
-      setCheck('lt-cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
-      setVal('lt-cfg-hotel-total-rooms', s.totalHotelRooms || 8);
-      setVal('lt-cfg-hotel-checkin-start', s.hotelCheckinStart || '10:00');
-      setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
-      setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
-      setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
-      renderAdminRoomTiers('lt');
-      renderAdminMealOptions('lt');
-    }
+  if (currentMode === 'pet_hotel') {
+    const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
+    if (petHotelCard) petHotelCard.style.setProperty('display', 'block', 'important');
+    setVal('lt-cfg-stay-notice-content', s.front_stay_notice || '');
+    setCheck('lt-cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
+    setVal('lt-cfg-hotel-total-rooms', s.totalHotelRooms || 8);
+    setVal('lt-cfg-hotel-checkin-start', s.hotelCheckinStart || '10:00');
+    setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
+    setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
+    setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
+    renderAdminRoomTiers('lt');
+    renderAdminMealOptions('lt');
   }
 
-  // 7. 買斷版加購卡片展示
   if (allowed.includes('revenue')) {
     setVal('lt-cfg-commission-rate', s.commissionRate ?? 50);
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
@@ -11734,11 +11723,9 @@ function populateLifetimeSettings() {
   }
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 關閉所有未儲存提示條
   markLifetimeSettingsSaved();
   markSettingsSaved();
 
-  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽使用者輸入
   setTimeout(() => {
     if (ltPage) {
       ltPage.oninput = markLifetimeSettingsUnsaved;
@@ -12505,9 +12492,6 @@ function openCustomBoundSpreadsheet() {
     // ========================================================
 // 🌟【修復版】testOwnerLinePush — 精確鎖定當前頁面業主 UID，直發業主對話框
 // ========================================================
-// ========================================================
-// 🌟【升級版】testOwnerLinePush — 目標 UID 防呆確認 + 主題卡片發送
-// ========================================================
 async function testOwnerLinePush() {
   const isLt = isStoreLifetime() || (document.getElementById('page-settings-lifetime')?.style.display !== 'none');
   
@@ -12519,27 +12503,28 @@ async function testOwnerLinePush() {
     return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
   }
 
-  // 🌟 明確彈窗讓您核對與替換目標 UID，避免誤發給自己
+  // 彈窗明確核對目前發送目標
   const { value: targetUid } = await Swal.fire({
-    title: '確認測試推播目標 LINE UID',
+    title: '確認測試推播目標 LINE 帳號',
     html: `
       <div class="text-left text-xs space-y-2.5 p-1 text-brand-900 font-sans">
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed text-[11px]">
-          <b>⚠️ 為什麼之前會傳到您個人的對話框？</b><br>
-          LINE 推播是根據輸入框填寫的 UID 發送。若欄位內填的是您自己的 UID，訊息就會發給您。<br>
-          <b>若要讓「店家業主」收到，請在此輸入「業主本人的 LINE UID」！</b>
+        <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-950 leading-relaxed text-[11.5px]">
+          <b>⚠️ 為什麼訊息會寄到您的個人視窗？</b><br>
+          LINE 推播唯一依據就是下方這組 <b>U 開頭的 User ID</b>。<br>
+          您目前輸入框內儲存的是<b>「您個人測試用的 UID」</b>，因此 LINE 伺服器只會發到您的手機！
         </div>
         <div>
-          <label class="block font-bold text-brand-800 mb-1">接收測試推播之 LINE UID (U開頭)：</label>
-          <input id="swal-target-uid" class="swal2-input text-xs font-mono font-bold" value="${ownerUid}" placeholder="請貼上業主 U 開頭個人 ID">
+          <label class="block font-bold text-brand-800 mb-1">即將接收測試推播之 UID (請確認是否為業主本人)：</label>
+          <input id="swal-target-uid" class="swal2-input text-xs font-mono font-bold" value="${ownerUid}" placeholder="請貼上業主 Kemi 的 U 開頭個人 ID">
         </div>
-        <div class="text-[10.5px] text-gray-500">
-          💡 業主如何查自己的 UID？只需請業主用個人 LINE 傳送「<b>查詢我的ID</b>」給官方帳號即可獲取。
+        <div class="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-amber-900">
+          💡 <b>如何獲取業主 (Kemi) 本人的 UID？</b><br>
+          只需請業主用她自己的 LINE，傳送「<b>查詢我的ID</b>」給官方帳號，官方帳號即會回傳她的專屬 UID，複製貼在此處即可！
         </div>
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '確定發送測試卡片',
+    confirmButtonText: '確定發送至此 UID',
     cancelButtonText: '取消',
     confirmButtonColor: '#8C7355',
     preConfirm: () => {
@@ -12554,13 +12539,11 @@ async function testOwnerLinePush() {
 
   if (!targetUid) return;
 
-  // 將確認後的 UID 寫回介面與快取
   ownerUid = targetUid;
   const setElVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
   setElVal('lt-cfg-owner-line-uid', ownerUid);
   setElVal('cfg-owner-line-uid', ownerUid);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUid);
-  localStorage.setItem('zy_owner_uid', ownerUid);
 
   Swal.fire({
     title: '正在發送測試推播...',
@@ -12597,9 +12580,9 @@ async function testOwnerLinePush() {
         title: '🎉 測試推播已送達！',
         html: `
           <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1">
-            <div>• <b>目標 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-            <div>• <b>卡片風格：</b>${cardTheme}</div>
-            <div class="pt-1 text-[11px] text-emerald-700">請開啟接收該 UID 的 LINE 帳號，確認官方帳號聊天室是否已收到即時通知。</div>
+            <div>• <b>接收對象 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
+            <div>• <b>官方帳號：</b>已成功透過官方帳號派送卡片</div>
+            <div class="pt-1 text-[11px] text-emerald-700">請確認該 UID 所屬帳號的 LINE 聊天室是否已收到即時通知。</div>
           </div>
         `,
         icon: 'success'
