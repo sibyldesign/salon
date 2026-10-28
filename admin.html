@@ -10038,72 +10038,193 @@ function toggleSelectAllDateSlots(dayStr, btn) {
 // ========================================================
 // 2. 訂閱版專用資料回填 (已修復誤觸未儲存與多欄位覆蓋問題)
 // ========================================================
-function populateSettings() {
-  const subPage = document.getElementById('page-settings');
+// ========================================================
+// 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
+// ========================================================
+function populateLifetimeSettings() {
   const ltPage = document.getElementById('page-settings-lifetime');
-  if (subPage) { subPage.oninput = null; subPage.onchange = null; }
+  const subPage = document.getElementById('page-settings');
+  // 🌟【防呆核心】：回填前徹底卸載監聽器，防止瀏覽器填入誤觸「未儲存提示條」
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
+  if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
+  const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
+  const currentMode = s.industryMode || store.industry_type || 'beauty';
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
     if (el && val !== undefined && val !== null) el.value = val;
   };
-  const setCheck = (id, val, defaultVal = true) => {
+  const setCheck = (id, val, def = true) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : defaultVal);
+    el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 門市基本資料
-  setVal('cfg-title', s.storeName);
-  setVal('cfg-subtitle', s.subtitle);
-  setVal('cfg-logo', s.logoUrl);
-  setVal('cfg-phone', s.storePhone || '');
-  setVal('cfg-address', s.address);
-  setVal('cfg-hours', s.businessHours);
-  setVal('cfg-buffer', s.bookingBufferHours);
-  setVal('cfg-care', s.careText);
-  setVal('cfg-deposit-info', s.depositInfo);
-  setVal('cfg-deposit-mode', s.depositMode);
-  setVal('cfg-deposit-amount', s.depositAmount);
-  setVal('cfg-deposit-report-mode', s.depositReportMode || 'both');
+  // 1. 前台本月活動文字說明
+  setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+
+  // 2. 門市營業時間與排班時段
+  setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+  setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+  setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
   setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
-  setVal('cfg-promo', s.promoText);
-  setVal('cfg-line', s.line);
-  setVal('cfg-ig', s.ig);
-  setVal('cfg-map', s.map);
-  setVal('cfg-contract-title', s.contractTitle);
-  setVal('cfg-contract-content', s.contractContent);
-  setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
-  setVal('cfg-promo-rules-input', s.promoRulesText || s.promo_rules_text || '');
-  setVal('cfg-commission-rate', s.commissionRate ?? 50);
-  setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
 
-  // 🌟【雙向同步】：確保讀取當前門市真實數據，杜絕全域污染
-  const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
-  const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
-  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
-  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
+  // 公休日與特殊店休標籤回填（補齊）
+  const offDays = s.weekly_off_days || [];
+  document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
+    input.checked = offDays.includes(Number(input.value));
+  });
+  const customOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : (customOffDatesArray || []);
+  const ltOffContainer = document.getElementById('lt-custom-off-dates-tags');
+  if (ltOffContainer) {
+    ltOffContainer.innerHTML = customOff.map(d => `
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-bold font-mono">
+        ${d} <button type="button" onclick="removeCustomOffDate('${d}', 'lt')" class="text-red-500 font-bold ml-1">×</button>
+      </span>
+    `).join('');
+  }
 
-  setVal('cfg-line-card-theme', effectiveCardTheme);
+  // 3. 活動置頂公告與 9:16 宣傳圖
+  setVal('lt-promo', s.promoText || '');
+  setVal('cfg-promo', s.promoText || '');
+  renderUploadSlots('lt');
+
+  // 4. 預約審核機制與定額訂金
+  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
+  setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
+  setVal('lt-deposit-mode', s.depositMode || 'all');
+  setVal('lt-deposit-amount', s.depositAmount || 0);
+  setVal('lt-deposit-report-mode', s.depositReportMode || 'both');
+  setVal('lt-deposit-info', s.depositInfo || '');
+  setVal('lt-buffer', s.bookingBufferHours || 1);
+
+  // 5. 專員名冊與門市 ID
+  renderStaffManager('lt');
+  const storeIdDisp = document.getElementById('lt-disp-current-store-id');
+  if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
+
+  // 6. 標配前台流程開關
+  setCheck('lt-toggle-staff-select', s.enable_staff_select ?? true, true);
+  setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? true, true);
+  setCheck('lt-toggle-custtype', s.enable_cust_type ?? true, true);
+  setCheck('lt-toggle-show-price', s.enable_show_price ?? true, true);
+  setCheck('lt-toggle-cust-notes', s.enable_cust_notes ?? true, true);
+  setCheck('lt-toggle-portfolio', s.enable_portfolio ?? true, true);
+  setCheck('lt-toggle-care', s.enable_care ?? true, true);
+  setCheck('lt-toggle-carousel', s.enable_carousel ?? true, true);
+  setCheck('lt-toggle-phone-history', s.enable_phone_history_query, true);
+  setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist, true);
+
+  // 7. 標配後台管理輔助開關
+  setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? true, true);
+  setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? true, true);
+  setCheck('lt-toggle-email', s.enable_email_copy ?? true, true);
+  setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? true, true);
+
+  // 8. 居家保養小叮嚀內容
+  setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
+  setVal('cfg-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
+
+  // 9. 管理員登入解鎖 PIN 碼顯示（補齊）
+  const adminPinVal = store.admin_pin || '8888';
+  const ltPinEl = document.getElementById('lt-disp-store-admin-pin');
+  if (ltPinEl) ltPinEl.innerText = adminPinVal;
+
+  // 10. 品牌外觀資料
+  setVal('lt-title', s.storeName || '');
+  setVal('lt-subtitle', s.subtitle || '');
+  setCheck('lt-toggle-logo', s.enable_logo ?? true, true);
+  setVal('lt-logo', s.logoUrl || '');
+  setVal('lt-phone', s.storePhone || '');
+  setVal('lt-address', s.address || '');
+  setVal('lt-hours', s.businessHours || '');
+
+  // 11. 風格色系
+  const effectiveTheme = s.themeColor || s.theme_color || 'latte';
+  setVal('lt-theme-color', effectiveTheme);
+  setVal('cfg-theme-color', effectiveTheme);
+
+  // 12. 社群連結與地圖導航
+  setVal('lt-line', s.line || '');
+  setVal('lt-ig', s.ig || '');
+  setVal('lt-map', s.map || '');
+
+  // 13. 寵物住宿模式連動配置（補齊餐費 3x3 矩陣與文字自訂）
+  const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
+  if (petHotelCard) {
+    const isPetHotel = (currentMode === 'pet_hotel');
+    petHotelCard.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+    if (isPetHotel) {
+      setCheck('lt-cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
+      setVal('lt-cfg-stay-notice-content', s.front_stay_notice || '');
+      setVal('lt-cfg-hotel-total-rooms', s.totalHotelRooms || 8);
+      setVal('lt-cfg-hotel-checkin-start', s.hotelCheckinStart || '10:00');
+      setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
+      setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
+      setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
+
+      // 供餐方案自訂提示語
+      const ltMealNotes = s.boarding_meal_notes || {};
+      setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
+      setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
+      setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
+
+      // 鮮食餐費 3x3 矩陣回填（補齊）
+      const mr = s.boardingMealRates || s.boarding_meal_rates || {};
+      const mrSmall = Array.isArray(mr.small) ? mr.small : [80, 75, 70];
+      const mrMed = Array.isArray(mr.medium) ? mr.medium : [100, 90, 85];
+      const mrLarge = Array.isArray(mr.large) ? mr.large : [120, 110, 105];
+
+      setVal('lt-cfg-meal-small-1', mrSmall[0] ?? 80);
+      setVal('lt-cfg-meal-small-2', mrSmall[1] ?? 75);
+      setVal('lt-cfg-meal-small-3', mrSmall[2] ?? 70);
+      setVal('lt-cfg-meal-med-1', mrMed[0] ?? 100);
+      setVal('lt-cfg-meal-med-2', mrMed[1] ?? 90);
+      setVal('lt-cfg-meal-med-3', mrMed[2] ?? 85);
+      setVal('lt-cfg-meal-large-1', mrLarge[0] ?? 120);
+      setVal('lt-cfg-meal-large-2', mrLarge[1] ?? 110);
+      setVal('lt-cfg-meal-large-3', mrLarge[2] ?? 105);
+
+      // 前台按鈕與附加服務文字自訂（補齊）
+      setVal('lt-cfg-label-mode-grooming', s.labelModeGrooming || s.label_mode_grooming || '精緻洗護美容');
+      setVal('lt-cfg-label-mode-boarding', s.labelModeBoarding || s.label_mode_boarding || '安親度假住宿');
+      setVal('lt-cfg-label-hotel-bath-in', s.labelHotelBathIn || s.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護');
+      setVal('lt-cfg-label-hotel-bath-out', s.labelHotelBathOut || s.label_hotel_bath_out || '【退房當天】返家前深層造型美容／洗澡');
+
+      renderAdminRoomTiers('lt');
+      renderAdminMealOptions('lt');
+    }
+  }
+
+  // 14. 加購抽成模組
+  if (allowed.includes('revenue')) {
+    setVal('lt-cfg-commission-rate', s.commissionRate ?? 50);
+    setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
+  }
+
+  // 15. LINE 智慧通報憑證與 7 大子開關（雙向同步，徹底防呆）
+  const effectiveCardTheme = localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || s.line_card_theme || 'latte';
+  const effectiveOwnerEmail = localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || s.owner_email || store.owner_email || '';
+  const effectiveLineToken = localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || s.line_channel_token || store.line_channel_token || '';
+  const effectiveOwnerUid = localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || s.owner_line_uid || store.owner_line_uid || '';
+
   setVal('lt-setting-line-card-theme', effectiveCardTheme);
+  setVal('cfg-line-card-theme', effectiveCardTheme);
   setVal('setting-line-card-theme', effectiveCardTheme);
 
-  setVal('cfg-owner-email', effectiveOwnerEmail);
   setVal('lt-cfg-owner-email', effectiveOwnerEmail);
-
-  setVal('cfg-line-token', effectiveLineToken);
+  setVal('cfg-owner-email', effectiveOwnerEmail);
   setVal('lt-cfg-line-token', effectiveLineToken);
-
-  setVal('cfg-owner-line-uid', effectiveOwnerUid);
+  setVal('cfg-line-token', effectiveLineToken);
   setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
-  // LINE 7 大獨立子開關回填
   const pushState = s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false');
   const auditState = s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false');
   const depNotifyState = s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false');
@@ -10112,212 +10233,255 @@ function populateSettings() {
   const menuQueryState = s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false');
   const pickupState = s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false');
 
-  setCheck('cfg-toggle-owner-line-push', pushState, true);
   setCheck('lt-cfg-toggle-owner-line-push', pushState, true);
-
-  setCheck('cfg-toggle-line-one-click', auditState, true);
+  setCheck('cfg-toggle-owner-line-push', pushState, true);
   setCheck('lt-cfg-toggle-line-one-click', auditState, true);
-
-  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
+  setCheck('cfg-toggle-line-one-click', auditState, true);
   setCheck('lt-cfg-toggle-owner-deposit-notify', depNotifyState, true);
-
-  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
+  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
   setCheck('lt-cfg-toggle-cust-instant-notify', custNotifyState, true);
-
-  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
+  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
   setCheck('lt-cfg-toggle-line-auto-notify', autoNotifyState, false);
-
-  setCheck('cfg-toggle-menu-query', menuQueryState, true);
+  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
   setCheck('lt-cfg-toggle-menu-query', menuQueryState, true);
-
-  setCheck('cfg-toggle-pet-pickup', pickupState, true);
+  setCheck('cfg-toggle-menu-query', menuQueryState, true);
   setCheck('lt-cfg-toggle-pet-pickup', pickupState, true);
+  setCheck('cfg-toggle-pet-pickup', pickupState, true);
 
-  // 前台風格主題色系
-  const activeTheme = s.theme_color || s.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
-  setVal('cfg-theme-color', activeTheme);
-  previewSelectedThemeColor(activeTheme);
-
-  // 標配流程與模組功能開關回填
-  setCheck('cfg-toggle-logo', s.enable_logo ?? s.enableLogo, true);
-  setCheck('cfg-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
-  setCheck('cfg-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
-  setCheck('cfg-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
-  setCheck('cfg-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
-  setCheck('cfg-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
-  setCheck('cfg-toggle-show-price', s.enable_show_price ?? s.enableShowPrice, true);
-  setCheck('cfg-toggle-cust-notes', s.enable_cust_notes ?? s.enableCustNotes, true);
-  setCheck('cfg-toggle-wallet', s.enable_wallet ?? s.enableWallet, true);
-  setCheck('cfg-toggle-packages', s.enable_packages ?? s.enablePackages, true);
-  setCheck('cfg-toggle-coupons', s.enable_coupons ?? s.enableCoupons, true);
-  setCheck('cfg-toggle-reviews', s.enable_reviews ?? s.enableReviews, true);
-  setCheck('cfg-toggle-portfolio', s.enable_portfolio ?? s.enablePortfolio, true);
-  setCheck('cfg-toggle-care', s.enable_care ?? s.enableCare, true);
-  setCheck('cfg-toggle-quick-contact', s.enable_quick_contact ?? s.enableQuickContact, true);
-  setCheck('cfg-toggle-cancel-reason', s.enable_cancel_reason ?? s.enableCancelReason, true);
-  setCheck('cfg-toggle-email', s.enable_email_copy ?? s.enableEmailCopy, true);
-  setCheck('cfg-toggle-carousel', s.enable_carousel ?? s.enableCarousel, true);
-  setCheck('cfg-toggle-featured-shop', s.enable_featured_shop ?? s.enableFeaturedShop, false);
-  setCheck('cfg-toggle-commission-calc', s.enable_commission_calc ?? s.enableCommissionCalc, true);
-  setCheck('cfg-toggle-contract', s.enable_contract ?? s.enableContract, false);
-  setCheck('cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
-  setCheck('setting-enable-phone-history', s.enable_phone_history_query, true);
-  setCheck('cfg-toggle-contact-specialist', s.enable_contact_specialist, true);
-
-  // 公休日設定
-  const offList = s.weekly_off_days || s.weeklyOffDays || [];
-  document.querySelectorAll('#weekly-off-grid input').forEach(input => {
-    input.checked = offList.includes(Number(input.value));
-  });
-
-  // LOGO 預覽
-  const logoPreviewBox = document.getElementById('logo-preview-box');
-  const logoPreviewImg = document.getElementById('logo-preview-img');
-  if (logoPreviewBox && logoPreviewImg && s.logoUrl) {
-    logoPreviewImg.src = s.logoUrl;
-    logoPreviewBox.classList.remove('hidden');
+  const linePushCard = document.getElementById('lt-addon-card-line_push');
+  if (linePushCard) {
+    linePushCard.classList.remove('hidden');
+    linePushCard.style.setProperty('display', 'block', 'important');
   }
 
-  renderStaffManager('');
-  renderPlanRules('');
-  renderUploadSlots('');
-  
-  markSettingsSaved();
-  markLifetimeSettingsSaved();
+  // 16. 定型化契約條款
+  if (allowed.includes('contract')) {
+    setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
+    setVal('lt-contract-content', s.contractContent || '');
+  }
+  if (allowed.includes('wallet')) renderPlanRules('lt');
+  if (allowed.includes('packages')) renderPlanRules('lt');
 
+  // 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
+  const storeName = store.store_name || s.storeName || '';
+  const storeSlug = store.slug || '';
+  const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+  const hasSheetsSync = isStoreLifetime() && (
+    allowed.includes('sheets_sync') || 
+    allowed.includes('google_sheets') || 
+    allowed.includes('sheets') || 
+    isZheli
+  );
+
+  const customSheetsCard = document.getElementById('custom-addon-hair-sheets-sync');
+  if (customSheetsCard) {
+    if (hasSheetsSync) {
+      customSheetsCard.classList.remove('hidden');
+      customSheetsCard.style.setProperty('display', 'block', 'important');
+      const titleEl = document.getElementById('lt-custom-sheets-title');
+      if (titleEl) titleEl.innerText = `【${storeName || '這理髮型'}】Google 試算表年度母表連動設定`;
+    } else {
+      customSheetsCard.classList.add('hidden');
+      customSheetsCard.style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  const savedSheetId = s.sheets_spreadsheet_id || localStorage.getItem(`zy_sheets_id_${CURRENT_STORE_ID}`) || '';
+  const savedGasUrl = s.sheets_gas_url || localStorage.getItem(`zy_gas_url_${CURRENT_STORE_ID}`) || API_URL || '';
+  const savedSheetsSync = (s.enable_sheets_sync !== undefined) ? s.enable_sheets_sync : (localStorage.getItem(`zy_sheets_sync_${CURRENT_STORE_ID}`) !== 'false');
+  const savedCustSync = (s.enable_sheets_cust_sync !== undefined) ? s.enable_sheets_cust_sync : (localStorage.getItem(`zy_cust_sync_${CURRENT_STORE_ID}`) !== 'false');
+
+  setVal('lt-custom-sheets-id', savedSheetId);
+  setVal('lt-custom-gas-url', savedGasUrl);
+  setCheck('lt-custom-toggle-sheets-sync', savedSheetsSync, true);
+  setCheck('lt-custom-toggle-cust-sync', savedCustSync, true);
+
+  const customBadge = document.getElementById('lt-sheets-status-badge');
+  if (customBadge) {
+    const isReady = Boolean(savedSheetId);
+    customBadge.className = isReady 
+      ? 'px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-[10px] font-bold'
+      : 'px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold';
+    customBadge.innerText = isReady ? '✓ 已綁定' : '未設定';
+  }
+  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
+
+  // 關閉未儲存提示條
+  markLifetimeSettingsSaved();
+  markSettingsSaved();
+
+  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽手動異動
   setTimeout(() => {
-    if (subPage) {
-      subPage.oninput = markSettingsUnsaved;
-      subPage.onchange = markSettingsUnsaved;
+    if (ltPage) {
+      ltPage.oninput = markLifetimeSettingsUnsaved;
+      ltPage.onchange = markLifetimeSettingsUnsaved;
     }
   }, 350);
 }
 
 // ========================================================
-// 2. 訂閱版儲存邏輯 (雙重資料表保險 + 35次未知欄位容錯剝除)
+// 2. 買斷版專用儲存邏輯 (全欄位完整收整 + 雙重資料表保險)
 // ========================================================
-async function saveStoreSettings() {
-  Swal.fire({ 
-    title: '正在儲存設定...', 
-    text: '正在將門市資料同步寫入雲端資料庫',
-    allowOutsideClick: false, 
-    didOpen: () => Swal.showLoading() 
-  });
+async function saveLifetimeStoreSettings() {
+  Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
   const getCheck = id => Boolean(document.getElementById(id)?.checked);
   const getVal = id => (document.getElementById(id)?.value || '').trim();
 
-  const weeklyOffDays = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
-  const selectedTheme = getVal('cfg-theme-color') || 'latte';
-  const selectedMode = backendData.settings?.industryMode || 'beauty';
-  const storeTitle = getVal('cfg-title') || backendData.settings?.storeName || '沙龍門市';
+  const weeklyOff = Array.from(document.querySelectorAll('#lt-weekly-off-grid input:checked')).map(el => Number(el.value));
+  const selectedTheme = getVal('lt-theme-color') || 'latte';
+  const storeTitle = getVal('lt-title') || backendData.settings?.storeName || '沙龍門市';
 
-  const lineTokenVal = getVal('cfg-line-token');
-  const ownerUidVal = getVal('cfg-owner-line-uid');
-  const lineCardTheme = getVal('cfg-line-card-theme') || 'latte';
-  const ownerEmailVal = getVal('cfg-owner-email');
+  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定】🚨🚨🚨
+  const rawSheetInput = getVal('lt-custom-sheets-id');
+  const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
+  const gasUrl = getVal('lt-custom-gas-url') || API_URL;
+  const enableSheetsSync = getCheck('lt-custom-toggle-sheets-sync');
+  const enableSheetsCustSync = getCheck('lt-custom-toggle-cust-sync');
 
-  // 🌟【精準隔離快取】：僅寫入帶有當前門市 ID 的項目，不再寫入未加字尾的全域變數
+  localStorage.setItem(`zy_sheets_id_${CURRENT_STORE_ID}`, cleanSheetId);
+  localStorage.setItem(`zy_gas_url_${CURRENT_STORE_ID}`, gasUrl);
+  localStorage.setItem(`zy_sheets_sync_${CURRENT_STORE_ID}`, enableSheetsSync);
+  localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
+  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
+
+  const chosenStartTime = getVal('lt-shift-start') || '09:00';
+  const chosenEndTime = getVal('lt-shift-end') || '19:00';
+  const chosenInterval = Number(getVal('lt-shift-interval') || 30);
+
+  const lineTokenVal = getVal('lt-cfg-line-token') || getVal('cfg-line-token');
+  const ownerUidVal = getVal('lt-cfg-owner-line-uid') || getVal('cfg-owner-line-uid');
+  const lineCardTheme = getVal('lt-setting-line-card-theme') || getVal('cfg-line-card-theme') || 'latte';
+  const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
+
+  // 門市專屬隔離快取持久化
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
-  localStorage.setItem('zy_cached_theme', selectedTheme);
 
-  // 獨立子開關快取
-  localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-line-push'));
-  localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-line-one-click'));
-  localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-owner-deposit-notify'));
-  localStorage.setItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-cust-instant-notify'));
-  localStorage.setItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-line-auto-notify'));
-  localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-menu-query'));
-  localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('cfg-toggle-pet-pickup'));
+  localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-line-push'));
+  localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-one-click'));
+  localStorage.setItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-deposit-notify'));
+  localStorage.setItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-cust-instant-notify'));
+  localStorage.setItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-auto-notify'));
+  localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-menu-query'));
+  localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-pet-pickup'));
 
-  const chosenStartTime = getVal('cfg-shift-start') || '09:00';
-  const chosenEndTime = getVal('cfg-shift-end') || '19:00';
-  const chosenInterval = Number(getVal('cfg-shift-interval') || 30);
+  // 收整鮮食 3x3 餐費矩陣
+  const mealRatesObj = {
+    small: [Number(getVal('lt-cfg-meal-small-1') || 80), Number(getVal('lt-cfg-meal-small-2') || 75), Number(getVal('lt-cfg-meal-small-3') || 70)],
+    medium: [Number(getVal('lt-cfg-meal-med-1') || 100), Number(getVal('lt-cfg-meal-med-2') || 90), Number(getVal('lt-cfg-meal-med-3') || 85)],
+    large: [Number(getVal('lt-cfg-meal-large-1') || 120), Number(getVal('lt-cfg-meal-large-2') || 110), Number(getVal('lt-cfg-meal-large-3') || 105)]
+  };
 
-  const settingsPayload = {
+  const payload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
     promo_imgs: promoImgsArray.filter(u => u && u.trim()),
     owner_email: ownerEmailVal,
-    weekly_off_days: weeklyOffDays,
-    custom_off_dates: customOffDatesArray,
-    industry_mode: selectedMode,
+    display_subtitle: getVal('lt-subtitle'),
+    logo_url: getVal('lt-logo'),
+    enable_logo: getCheck('lt-toggle-logo'),
+    store_phone: getVal('lt-phone'),
+    address: getVal('lt-address'),
+    business_hours: getVal('lt-hours') || '09:00 - 19:00',
+    booking_buffer_hours: Number(getVal('lt-buffer') || 1),
+    deposit_mode: getVal('lt-deposit-mode') || 'all',
+    deposit_amount: Number(getVal('lt-deposit-amount') || 0),
+    deposit_report_mode: getVal('lt-deposit-report-mode') || 'both',
+    deposit_info: getVal('lt-deposit-info'),
+    promo_text: getVal('lt-promo'),
+    care_text: getVal('lt-care'),
+    line_url: getVal('lt-line'),
+    ig_url: getVal('lt-ig'),
+    map_url: getVal('lt-map'),
     theme_color: selectedTheme,
-    display_subtitle: getVal('cfg-subtitle'),
-    logo_url: getVal('cfg-logo'),
-    enable_logo: getCheck('cfg-toggle-logo'),
-    store_phone: getVal('cfg-phone'),
-    address: getVal('cfg-address'),
-    store_resources: storeResourcesList,
-    business_hours: getVal('cfg-hours') || '09:00 - 19:00',
-    booking_buffer_hours: Number(getVal('cfg-buffer') || 1),
-    care_text: getVal('cfg-care'),
-    deposit_mode: getVal('cfg-deposit-mode') || 'all',
-    deposit_amount: Number(getVal('cfg-deposit-amount') || 0),
-    deposit_report_mode: getVal('cfg-deposit-report-mode') || 'both',
-    deposit_info: getVal('cfg-deposit-info'),
-    promo_text: getVal('cfg-promo'),
-    line_url: getVal('cfg-line'),
-    ig_url: getVal('cfg-ig'),
-    map_url: getVal('cfg-map'),
-    line_channel_token: lineTokenVal,
-    owner_line_uid: ownerUidVal,
-    line_card_theme: lineCardTheme,
-    contract_title: getVal('cfg-contract-title') || '定型化服務契約書',
-    contract_content: getVal('cfg-contract-content'),
-    promo_rules_text: getVal('cfg-promo-rules'),
+    weekly_off_days: weeklyOff,
+    custom_off_dates: customOffDatesArray,
+    promo_rules_text: getVal('lt-promo-rules'),
     shift_start_time: chosenStartTime,
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
-    commission_rate: Number(getVal('cfg-commission-rate') || 50),
-    designated_bonus: Number(getVal('cfg-designated-bonus') || 50),
-    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
-    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
-    enable_owner_deposit_notify: getCheck('cfg-toggle-owner-deposit-notify'),
-    enable_cust_instant_notify: getCheck('cfg-toggle-cust-instant-notify'),
-    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
-    enable_line_menu_query: getCheck('cfg-toggle-menu-query'),
-    enable_pet_pickup_notify: getCheck('cfg-toggle-pet-pickup'),
-    enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
-    enable_deposit: getCheck('cfg-toggle-deposit'),
-    enable_staff_select: getCheck('cfg-toggle-staff-select'),
-    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
-    enable_cust_type: getCheck('cfg-toggle-custtype'),
-    enable_show_price: getCheck('cfg-toggle-show-price'),
-    enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
-    enable_wallet: getCheck('cfg-toggle-wallet'),
-    enable_packages: getCheck('cfg-toggle-packages'),
-    enable_coupons: getCheck('cfg-toggle-coupons'),
-    enable_reviews: getCheck('cfg-toggle-reviews'),
-    enable_portfolio: getCheck('cfg-toggle-portfolio'),
-    enable_care: getCheck('cfg-toggle-care'),
-    enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
-    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
-    enable_email_copy: getCheck('cfg-toggle-email'),
-    enable_carousel: getCheck('cfg-toggle-carousel'),
-    enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
-    enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
-    enable_contract: getCheck('cfg-toggle-contract'),
-    enable_phone_history_query: getCheck('setting-enable-phone-history'),
-    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+
+    // LINE 設定
+    line_channel_token: lineTokenVal,
+    owner_line_uid: ownerUidVal,
+    line_card_theme: lineCardTheme,
+    enable_owner_line_push: getCheck('lt-cfg-toggle-owner-line-push'),
+    enable_line_one_click_audit: getCheck('lt-cfg-toggle-line-one-click'),
+    enable_owner_deposit_notify: getCheck('lt-cfg-toggle-owner-deposit-notify'),
+    enable_cust_instant_notify: getCheck('lt-cfg-toggle-cust-instant-notify'),
+    enable_line_auto_notify: getCheck('lt-cfg-toggle-line-auto-notify'),
+    enable_line_menu_query: getCheck('lt-cfg-toggle-menu-query'),
+    enable_pet_pickup_notify: getCheck('lt-cfg-toggle-pet-pickup'),
+
+    // 標配前台與後台開關
+    enable_staff_select: getCheck('lt-toggle-staff-select'),
+    enable_multi_staff_schedule: getCheck('lt-toggle-multi-staff-schedule'),
+    enable_cust_type: getCheck('lt-toggle-custtype'),
+    enable_show_price: getCheck('lt-toggle-show-price'),
+    enable_cust_notes: getCheck('lt-toggle-cust-notes'),
+    enable_portfolio: getCheck('lt-toggle-portfolio'),
+    enable_care: getCheck('lt-toggle-care'),
+    enable_carousel: getCheck('lt-toggle-carousel'),
+    enable_phone_history_query: getCheck('lt-toggle-phone-history'),
+    enable_contact_specialist: getCheck('lt-toggle-contact-specialist'),
+    enable_audit_booking: getCheck('lt-toggle-audit-booking'),
+    enable_deposit: getCheck('lt-toggle-deposit'),
+    enable_quick_contact: getCheck('lt-toggle-quick-contact'),
+    enable_cancel_reason: getCheck('lt-toggle-cancel-reason'),
+    enable_email_copy: getCheck('lt-toggle-email'),
+
+    // 抽成與契約
+    commission_rate: Number(getVal('lt-cfg-commission-rate') || 50),
+    designated_bonus: Number(getVal('lt-cfg-designated-bonus') || 50),
+    contract_title: getVal('lt-contract-title') || '定型化服務契約書',
+    contract_content: getVal('lt-contract-content'),
+
+    // 寵物住宿專屬設定（完整收整）
+    enable_front_stay_notice: getCheck('lt-cfg-toggle-stay-notice'),
+    front_stay_notice: getVal('lt-cfg-stay-notice-content'),
+    total_hotel_rooms: Number(getVal('lt-cfg-hotel-total-rooms') || 8),
+    hotel_checkin_start: getVal('lt-cfg-hotel-checkin-start') || '10:00',
+    hotel_checkout_end: getVal('lt-cfg-hotel-checkout-end') || '19:00',
+    meal_time_breakfast: getVal('lt-cfg-meal-time-breakfast') || '09:00',
+    meal_time_dinner: getVal('lt-cfg-meal-time-dinner') || '18:00',
+    boarding_meal_notes: {
+      one: getVal('lt-meal-note-one') || '安排於晚間 18:00 供餐',
+      two: getVal('lt-meal-note-two') || '固定於早 09:00、晚 18:00 供餐',
+      three: getVal('lt-meal-note-three') || '早 09:00、午 12:30、晚 18:00 三餐完整照護'
+    },
+    boarding_meal_rates: mealRatesObj,
+    label_mode_grooming: getVal('lt-cfg-label-mode-grooming') || '精緻洗護美容',
+    label_mode_boarding: getVal('lt-cfg-label-mode-boarding') || '安親度假住宿',
+    label_hotel_bath_in: getVal('lt-cfg-label-hotel-bath-in') || '【入住當天】進房前基礎清潔洗護',
+    label_hotel_bath_out: getVal('lt-cfg-label-hotel-bath-out') || '【退房當天】返家前深層造型美容／洗澡',
+    hotel_room_tiers: (adminRoomTiers && adminRoomTiers.length > 0) ? adminRoomTiers : undefined,
+    hotel_meal_options: (adminMealOptions && adminMealOptions.length > 0) ? adminMealOptions : undefined,
+
+    // 🚨🚨🚨【客製專用：這理髮型 - 試算表連動設定】🚨🚨🚨
+    sheets_spreadsheet_id: cleanSheetId,
+    sheets_gas_url: gasUrl,
+    enable_sheets_sync: enableSheetsSync,
+    enable_sheets_cust_sync: enableSheetsCustSync,
+    // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
+
     updated_at: new Date().toISOString()
   };
 
   try {
-    // 🌟【第一道保險】：直接更新 stores 原生資料表，確保金鑰、信箱與門市名稱 100% 寫入
+    // 1. 同步寫入 stores 表
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
-      headers: { 
-        "apikey": SUPABASE_ANON_KEY, 
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
-        "Content-Type": "application/json" 
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         store_name: storeTitle,
-        industry_type: selectedMode,
         theme_color: selectedTheme,
         owner_email: ownerEmailVal,
         owner_line_uid: ownerUidVal,
@@ -10325,8 +10489,8 @@ async function saveStoreSettings() {
       })
     });
 
-    // 🌟【第二道保險】：寫入 store_settings，支援最多 35 次容錯自動剝除無效欄位
-    const toSend = { ...settingsPayload };
+    // 2. 寫入 store_settings 表 (35次容錯自動剝除無效欄位)
+    const toSend = { ...payload };
     for (let attempt = 0; attempt < 35; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
         method: "PATCH",
@@ -10344,10 +10508,10 @@ async function saveStoreSettings() {
         if (!patchData || patchData.length === 0) {
           await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
             method: "POST",
-            headers: { 
-              "apikey": SUPABASE_ANON_KEY, 
-              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
-              "Content-Type": "application/json" 
+            headers: {
+              "apikey": SUPABASE_ANON_KEY,
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+              "Content-Type": "application/json"
             },
             body: JSON.stringify(toSend)
           });
@@ -10364,23 +10528,18 @@ async function saveStoreSettings() {
       }
     }
 
-    // 更新記憶體物件
-    if (backendData.settings) {
-      Object.assign(backendData.settings, toSend);
-    }
+    if (backendData.settings) Object.assign(backendData.settings, payload);
     if (backendData.storeInfo) {
       backendData.storeInfo.line_channel_token = lineTokenVal;
       backendData.storeInfo.owner_line_uid = ownerUidVal;
       backendData.storeInfo.owner_email = ownerEmailVal;
-      backendData.storeInfo.store_name = storeTitle;
-      backendData.storeInfo.theme_color = selectedTheme;
     }
 
-    markSettingsSaved();
     markLifetimeSettingsSaved();
-    Swal.fire({ title: '系統設定已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
-  } catch (err) {
-    Swal.fire('儲存失敗', err.message, 'error');
+    markSettingsSaved();
+    Swal.fire({ title: '買斷版設定已成功儲存！', text: '設定已更新，重整網頁不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
+  } catch (e) {
+    Swal.fire('儲存失敗', e.message, 'error');
   }
 }
     // 說明圖上傳與獨立紅叉刪除
@@ -11567,15 +11726,12 @@ function routeToSettingsPage(btnEl) {
 }
 
     // ========================================================
-// 1. 買斷版專用資料回填與模組展開 (已修復誤觸未儲存與讀取覆蓋問題)
-// ========================================================
-// ========================================================
-// 1. 買斷版專用資料回填 (雙欄位強制對齊，徹底杜絕舊 UID 殘留與誤觸未儲存)
+// 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
 // ========================================================
 function populateLifetimeSettings() {
   const ltPage = document.getElementById('page-settings-lifetime');
   const subPage = document.getElementById('page-settings');
-  // 🌟【關鍵防呆】：回填資料時徹底卸載監聽器，防止瀏覽器填入誤觸發「未儲存提示條」
+  // 🌟【防呆核心】：回填前徹底拔除監聽器，防止瀏覽器填入時誤觸發「未儲存提示條」
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
   if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
@@ -11594,75 +11750,53 @@ function populateLifetimeSettings() {
     el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 營業時間與基礎設定
+  // 1. 前台本月活動規則說明
+  setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+
+  // 2. 門市營業時間與排班時段
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
+  setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+  setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+  setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
+
+  // 公休日與特殊休假標籤回填（補齊）
+  const offDays = s.weekly_off_days || [];
+  document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
+    input.checked = offDays.includes(Number(input.value));
+  });
+  const customOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : (customOffDatesArray || []);
+  const ltOffContainer = document.getElementById('lt-custom-off-dates-tags');
+  if (ltOffContainer) {
+    ltOffContainer.innerHTML = customOff.map(d => `
+      <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-bold font-mono">
+        ${d} <button type="button" onclick="removeCustomOffDate('${d}', 'lt')" class="text-red-500 font-bold ml-1">×</button>
+      </span>
+    `).join('');
+  }
+
+  // 3. 活動置頂公告與 9:16 宣傳圖
   setVal('lt-promo', s.promoText || '');
+  setVal('cfg-promo', s.promoText || '');
+  renderUploadSlots('lt');
+
+  // 4. 預約審核機制與定額訂金
+  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
+  setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
   setVal('lt-deposit-mode', s.depositMode || 'all');
   setVal('lt-deposit-amount', s.depositAmount || 0);
   setVal('lt-deposit-report-mode', s.depositReportMode || 'both');
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
-  setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
 
-  // 供餐方案自訂提示語回填
-  const ltMealNotes = s.boarding_meal_notes || {};
-  setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
-  setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
-  setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
+  // 5. 專員名冊與門市 ID
+  renderStaffManager('lt');
+  const storeIdDisp = document.getElementById('lt-disp-current-store-id');
+  if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
 
-  // 🌟【核心對齊】：嚴格讀取當前門市專屬設定，並同時填入買斷與訂閱欄位，確保絕對一致
-  const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
-  const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
-  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
-  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
-
-  // 買斷版與訂閱版欄位同步賦值
-  setVal('lt-setting-line-card-theme', effectiveCardTheme);
-  setVal('cfg-line-card-theme', effectiveCardTheme);
-  setVal('setting-line-card-theme', effectiveCardTheme);
-
-  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
-  setVal('cfg-owner-email', effectiveOwnerEmail);
-
-  setVal('lt-cfg-line-token', effectiveLineToken);
-  setVal('cfg-line-token', effectiveLineToken);
-
-  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
-  setVal('cfg-owner-line-uid', effectiveOwnerUid);
-
-  // LINE 7 大獨立子開關回填
-  const pushState = s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false');
-  const auditState = s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false');
-  const depNotifyState = s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false');
-  const custNotifyState = s.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false');
-  const autoNotifyState = s.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true');
-  const menuQueryState = s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false');
-  const pickupState = s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false');
-
-  setCheck('lt-cfg-toggle-owner-line-push', pushState, true);
-  setCheck('cfg-toggle-owner-line-push', pushState, true);
-
-  setCheck('lt-cfg-toggle-line-one-click', auditState, true);
-  setCheck('cfg-toggle-line-one-click', auditState, true);
-
-  setCheck('lt-cfg-toggle-owner-deposit-notify', depNotifyState, true);
-  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
-
-  setCheck('lt-cfg-toggle-cust-instant-notify', custNotifyState, true);
-  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
-
-  setCheck('lt-cfg-toggle-line-auto-notify', autoNotifyState, false);
-  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
-
-  setCheck('lt-cfg-toggle-menu-query', menuQueryState, true);
-  setCheck('cfg-toggle-menu-query', menuQueryState, true);
-
-  setCheck('lt-cfg-toggle-pet-pickup', pickupState, true);
-  setCheck('cfg-toggle-pet-pickup', pickupState, true);
-
-  // 2. 標配前台預約流程開關
+  // 6. 標配前台流程開關
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? true, true);
   setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? true, true);
   setCheck('lt-toggle-custtype', s.enable_cust_type ?? true, true);
@@ -11674,16 +11808,22 @@ function populateLifetimeSettings() {
   setCheck('lt-toggle-phone-history', s.enable_phone_history_query, true);
   setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist, true);
 
-  // 3. 標配自動化輔助開關
-  setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
-  setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
+  // 7. 標配後台管理輔助開關
   setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? true, true);
   setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? true, true);
   setCheck('lt-toggle-email', s.enable_email_copy ?? true, true);
   setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? true, true);
 
-  // 4. 保養叮嚀與品牌資料
+  // 8. 居家保養小叮嚀內容
   setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
+  setVal('cfg-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
+
+  // 9. 管理員登入解鎖 PIN 碼顯示（補齊）
+  const adminPinVal = store.admin_pin || '8888';
+  const ltPinEl = document.getElementById('lt-disp-store-admin-pin');
+  if (ltPinEl) ltPinEl.innerText = adminPinVal;
+
+  // 10. 品牌外觀資料
   setVal('lt-title', s.storeName || '');
   setVal('lt-subtitle', s.subtitle || '');
   setCheck('lt-toggle-logo', s.enable_logo ?? true, true);
@@ -11691,41 +11831,109 @@ function populateLifetimeSettings() {
   setVal('lt-phone', s.storePhone || '');
   setVal('lt-address', s.address || '');
   setVal('lt-hours', s.businessHours || '');
-  setVal('lt-theme-color', s.themeColor || 'latte');
+
+  // 11. 主題色系
+  const effectiveTheme = s.themeColor || s.theme_color || 'latte';
+  setVal('lt-theme-color', effectiveTheme);
+  setVal('cfg-theme-color', effectiveTheme);
+
+  // 12. 社群連結與地圖
   setVal('lt-line', s.line || '');
   setVal('lt-ig', s.ig || '');
   setVal('lt-map', s.map || '');
 
-  // 5. 專員名冊與公休日
-  renderStaffManager('lt');
-  const storeIdDisp = document.getElementById('lt-disp-current-store-id');
-  if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
-  const offDays = s.weekly_off_days || [];
-  document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
-    input.checked = offDays.includes(Number(input.value));
-  });
-  renderUploadSlots('lt');
+  // 13. 寵物住宿模式連動配置（補齊餐費矩陣與文字自訂）
+  const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
+  if (petHotelCard) {
+    const isPetHotel = (currentMode === 'pet_hotel');
+    petHotelCard.style.setProperty('display', isPetHotel ? 'block' : 'none', 'important');
+    if (isPetHotel) {
+      setCheck('lt-cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
+      setVal('lt-cfg-stay-notice-content', s.front_stay_notice || '');
+      setVal('lt-cfg-hotel-total-rooms', s.totalHotelRooms || 8);
+      setVal('lt-cfg-hotel-checkin-start', s.hotelCheckinStart || '10:00');
+      setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
+      setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
+      setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
 
-  // 6. 寵物住宿模式連動
-  if (currentMode === 'pet_hotel') {
-    const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
-    if (petHotelCard) petHotelCard.style.setProperty('display', 'block', 'important');
-    setVal('lt-cfg-stay-notice-content', s.front_stay_notice || '');
-    setCheck('lt-cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
-    setVal('lt-cfg-hotel-total-rooms', s.totalHotelRooms || 8);
-    setVal('lt-cfg-hotel-checkin-start', s.hotelCheckinStart || '10:00');
-    setVal('lt-cfg-hotel-checkout-end', s.hotelCheckoutEnd || '19:00');
-    setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
-    setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
-    renderAdminRoomTiers('lt');
-    renderAdminMealOptions('lt');
+      // 供餐方案自訂提示語
+      const ltMealNotes = s.boarding_meal_notes || {};
+      setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
+      setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
+      setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
+
+      // 鮮食餐費 3x3 矩陣回填（補齊）
+      const mr = s.boardingMealRates || s.boarding_meal_rates || {};
+      const mrSmall = Array.isArray(mr.small) ? mr.small : [80, 75, 70];
+      const mrMed = Array.isArray(mr.medium) ? mr.medium : [100, 90, 85];
+      const mrLarge = Array.isArray(mr.large) ? mr.large : [120, 110, 105];
+
+      setVal('lt-cfg-meal-small-1', mrSmall[0] ?? 80);
+      setVal('lt-cfg-meal-small-2', mrSmall[1] ?? 75);
+      setVal('lt-cfg-meal-small-3', mrSmall[2] ?? 70);
+      setVal('lt-cfg-meal-med-1', mrMed[0] ?? 100);
+      setVal('lt-cfg-meal-med-2', mrMed[1] ?? 90);
+      setVal('lt-cfg-meal-med-3', mrMed[2] ?? 85);
+      setVal('lt-cfg-meal-large-1', mrLarge[0] ?? 120);
+      setVal('lt-cfg-meal-large-2', mrLarge[1] ?? 110);
+      setVal('lt-cfg-meal-large-3', mrLarge[2] ?? 105);
+
+      // 前台按鈕與附加服務文字自訂（補齊）
+      setVal('lt-cfg-label-mode-grooming', s.labelModeGrooming || s.label_mode_grooming || '精緻洗護美容');
+      setVal('lt-cfg-label-mode-boarding', s.labelModeBoarding || s.label_mode_boarding || '安親度假住宿');
+      setVal('lt-cfg-label-hotel-bath-in', s.labelHotelBathIn || s.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護');
+      setVal('lt-cfg-label-hotel-bath-out', s.labelHotelBathOut || s.label_hotel_bath_out || '【退房當天】返家前深層造型美容／洗澡');
+
+      renderAdminRoomTiers('lt');
+      renderAdminMealOptions('lt');
+    }
   }
 
-  // 7. 買斷版加購卡片展示
+  // 14. 加購抽成模組
   if (allowed.includes('revenue')) {
     setVal('lt-cfg-commission-rate', s.commissionRate ?? 50);
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
+
+  // 15. LINE 智慧通報憑證與 7 大子開關（雙向同步，徹底防呆）
+  const effectiveCardTheme = localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || s.line_card_theme || 'latte';
+  const effectiveOwnerEmail = localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || s.owner_email || store.owner_email || '';
+  const effectiveLineToken = localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || s.line_channel_token || store.line_channel_token || '';
+  const effectiveOwnerUid = localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || s.owner_line_uid || store.owner_line_uid || '';
+
+  setVal('lt-setting-line-card-theme', effectiveCardTheme);
+  setVal('cfg-line-card-theme', effectiveCardTheme);
+  setVal('setting-line-card-theme', effectiveCardTheme);
+
+  setVal('lt-cfg-owner-email', effectiveOwnerEmail);
+  setVal('cfg-owner-email', effectiveOwnerEmail);
+  setVal('lt-cfg-line-token', effectiveLineToken);
+  setVal('cfg-line-token', effectiveLineToken);
+  setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
+
+  const pushState = s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false');
+  const auditState = s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false');
+  const depNotifyState = s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false');
+  const custNotifyState = s.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false');
+  const autoNotifyState = s.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true');
+  const menuQueryState = s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false');
+  const pickupState = s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false');
+
+  setCheck('lt-cfg-toggle-owner-line-push', pushState, true);
+  setCheck('cfg-toggle-owner-line-push', pushState, true);
+  setCheck('lt-cfg-toggle-line-one-click', auditState, true);
+  setCheck('cfg-toggle-line-one-click', auditState, true);
+  setCheck('lt-cfg-toggle-owner-deposit-notify', depNotifyState, true);
+  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
+  setCheck('lt-cfg-toggle-cust-instant-notify', custNotifyState, true);
+  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
+  setCheck('lt-cfg-toggle-line-auto-notify', autoNotifyState, false);
+  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
+  setCheck('lt-cfg-toggle-menu-query', menuQueryState, true);
+  setCheck('cfg-toggle-menu-query', menuQueryState, true);
+  setCheck('lt-cfg-toggle-pet-pickup', pickupState, true);
+  setCheck('cfg-toggle-pet-pickup', pickupState, true);
 
   const linePushCard = document.getElementById('lt-addon-card-line_push');
   if (linePushCard) {
@@ -11733,6 +11941,7 @@ function populateLifetimeSettings() {
     linePushCard.style.setProperty('display', 'block', 'important');
   }
 
+  // 16. 定型化契約條款
   if (allowed.includes('contract')) {
     setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
     setVal('lt-contract-content', s.contractContent || '');
@@ -11784,11 +11993,11 @@ function populateLifetimeSettings() {
   }
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 關閉所有未儲存提示條
+  // 關閉未儲存提示條
   markLifetimeSettingsSaved();
   markSettingsSaved();
 
-  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽使用者手動輸入
+  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽手動異動
   setTimeout(() => {
     if (ltPage) {
       ltPage.oninput = markLifetimeSettingsUnsaved;
@@ -11833,15 +12042,11 @@ async function saveLifetimeStoreSettings() {
   const lineCardTheme = getVal('lt-setting-line-card-theme') || getVal('cfg-line-card-theme') || 'latte';
   const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
 
-  // 雙軌 LocalStorage 備份 (門市專屬 + 全域備援)
+  // 🌟【本地多重持久化】：確保重整絕對不丟失
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
-  localStorage.setItem('zy_line_token', lineTokenVal);
-  localStorage.setItem('zy_owner_uid', ownerUidVal);
-  localStorage.setItem('zy_line_card_theme', lineCardTheme);
-  localStorage.setItem('zy_owner_email', ownerEmailVal);
 
   localStorage.setItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-owner-line-push'));
   localStorage.setItem(`zy_tog_one_click_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-line-one-click'));
@@ -11921,7 +12126,7 @@ async function saveLifetimeStoreSettings() {
   };
 
   try {
-    // 🌟【第一道保險】：優先將核心通報憑證直接寫入 stores 原生資料表 (保證永久保存不遺失)
+    // 1. 同步寫入 stores 表
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: {
@@ -11938,7 +12143,7 @@ async function saveLifetimeStoreSettings() {
       })
     });
 
-    // 🌟【第二道保險】：寫入 store_settings，支援最多 35 次容錯自動剝除無效欄位
+    // 2. 寫入 store_settings 表 (安全自動剔除未知欄位)
     const toSend = { ...payload };
     for (let attempt = 0; attempt < 35; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
@@ -11977,10 +12182,7 @@ async function saveLifetimeStoreSettings() {
       }
     }
 
-    // 更新記憶體物件
-    if (backendData.settings) {
-      Object.assign(backendData.settings, payload);
-    }
+    if (backendData.settings) Object.assign(backendData.settings, payload);
     if (backendData.storeInfo) {
       backendData.storeInfo.line_channel_token = lineTokenVal;
       backendData.storeInfo.owner_line_uid = ownerUidVal;
@@ -11989,7 +12191,7 @@ async function saveLifetimeStoreSettings() {
 
     markLifetimeSettingsSaved();
     markSettingsSaved();
-    Swal.fire({ title: '買斷版設定已成功儲存！', text: '設定已更新，重整網頁不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
+    Swal.fire({ title: '設定已成功儲存！', text: '已更新至雲端，重整網頁不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
   } catch (e) {
     Swal.fire('儲存失敗', e.message, 'error');
   }
@@ -12555,50 +12757,52 @@ function openCustomBoundSpreadsheet() {
     // ========================================================
 // 🌟【終極防呆版】testOwnerLinePush — 徹底鎖定當前輸入、杜絕抓到開發者舊 UID
 // ========================================================
+// ========================================================
+// 🌟【終極校準版】testOwnerLinePush — 鎖定真實業主 UID 與 Token
+// ========================================================
 async function testOwnerLinePush() {
-  // 1. 同時取得畫面上可見與不可見的所有輸入框
-  const ltTokenInput = document.getElementById('lt-cfg-line-token');
-  const subTokenInput = document.getElementById('cfg-line-token');
-  const ltUidInput = document.getElementById('lt-cfg-owner-line-uid');
-  const subUidInput = document.getElementById('cfg-owner-line-uid');
-
-  // 取出非空的值（若使用者在當前頁面有輸入，優先取非空值）
-  let token = (ltTokenInput?.value || subTokenInput?.value || '').trim();
-  let ownerUid = (ltUidInput?.value || subUidInput?.value || '').trim();
+  // 1. 同時比對買斷版與訂閱版欄位，優先抓取當前有輸入內容的有效值
+  const ltToken = (document.getElementById('lt-cfg-line-token')?.value || '').trim();
+  const subToken = (document.getElementById('cfg-line-token')?.value || '').trim();
+  const ltUid = (document.getElementById('lt-cfg-owner-line-uid')?.value || '').trim();
+  const subUid = (document.getElementById('cfg-owner-line-uid')?.value || '').trim();
   const cardTheme = (document.getElementById('lt-setting-line-card-theme')?.value || document.getElementById('cfg-line-card-theme')?.value || 'latte').trim();
+
+  let token = ltToken || subToken;
+  let ownerUid = ltUid || subUid;
 
   if (!token) {
     return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
   }
 
-  // 2. 彈窗強制顯示目前抓取到的 Token 與 UID，讓您肉眼最後核對
-  const tokenMasked = token.length > 15 ? `${token.substring(0, 8)}...${token.substring(token.length - 6)}` : token;
-  const isDeveloperUid = (ownerUid === "U7a9de3e44632bd2ac64c5dc1d35c2335");
+  // 2. 彈窗強制讓您肉眼核對即將發送的 Token 與 UID
+  const tokenMasked = token.length > 20 ? `${token.substring(0, 10)}...${token.substring(token.length - 8)}` : token;
+  const isDevUid = (ownerUid === "U7a9de3e44632bd2ac64c5dc1d35c2335");
 
   const { value: targetUid } = await Swal.fire({
     title: '確認測試推播發送目標',
     html: `
       <div class="text-left text-xs space-y-2.5 p-1 text-brand-900 font-sans">
-        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-950 leading-relaxed text-[11.5px]">
+        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-950 leading-relaxed text-[11px]">
           <div>• <b>扣款官方帳號 Token：</b><span class="font-mono text-gray-700 font-bold">${tokenMasked}</span></div>
-          <div class="mt-1 text-[10.5px] text-amber-800">※ 提示：請確認此 Token 是業主官方帳號發行，否則會扣到您的額度。</div>
+          <div class="mt-1 text-[10.5px] text-amber-800">※ 提示：請確認此 Token 為 Kemi 官方帳號發行，訊息才會從 Kemi 官方帳號扣除！</div>
         </div>
 
-        ${isDeveloperUid ? `
+        ${isDevUid ? `
           <div class="p-2.5 bg-rose-50 border border-rose-300 rounded-xl text-rose-800 text-[11px] font-bold animate-pulse">
-            ⚠️ 警告：目前輸入框內偵測到的是您個人的 UID (U7a9de3e...)！<br>
-            若要發送給業主，請在下方輸入框貼入業主的 LINE UID。
+            ⚠️ 警告：目前欄位內是您個人的 UID (U7a9de3e...)！<br>
+            若要發給業主 Kemi，請使用：<code class="text-emerald-800">Ucce338c17dbd74915561d1fe715f9091</code>
           </div>
         ` : ''}
 
         <div>
-          <label class="block font-bold text-brand-800 mb-1">即將接收測試卡片的 LINE UID (U開頭)：</label>
+          <label class="block font-bold text-brand-800 mb-1">接收測試卡片的業主 LINE UID：</label>
           <input id="swal-target-uid" class="swal2-input text-xs font-mono font-bold" value="${ownerUid}" placeholder="請貼上業主本人的 U 開頭個人 ID">
         </div>
       </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '確定發送至此 UID',
+    confirmButtonText: '確定發送測試卡片',
     cancelButtonText: '取消',
     confirmButtonColor: '#8C7355',
     preConfirm: () => {
@@ -12613,11 +12817,15 @@ async function testOwnerLinePush() {
 
   if (!targetUid) return;
 
-  // 3. 強制同步賦值給兩套輸入框與快取，絕不讓任何地方殘留舊 UID
+  // 3. 強制同步回寫所有輸入框與門市快取
   ownerUid = targetUid;
-  if (ltUidInput) ltUidInput.value = ownerUid;
-  if (subUidInput) subUidInput.value = ownerUid;
+  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  setEl('lt-cfg-owner-line-uid', ownerUid);
+  setEl('cfg-owner-line-uid', ownerUid);
+  setEl('lt-cfg-line-token', token);
+  setEl('cfg-line-token', token);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUid);
+  localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, token);
 
   Swal.fire({
     title: '正在發送測試推播...',
@@ -12626,7 +12834,7 @@ async function testOwnerLinePush() {
     didOpen: () => Swal.showLoading()
   });
 
-  // 4. 精確對齊 GAS 端的資料欄位名稱 (name, phone, date, time, service, price)
+  // 4. 精確對齊 GAS 端的資料欄位 (name, phone, date, time, service, price)
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -12657,8 +12865,8 @@ async function testOwnerLinePush() {
         html: `
           <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1">
             <div>• <b>接收對象 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-            <div>• <b>推播狀態：</b>LINE 伺服器已成功接收並派發</div>
-            <div class="pt-1 text-[11px] text-emerald-700">請開啟該 UID 所屬帳號的 LINE 查看測試卡片。</div>
+            <div>• <b>發送狀態：</b>LINE 官方伺服器已成功接收並派發</div>
+            <div class="pt-1 text-[11px] text-emerald-700">請確認該 UID 帳號的手機 LINE 聊天室是否已收到即時通知。</div>
           </div>
         `,
         icon: 'success'
