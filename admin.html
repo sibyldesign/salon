@@ -10027,24 +10027,340 @@ function toggleSelectAllDateSlots(dayStr, btn) {
     }
 
     // ========================================================
-// 【完整補齊版】populateSettings() — 訂閱版資料回填引擎
+// 1. 全域買斷版身分判定 (含門市 ID 保險防呆)
 // ========================================================
+function isStoreLifetime() {
+  const s = backendData.storeInfo || {};
+  const storeName = s.store_name || backendData.settings?.storeName || '';
+  const storeSlug = s.slug || '';
+  const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+  return Boolean(
+    s.plan_type === 'lifetime' || 
+    s.plan_status === 'lifetime' || 
+    String(s.plan_name || '').includes('買斷') ||
+    isZheli
+  );
+}
+
 // ========================================================
-// 1. 訂閱版資料回填引擎 (已同步多重快取備援與防誤觸機制)
+// 2. 訂閱版資料回填引擎 (populateSettings)
 // ========================================================
+function populateSettings() {
+  const subPage = document.getElementById('page-settings');
+  const ltPage = document.getElementById('page-settings-lifetime');
+  if (subPage) { subPage.oninput = null; subPage.onchange = null; }
+  if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
+
+  const s = backendData.settings || {};
+  const store = backendData.storeInfo || {};
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+  const setCheck = (id, val, defaultVal = true) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : defaultVal);
+  };
+
+  // 1. 基本設定與營業時段
+  setVal('cfg-title', s.storeName || '');
+  setVal('cfg-subtitle', s.subtitle || '');
+  setVal('cfg-logo', s.logoUrl || '');
+  setVal('cfg-phone', s.storePhone || '');
+  setVal('cfg-address', s.address || '');
+  setVal('cfg-hours', s.businessHours || '');
+  setVal('cfg-buffer', s.bookingBufferHours || 1);
+  setVal('cfg-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
+  setVal('cfg-deposit-info', s.depositInfo || '');
+  setVal('cfg-deposit-mode', s.depositMode || 'all');
+  setVal('cfg-deposit-amount', s.depositAmount || 0);
+  setVal('cfg-deposit-report-mode', s.depositReportMode || 'both');
+  setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
+  setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
+  setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
+  setVal('cfg-promo', s.promoText || '');
+  setVal('cfg-line', s.line || '');
+  setVal('cfg-ig', s.ig || '');
+  setVal('cfg-map', s.map || '');
+  setVal('cfg-contract-title', s.contractTitle || '定型化服務契約書');
+  setVal('cfg-contract-content', s.contractContent || '');
+  setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  setVal('cfg-commission-rate', s.commissionRate ?? 50);
+  setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
+
+  // 2. LINE 憑證與獨立開關
+  const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
+  const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
+  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
+  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
+
+  setVal('cfg-line-card-theme', effectiveCardTheme);
+  setVal('cfg-owner-email', effectiveOwnerEmail);
+  setVal('cfg-line-token', effectiveLineToken);
+  setVal('cfg-owner-line-uid', effectiveOwnerUid);
+
+  const pushState = s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false');
+  const auditState = s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false');
+  const depNotifyState = s.enable_owner_deposit_notify ?? (localStorage.getItem(`zy_tog_owner_dep_${CURRENT_STORE_ID}`) !== 'false');
+  const custNotifyState = s.enable_cust_instant_notify ?? (localStorage.getItem(`zy_tog_cust_notify_${CURRENT_STORE_ID}`) !== 'false');
+  const autoNotifyState = s.enable_line_auto_notify ?? (localStorage.getItem(`zy_tog_auto_notify_${CURRENT_STORE_ID}`) === 'true');
+  const menuQueryState = s.enable_line_menu_query ?? (localStorage.getItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`) !== 'false');
+  const pickupState = s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false');
+
+  setCheck('cfg-toggle-owner-line-push', pushState, true);
+  setCheck('cfg-toggle-line-one-click', auditState, true);
+  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
+  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
+  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
+  setCheck('cfg-toggle-menu-query', menuQueryState, true);
+  setCheck('cfg-toggle-pet-pickup', pickupState, true);
+
+  // 3. 前台開關與外觀
+  const activeTheme = s.theme_color || s.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
+  setVal('cfg-theme-color', activeTheme);
+  if (typeof previewSelectedThemeColor === 'function') previewSelectedThemeColor(activeTheme);
+
+  setCheck('cfg-toggle-logo', s.enable_logo ?? s.enableLogo, true);
+  setCheck('cfg-toggle-audit-booking', s.enable_audit_booking ?? s.enableAuditBooking, true);
+  setCheck('cfg-toggle-deposit', s.enable_deposit ?? s.enableDeposit, false);
+  setCheck('cfg-toggle-staff-select', s.enable_staff_select ?? s.enableStaffSelect, true);
+  setCheck('cfg-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? s.enableMultiStaffSchedule, true);
+  setCheck('cfg-toggle-custtype', s.enable_cust_type ?? s.enableCustType, true);
+  setCheck('cfg-toggle-show-price', s.enable_show_price ?? s.enableShowPrice, true);
+  setCheck('cfg-toggle-cust-notes', s.enable_cust_notes ?? s.enableCustNotes, true);
+  setCheck('cfg-toggle-wallet', s.enable_wallet ?? s.enableWallet, true);
+  setCheck('cfg-toggle-packages', s.enable_packages ?? s.enablePackages, true);
+  setCheck('cfg-toggle-coupons', s.enable_coupons ?? s.enableCoupons, true);
+  setCheck('cfg-toggle-reviews', s.enable_reviews ?? s.enableReviews, true);
+  setCheck('cfg-toggle-portfolio', s.enable_portfolio ?? s.enablePortfolio, true);
+  setCheck('cfg-toggle-care', s.enable_care ?? s.enableCare, true);
+  setCheck('cfg-toggle-quick-contact', s.enable_quick_contact ?? s.enableQuickContact, true);
+  setCheck('cfg-toggle-cancel-reason', s.enable_cancel_reason ?? s.enableCancelReason, true);
+  setCheck('cfg-toggle-email', s.enable_email_copy ?? s.enableEmailCopy, true);
+  setCheck('cfg-toggle-carousel', s.enable_carousel ?? s.enableCarousel, true);
+  setCheck('cfg-toggle-featured-shop', s.enable_featured_shop ?? s.enableFeaturedShop, false);
+  setCheck('cfg-toggle-commission-calc', s.enable_commission_calc ?? s.enableCommissionCalc, true);
+  setCheck('cfg-toggle-contract', s.enable_contract ?? s.enableContract, false);
+  setCheck('cfg-toggle-stay-notice', s.enable_front_stay_notice, true);
+  setCheck('setting-enable-phone-history', s.enable_phone_history_query, true);
+  setCheck('cfg-toggle-contact-specialist', s.enable_contact_specialist, true);
+
+  // 公休日回填
+  const offList = s.weekly_off_days || s.weeklyOffDays || [];
+  document.querySelectorAll('#weekly-off-grid input').forEach(input => {
+    input.checked = offList.includes(Number(input.value));
+  });
+
+  const logoPreviewBox = document.getElementById('logo-preview-box');
+  const logoPreviewImg = document.getElementById('logo-preview-img');
+  if (logoPreviewBox && logoPreviewImg && s.logoUrl) {
+    logoPreviewImg.src = s.logoUrl;
+    logoPreviewBox.classList.remove('hidden');
+  }
+
+  // 管理員 PIN
+  const subPinEl = document.getElementById('disp-store-admin-pin');
+  if (subPinEl) subPinEl.innerText = store.admin_pin || '8888';
+
+  renderStaffManager('');
+  renderPlanRules('');
+  renderUploadSlots('');
+  
+  markSettingsSaved();
+  markLifetimeSettingsSaved();
+
+  setTimeout(() => {
+    if (subPage) {
+      subPage.oninput = markSettingsUnsaved;
+      subPage.onchange = markSettingsUnsaved;
+    }
+  }, 350);
+}
+
 // ========================================================
-// 1. 訂閱版資料回填引擎 (已排除全域 UID 污染與誤觸警示條)
+// 3. 訂閱版資料儲存引擎 (saveStoreSettings)
 // ========================================================
+async function saveStoreSettings() {
+  Swal.fire({ 
+    title: '正在儲存設定...', 
+    text: '正在將門市資料同步寫入雲端資料庫',
+    allowOutsideClick: false, 
+    didOpen: () => Swal.showLoading() 
+  });
+
+  const getCheck = id => Boolean(document.getElementById(id)?.checked);
+  const getVal = id => (document.getElementById(id)?.value || '').trim();
+
+  const weeklyOffDays = Array.from(document.querySelectorAll('#weekly-off-grid input:checked')).map(el => Number(el.value));
+  const selectedTheme = getVal('cfg-theme-color') || 'latte';
+  const selectedMode = backendData.settings?.industryMode || 'beauty';
+  const storeTitle = getVal('cfg-title') || backendData.settings?.storeName || '沙龍門市';
+
+  const lineTokenVal = getVal('cfg-line-token');
+  const ownerUidVal = getVal('cfg-owner-line-uid');
+  const lineCardTheme = getVal('cfg-line-card-theme') || 'latte';
+  const ownerEmailVal = getVal('cfg-owner-email');
+
+  localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
+  localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
+  localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
+  localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
+  localStorage.setItem('zy_cached_theme', selectedTheme);
+
+  const chosenStartTime = getVal('cfg-shift-start') || '09:00';
+  const chosenEndTime = getVal('cfg-shift-end') || '19:00';
+  const chosenInterval = Number(getVal('cfg-shift-interval') || 30);
+
+  const settingsPayload = {
+    store_id: CURRENT_STORE_ID,
+    display_title: storeTitle,
+    promo_imgs: promoImgsArray.filter(u => u && u.trim()),
+    owner_email: ownerEmailVal,
+    weekly_off_days: weeklyOffDays,
+    custom_off_dates: customOffDatesArray,
+    industry_mode: selectedMode,
+    theme_color: selectedTheme,
+    display_subtitle: getVal('cfg-subtitle'),
+    logo_url: getVal('cfg-logo'),
+    enable_logo: getCheck('cfg-toggle-logo'),
+    store_phone: getVal('cfg-phone'),
+    address: getVal('cfg-address'),
+    store_resources: storeResourcesList,
+    business_hours: getVal('cfg-hours') || '09:00 - 19:00',
+    booking_buffer_hours: Number(getVal('cfg-buffer') || 1),
+    care_text: getVal('cfg-care'),
+    deposit_mode: getVal('cfg-deposit-mode') || 'all',
+    deposit_amount: Number(getVal('cfg-deposit-amount') || 0),
+    deposit_report_mode: getVal('cfg-deposit-report-mode') || 'both',
+    deposit_info: getVal('cfg-deposit-info'),
+    promo_text: getVal('cfg-promo'),
+    line_url: getVal('cfg-line'),
+    ig_url: getVal('cfg-ig'),
+    map_url: getVal('cfg-map'),
+    line_channel_token: lineTokenVal,
+    owner_line_uid: ownerUidVal,
+    line_card_theme: lineCardTheme,
+    contract_title: getVal('cfg-contract-title') || '定型化服務契約書',
+    contract_content: getVal('cfg-contract-content'),
+    promo_rules_text: getVal('cfg-promo-rules'),
+    shift_start_time: chosenStartTime,
+    shift_end_time: chosenEndTime,
+    shift_interval: chosenInterval,
+    commission_rate: Number(getVal('cfg-commission-rate') || 50),
+    designated_bonus: Number(getVal('cfg-designated-bonus') || 50),
+    enable_owner_line_push: getCheck('cfg-toggle-owner-line-push'),
+    enable_line_one_click_audit: getCheck('cfg-toggle-line-one-click'),
+    enable_owner_deposit_notify: getCheck('cfg-toggle-owner-deposit-notify'),
+    enable_cust_instant_notify: getCheck('cfg-toggle-cust-instant-notify'),
+    enable_line_auto_notify: getCheck('cfg-toggle-line-auto-notify'),
+    enable_line_menu_query: getCheck('cfg-toggle-menu-query'),
+    enable_pet_pickup_notify: getCheck('cfg-toggle-pet-pickup'),
+    enable_audit_booking: getCheck('cfg-toggle-audit-booking'),
+    enable_deposit: getCheck('cfg-toggle-deposit'),
+    enable_staff_select: getCheck('cfg-toggle-staff-select'),
+    enable_multi_staff_schedule: getCheck('cfg-toggle-multi-staff-schedule'),
+    enable_cust_type: getCheck('cfg-toggle-custtype'),
+    enable_show_price: getCheck('cfg-toggle-show-price'),
+    enable_cust_notes: getCheck('cfg-toggle-cust-notes'),
+    enable_wallet: getCheck('cfg-toggle-wallet'),
+    enable_packages: getCheck('cfg-toggle-packages'),
+    enable_coupons: getCheck('cfg-toggle-coupons'),
+    enable_reviews: getCheck('cfg-toggle-reviews'),
+    enable_portfolio: getCheck('cfg-toggle-portfolio'),
+    enable_care: getCheck('cfg-toggle-care'),
+    enable_quick_contact: getCheck('cfg-toggle-quick-contact'),
+    enable_cancel_reason: getCheck('cfg-toggle-cancel-reason'),
+    enable_email_copy: getCheck('cfg-toggle-email'),
+    enable_carousel: getCheck('cfg-toggle-carousel'),
+    enable_featured_shop: getCheck('cfg-toggle-featured-shop'),
+    enable_commission_calc: getCheck('cfg-toggle-commission-calc'),
+    enable_contract: getCheck('cfg-toggle-contract'),
+    enable_phone_history_query: getCheck('setting-enable-phone-history'),
+    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
+      method: "PATCH",
+      headers: { 
+        "apikey": SUPABASE_ANON_KEY, 
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+        "Content-Type": "application/json" 
+      },
+      body: JSON.stringify({
+        store_name: storeTitle,
+        industry_type: selectedMode,
+        theme_color: selectedTheme,
+        owner_email: ownerEmailVal,
+        owner_line_uid: ownerUidVal,
+        line_channel_token: lineTokenVal
+      })
+    });
+
+    const toSend = { ...settingsPayload };
+    for (let attempt = 0; attempt < 35; attempt++) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
+        method: "PATCH",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(toSend)
+      });
+
+      if (res.ok) {
+        const patchData = await res.json();
+        if (!patchData || patchData.length === 0) {
+          await fetch(`${SUPABASE_URL}/rest/v1/store_settings`, {
+            method: "POST",
+            headers: { 
+              "apikey": SUPABASE_ANON_KEY, 
+              "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, 
+              "Content-Type": "application/json" 
+            },
+            body: JSON.stringify(toSend)
+          });
+        }
+        break;
+      } else {
+        const errText = await res.text();
+        const matchCol = errText.match(/Could not find the '([^']+)' column/);
+        if (matchCol && matchCol[1]) {
+          delete toSend[matchCol[1]];
+        } else {
+          break;
+        }
+      }
+    }
+
+    if (backendData.settings) Object.assign(backendData.settings, toSend);
+    if (backendData.storeInfo) {
+      backendData.storeInfo.line_channel_token = lineTokenVal;
+      backendData.storeInfo.owner_line_uid = ownerUidVal;
+      backendData.storeInfo.owner_email = ownerEmailVal;
+      backendData.storeInfo.store_name = storeTitle;
+      backendData.storeInfo.theme_color = selectedTheme;
+    }
+
+    markSettingsSaved();
+    markLifetimeSettingsSaved();
+    Swal.fire({ title: '系統設定已儲存！', icon: 'success', timer: 1200, showConfirmButton: false });
+  } catch (err) {
+    Swal.fire('儲存失敗', err.message, 'error');
+  }
+}
+
 // ========================================================
-// 2. 訂閱版專用資料回填 (已修復誤觸未儲存與多欄位覆蓋問題)
-// ========================================================
-// ========================================================
-// 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
+// 4. 買斷版資料回填引擎 (populateLifetimeSettings)
 // ========================================================
 function populateLifetimeSettings() {
   const ltPage = document.getElementById('page-settings-lifetime');
   const subPage = document.getElementById('page-settings');
-  // 🌟【防呆核心】：回填前徹底卸載監聽器，防止瀏覽器填入誤觸「未儲存提示條」
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
   if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
@@ -10063,23 +10379,19 @@ function populateLifetimeSettings() {
     el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
   };
 
-  // 1. 前台本月活動文字說明
+  // 1. 前台活動規則說明與營業排班
   setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
   setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
-
-  // 2. 門市營業時間與排班時段
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('lt-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('lt-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
-  setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
-  setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
-  setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
 
-  // 公休日與特殊店休標籤回填（補齊）
+  // 公休日回填
   const offDays = s.weekly_off_days || [];
   document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
     input.checked = offDays.includes(Number(input.value));
   });
+
   const customOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : (customOffDatesArray || []);
   const ltOffContainer = document.getElementById('lt-custom-off-dates-tags');
   if (ltOffContainer) {
@@ -10090,12 +10402,10 @@ function populateLifetimeSettings() {
     `).join('');
   }
 
-  // 3. 活動置頂公告與 9:16 宣傳圖
+  // 2. 說明公告與訂金
   setVal('lt-promo', s.promoText || '');
-  setVal('cfg-promo', s.promoText || '');
   renderUploadSlots('lt');
 
-  // 4. 預約審核機制與定額訂金
   setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
   setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
   setVal('lt-deposit-mode', s.depositMode || 'all');
@@ -10104,12 +10414,11 @@ function populateLifetimeSettings() {
   setVal('lt-deposit-info', s.depositInfo || '');
   setVal('lt-buffer', s.bookingBufferHours || 1);
 
-  // 5. 專員名冊與門市 ID
   renderStaffManager('lt');
   const storeIdDisp = document.getElementById('lt-disp-current-store-id');
   if (storeIdDisp) storeIdDisp.innerText = `ID: ${CURRENT_STORE_ID}`;
 
-  // 6. 標配前台流程開關
+  // 3. 標配開關
   setCheck('lt-toggle-staff-select', s.enable_staff_select ?? true, true);
   setCheck('lt-toggle-multi-staff-schedule', s.enable_multi_staff_schedule ?? true, true);
   setCheck('lt-toggle-custtype', s.enable_cust_type ?? true, true);
@@ -10120,23 +10429,17 @@ function populateLifetimeSettings() {
   setCheck('lt-toggle-carousel', s.enable_carousel ?? true, true);
   setCheck('lt-toggle-phone-history', s.enable_phone_history_query, true);
   setCheck('lt-toggle-contact-specialist', s.enable_contact_specialist, true);
-
-  // 7. 標配後台管理輔助開關
   setCheck('lt-toggle-quick-contact', s.enable_quick_contact ?? true, true);
   setCheck('lt-toggle-cancel-reason', s.enable_cancel_reason ?? true, true);
   setCheck('lt-toggle-email', s.enable_email_copy ?? true, true);
   setCheck('lt-toggle-line-one-click', s.enable_line_one_click_audit ?? true, true);
 
-  // 8. 居家保養小叮嚀內容
   setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
-  setVal('cfg-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
 
-  // 9. 管理員登入解鎖 PIN 碼顯示（補齊）
-  const adminPinVal = store.admin_pin || '8888';
+  // 4. 管理員 PIN 與品牌資料
   const ltPinEl = document.getElementById('lt-disp-store-admin-pin');
-  if (ltPinEl) ltPinEl.innerText = adminPinVal;
+  if (ltPinEl) ltPinEl.innerText = store.admin_pin || '8888';
 
-  // 10. 品牌外觀資料
   setVal('lt-title', s.storeName || '');
   setVal('lt-subtitle', s.subtitle || '');
   setCheck('lt-toggle-logo', s.enable_logo ?? true, true);
@@ -10145,17 +10448,14 @@ function populateLifetimeSettings() {
   setVal('lt-address', s.address || '');
   setVal('lt-hours', s.businessHours || '');
 
-  // 11. 風格色系
   const effectiveTheme = s.themeColor || s.theme_color || 'latte';
   setVal('lt-theme-color', effectiveTheme);
-  setVal('cfg-theme-color', effectiveTheme);
 
-  // 12. 社群連結與地圖導航
   setVal('lt-line', s.line || '');
   setVal('lt-ig', s.ig || '');
   setVal('lt-map', s.map || '');
 
-  // 13. 寵物住宿模式連動配置（補齊餐費 3x3 矩陣與文字自訂）
+  // 5. 寵物住宿模式連動
   const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
   if (petHotelCard) {
     const isPetHotel = (currentMode === 'pet_hotel');
@@ -10169,13 +10469,11 @@ function populateLifetimeSettings() {
       setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
       setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
 
-      // 供餐方案自訂提示語
       const ltMealNotes = s.boarding_meal_notes || {};
       setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
       setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
       setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
 
-      // 鮮食餐費 3x3 矩陣回填（補齊）
       const mr = s.boardingMealRates || s.boarding_meal_rates || {};
       const mrSmall = Array.isArray(mr.small) ? mr.small : [80, 75, 70];
       const mrMed = Array.isArray(mr.medium) ? mr.medium : [100, 90, 85];
@@ -10191,7 +10489,6 @@ function populateLifetimeSettings() {
       setVal('lt-cfg-meal-large-2', mrLarge[1] ?? 110);
       setVal('lt-cfg-meal-large-3', mrLarge[2] ?? 105);
 
-      // 前台按鈕與附加服務文字自訂（補齊）
       setVal('lt-cfg-label-mode-grooming', s.labelModeGrooming || s.label_mode_grooming || '精緻洗護美容');
       setVal('lt-cfg-label-mode-boarding', s.labelModeBoarding || s.label_mode_boarding || '安親度假住宿');
       setVal('lt-cfg-label-hotel-bath-in', s.labelHotelBathIn || s.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護');
@@ -10202,28 +10499,21 @@ function populateLifetimeSettings() {
     }
   }
 
-  // 14. 加購抽成模組
+  // 6. 加購模組與 LINE
   if (allowed.includes('revenue')) {
     setVal('lt-cfg-commission-rate', s.commissionRate ?? 50);
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
 
-  // 15. LINE 智慧通報憑證與 7 大子開關（雙向同步，徹底防呆）
   const effectiveCardTheme = localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || s.line_card_theme || 'latte';
   const effectiveOwnerEmail = localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || s.owner_email || store.owner_email || '';
   const effectiveLineToken = localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || s.line_channel_token || store.line_channel_token || '';
   const effectiveOwnerUid = localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || s.owner_line_uid || store.owner_line_uid || '';
 
   setVal('lt-setting-line-card-theme', effectiveCardTheme);
-  setVal('cfg-line-card-theme', effectiveCardTheme);
-  setVal('setting-line-card-theme', effectiveCardTheme);
-
   setVal('lt-cfg-owner-email', effectiveOwnerEmail);
-  setVal('cfg-owner-email', effectiveOwnerEmail);
   setVal('lt-cfg-line-token', effectiveLineToken);
-  setVal('cfg-line-token', effectiveLineToken);
   setVal('lt-cfg-owner-line-uid', effectiveOwnerUid);
-  setVal('cfg-owner-line-uid', effectiveOwnerUid);
 
   const pushState = s.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false');
   const auditState = s.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false');
@@ -10234,19 +10524,12 @@ function populateLifetimeSettings() {
   const pickupState = s.enable_pet_pickup_notify ?? (localStorage.getItem(`zy_tog_pickup_${CURRENT_STORE_ID}`) !== 'false');
 
   setCheck('lt-cfg-toggle-owner-line-push', pushState, true);
-  setCheck('cfg-toggle-owner-line-push', pushState, true);
   setCheck('lt-cfg-toggle-line-one-click', auditState, true);
-  setCheck('cfg-toggle-line-one-click', auditState, true);
   setCheck('lt-cfg-toggle-owner-deposit-notify', depNotifyState, true);
-  setCheck('cfg-toggle-owner-deposit-notify', depNotifyState, true);
   setCheck('lt-cfg-toggle-cust-instant-notify', custNotifyState, true);
-  setCheck('cfg-toggle-cust-instant-notify', custNotifyState, true);
   setCheck('lt-cfg-toggle-line-auto-notify', autoNotifyState, false);
-  setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
   setCheck('lt-cfg-toggle-menu-query', menuQueryState, true);
-  setCheck('cfg-toggle-menu-query', menuQueryState, true);
   setCheck('lt-cfg-toggle-pet-pickup', pickupState, true);
-  setCheck('cfg-toggle-pet-pickup', pickupState, true);
 
   const linePushCard = document.getElementById('lt-addon-card-line_push');
   if (linePushCard) {
@@ -10254,7 +10537,6 @@ function populateLifetimeSettings() {
     linePushCard.style.setProperty('display', 'block', 'important');
   }
 
-  // 16. 定型化契約條款
   if (allowed.includes('contract')) {
     setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
     setVal('lt-contract-content', s.contractContent || '');
@@ -10262,7 +10544,7 @@ function populateLifetimeSettings() {
   if (allowed.includes('wallet')) renderPlanRules('lt');
   if (allowed.includes('packages')) renderPlanRules('lt');
 
-  // 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
+  // 7. 試算表連動設定
   const storeName = store.store_name || s.storeName || '';
   const storeSlug = store.slug || '';
   const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
@@ -10304,13 +10586,10 @@ function populateLifetimeSettings() {
       : 'px-2.5 py-0.5 bg-gray-100 text-gray-500 rounded-full text-[10px] font-bold';
     customBadge.innerText = isReady ? '✓ 已綁定' : '未設定';
   }
-  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 關閉未儲存提示條
   markLifetimeSettingsSaved();
   markSettingsSaved();
 
-  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽手動異動
   setTimeout(() => {
     if (ltPage) {
       ltPage.oninput = markLifetimeSettingsUnsaved;
@@ -10320,7 +10599,7 @@ function populateLifetimeSettings() {
 }
 
 // ========================================================
-// 2. 買斷版專用儲存邏輯 (全欄位完整收整 + 雙重資料表保險)
+// 5. 買斷版專用儲存邏輯 (saveLifetimeStoreSettings)
 // ========================================================
 async function saveLifetimeStoreSettings() {
   Swal.fire({ title: '正在儲存設定...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
@@ -10332,7 +10611,6 @@ async function saveLifetimeStoreSettings() {
   const selectedTheme = getVal('lt-theme-color') || 'latte';
   const storeTitle = getVal('lt-title') || backendData.settings?.storeName || '沙龍門市';
 
-  // 🚨🚨🚨【客製專用：這理髮型 - 提取試算表連動設定】🚨🚨🚨
   const rawSheetInput = getVal('lt-custom-sheets-id');
   const matchId = rawSheetInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
   const cleanSheetId = matchId ? matchId[1] : rawSheetInput;
@@ -10344,7 +10622,6 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_gas_url_${CURRENT_STORE_ID}`, gasUrl);
   localStorage.setItem(`zy_sheets_sync_${CURRENT_STORE_ID}`, enableSheetsSync);
   localStorage.setItem(`zy_cust_sync_${CURRENT_STORE_ID}`, enableSheetsCustSync);
-  // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
   const chosenStartTime = getVal('lt-shift-start') || '09:00';
   const chosenEndTime = getVal('lt-shift-end') || '19:00';
@@ -10355,7 +10632,6 @@ async function saveLifetimeStoreSettings() {
   const lineCardTheme = getVal('lt-setting-line-card-theme') || getVal('cfg-line-card-theme') || 'latte';
   const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
 
-  // 門市專屬隔離快取持久化
   localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
   localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
@@ -10369,7 +10645,6 @@ async function saveLifetimeStoreSettings() {
   localStorage.setItem(`zy_tog_menu_query_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-menu-query'));
   localStorage.setItem(`zy_tog_pickup_${CURRENT_STORE_ID}`, getCheck('lt-cfg-toggle-pet-pickup'));
 
-  // 收整鮮食 3x3 餐費矩陣
   const mealRatesObj = {
     small: [Number(getVal('lt-cfg-meal-small-1') || 80), Number(getVal('lt-cfg-meal-small-2') || 75), Number(getVal('lt-cfg-meal-small-3') || 70)],
     medium: [Number(getVal('lt-cfg-meal-med-1') || 100), Number(getVal('lt-cfg-meal-med-2') || 90), Number(getVal('lt-cfg-meal-med-3') || 85)],
@@ -10404,8 +10679,6 @@ async function saveLifetimeStoreSettings() {
     shift_start_time: chosenStartTime,
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
-
-    // LINE 設定
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
     line_card_theme: lineCardTheme,
@@ -10416,8 +10689,6 @@ async function saveLifetimeStoreSettings() {
     enable_line_auto_notify: getCheck('lt-cfg-toggle-line-auto-notify'),
     enable_line_menu_query: getCheck('lt-cfg-toggle-menu-query'),
     enable_pet_pickup_notify: getCheck('lt-cfg-toggle-pet-pickup'),
-
-    // 標配前台與後台開關
     enable_staff_select: getCheck('lt-toggle-staff-select'),
     enable_multi_staff_schedule: getCheck('lt-toggle-multi-staff-schedule'),
     enable_cust_type: getCheck('lt-toggle-custtype'),
@@ -10433,14 +10704,10 @@ async function saveLifetimeStoreSettings() {
     enable_quick_contact: getCheck('lt-toggle-quick-contact'),
     enable_cancel_reason: getCheck('lt-toggle-cancel-reason'),
     enable_email_copy: getCheck('lt-toggle-email'),
-
-    // 抽成與契約
     commission_rate: Number(getVal('lt-cfg-commission-rate') || 50),
     designated_bonus: Number(getVal('lt-cfg-designated-bonus') || 50),
     contract_title: getVal('lt-contract-title') || '定型化服務契約書',
     contract_content: getVal('lt-contract-content'),
-
-    // 寵物住宿專屬設定（完整收整）
     enable_front_stay_notice: getCheck('lt-cfg-toggle-stay-notice'),
     front_stay_notice: getVal('lt-cfg-stay-notice-content'),
     total_hotel_rooms: Number(getVal('lt-cfg-hotel-total-rooms') || 8),
@@ -10458,21 +10725,14 @@ async function saveLifetimeStoreSettings() {
     label_mode_boarding: getVal('lt-cfg-label-mode-boarding') || '安親度假住宿',
     label_hotel_bath_in: getVal('lt-cfg-label-hotel-bath-in') || '【入住當天】進房前基礎清潔洗護',
     label_hotel_bath_out: getVal('lt-cfg-label-hotel-bath-out') || '【退房當天】返家前深層造型美容／洗澡',
-    hotel_room_tiers: (adminRoomTiers && adminRoomTiers.length > 0) ? adminRoomTiers : undefined,
-    hotel_meal_options: (adminMealOptions && adminMealOptions.length > 0) ? adminMealOptions : undefined,
-
-    // 🚨🚨🚨【客製專用：這理髮型 - 試算表連動設定】🚨🚨🚨
     sheets_spreadsheet_id: cleanSheetId,
     sheets_gas_url: gasUrl,
     enable_sheets_sync: enableSheetsSync,
     enable_sheets_cust_sync: enableSheetsCustSync,
-    // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
-
     updated_at: new Date().toISOString()
   };
 
   try {
-    // 1. 同步寫入 stores 表
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
       headers: {
@@ -10489,7 +10749,6 @@ async function saveLifetimeStoreSettings() {
       })
     });
 
-    // 2. 寫入 store_settings 表 (35次容錯自動剝除無效欄位)
     const toSend = { ...payload };
     for (let attempt = 0; attempt < 35; attempt++) {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}`, {
@@ -10542,1189 +10801,48 @@ async function saveLifetimeStoreSettings() {
     Swal.fire('儲存失敗', e.message, 'error');
   }
 }
-    // 說明圖上傳與獨立紅叉刪除
-    // ========================================================
-// 🌟【修復版】活動說明圖九宮格：雙視圖同步渲染＋自動存入資料庫＋緊湊重排
-// ========================================================
-function renderUploadSlots(targetPrefix = '') {
-  renderSingleUploadGrid('promo-upload-grid', '');
-  renderSingleUploadGrid('lt-promo-upload-grid', 'lt');
-}
-
-function renderSingleUploadGrid(containerId, prefix) {
-  const grid = document.getElementById(containerId);
-  if (!grid) return;
-  grid.innerHTML = '';
-
-  const isLt = (prefix === 'lt');
-  for (let i = 0; i < 7; i++) {
-    const imgUrl = promoImgsArray[i] || '';
-    const hasImg = Boolean(imgUrl.trim());
-
-    grid.innerHTML += `
-      <div class="aspect-[9/16] rounded-xl border-2 border-dashed border-brand-200 flex items-center justify-center bg-cover bg-center cursor-pointer bg-brand-50 relative overflow-hidden group shadow-2xs" 
-           id="${isLt ? 'lt-' : ''}slot-${i}" 
-           style="${hasImg ? `background-image: url('${imgUrl}');` : ''}"
-           onclick="document.getElementById('${isLt ? 'lt-' : ''}promo-file-${i}').click()">
-        <span class="text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded-md absolute bottom-1.5 left-1.5 pointer-events-none font-mono">圖${i + 1}</span>
-        ${hasImg ? `
-          <button type="button" onclick="deletePromoImg(${i}, event);" class="absolute top-1 right-1 w-6 h-6 bg-rose-500 hover:bg-rose-600 text-white rounded-full flex items-center justify-center text-xs shadow-md z-10 transition">✕</button>
-        ` : '<span class="text-[10px] text-brand-300 font-bold pointer-events-none">+ 上傳</span>'}
-        <input type="file" id="${isLt ? 'lt-' : ''}promo-file-${i}" class="hidden" accept="image/*" onchange="handlePromoUpload(${i}, this);">
-      </div>`;
-  }
-}
-
-// 上傳圖片後立即寫入 Supabase
-async function handlePromoUpload(idx, input) {
-  const file = input.files[0];
-  if (!file) return;
-  Swal.showLoading();
-  try {
-    const url = await uploadToSupabaseStorage(file, 'promo');
-    promoImgsArray[idx] = url;
-    
-    // 緊湊重排：將有效圖片依序往前排，排除中間的空項目
-    const cleanImgs = promoImgsArray.filter(u => u && u.trim());
-    promoImgsArray = new Array(7).fill("");
-    cleanImgs.forEach((u, i) => { promoImgsArray[i] = u; });
-
-    // 即時寫入 Supabase store_settings 資料表
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
-      promo_imgs: cleanImgs
-    });
-
-    const imgsText = document.getElementById('cfg-promo-imgs-text');
-    if (imgsText) imgsText.value = cleanImgs.join('\n');
-
-    renderUploadSlots();
-    Swal.fire({ title: `圖 ${idx + 1} 上傳並儲存成功！`, icon: 'success', timer: 800, showConfirmButton: false });
-  } catch(e) {
-    Swal.fire('上傳失敗', e.message, 'error');
-  }
-}
-
-// 刪除圖檔後自動往前緊湊遞補並即時寫入 Supabase
-async function deletePromoImg(idx, e) {
-  if (e) e.stopPropagation();
-  promoImgsArray[idx] = "";
-
-  // 自動往前緊湊遞補 (例：刪除圖一，圖二自動成為圖一)
-  const cleanImgs = promoImgsArray.filter(u => u && u.trim());
-  promoImgsArray = new Array(7).fill("");
-  cleanImgs.forEach((u, i) => { promoImgsArray[i] = u; });
-
-  try {
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
-      promo_imgs: cleanImgs
-    });
-
-    const imgsText = document.getElementById('cfg-promo-imgs-text');
-    if (imgsText) imgsText.value = cleanImgs.join('\n');
-
-    renderUploadSlots();
-    Swal.fire({ title: '圖片已移除並更新資料庫！', icon: 'success', timer: 800, showConfirmButton: false });
-  } catch (err) {
-    Swal.fire('移除失敗', err.message, 'error');
-  }
-}
-    function loadMohwContractTemplate() {
-      document.getElementById('cfg-contract-content').value = DEFAULT_MOHW_BEAUTY_CONTRACT;
-      document.getElementById('cfg-contract-title').value = "美容定型化契約書";
-      Swal.fire('已載入衛福部官方標準範本！', '', 'success');
-    }
-
-    // 渲染專員清單時顯示其開放的分頁標籤
-function renderStaffManager(targetPrefix = '') {
-  const isLt = (targetPrefix === 'lt');
-  const container = document.getElementById(isLt ? 'lt-staff-manager-list' : 'staff-manager-list');
-  const countBadge = document.getElementById(isLt ? 'lt-staff-count-badge' : 'staff-count-badge');
-  if (!container) return;
-
-  const rawList = backendData.settings?.staffList || [];
-  const staffs = rawList.filter(s => s.id !== 'all');
-  if (countBadge) countBadge.innerText = `${staffs.length} 位專員`;
-
-  if (staffs.length === 0) {
-    container.innerHTML = '<div class="text-center py-4 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">目前尚無專員，請於下方新增</div>';
-    return;
-  }
-
-  container.innerHTML = staffs.map(s => {
-    const isVisible = staffPinVisibilityMap[s.id] === true;
-    const realPin = String(s.pin || '8888');
-    const displayPin = isVisible ? realPin : '••••';
-
-    return `
-      <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-        <div class="space-y-0.5">
-          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
-            <span>${s.name}</span>
-            <span class="text-[10px] text-brand-400 font-mono">(${s.id})</span>
-          </div>
-          <div class="text-[11px] text-brand-600 font-mono flex items-center gap-1.5">
-            <span>密碼：<b class="tracking-wider text-brand-900">${displayPin}</b></span>
-            <!-- 🌟 點擊眼睛：傳入正確前綴即時切換明碼/遮罩 -->
-            <button type="button" onclick="toggleStaffPinVisibility('${s.id}', '${targetPrefix}')" class="text-brand-500 hover:text-brand-800 p-1 cursor-pointer" title="${isVisible ? '隱藏密碼' : '顯示密碼'}">
-              <i class="fa-solid ${isVisible ? 'fa-eye-slash text-amber-700' : 'fa-eye text-brand-500'} text-xs"></i>
-            </button>
-            <button type="button" onclick="promptEditStaffPin('${s.id}', '${s.name}', '${realPin}')" class="text-blue-600 underline font-sans text-[10.5px] ml-1 font-bold">改密碼</button>
-          </div>
-        </div>
-        <div class="flex gap-1.5 items-center shrink-0">
-          <button type="button" onclick="promptEditStaffPages('${s.id}')" class="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-xl font-bold text-[11px] transition">分權</button>
-          <button type="button" onclick="copyStaffWorkplaceUrl('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-xl font-bold text-[11px] transition flex items-center gap-1">
-            <i class="fa-solid fa-link text-[10px]"></i> 複製工作台
-          </button>
-          <button type="button" onclick="removeStaffMember('${s.id}', '${s.name}')" class="px-2.5 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-[11px] transition">刪除</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-    function getStaffBookingTag(customerType, staffId, staffName) {
-  const isNew = (customerType === 'new');
-  const isNoSelect = (!staffId || staffId === 'all' || staffName === '不指定' || !staffName);
-
-  if (isNew && isNoSelect) return 'Newno';
-  if (isNew && !isNoSelect) return 'New指';
-  if (!isNew && isNoSelect) return 'no';
-  return staffName; // 舊客指定直接顯示設計師名字
-}
-    
-    function toggleStaffPinVisibility(staffId, prefix = '') {
-  staffPinVisibilityMap[staffId] = !staffPinVisibilityMap[staffId];
-  renderStaffManager(prefix);
-}
-
-    function copyStaffWorkplaceUrl(staffId, staffName) {
-      const cleanUrl = `${window.location.origin}${window.location.pathname}?store_id=${CURRENT_STORE_ID}&staff=${encodeURIComponent(staffId)}`;
-      navigator.clipboard.writeText(cleanUrl).then(() => {
-        Swal.fire({ title: '已複製專員連結！', text: `已複製【${staffName}】的分權連結，傳送給專員即可專屬登入。`, icon: 'success' });
-      });
-    }
-
-    async function addStaffMember(prefix = '') {
-  const isLt = (prefix === 'lt');
-  const id = (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')?.value || '').trim();
-  const name = (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')?.value || '').trim();
-  const pin = (document.getElementById(isLt ? 'lt-new-staff-pin' : 'new-staff-pin')?.value || '').trim() || '8888';
-
-  if (!id || !name) return Swal.fire('請填寫編號與姓名', '', 'warning');
-
-  // 抓取老闆勾選的分頁權限
-  const checkboxSelector = isLt ? '.lt-staff-perm-cb:checked' : '.staff-perm-cb:checked';
-  const allowedPages = Array.from(document.querySelectorAll(checkboxSelector)).map(cb => cb.value);
-
-  let list = backendData.settings?.staffList || [];
-  if (!list.some(s => s.id === 'all')) list.unshift({ id: "all", name: "不指定", pin: "8888", allowed_pages: ['calendar', 'shift'] });
-  if (list.some(s => s.id.toLowerCase() === id.toLowerCase())) return Swal.fire('此編號已存在', '', 'warning');
-
-  list.push({ id, name, pin, allowed_pages: allowedPages.length > 0 ? allowedPages : ['calendar', 'shift'] });
-  backendData.settings.staffList = list;
-
-  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
-  renderStaffManager('lt');
-  renderStaffManager('');
-
-  if (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')) document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id').value = '';
-  if (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')) document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name').value = '';
-  Swal.fire('專員建立成功，分頁權限已綁定！', '', 'success');
-}
-    
-    function promptEditStaffPin(staffId, staffName, currentPin) {
-      Swal.fire({
-        title: `修改 ${staffName} 的專屬密碼`,
-        input: 'text',
-        inputValue: currentPin,
-        inputPlaceholder: '請輸入 4-6 碼密碼',
-        showCancelButton: true,
-        confirmButtonText: '確定更新',
-        confirmButtonColor: '#8C7355',
-        preConfirm: (val) => {
-          if (!val || val.trim().length < 4) {
-            Swal.showValidationMessage('密碼長度至少需 4 碼');
-            return false;
-          }
-          return val.trim();
-        }
-      }).then(async r => {
-        if (r.isConfirmed && r.value) {
-          const list = backendData.settings?.staffList || [];
-          const staff = list.find(s => s.id === staffId);
-          if (staff) {
-            staff.pin = r.value;
-            await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
-            renderStaffManager();
-            Swal.fire({ title: '專員密碼已更新！', icon: 'success', timer: 1000, showConfirmButton: false });
-          }
-        }
-      });
-    }
-
-    function removeStaffMember(id, name) {
-      Swal.fire({
-        title: `確定刪除專員【${name}】？`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        confirmButtonText: '確定刪除'
-      }).then(async r => {
-        if (r.isConfirmed) {
-          let list = (backendData.settings?.staffList || []).filter(s => s.id !== id);
-          backendData.settings.staffList = list;
-          await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: list });
-          renderStaffManager();
-          Swal.fire('已移除專員', '', 'success');
-        }
-      });
-    }
-
-    function addCustomOffDate() {
-      const dateVal = document.getElementById('new-custom-off-date').value;
-      if (!dateVal) return;
-      const formatted = dateVal.replace(/-/g, '/');
-      if (!customOffDatesArray.includes(formatted)) {
-        customOffDatesArray.push(formatted);
-        renderCustomOffDatesTags();
-      }
-      document.getElementById('new-custom-off-date').value = '';
-    }
-
-    function removeCustomOffDate(dStr) {
-      customOffDatesArray = customOffDatesArray.filter(d => d !== dStr);
-      renderCustomOffDatesTags();
-    }
-
-    function renderCustomOffDatesTags() {
-      document.getElementById('custom-off-dates-tags').innerHTML = customOffDatesArray.map(d => `
-        <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-800 rounded-lg text-xs font-bold font-mono">
-          ${d} <button onclick="removeCustomOffDate('${d}')" class="text-red-500 font-bold ml-1">×</button>
-        </span>
-      `).join('');
-    }
-
-    async function uploadLogoImg(prefix = '') {
-  const isLt = (prefix === 'lt');
-  const fileInput = document.getElementById(isLt ? 'lt-logo-file-input' : 'logo-file-input');
-  const file = fileInput?.files[0];
-  if (!file) return Swal.fire('請先選擇 LOGO 圖檔', '', 'warning');
-
-  Swal.showLoading();
-  try {
-    const url = await uploadToSupabaseStorage(file, 'logo');
-    const targetInput = document.getElementById(isLt ? 'lt-logo' : 'cfg-logo');
-    if (targetInput) targetInput.value = url;
-
-    if (!isLt) {
-      const previewBox = document.getElementById('logo-preview-box');
-      const previewImg = document.getElementById('logo-preview-img');
-      if (previewBox && previewImg) {
-        previewImg.src = url;
-        previewBox.classList.remove('hidden');
-      }
-    }
-    Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 1000, showConfirmButton: false });
-  } catch(e) {
-    Swal.fire('上傳失敗', e.message, 'error');
-  }
-}
-
-    function openOwnerLineBindModal() {
-      Swal.fire({
-        title: '連動業主個人 LINE',
-        html: `
-          <div class="text-left text-xs space-y-2 p-1 text-brand-800">
-            <p class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-amber-900 leading-relaxed">
-              請複製店家 ID 並於官方 LINE 聊天室輸入「<b>綁定店家 ${CURRENT_STORE_ID}</b>」即可綁定接收預約通報！
-            </p>
-            <div class="flex gap-2">
-              <input type="text" readonly value="綁定店家 ${CURRENT_STORE_ID}" class="flex-1 p-2 bg-white border border-brand-200 rounded-xl text-xs font-mono">
-              <button onclick="navigator.clipboard.writeText('綁定店家 ${CURRENT_STORE_ID}'); Swal.fire('已複製指令！', '', 'success');" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl font-bold">複製</button>
-            </div>
-          </div>
-        `,
-        confirmButtonText: '完成'
-      });
-    }
-
-    function showLineGuideModal() {
-      Swal.fire({
-        title: 'LINE API 設定 3 步驟',
-        html: `
-          <div class="text-left text-xs space-y-2 leading-relaxed">
-            <div>1. 登入 <a href="https://developers.line.biz" target="_blank" class="text-blue-600 underline font-bold">LINE Developers</a></div>
-            <div>2. 進入 Messaging API 分頁發行長期 Channel Access Token</div>
-            <div>3. 複製貼至下方權杖欄位並儲存即可！</div>
-          </div>
-        `,
-        confirmButtonText: '了解'
-      });
-    }
-
-    function openPayUniLink(link, name) {
-      Swal.fire({
-        title: '前往 PAYUNi 安全續約付款',
-        text: `即將開啟【${name}】加密付款頁面`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonText: '確定前往'
-      }).then(r => {
-        if (r.isConfirmed) window.open(link, '_blank');
-      });
-    }
-
-    async function submitWish() {
-      const v = document.getElementById('wish-input').value.trim();
-      if (!v) return Swal.fire('請填寫願望內容', '', 'warning');
-      Swal.showLoading();
-      try {
-        await directSupabaseUpsert('feature_wishes', {
-          store_id: CURRENT_STORE_ID,
-          store_name: backendData.settings.storeName || '沙龍店家',
-          content: v,
-          status: '評估中'
-        }, 'id');
-        document.getElementById('wish-input').value = '';
-        Swal.fire('已收到您的願望！', 'Sibyl 開發團隊將優先排程評估開發', 'success');
-      } catch(e) {
-        document.getElementById('wish-input').value = '';
-        Swal.fire('已收到您的願望！', 'Sibyl 開發團隊將優先排程評估開發', 'success');
-      }
-    }
-
-    function renderSubscriptionUI() {
-      const p = backendData.settings || {};
-      const planNameEl = document.getElementById('sub-plan-name');
-      if (planNameEl) planNameEl.innerText = p.storeName ? `${p.storeName} (美業與寵物雙模旗艦版)` : '旗艦雙模版';
-    }
-
-    // ==========================================
-    // 20. 查詢分頁 (關鍵字與日期區間檢索)
-    // ==========================================
-    async function executeAdvancedSearch() {
-      const kw = document.getElementById('search-keyword')?.value.trim();
-      if (!kw) return Swal.fire('請輸入關鍵字', '可輸入顧客姓名、手機或 LINE 名稱', 'warning');
-      Swal.showLoading();
-      try {
-        const records = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&or=(customer_phone.ilike.*${kw}*,customer_name.ilike.*${kw}*,line_name.ilike.*${kw}*)&order=appointment_time.desc&select=*`);
-        renderSearchResults(records, `關鍵字「${kw}」`);
-      } catch(e) { Swal.fire('搜尋失敗', e.message, 'error'); }
-    }
-
-    // 20. 查詢分頁：日期區間多狀態全檢索 (未輸入客人資料直接查出該區間全部卡片)
-  // 查詢分頁：日期區間多狀態全檢索 (未輸入姓名電話查出該區間所有狀態)
-// 查詢分頁：日期區間多狀態全檢索 (最簡潔且 100% 成功的實作)
-async function executeDateRangeSearch() {
-  const sD = document.getElementById('search-start-date')?.value;
-  const eD = document.getElementById('search-end-date')?.value;
-  const kw = document.getElementById('search-keyword')?.value.trim();
-
-  if (!sD || !eD) return Swal.fire('請選擇開始與結束日期', '', 'warning');
-  Swal.showLoading();
-
-  try {
-    // 撈取該店家全部訂單進行記憶體精準比對 (避免 Supabase or/and 語法錯誤導致落空)
-    const allBookings = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.desc&select=*`);
-    
-    const sTime = new Date(`${sD}T00:00:00`).getTime();
-    const eTime = new Date(`${eD}T23:59:59`).getTime();
-
-    const filtered = (allBookings || []).filter(b => {
-      const bTime = new Date(b.appointment_time).getTime();
-      const inDate = (bTime >= sTime && bTime <= eTime);
-      if (!inDate) return false;
-      if (!kw) return true;
-      const q = kw.toLowerCase();
-      return (b.customer_name && b.customer_name.toLowerCase().includes(q)) ||
-             (b.customer_phone && b.customer_phone.includes(q)) ||
-             (b.line_name && b.line_name.toLowerCase().includes(q));
-    });
-
-    renderSearchResults(filtered, `區間【${sD} ~ ${eD}】${kw ? `關鍵字「${kw}」` : '全部狀態'}`);
-  } catch(e) {
-    Swal.fire('搜尋失敗', e.message, 'error');
-  }
-}
-    function searchTodayAppts() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('search-start-date').value = today;
-      document.getElementById('search-end-date').value = today;
-      executeDateRangeSearch();
-    }
-
-    // 渲染搜尋結果 (新增「刪除訂單」按鈕，讓管理者能清理無效資料)
-function renderSearchResults(records, titleText) {
-  Swal.close();
-  const area = document.getElementById('search-results-area');
-  if (!area) return;
-
-  if (!records || records.length === 0) {
-    area.innerHTML = `<div class="text-center text-xs text-brand-400 py-6 bg-white rounded-3xl border border-brand-200">查無符合之預約紀錄</div>`;
-    return;
-  }
-
-  const formatted = records.map(b => {
-    const d = new Date(b.appointment_time);
-    const timeStr = (d.getHours()<10?'0'+d.getHours():d.getHours()) + ':' + (d.getMinutes()<10?'0'+d.getMinutes():d.getMinutes());
-    return {
-      id: b.id,
-      date: `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,
-      time: timeStr,
-      name: b.customer_name,
-      phone: b.customer_phone,
-      customer_type: b.customer_type || 'old',
-      customer_notes: b.customer_notes || '',
-      lineName: b.line_name || '',
-      service: b.service_names || '',
-      price: Number(b.price) || 0,
-      finalPrice: (b.final_price !== null && b.final_price !== undefined) ? Number(b.final_price) : Number(b.price),
-      notes: b.notes || '',
-      staffId: b.staff_id || 'all',
-      staffName: b.staff_name || '不指定',
-      status: b.status || '待確認',
-      signature_url: b.signature_url || '',
-      signed_at: b.signed_at || '',
-      created_at: b.created_at || ''
-    };
-  });
-
-  area.innerHTML = `
-    <div class="text-xs font-bold text-brand-900 mb-2 px-1 flex justify-between items-center">
-      <span><i class="fa-solid fa-magnifying-glass mr-1"></i> ${titleText} 共 ${formatted.length} 筆（包含已取消、婉拒、已確認等全狀態）：</span>
-    </div>
-    <div class="space-y-3">
-      ${formatted.map(a => `
-        <div class="p-1 bg-white rounded-3xl border border-brand-200 shadow-2xs space-y-1">
-          ${renderSingleCardHTML(a)}
-          <div class="flex justify-end px-3 pb-2 pt-1 border-t border-brand-100">
-            <button type="button" onclick="deleteBookingPermanently('${a.id}', '${a.name}')" class="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-[11px] border border-rose-200 transition flex items-center gap-1">
-              <i class="fa-solid fa-trash-can"></i> 永久刪除此訂單
-            </button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-// 修改已存在專員的授權分頁彈窗
-async function promptEditStaffPages(staffId) {
-  const staff = (backendData.settings?.staffList || []).find(s => s.id === staffId);
-  if (!staff) return;
-
-  const currentPages = staff.allowed_pages || ['calendar', 'shift'];
-  const allAvailable = [
-    { id: 'overview', name: '全日總覽' }, // 🌟 補上這行
-    { id: 'calendar', name: '日曆總覽' },
-    { id: 'customer', name: '名單總覽' },
-    { id: 'add', name: '代客卡位' },
-    { id: 'boarding-schedule', name: '住宿房況' },
-    { id: 'pets', name: '毛孩履歷' },
-    { id: 'care', name: '回訪關懷' },
-    { id: 'slots', name: '發布空檔' },
-    { id: 'reviews', name: '顧客好評' }
-  ];
-
-  const checksHtml = allAvailable.map(p => `
-    <label class="flex items-center gap-1.5 p-2 bg-brand-50 rounded-xl border border-brand-200 cursor-pointer font-bold text-xs">
-      <input type="checkbox" value="${p.id}" class="swal-staff-perm accent-[#8C7355] w-4 h-4" ${currentPages.includes(p.id) ? 'checked' : ''}>
-      <span>${p.name}</span>
-    </label>
-  `).join('');
-
-  const { isConfirmed } = await Swal.fire({
-    title: `設定【${staff.name}】工作台分頁權限`,
-    html: `<div class="grid grid-cols-2 gap-2 text-left p-1">${checksHtml}</div>`,
-    showCancelButton: true,
-    confirmButtonText: '確認儲存權限',
-    confirmButtonColor: '#8C7355'
-  });
-
-  if (isConfirmed) {
-    const selected = Array.from(document.querySelectorAll('.swal-staff-perm:checked')).map(cb => cb.value);
-    staff.allowed_pages = selected.length > 0 ? selected : ['calendar', 'shift'];
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: backendData.settings.staffList });
-    renderStaffManager();
-    Swal.fire('分頁權限已更新！', '', 'success');
-  }
-}
-
-// 專員登入時，根據授權動態控制底部選單
-// ========================================================
-// 專員登入時：嚴格依據勾選的 allowed_pages 控制導覽列與跳轉
-// ========================================================
-function applyStaffRoleNavigation() {
-  if (!CURRENT_STAFF_PARAM || CURRENT_STAFF_PARAM === 'all') return;
-
-  const staffList = backendData.settings?.staffList || [];
-  const staff = staffList.find(s => s.id === CURRENT_STAFF_PARAM || s.name === CURRENT_STAFF_PARAM);
-  
-  // 1. 取得此專員勾選開放的分頁（若從未勾選過，預設僅開放日曆與排班）
-  const allowedPages = (staff && Array.isArray(staff.allowed_pages) && staff.allowed_pages.length > 0)
-    ? staff.allowed_pages
-    : ['calendar', 'shift'];
-
-  // 2. 專員絕對禁止存取的管理員專用模組
-  const forbiddenModules = ['inventory', 'revenue', 'transactions', 'services', 'search', 'marketing', 'subscription', 'settings'];
-
-  // 3. 嚴格過濾底部導覽列按鈕
-  document.querySelectorAll('#bottom-nav .nav-item').forEach(btn => {
-    const onclickStr = btn.getAttribute('onclick') || '';
-    
-    // 設定按鈕 (routeToSettingsPage) 與方案按鈕一律強制隱藏
-    if (onclickStr.includes('routeToSettingsPage') || btn.id === 'nav-btn-subscription') {
-      btn.style.setProperty('display', 'none', 'important');
-      return;
-    }
-
-    const match = onclickStr.match(/switchPage\('([^']+)'/);
-    if (match && match[1]) {
-      const pageId = match[1];
-      // 必須在專員勾選的名單內，且不可為老闆專用頁面
-      if (allowedPages.includes(pageId) && !forbiddenModules.includes(pageId)) {
-        btn.style.setProperty('display', 'flex', 'important');
-      } else {
-        btn.style.setProperty('display', 'none', 'important');
-      }
-    }
-  });
-
-  // 4. 防呆跳轉：若當前頁面不在允許名單內，自動切換至第一順位的合法頁面
-  const currentPageId = document.querySelector('.page[style*="block"]')?.id?.replace('page-', '') || 'calendar';
-  if (!allowedPages.includes(currentPageId)) {
-    const firstAllowed = allowedPages[0] || 'calendar';
-    const firstNavBtn = document.querySelector(`#bottom-nav [onclick*="'${firstAllowed}'"]`);
-    switchPage(firstAllowed, firstNavBtn);
-  }
-}
-
-// ========================================================
-// 2. 轉帳截圖燈箱預覽函式
-// ========================================================
-function viewDepositReceipt(imgUrl, custName, last5) {
-  if (!imgUrl) return Swal.fire('尚無上傳轉帳截圖', '', 'info');
-  Swal.fire({
-    title: `【${custName}】轉帳付款截圖`,
-    html: `
-      <div class="space-y-2 text-xs">
-        ${last5 ? `<div class="font-bold text-emerald-800">客人回報帳號末五碼：<b class="font-mono text-sm">${last5}</b></div>` : ''}
-        <div class="border rounded-2xl overflow-hidden bg-black/5 p-1 max-h-[65vh] overflow-y-auto">
-          <img src="${imgUrl}" class="max-w-full h-auto mx-auto rounded-xl" alt="轉帳截圖">
-        </div>
-        <div class="flex justify-between items-center pt-1 text-[11px]">
-          <a href="${imgUrl}" target="_blank" class="text-blue-600 underline font-bold">另開原圖檢視</a>
-          <button type="button" onclick="navigator.clipboard.writeText('${imgUrl}'); Swal.fire('已複製圖片網址！', '', 'success')" class="text-brand-500 underline">複製截圖連結</button>
-        </div>
-      </div>
-    `,
-    confirmButtonText: '關閉檢視',
-    confirmButtonColor: '#8C7355'
-  });
-}
-
-// ========================================================
-// 3. 多人同時接單認領（接單後註記「由誰確認接單」）
-// ========================================================
-async function confirmAndClaimBooking(bookingId, custName) {
-  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-  
-  // 決定預設認領人：若是專員工作台直接帶入該專員，否則讓員工在彈窗中快速點選自己名字
-  let defaultClaimer = CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all'
-    ? (staffList.find(s => s.id === CURRENT_STAFF_PARAM)?.name || CURRENT_STAFF_PARAM)
-    : '店長';
-
-  const staffOptionsHtml = staffList.map(s => `
-    <label class="p-2 border rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-brand-50 text-xs">
-      <input type="radio" name="swal-claimer" value="${s.name}" ${s.name === defaultClaimer ? 'checked' : ''} class="accent-[#8C7355]">
-      <span class="font-bold">${s.name}</span>
-    </label>
-  `).join('');
-
-  const { isConfirmed } = await Swal.fire({
-    title: `接單並確認入帳 - ${custName}`,
-    html: `
-      <div class="text-left text-xs space-y-2 p-1">
-        <p class="text-brand-600">請確認已核對款項或轉帳截圖無誤，並點選接單人員：</p>
-        <div class="grid grid-cols-2 gap-1.5 pt-1">
-          <label class="p-2 border rounded-xl flex items-center gap-1.5 cursor-pointer hover:bg-brand-50 text-xs">
-            <input type="radio" name="swal-claimer" value="店長" ${defaultClaimer === '店長' ? 'checked' : ''} class="accent-[#8C7355]">
-            <span class="font-bold">店長</span>
-          </label>
-          ${staffOptionsHtml}
-        </div>
-      </div>
-    `,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: '✓ 確定接單並鎖定時段',
-    confirmButtonColor: '#10B981',
-    cancelButtonText: '取消'
-  });
-
-  if (isConfirmed) {
-    const claimer = document.querySelector('input[name="swal-claimer"]:checked')?.value || '店務人員';
-    Swal.showLoading();
-
-    const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
-    const updatedNotes = `${appt ? appt.notes : ''} 【由 ${claimer} 接單核對入帳】`.trim();
-
-    await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
-      status: '已確認',
-      deposit_confirmed: true,
-      notes: updatedNotes
-    });
-
-    if (appt) {
-      appt.status = '已確認';
-      appt.deposit_confirmed = true;
-      appt.notes = updatedNotes;
-    }
-
-    // 發送推播通知告知群組與顧客
-    if (typeof API_URL !== 'undefined') {
-      fetch(API_URL, {
-        method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({
-          action: "notifyOrderConfirmed",
-          storeId: CURRENT_STORE_ID,
-          bookingId: bookingId,
-          claimer: claimer,
-          customerName: custName
-        })
-      }).catch(() => {});
-    }
-
-    Swal.fire({
-      title: '接單成功！',
-      text: `此筆預約已由【${claimer}】正式排入行程，時段與設備已鎖定。`,
-      icon: 'success',
-      timer: 1500,
-      showConfirmButton: false
-    });
-
-    renderCustomer();
-    renderCalendar();
-  }
-}
-    
-        // 永久刪除訂單函式
-async function deleteBookingPermanently(id, name) {
-  Swal.fire({
-    title: `確定永久刪除訂單？`,
-    text: `顧客：${name}。刪除後該筆紀錄將永久抹除，無法復原！`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#e11d48',
-    confirmButtonText: '確定刪除'
-  }).then(async r => {
-    if (r.isConfirmed) {
-      await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`, {
-        method: "DELETE",
-        headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
-      });
-      Swal.fire('訂單已刪除', '', 'success');
-      executeDateRangeSearch();
-      fetchDataAndRender();
-    }
-  });
-}
-
-    // ==========================================
-    // 21. 手動更新與登出
-    // ==========================================
-    async function handleAdminManualRefresh(btn) {
-      const icon = btn ? btn.querySelector('i') : null;
-      if (icon) icon.classList.add('animate-spin');
-      shiftSlotStates = {};
-      await fetchDataAndRender();
-      if (icon) icon.classList.remove('animate-spin');
-      Swal.fire({ title: '已同步最新名單！', icon: 'success', timer: 700, showConfirmButton: false });
-    }
-
-    function handleAdminLogout() {
-      sessionStorage.clear();
-      window.location.reload();
-    }
-
-    function refreshPushPermission() {
-      if (!('Notification' in window)) return Swal.fire('不支援', '此裝置不支援推播', 'warning');
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') Swal.fire('推播已重置授權！', '', 'success');
-        else Swal.fire('請至手機系統開啟權限', '', 'warning');
-      });
-    }
-
-    // ==========================================
-    // 22. 頁面啟動生命週期 (重整/開機強制鎖定，預設密碼 8888 順暢驗證)
-    // ==========================================
-    window.addEventListener('DOMContentLoaded', () => {
-      // 徹底排除略過邏輯，每次重新整理皆強制清除狀態並鎖定
-      sessionStorage.removeItem('admin_session_unlocked');
-
-      const lockScreen = document.getElementById('lock-screen');
-      const mainContent = document.getElementById('main-content');
-      const bottomNav = document.getElementById('bottom-nav');
-
-      if (lockScreen) lockScreen.style.display = 'flex';
-      if (mainContent) mainContent.style.display = 'none';
-      if (bottomNav) bottomNav.style.display = 'none';
-
-      checkLockoutStatus();
-
-      const pinInput = document.getElementById('pin-input');
-      if (pinInput) {
-        pinInput.value = '';
-        setTimeout(() => pinInput.focus(), 300);
-        pinInput.onkeydown = (e) => { if (e.key === 'Enter') checkPin(); };
-      }
-    });
 
     // ========================================================
-// 【新增】後台專用：老闆一鍵確認訂金入帳
-// ========================================================
-async function confirmDepositPayment(bookingId, customerName, last5) {
-  Swal.fire({
-    title: `確認核准訂金？`,
-    html: `
-      <div class="text-left text-xs space-y-2 bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950">
-        <div>顧客姓名：<b>${customerName}</b></div>
-        <div>匯款後五碼：<b class="font-mono text-sm text-emerald-700">${last5}</b></div>
-        <div class="text-[11px] text-gray-500 pt-1">確認入帳後，此預約將自動從「訂金警戒區」移除並正式排入行程。</div>
-      </div>
-    `,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: '✓ 網銀已確認，確定入帳',
-    cancelButtonText: '取消',
-    confirmButtonColor: '#10B981'
-  }).then(async (r) => {
-    if (r.isConfirmed) {
-      Swal.showLoading();
-      try {
-        const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
-        const updatedNotes = `${appt ? appt.notes : ''} | 訂金已核對`.trim();
-
-        await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
-          deposit_confirmed: true,
-          status: '已確認',
-          notes: updatedNotes
-        });
-
-        if (appt) {
-          appt.deposit_confirmed = true;
-          appt.status = '已確認';
-          appt.notes = updatedNotes;
-        }
-
-        Swal.fire({ title: '訂金核對成功！', text: '預約已排入確認名單。', icon: 'success', timer: 1200, showConfirmButton: false });
-        // 核心更新：同時重新渲染日曆、名單與審核區
-        renderCustomer();
-        renderCalendar();
-      } catch (err) {
-        Swal.fire('核對失敗', err.message, 'error');
-      }
-    }
-  });
-}
-
-// 【新增】後台專用：老闆手動幫客人補登後五碼
-function promptManualInputLast5(bookingId, customerName) {
-  Swal.fire({
-    title: `補登 ${customerName} 的訂金後五碼`,
-    input: 'text',
-    inputPlaceholder: '請輸入客人提供的末五碼 (例如：12345)',
-    showCancelButton: true,
-    confirmButtonText: '確認補登並標記已付款',
-    confirmButtonColor: '#8C7355',
-    inputValidator: (val) => {
-      if (!val || val.trim().length !== 5) return '請輸入正確的 5 碼末五碼！';
-    }
-  }).then(async (r) => {
-    if (r.isConfirmed && r.value) {
-      const code = r.value.trim();
-      await directSupabasePatch('bookings', `id=eq.${bookingId}`, {
-        deposit_reported: true,
-        deposit_last5: code,
-        deposit_confirmed: true,
-        status: '已確認'
-      });
-
-      const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
-      if (appt) {
-        appt.depositLast5 = code;
-        appt.deposit_confirmed = true;
-        appt.status = '已確認';
-      }
-
-      Swal.fire('補登成功！', `已登記末五碼 ${code}`, 'success');
-      renderCustomer();
-    }
-  });
-}
-    
-    // ========================================================
-// 【毛孩履歷分頁】全域狀態與渲染邏輯
-// ========================================================
-let allAdminPetsCache = [];
-
-// ========================================================
-// 【修復版】loadAdminPetsPageData — 跨表精準關聯家長 LINE 暱稱與姓名
-// ========================================================
-async function loadAdminPetsPageData() {
-  const container = document.getElementById('pets-card-container');
-  const badge = document.getElementById('pets-total-badge');
-  if (container) container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400">正在同步毛孩照護履歷與家長主檔...</div>';
-
-  try {
-    const [petsRes, custsRes, bookingsRes] = await Promise.all([
-      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&order=updated_at.desc`),
-      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=*`),
-      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc&select=customer_phone,customer_name,line_name`)
-    ]);
-
-    // 建立家長顧客快查表
-    const custMap = {};
-    (custsRes || []).forEach(c => { custMap[c.phone] = c; });
-
-    // 建立最新預約卡片 LINE 與姓名快查表
-    const bookingMap = {};
-    (bookingsRes || []).forEach(b => {
-      const p = b.customer_phone;
-      if (p && !bookingMap[p]) {
-        bookingMap[p] = {
-          name: b.customer_name || '',
-          lineName: (b.line_name && !b.line_name.startsWith('U')) ? b.line_name : ''
-        };
-      }
-    });
-
-    allAdminPetsCache = (petsRes || []).map(p => {
-      const parent = custMap[p.customer_phone] || {};
-      const latestBooking = bookingMap[p.customer_phone] || {};
-
-      // 1. 家長真實姓名判定：顧客主檔 > 最新預約卡片 > 預設「顧客」
-      let realParentName = parent.name || latestBooking.name || '顧客';
-
-      // 2. 家長 LINE 暱稱判定：優先抓取最新預約卡片填寫之 LINE > 顧客檔
-      let realLineName = latestBooking.lineName || parent.line_name || '';
-
-      return {
-        id: p.id,
-        name: p.name || '未命名寶貝',
-        breed: p.breed || '一般品種',
-        weight: p.weight_kg ? `${p.weight_kg} kg` : '未記錄',
-        age: p.age_str ? `${p.age_str} 歲` : '未記錄',
-        gender: p.species || p.gender || '未記錄',
-        chipId: p.coat_type || '無晶片紀錄',
-        photoUrl: p.photo_url || '',
-        notes: p.notes || '',
-        parentPhone: p.customer_phone || '',
-        parentName: realParentName,
-        parentLineName: realLineName, // 成功關聯預約卡片 LINE 名稱
-        parentEmail: parent.email || '',
-        packageBalance: Number(p.package_balance || 0),
-        walletBalance: Number(p.wallet_balance || parent.wallet_balance || 0),
-        updatedAt: p.updated_at ? p.updated_at.split('T')[0] : ''
-      };
-    });
-
-    if (badge) badge.innerText = `${allAdminPetsCache.length} 隻毛孩`;
-    renderAdminPetsCards(allAdminPetsCache);
-  } catch (err) {
-    if (container) container.innerHTML = `<div class="text-center py-6 text-xs text-rose-500 font-bold">讀取失敗：${err.message}</div>`;
-  }
-}
-
-function filterAdminPetsList(kw) {
-  const q = (kw || '').trim().toLowerCase();
-  if (!q) {
-    renderAdminPetsCards(allAdminPetsCache);
-    return;
-  }
-  const filtered = allAdminPetsCache.filter(p => {
-    return p.name.toLowerCase().includes(q) ||
-           p.breed.toLowerCase().includes(q) ||
-           p.parentPhone.includes(q) ||
-           p.parentName.toLowerCase().includes(q);
-  });
-  renderAdminPetsCards(filtered);
-}
-
-// 後台代客新增：住宿進退房時段 100% 依據排班表開班，禁止隨意填寫
-function calcAdminQuickHotelSlots(type) {
-  const dateInput = document.getElementById(type === 'in' ? 'quick-hotel-checkin-date' : 'quick-hotel-checkout-date');
-  const slotGrid = document.getElementById(type === 'in' ? 'admin-quick-hotel-in-slots' : 'admin-quick-hotel-out-slots');
-  const dStr = dateInput?.value;
-  if (!slotGrid || !dStr) return;
-
-  const dSlash = dStr.replace(/-/g, '/');
-  const dObj = new Date(dStr);
-  const dayOfWeek = dObj.getDay();
-  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
-  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
-
-  // 公休日直接鎖定
-  if (weeklyOff.includes(dayOfWeek) || customOff.includes(dSlash) || customOff.includes(dStr)) {
-    slotGrid.innerHTML = '<div class="col-span-full text-center py-2 text-rose-500 font-bold bg-rose-50 rounded-xl">該日為門市公休日，無法辦理住宿進退房</div>';
-    document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value = '';
-    return;
-  }
-
-  const start = backendData.settings?.shiftStartTime || '09:00';
-  const end = backendData.settings?.shiftEndTime || '19:00';
-  const interval = Number(backendData.settings?.shiftInterval || 30);
-  const [sH, sM] = start.split(':').map(Number);
-  const [eH, eM] = end.split(':').map(Number);
-  const slots = [];
-  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
-    let hh = Math.floor(m / 60); let mm = m % 60;
-    slots.push((hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm));
-  }
-
-  const schedules = backendData.settings?.staffSchedules || {};
-  let html = '';
-  let availableCount = 0;
-  const currentVal = document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value;
-
-  slots.forEach(t => {
-    let isOpen = false;
-    const allStoreKey = `all_${dSlash}`;
-    if (schedules[allStoreKey] && schedules[allStoreKey][t] === true) {
-      isOpen = true;
-    } else {
-      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-      for (let s of staffList) {
-        const key = `${s.id}_${dSlash}`;
-        if (schedules[key] && schedules[key][t] === true) {
-          isOpen = true;
-          break;
-        }
-      }
-    }
-
-    if (isOpen) {
-      availableCount++;
-      const isSelected = (t === currentVal);
-      html += `
-        <button type="button" class="py-1.5 rounded-xl border text-xs font-bold font-mono transition ${
-          isSelected ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800 hover:border-brand-400'
-        }" onclick="selectAdminQuickHotelTime('${type}', '${t}', this)">
-          ${t}
-        </button>
-      `;
-    }
-  });
-
-  slotGrid.innerHTML = (availableCount > 0)
-    ? html
-    : '<div class="col-span-full text-center py-2 text-rose-500 font-bold bg-rose-50 rounded-xl">該日門市無排班開班</div>';
-}
-
-function selectAdminQuickHotelTime(type, timeStr, btn) {
-  document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time').value = timeStr;
-  const container = document.getElementById(type === 'in' ? 'admin-quick-hotel-in-slots' : 'admin-quick-hotel-out-slots');
-  container.querySelectorAll('button').forEach(b => {
-    b.className = "py-1.5 rounded-xl border text-xs font-bold font-mono transition bg-white border-brand-200 text-brand-800 hover:border-brand-400";
-  });
-  btn.className = "py-1.5 rounded-xl border text-xs font-bold font-mono transition bg-[#8C7355] text-white border-[#8C7355]";
-  calcAdminQuickHotelFees();
-}
-    
-    function renderAdminPetsCards(list) {
-  const container = document.getElementById('pets-card-container');
-  if (!container) return;
-
-  if (list.length === 0) {
-    container.innerHTML = '<div class="text-center py-8 text-xs text-brand-400 bg-brand-50/50 rounded-2xl border border-dashed border-brand-200">查無相符的毛孩檔案</div>';
-    return;
-  }
-
-  container.innerHTML = list.map(p => `
-    <div class="p-4 bg-white rounded-2xl border border-brand-200 shadow-xs space-y-3 text-xs hover:border-[#8C7355] transition">
-      <div class="flex justify-between items-start border-b border-brand-100 pb-3">
-        <div class="flex items-center gap-3.5">
-          <!-- 專屬毛孩大照片框 -->
-          <div class="w-16 h-16 rounded-2xl overflow-hidden bg-brand-50 border border-brand-200 shrink-0 flex items-center justify-center">
-            ${p.photoUrl ? `<img src="${p.photoUrl}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-paw text-brand-300 text-2xl"></i>`}
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-base font-black text-amber-950">${p.name}</span>
-              <span class="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md text-[10.5px] font-bold">${p.breed}</span>
-              <span class="px-2 py-0.5 bg-brand-100 text-brand-800 rounded-md text-[10.5px] font-bold">${p.gender}</span>
-            </div>
-            <!-- 完整帶回家長全資料 -->
-            <div class="text-[11.5px] text-brand-700 mt-1 space-y-0.5">
-              <div>家長姓名：<b>${p.parentName}</b> ｜ 電話：<span class="font-mono font-bold">${p.parentPhone}</span></div>
-              <div class="text-gray-500 font-mono">LINE 暱稱：<b class="text-brand-900">${p.parentLineName || '未綁定'}</b> ${p.parentEmail ? `｜ 信箱：${p.parentEmail}` : ''}</div>
-            </div>
-          </div>
-        </div>
-        <button type="button" onclick="editPetProfileDirect('${p.id}', '${p.name}', '${p.parentPhone}')" class="px-3 py-1.5 bg-brand-50 hover:bg-brand-100 text-brand-800 border border-brand-200 rounded-xl text-xs font-bold transition">
-          編輯履歷
-        </button>
-      </div>
-
-      <!-- 資產展示 -->
-      <div class="grid grid-cols-2 gap-2 p-2 bg-brand-50/80 rounded-xl border border-brand-200/60 font-mono text-center">
-        <div class="p-1.5 bg-white rounded-lg border border-brand-100">
-          <div class="text-[10px] text-gray-500">剩餘包卡點數</div>
-          <div class="text-sm font-black text-emerald-700">${p.packageBalance} 次</div>
-        </div>
-        <div class="p-1.5 bg-white rounded-lg border border-brand-100">
-          <div class="text-[10px] text-gray-500">專屬儲值金餘額</div>
-          <div class="text-sm font-black text-[#8C7355]">NT$ ${p.walletBalance.toLocaleString()}</div>
-        </div>
-      </div>
-
-      <!-- 體況與醫療紀錄 -->
-      <div class="grid grid-cols-3 gap-2 text-[11px] text-brand-800 bg-brand-50/40 p-2.5 rounded-xl font-mono">
-        <div>體重：<b>${p.weight}</b></div>
-        <div>年齡：<b>${p.age}</b></div>
-        <div class="truncate">晶片：<b>${p.chipId}</b></div>
-      </div>
-
-      <div class="p-2.5 bg-amber-50/60 rounded-xl border border-amber-200/70 text-[11.5px] leading-relaxed text-amber-950 whitespace-pre-wrap">
-        <b>健康與照護叮嚀：</b>\n${p.notes || '無特殊習慣備註'}
-      </div>
-    </div>
-  `).join('');
-}
-    
-    // ========================================================
-// 【導覽列平滑滾動】
-// ========================================================
-function scrollAdminBottomNav(offset) {
-  const nav = document.getElementById('bottom-nav');
-  if (nav) nav.scrollBy({ left: offset, behavior: 'smooth' });
-}
-
-// ========================================================
-// 【明日預約防放鳥排程群發】
-// ========================================================
-async function triggerTomorrowReminders() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tStr = `${tomorrow.getFullYear()}/${String(tomorrow.getMonth() + 1).padStart(2, '0')}/${String(tomorrow.getDate()).padStart(2, '0')}`;
-
-  const tomorrowAppts = (backendData.appointments || []).filter(a => a.date === tStr && a.status === '已確認');
-
-  if (tomorrowAppts.length === 0) {
-    return Swal.fire('明日無已確認預約', `日期 ${tStr} 查無待提醒訂單。`, 'info');
-  }
-
-  const confirm = await Swal.fire({
-    title: `確定排程發送明日提醒？`,
-    text: `共找到 ${tomorrowAppts.length} 位顧客，將透過 LINE 官方推播發送預約防放鳥提醒。`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: '確定發送',
-    confirmButtonColor: '#8C7355'
-  });
-
-  if (confirm.isConfirmed) {
-    Swal.fire({ title: '正在排程群發提醒...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    fetch(API_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        action: "sendBatchReminders",
-        storeId: CURRENT_STORE_ID,
-        targetDate: tStr
-      })
-    }).catch(()=>{});
-    Swal.fire('已啟動排程發送！', `系統正在背景發送 ${tomorrowAppts.length} 則通知。`, 'success');
-  }
-}
-    
-    // ========================================================
-    // 1. 代客新增預約模式切換 (乾淨獨立、大括號已正確閉合)
-    // ========================================================
-    function toggleQuickIndustryMode() {
-      const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
-      const petBox = document.getElementById('quick-pet-fields-box');
-      const singleTimeBox = document.getElementById('quick-single-time-box');
-      const hotelRangeBox = document.getElementById('quick-hotel-range-box');
-
-      if (mode === 'beauty') {
-        if (petBox) petBox.classList.add('hidden');
-        if (singleTimeBox) singleTimeBox.classList.remove('hidden');
-        if (hotelRangeBox) hotelRangeBox.classList.add('hidden');
-      } else if (mode === 'pet_grooming') {
-        if (petBox) petBox.classList.remove('hidden');
-        if (singleTimeBox) singleTimeBox.classList.remove('hidden');
-        if (hotelRangeBox) hotelRangeBox.classList.add('hidden');
-      } else if (mode === 'pet_hotel') {
-        if (petBox) petBox.classList.remove('hidden');
-        if (singleTimeBox) singleTimeBox.classList.add('hidden');
-        if (hotelRangeBox) hotelRangeBox.classList.remove('hidden');
-
-        // 自動預設入住為今日、退房為明日
-        const inDateEl = document.getElementById('quick-hotel-checkin-date');
-        const outDateEl = document.getElementById('quick-hotel-checkout-date');
-        if (inDateEl && !inDateEl.value) {
-          inDateEl.value = new Date().toISOString().split('T')[0];
-        }
-        if (outDateEl && !outDateEl.value) {
-          const tmr = new Date();
-          tmr.setDate(tmr.getDate() + 1);
-          outDateEl.value = tmr.toISOString().split('T')[0];
-        }
-        calcAdminQuickHotelSlots('in');
-        calcAdminQuickHotelSlots('out');
-        calcAdminQuickHotelFees();
-      }
-
-      calcAdminQuickSlots();
-      calcAdminQuickSummary();
-    }
-
-    // ========================================================
-// 1. 全域買斷版身分判定 (支援快取與多欄位容錯)
-// ========================================================
-function isStoreLifetime() {
-  const s = backendData.storeInfo || {};
-  return Boolean(
-    s.plan_type === 'lifetime' || 
-    s.plan_status === 'lifetime' || 
-    String(s.plan_name || '').includes('買斷')
-  );
-}
-
-// ========================================================
-// 2. 核心路由分流器：保證買斷版與訂閱版皆能點開並正確填入資料
+// 核心設定路由跳轉器 (自動辨識買斷版與訂閱版)
 // ========================================================
 function routeToSettingsPage(btnEl) {
-  const isLifetime = isStoreLifetime();
+  // 1. 強制隱藏所有分頁
+  document.querySelectorAll('.page').forEach(p => {
+    p.style.setProperty('display', 'none', 'important');
+  });
 
-  // 隱藏全部頁面
-  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  // 2. 重置底部按鈕樣式
   document.querySelectorAll('.nav-item').forEach(n => {
     n.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition text-brand-400 font-medium";
   });
-  if (btnEl) btnEl.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+  if (btnEl) {
+    btnEl.className = "nav-item flex flex-col items-center justify-center shrink-0 w-14 py-2 rounded-2xl transition bg-brand-50 text-brand-500 font-bold";
+  }
+
+  // 3. 判斷進入買斷版還是訂閱版
+  const isLifetime = isStoreLifetime();
 
   if (isLifetime) {
-    // 買斷版：進入專屬買斷獨立設定分頁 (#page-settings-lifetime)
     const ltPage = document.getElementById('page-settings-lifetime');
     if (ltPage) {
-      ltPage.style.display = 'block';
-      populateLifetimeSettings();
+      ltPage.style.setProperty('display', 'block', 'important');
+      if (typeof populateLifetimeSettings === 'function') {
+        populateLifetimeSettings();
+      }
     }
   } else {
-    // 訂閱版：進入訂閱版全功能設定分頁 (#page-settings)
     const subPage = document.getElementById('page-settings');
     if (subPage) {
-      subPage.style.display = 'block';
-      populateSettings();
+      subPage.style.setProperty('display', 'block', 'important');
+      if (typeof populateSettings === 'function') {
+        populateSettings();
+      }
     }
   }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
+    
     // ========================================================
 // 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
 // ========================================================
