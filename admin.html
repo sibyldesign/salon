@@ -2023,9 +2023,28 @@
         <span class="text-[10px] text-emerald-700 font-bold">（完全 0 元！屬於 Reply 訊息，不消耗每月付費訊息則數）</span>
       </div>
       <label class="relative inline-flex items-center cursor-pointer shrink-0 ml-2">
-        <input type="checkbox" id="lt-cfg-toggle-menu-query" class="sr-only peer" checked>
+        <input type="checkbox" id="cfg-toggle-menu-query" class="sr-only peer" checked>
         <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
       </label>
+    </div>
+
+    <!-- 🌟【新增】：圖文選單設定教學與專屬查詢網址一鍵複製卡片 -->
+    <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-2 mt-1.5">
+      <div class="font-bold text-emerald-950 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-link text-emerald-600"></i> 圖文選單專屬「查詢預約」連結
+        </span>
+        <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md font-bold">0元不扣訊息則數</span>
+      </div>
+      <p class="text-[11px] text-emerald-900/90 leading-relaxed">
+        將下方專屬連結貼入 LINE 官方帳號後台「圖文選單」的動作【開啟連結 (URI)】，客人點擊即可直接輸入手機號碼自主查閱歷史預約與排程狀態：
+      </p>
+      <div class="flex items-center gap-1.5">
+        <input type="text" id="lt-front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-600 outline-none select-all" value="正在生成專屬連結...">
+        <button type="button" onclick="copyFrontMenuQueryUrl()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
+          <i class="fa-regular fa-copy"></i> 複製連結
+        </button>
+      </div>
     </div>
 
     <!-- 開關 7：寵美專用完工通知接回 -->
@@ -2554,6 +2573,25 @@
         <input type="checkbox" id="cfg-toggle-menu-query" class="sr-only peer" checked>
         <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
       </label>
+    </div>
+
+    <!-- 🌟【新增】：圖文選單設定教學與專屬查詢網址一鍵複製卡片 -->
+    <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-2 mt-1.5">
+      <div class="font-bold text-emerald-950 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-link text-emerald-600"></i> 圖文選單專屬「查詢預約」連結
+        </span>
+        <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md font-bold">0元不扣訊息則數</span>
+      </div>
+      <p class="text-[11px] text-emerald-900/90 leading-relaxed">
+        將下方專屬連結貼入 LINE 官方帳號後台「圖文選單」的動作【開啟連結 (URI)】，客人點擊即可直接輸入手機號碼自主查閱歷史預約與排程狀態：
+      </p>
+      <div class="flex items-center gap-1.5">
+        <input type="text" id="front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-600 outline-none select-all" value="正在生成專屬連結...">
+        <button type="button" onclick="copyFrontMenuQueryUrl()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
+          <i class="fa-regular fa-copy"></i> 複製連結
+        </button>
+      </div>
     </div>
 
     <!-- 開關 7：寵美專用完工通知接回 -->
@@ -4788,6 +4826,7 @@ async function fetchDataAndRender() {
     applyStaffRoleNavigation();
     renderOverviewDateButtons();
     renderOverviewGridCanvas();
+    updateFrontMenuQueryUrlDisplay();
 
     if (selectedCalendarDate) {
       showApptsInCalendar(selectedCalendarDate);
@@ -6097,8 +6136,18 @@ function renderSingleCardHTML(a) {
       </div>`;
   }
 
-  // 預估費用展示 (杜絕天價)
-  let priceDisplay = `NT$ ${Number(a.price || 0).toLocaleString()}`;
+  // 🌟【後台預約卡片金額防呆】：若儲存為 0，即時比對服務項目取得基準價
+  let actualDisplayPrice = Number(a.price || 0);
+  if (actualDisplayPrice === 0 && a.service) {
+    (backendData.services || []).forEach(s => {
+      if ((a.service || '').includes(s.name)) {
+        const p = Number(String(s.price || 0).match(/\d+/)?.[0] || 0);
+        actualDisplayPrice += p;
+      }
+    });
+  }
+
+  let priceDisplay = `NT$ ${actualDisplayPrice.toLocaleString()}`;
   const estRangeMatch = rawNotes.match(/【現場預算試算:\s*([^】]+)】/);
   if (estRangeMatch) {
     priceDisplay = estRangeMatch[1].replace(/現場預估應付金額：?/g, '').trim();
@@ -6630,6 +6679,37 @@ function renderCustomer() {
       }
     }
 
+    // 在後台 auditOrder(id, status, name) 與 quickUpdateStatus 內加入：
+async function notifyCustomerStatusChanged(bookingId, newStatus) {
+  const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+  const s = backendData.settings || {};
+  const token = s.lineChannelToken || s.line_channel_token;
+  const toUid = appt?.line_user_id || appt?.lineName; // 顧客的 LINE UID
+
+  // 必須持有 Channel Token 且有取得客人的 LINE UID (U開頭)
+  if (!token || !toUid || !toUid.startsWith('U')) return;
+
+  fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "sendBookingFlexNotification",
+      token: token,
+      toUid: toUid,
+      cardType: (newStatus === "已確認") ? "bookingConfirmed" : "bookingDeclined",
+      themeKey: s.line_card_theme || "latte",
+      data: {
+        name: appt.name,
+        date: appt.date,
+        time: appt.time,
+        service: appt.service,
+        price: appt.finalPrice || appt.price,
+        storeName: s.storeName || "門市"
+      }
+    })
+  }).catch(err => console.warn("顧客通知發送失敗:", err));
+}
+    
     async function auditOrder(id, status, name) {
       if (status === '婉拒') {
         Swal.fire({
@@ -12868,6 +12948,40 @@ function handleServiceTypeChange(typeVal) {
   if (box) {
     box.classList.toggle('hidden', typeVal !== 'Group_A');
   }
+}
+
+    // ==========================================
+// 圖文選單專屬「查詢預約」網址生成與複製
+// ==========================================
+function updateFrontMenuQueryUrlDisplay() {
+  // 自動依當前網域與門市 ID 組合完整網址
+  const baseUrl = window.location.origin + window.location.pathname.replace(/admin\.html|index\.html/g, '');
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+  const queryUrl = `${cleanBase}?store_id=${CURRENT_STORE_ID}#query`;
+
+  const subInput = document.getElementById('front-menu-query-url');
+  const ltInput = document.getElementById('lt-front-menu-query-url');
+  if (subInput) subInput.value = queryUrl;
+  if (ltInput) ltInput.value = queryUrl;
+}
+
+function copyFrontMenuQueryUrl() {
+  const input = document.getElementById('front-menu-query-url') || document.getElementById('lt-front-menu-query-url');
+  if (!input || !input.value) return;
+
+  navigator.clipboard.writeText(input.value).then(() => {
+    Swal.fire({
+      title: '已複製圖文選單連結！',
+      html: `
+        <div class="text-left text-xs bg-brand-50 p-3 rounded-xl border border-brand-200 text-brand-900 space-y-1">
+          <div>• 複製網址：<b class="font-mono text-emerald-800 break-all">${input.value}</b></div>
+          <div class="text-[11px] text-gray-500 pt-1">請至 LINE Official Account Manager 的圖文選單中，將動作設為「開啟連結 (URI)」並貼上此網址即可。</div>
+        </div>
+      `,
+      icon: 'success',
+      confirmButtonColor: '#8C7355'
+    });
+  });
 }
   </script>
 </body>
