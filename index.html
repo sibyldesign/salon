@@ -5234,26 +5234,60 @@ function applyHistoryQueryModuleGating(storeConfig) {
   // ========================================================
 // 🌟【買斷標配】前台顧客輸入電話查詢歷史預約
 // ========================================================
+// ==========================================
+// 前台顧客查詢歷史預約彈窗 (含未填手機直接引導輸入)
+// ==========================================
 async function openFrontCustomerHistoryModal() {
-  const phone = document.getElementById('phone')?.value.trim().replace(/\D/g, '');
+  let phone = document.getElementById('phone')?.value.trim().replace(/\D/g, '');
+
+  // 1. 若客人是從 LINE 圖文選單直接點開，尚未在表單填過電話，彈窗請客人輸入手機
   if (!phone || phone.length < 8) {
-    return Swal.fire('請先輸入手機號碼', '請在上方輸入手機號碼後再點擊查詢。', 'warning');
+    const { value: inputPhone } = await Swal.fire({
+      title: '查詢我的預約紀錄',
+      html: `
+        <div class="text-left text-xs space-y-2 p-1 text-brand-900 font-sans">
+          <p class="text-gray-500 leading-relaxed">請輸入您預約時登記的聯絡手機號碼：</p>
+          <input type="tel" id="swal-query-phone" maxlength="10" placeholder="例如：0912345678" class="swal2-input text-center font-mono text-base font-bold tracking-wider">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: '立即查詢',
+      cancelButtonText: '返回預約',
+      confirmButtonColor: '#8C7355',
+      preConfirm: () => {
+        const p = document.getElementById('swal-query-phone')?.value.trim().replace(/\D/g, '');
+        if (!p || p.length < 8) {
+          Swal.showValidationMessage('請輸入正確的手機號碼！');
+          return false;
+        }
+        return p;
+      }
+    });
+
+    if (!inputPhone) return;
+    phone = inputPhone;
+    // 同步帶回表單的電話欄位，方便客人後續預約
+    const phoneField = document.getElementById('phone');
+    if (phoneField && !phoneField.value) phoneField.value = phone;
   }
 
+  // 2. 開啟查詢清單 Modal
   const modal = document.getElementById('frontHistoryModal');
   const container = document.getElementById('frontHistoryListContainer');
   if (modal) modal.classList.remove('hidden');
-  if (container) container.innerHTML = '<div class="text-center py-6 text-gray-400 text-xs">正在查詢預約...</div>';
+  if (container) container.innerHTML = '<div class="text-center py-6 text-gray-400 text-xs">正在連線查詢預約紀錄...</div>';
 
   try {
-    const bookings = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=appointment_time.desc&limit=10`);
+    const bookings = await directSupabaseFetch(
+      `bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=appointment_time.desc&limit=10`
+    );
 
     if (!bookings || bookings.length === 0) {
       container.innerHTML = `
-        <div class="text-center py-8 text-xs text-brand-400 space-y-1">
-          <i class="fa-regular fa-calendar-xmark text-2xl text-brand-300 block mb-1"></i>
-          <div>查無手機 <b>${phone}</b> 的預約紀錄</div>
-          <div class="text-[10.5px]">歡迎直接選取下方時段進行預約！</div>
+        <div class="text-center py-8 text-xs text-brand-400 space-y-1.5">
+          <i class="fa-regular fa-calendar-xmark text-3xl text-brand-300 block mb-1"></i>
+          <div class="font-bold text-brand-800">查無手機【${phone}】的預約紀錄</div>
+          <div class="text-[11px] text-gray-400">目前尚無預約或已全數結單歸檔。歡迎直接選取下方時段進行預約！</div>
         </div>
       `;
       return;
@@ -5265,30 +5299,32 @@ async function openFrontCustomerHistoryModal() {
       const dStr = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
       const tStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
       
-      let statusColor = "bg-brand-100 text-brand-800";
-      if (b.status === "已確認") statusColor = "bg-emerald-100 text-emerald-800";
-      else if (b.status === "已取消" || b.status === "婉拒") statusColor = "bg-rose-100 text-rose-700";
+      let statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">待店家審核</span>`;
+      if (b.status === "已確認") statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">✓ 預約成功</span>`;
+      else if (b.status === "已結單") statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600">已完工結單</span>`;
+      else if (b.status === "已取消" || b.status === "婉拒") statusBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">已取消/婉拒</span>`;
 
       return `
-        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200/80 space-y-1 text-xs">
+        <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200/80 space-y-1.5 text-xs text-left">
           <div class="flex justify-between items-center">
-            <span class="font-bold text-brand-900 font-mono">${dStr} ${tStr}</span>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusColor}">${b.status}</span>
+            <span class="font-bold text-brand-900 font-mono text-xs flex items-center gap-1">
+              <i class="fa-regular fa-clock text-theme-primary"></i> ${dStr} ${tStr}
+            </span>
+            ${statusBadge}
           </div>
-          <div class="text-[11.5px] text-brand-700 font-medium">項目：<b>${b.service_names || '剪燙造型'}</b></div>
-          <div class="text-[10.5px] text-brand-500 font-mono flex justify-between">
-            <span>設計師：${b.staff_name || '不指定'}</span>
-            <span>預算：NT$ ${Number(b.final_price || b.price || 0).toLocaleString()}</span>
+          <div class="text-[11.5px] text-brand-800">預約項目：<b>${b.service_names || '門市服務'}</b></div>
+          <div class="text-[10.5px] text-brand-500 font-mono flex justify-between border-t border-brand-100 pt-1">
+            <span>專員：${b.staff_name || '不指定'}</span>
+            <span>預算：NT$ ${Number(b.final_price || b.price || 0).toLocaleString()} 元</span>
           </div>
         </div>
       `;
     }).join('');
 
   } catch (err) {
-    container.innerHTML = `<div class="text-center py-6 text-rose-500 text-xs font-bold">查詢失敗，請稍後重試</div>`;
+    container.innerHTML = `<div class="text-center py-6 text-rose-500 text-xs font-bold">查詢失敗，請確認網路連線</div>`;
   }
 }
-
 function closeFrontCustomerHistoryModal() {
   const modal = document.getElementById('frontHistoryModal');
   if (modal) modal.classList.add('hidden');
@@ -5623,6 +5659,25 @@ function contactSpecialist(serviceName = '') {
 
   window.open(lineUrl, '_blank');
 }
+
+  // ==========================================
+// 🌟【圖文選單專用】：偵測網址 #query 自動彈出查詢彈窗
+// ==========================================
+function checkUrlHashAndOpenQuery() {
+  const hash = window.location.hash;
+  const isQueryMode = (hash === '#query' || urlParams.get('action') === 'query');
+
+  if (isQueryMode) {
+    // 稍作延遲，確保前台 DOM 與資料庫資料載入就緒後彈出
+    setTimeout(() => {
+      openFrontCustomerHistoryModal();
+    }, 400);
+  }
+}
+
+// 頁面初次載入與錨點變化時同步監聽
+window.addEventListener('load', checkUrlHashAndOpenQuery);
+window.addEventListener('hashchange', checkUrlHashAndOpenQuery);
 </script>
 </body>
 </html>
