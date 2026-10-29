@@ -3720,6 +3720,10 @@ function updateCheckoutSummary() {
   let finalMax = outOfPocketMax + totalAddon;
 
   const finalEl = document.getElementById('summary-final-total');
+  // 🌟【保留計算出的真實金額】：無論前端是否隱藏，此數值皆為真實費用
+  window.actualCalculatedMinPrice = finalMin;
+  window.actualCalculatedMaxPrice = finalMax;
+
   if (finalEl) {
     if (!showPrice) {
       finalEl.innerText = '現場確認';
@@ -4594,6 +4598,39 @@ async function submitQuickDepositProof() {
       notes: `${targetBooking.notes || ''} ${noteAppend}`.trim()
     });
 
+    // 🌟【功能 3 核心】：顧客回報訂金成功後，即時推播對帳卡片至業主個人 LINE
+    const sCfg = window.storeSettings || (typeof db !== 'undefined' ? db : {});
+    const sInfo = window.currentStore || {};
+    const ownerToken = sCfg.line_channel_token || sInfo.line_channel_token || db.lineChannelToken || '';
+    const ownerUid = sCfg.owner_line_uid || sInfo.owner_line_uid || db.ownerLineUid || '';
+    const isDepositPushEnabled = (sCfg.enable_owner_deposit_notify !== false);
+
+    if (ownerToken && ownerUid && isDepositPushEnabled) {
+      fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "sendLinePushProxy",
+          token: ownerToken,
+          to: ownerUid,
+          cardType: "ownerDepositReport",
+          themeKey: sCfg.line_card_theme || db.lineCardTheme || "latte",
+          data: {
+            bookingId: targetBooking.id,
+            name: targetBooking.customer_name || '顧客',
+            phone: targetBooking.customer_phone || '',
+            depositLast5: last5 || '（傳送截圖）',
+            receiptUrl: receiptUrl || '',
+            service: targetBooking.service_names || '門市服務',
+            price: targetBooking.price || 0,
+            date: targetBooking.appointment_time ? targetBooking.appointment_time.split('T')[0] : '',
+            time: targetBooking.appointment_time ? targetBooking.appointment_time.split('T')[1].slice(0, 5) : '',
+            storeId: CURRENT_STORE_ID
+          }
+        })
+      }).catch(err => console.warn("訂金對帳通報背景略過:", err));
+    }
+
     Swal.fire({
       title: '付款憑證已回報！',
       text: '店家確認款項或截圖無誤後，將立即為您接單保留時段。',
@@ -4848,14 +4885,28 @@ document.getElementById('bookForm').onsubmit = async function(e) {
   btn.innerText = "正在送出預約申請...";
 
   // 5. 抓取預估費用
-  const summaryBoxText = document.getElementById('summary-final-total')?.innerText || '';
-  const numMatches = summaryBoxText.match(/\d[\d,]*/g);
-  let finalBasePrice = 0;
-  if (numMatches && numMatches.length > 0) {
-    finalBasePrice = Number(numMatches[0].replace(/,/g, ''));
+  // 2. 在 document.getElementById('bookForm').onsubmit 中，改用真實計算金額 (搜尋 finalBasePrice)
+  // 🌟【修復前台不顯金額導致存成 0 元】：優先讀取真實計算金額
+  let finalBasePrice = Number(window.actualCalculatedMinPrice || 0);
+
+  if (finalBasePrice === 0) {
+    const summaryBoxText = document.getElementById('summary-final-total')?.innerText || '';
+    const numMatches = summaryBoxText.match(/\d[\d,]*/g);
+    if (numMatches && numMatches.length > 0) {
+      finalBasePrice = Number(numMatches[0].replace(/,/g, ''));
+    }
   }
-  const cleanPriceRangeText = (numMatches && numMatches.length >= 2)
-    ? `NT$ ${numMatches[0]} ~ ${numMatches[1]}`
+
+  // 若依舊為 0 (例如直接點選)，則從所勾選項目的 data-price 進行計算
+  if (finalBasePrice === 0) {
+    document.querySelectorAll('#service-grid input:checked, [class*="-svc"]:checked').forEach(cb => {
+      const p = Number(String(cb.getAttribute('data-price') || '0').match(/\d+/)?.[0] || 0);
+      finalBasePrice += p;
+    });
+  }
+
+  const cleanPriceRangeText = (window.actualCalculatedMaxPrice && window.actualCalculatedMaxPrice > finalBasePrice)
+    ? `NT$ ${finalBasePrice.toLocaleString()} ~ ${window.actualCalculatedMaxPrice.toLocaleString()}`
     : `NT$ ${finalBasePrice.toLocaleString()}`;
 
   notesArray.push(`【現場預算試算: ${cleanPriceRangeText}】`);
@@ -5028,37 +5079,43 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const isZheliStore = Boolean(db.storeName && db.storeName.includes('這理'));
     const currentActualStoreName = db.storeName || "沙龍門市";
 
+    // 🌟【功能 1 & 2】：發送預約成立通知至業主個人 LINE (含一鍵接單/婉拒按鈕)
+    const ownerToken = db.lineChannelToken || sCfg.line_channel_token || '';
+    const ownerUid = db.ownerLineUid || sCfg.owner_line_uid || '';
+    const enableAudit = (sCfg.enable_audit_booking !== false);
+    const enableOneClick = (sCfg.enable_line_one_click_audit !== false);
+
     const webhookPayload = {
       action: "submitBooking",
       store_id: CURRENT_STORE_ID,
-      store_name: currentActualStoreName,
-      id: newBookingId,          // 🌟 關鍵補上：讓 GAS 拿到訂單 ID
-      bookingId: newBookingId,   // 雙向相容
+      store_name: db.storeName || "沙龍門市",
+      id: newBookingId,
+      bookingId: newBookingId,
       transaction_no: `WEB-${Date.now().toString().slice(-6)}`,
       date: formattedDate,
       time: targetTime,
       staff_name: staffCode,
       customer_name: nameVal,
       phone: safePhone,
-      customer_phone: safePhone,
       email: emailVal,
-      customer_email: emailVal,
-      customerEmail: emailVal,
-      line_channel_token: db.lineChannelToken || sCfg.line_channel_token || '',
-      owner_line_uid: db.ownerLineUid || sCfg.owner_line_uid || '',
+      line_channel_token: ownerToken,
+      owner_line_uid: ownerUid,
       line_card_theme: db.lineCardTheme || sCfg.line_card_theme || 'latte',
-      customer_line_uid: guestLineUid || '',
+      customer_line_uid: guestLineUid || customerLineUid || '', // 客人 LINE UID
       line_name: cleanLineName,
-      service_code: shortServiceCode,
       service_name: sVal,
-      service: sVal,
-      price: Number(finalBasePrice || 0),
-      final_price: Number(finalBasePrice || 0),
+      price: finalBasePrice,
       price_range: cleanPriceRangeText,
-      signature_url: signatureBase64,
+      enable_audit: enableAudit && enableOneClick, // 是否附帶接單/婉拒按鈕
       status: "待確認",
       notes: notesArray.join(' | ')
     };
+
+    fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(webhookPayload)
+    }).catch(err => console.warn("通知發送略過:", err));
 
     // 只有「這理髮型」才附帶母表 ID 進行試算表串接
     if (isZheliStore) {
