@@ -584,7 +584,7 @@
       <option value="">-- 快速挑選常用分類 --</option>
       <!-- 由 JS 依美業或寵美模式動態填入 -->
     </select>
-    <input type="text" id="svc-category" placeholder="輸入或修改大分類 (如: 縮毛矯正/大型犬)" class="w-1/2 p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none font-bold">
+    <input type="text" id="svc-category" placeholder="輸入或修改大分類 (如: 縮毛矯正/大型犬)" class="w-1/2 p-2.5 rounded-xl border border-brand-200 text-xs bg-white outline-none font-bold" oninput="syncCustomCategoryToPreset(this.value)">
   </div>
 </div>
         
@@ -7256,7 +7256,7 @@ async function saveServiceItem() {
   const payload = {
     store_id: CURRENT_STORE_ID,
     service_name: name,
-    category: category, // 🌟 儲存大分類
+    category: category,
     price: priceStr,
     duration_minutes: Number(duration || 60),
     service_type: type,
@@ -7267,16 +7267,47 @@ async function saveServiceItem() {
     materials: selectedBOM
   };
 
-  Swal.showLoading();
-  if (id && !id.startsWith('def-')) {
-    await directSupabasePatch('services', `id=eq.${id}`, payload);
+  // 1. 本地記憶體即時反應（零延遲）
+  const localItem = {
+    id: id || ('temp_' + Date.now()),
+    name: name,
+    category: category,
+    price: priceStr,
+    duration: Number(duration || 60),
+    type: type,
+    required_resource: resource,
+    assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
+    isActive: isActive,
+    isAddon: isAddon,
+    materials: selectedBOM
+  };
+
+  if (!backendData.services) backendData.services = [];
+  const existingIdx = backendData.services.findIndex(s => String(s.id) === String(id));
+  if (existingIdx !== -1) {
+    backendData.services[existingIdx] = localItem;
   } else {
-    await directSupabaseUpsert('services', payload, 'id');
+    backendData.services.push(localItem);
   }
 
+  // 自動切換到該大分類標籤，讓店家立刻看到新項目
+  activeServiceCategoryFilter = category;
   resetServiceForm();
-  await fetchDataAndRender();
-  Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 1000, showConfirmButton: false });
+  renderServiceList();
+
+  // 2. 背景非同步寫入 Supabase
+  try {
+    if (id && !id.startsWith('temp_') && !id.startsWith('def-')) {
+      await directSupabasePatch('services', `id=eq.${id}`, payload);
+    } else {
+      const res = await directSupabaseUpsert('services', payload, 'id');
+      if (res && res[0]) localItem.id = res[0].id;
+    }
+    Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch (e) {
+    console.error("儲存失敗:", e);
+    Swal.fire('雲端儲存異常', e.message, 'error');
+  }
 }
 
     // 一鍵上架 / 下架快速切換
@@ -7307,12 +7338,38 @@ function getPresetCategoriesByMode() {
 }
 
 // 初始化表單內的分類下拉選單
-function populateCategoryPresets() {
+function populateCategoryPresets(selectedVal = '') {
   const sel = document.getElementById('svc-category-preset');
   if (!sel) return;
+
   const presets = getPresetCategoriesByMode();
+  // 同步抓取目前所有項目與已手動輸入之自訂大分類
+  const currentUsedCats = (backendData.services || []).map(s => s.category || '').filter(Boolean);
+  const inputCatVal = document.getElementById('svc-category')?.value.trim();
+  if (inputCatVal) currentUsedCats.push(inputCatVal);
+
+  const combined = Array.from(new Set([...presets, ...currentUsedCats]));
+
   sel.innerHTML = '<option value="">-- 快速挑選常用分類 --</option>' + 
-    presets.map(c => `<option value="${c}">${c}</option>`).join('');
+    combined.map(c => `<option value="${c}" ${c === selectedVal ? 'selected' : ''}>${c}</option>`).join('');
+}
+
+// 輸入自訂分類時，即時寫入下拉選單並維持選取
+function syncCustomCategoryToPreset(val) {
+  const cleanVal = (val || '').trim();
+  if (!cleanVal) return;
+
+  const sel = document.getElementById('svc-category-preset');
+  if (!sel) return;
+
+  let exists = Array.from(sel.options).some(o => o.value === cleanVal);
+  if (!exists) {
+    const newOpt = document.createElement('option');
+    newOpt.value = cleanVal;
+    newOpt.text = `★ ${cleanVal} (自訂)`;
+    sel.appendChild(newOpt);
+  }
+  sel.value = cleanVal;
 }
     
     // 替換 renderServiceList() 呈現豐富資源與狀態標籤
@@ -7365,14 +7422,14 @@ function renderServiceList() {
           <span class="text-[10px] text-brand-400 font-mono">(${groupItems.length} 項)</span>
         </div>
         <div class="space-y-2">
-          ${groupItems.map((s, idx) => {
+          ${groupItems.map(s => {
             const isActive = (s.isActive !== false && s.is_active !== false);
             const staffText = (Array.isArray(s.assigned_staff) && s.assigned_staff.length > 0 && !s.assigned_staff.includes('all'))
               ? s.assigned_staff.join(', ')
               : '全體專員通用';
 
             return `
-              <div class="p-3.5 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/60 opacity-60'} flex justify-between items-center text-xs transition">
+              <div class="p-3 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/60 opacity-60'} flex justify-between items-center text-xs transition">
                 <div class="space-y-1">
                   <div class="flex items-center gap-1.5 font-bold text-brand-900">
                     <span class="${!isActive ? 'line-through text-gray-400' : ''}">${s.isAddon ? '[加購] ' : ''}${s.name}</span>
@@ -7385,9 +7442,13 @@ function renderServiceList() {
                     NT$ ${s.price} ｜ 耗時: ${s.duration} 分鐘 ｜ 負責專員: <b class="text-brand-800 font-sans">${staffText}</b>
                   </div>
                 </div>
-                <div class="flex gap-1 items-center">
-                  <button type="button" onclick="editServiceItem('${s.id}')" class="px-2.5 py-1 bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition">修改</button>
-                  <button type="button" onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1 bg-rose-50 text-rose-700 font-bold rounded-lg hover:bg-rose-100 transition">刪除</button>
+
+                <!-- 🌟【補回】：上下移動箭頭 ＋ 修改 ＋ 刪除 -->
+                <div class="flex gap-1 items-center shrink-0">
+                  <button type="button" onclick="moveServiceOrderById('${s.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向上移動">▲</button>
+                  <button type="button" onclick="moveServiceOrderById('${s.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向下移動">▼</button>
+                  <button type="button" onclick="editServiceItem('${s.id}')" class="px-2.5 py-1.5 bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition">修改</button>
+                  <button type="button" onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-700 font-bold rounded-lg hover:bg-rose-100 transition">刪除</button>
                 </div>
               </div>
             `;
@@ -7397,19 +7458,28 @@ function renderServiceList() {
     `;
   }).join('');
 }
-    async function moveServiceOrder(idx, dir) {
-      const svcs = backendData.services || [];
-      const targetIdx = idx + dir;
-      if (targetIdx < 0 || targetIdx >= svcs.length) return;
-      const temp = svcs[idx];
-      svcs[idx] = svcs[targetIdx];
-      svcs[targetIdx] = temp;
-      for (let i = 0; i < svcs.length; i++) {
-        svcs[i].sortOrder = i;
-        await directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i });
-      }
-      renderServiceList();
-    }
+    
+    async function moveServiceOrderById(id, dir) {
+  const svcs = backendData.services || [];
+  const idx = svcs.findIndex(s => String(s.id) === String(id));
+  if (idx === -1) return;
+
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= svcs.length) return;
+
+  // 本地陣列交換
+  const temp = svcs[idx];
+  svcs[idx] = svcs[targetIdx];
+  svcs[targetIdx] = temp;
+
+  renderServiceList(); // 立即回繪，毫無延遲
+
+  // 背景非同步同步資料庫順序
+  for (let i = 0; i < svcs.length; i++) {
+    svcs[i].sortOrder = i;
+    directSupabasePatch('services', `id=eq.${svcs[i].id}`, { sort_order: i }).catch(() => {});
+  }
+}
 
     async function deleteServiceItem(id) {
       Swal.fire({ title: '確定刪除此服務？', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: '確定刪除' }).then(async r => {
@@ -12443,6 +12513,98 @@ function loadMohwContractTemplate(prefix = '') {
     el.value = DEFAULT_MOHW_BEAUTY_CONTRACT;
     Swal.fire({ title: '已載入官方定型化契約範本！', icon: 'success', timer: 1000, showConfirmButton: false });
   }
+}
+
+    // ==========================================
+// 查詢分頁核心搜尋函式（補齊缺失功能）
+// ==========================================
+function executeAdvancedSearch() {
+  const kw = (document.getElementById('search-keyword')?.value || '').trim().toLowerCase();
+  const container = document.getElementById('search-results-area');
+  if (!container) return;
+
+  if (!kw) {
+    return Swal.fire('請輸入關鍵字', '可輸入顧客姓名、手機、LINE暱稱或項目關鍵字', 'info');
+  }
+
+  const cleanKw = kw.replace(/\D/g, '');
+  const allAppts = backendData.appointments || [];
+
+  const matched = allAppts.filter(a => {
+    const nameMatch = (a.name || '').toLowerCase().includes(kw);
+    const lineMatch = (a.lineName || '').toLowerCase().includes(kw);
+    const svcMatch = (a.service || '').toLowerCase().includes(kw);
+    const notesMatch = (a.notes || '').toLowerCase().includes(kw);
+    const phoneMatch = cleanKw && getCleanPhone(a.phone).includes(cleanKw);
+    return nameMatch || lineMatch || svcMatch || notesMatch || phoneMatch;
+  });
+
+  renderSearchResults(matched, `關鍵字「${kw}」搜尋結果`);
+}
+
+function searchTodayAppts() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todaySlash = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
+  
+  const allAppts = backendData.appointments || [];
+  const matched = allAppts.filter(a => (a.date || '').replace(/-/g, '/') === todaySlash);
+
+  const startInput = document.getElementById('search-start-date');
+  const endInput = document.getElementById('search-end-date');
+  const todayHyphen = todaySlash.replace(/\//g, '-');
+  if (startInput) startInput.value = todayHyphen;
+  if (endInput) endInput.value = todayHyphen;
+
+  renderSearchResults(matched, `今日 (${todaySlash}) 全部預約名單`);
+}
+
+function executeDateRangeSearch() {
+  const startVal = document.getElementById('search-start-date')?.value;
+  const endVal = document.getElementById('search-end-date')?.value;
+  const container = document.getElementById('search-results-area');
+  if (!container) return;
+
+  if (!startVal || !endVal) {
+    return Swal.fire('請選取日期區間', '開始日期與結束日期皆為必選', 'warning');
+  }
+
+  const sSlash = startVal.replace(/-/g, '/');
+  const eSlash = endVal.replace(/-/g, '/');
+
+  const allAppts = backendData.appointments || [];
+  const matched = allAppts.filter(a => {
+    const aDate = (a.date || '').replace(/-/g, '/');
+    return aDate >= sSlash && aDate <= eSlash;
+  });
+
+  renderSearchResults(matched, `${sSlash} ~ ${eSlash} 區間查詢結果`);
+}
+
+function renderSearchResults(list, titleText) {
+  const container = document.getElementById('search-results-area');
+  if (!container) return;
+
+  if (!list || list.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-10 bg-white rounded-3xl border border-brand-200 space-y-2">
+        <i class="fa-solid fa-magnifying-glass text-brand-300 text-3xl"></i>
+        <div class="text-xs font-bold text-brand-800">${titleText}</div>
+        <div class="text-[11px] text-gray-400">查無任何符合條件的排程紀錄</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="flex justify-between items-center px-1 mb-1 text-xs font-bold text-brand-900">
+      <span>${titleText}</span>
+      <span class="text-brand-500 font-mono">共 ${list.length} 筆</span>
+    </div>
+    <div class="space-y-3">
+      ${list.map(a => renderSingleCardHTML(a)).join('')}
+    </div>
+  `;
 }
   </script>
 </body>
