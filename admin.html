@@ -608,7 +608,8 @@
           </div>
           <div>
             <label class="block text-[11px] font-bold text-brand-800 mb-1">插單屬性</label>
-            <select id="svc-type" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 font-bold outline-none">
+            <!-- 🌟 新增 onchange 監聽 -->
+            <select id="svc-type" onchange="handleServiceTypeChange(this.value)" class="w-full p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 font-bold outline-none">
               <option value="Group_B">Group B (全程專屬類)</option>
               <option value="Group_A">Group A (等待期技術類)</option>
             </select>
@@ -625,7 +626,21 @@
           </div>
         </div>
 
-        <!-- 負責專員 / 美容師選取 (可複選，支援莫莉、岑岑分工) -->
+        <!-- 🌟【新增】：Group A 時段重疊人數上限設定區塊（切換為 Group A 時自動展開） -->
+        <div id="group-a-capacity-box" class="p-3 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-1.5 hidden">
+          <div class="flex justify-between items-center">
+            <label class="text-[11px] font-bold text-purple-950 flex items-center gap-1.5">
+              <i class="fa-solid fa-users-rectangle text-purple-700"></i> Group A 等待期間可同時重疊客人上限：
+            </label>
+            <span class="text-[10px] text-purple-700 font-medium">例如染燙靜置時允許穿插剪髮</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="number" id="svc-group-a-capacity" min="1" max="10" value="2" class="w-32 p-2 rounded-xl border border-purple-300 bg-white text-xs font-mono font-bold text-purple-900 outline-none text-center">
+            <span class="text-xs font-bold text-purple-900">位客人 (同時段最大承載)</span>
+          </div>
+        </div>
+
+        <!-- 負責專員 / 美容師選取 (可複選，支援分工) -->
         <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 space-y-1.5">
           <label class="block text-[11px] font-bold text-brand-900">負責此項目的專員/美容師 (預設全體老師皆可接單)：</label>
           <div id="svc-staff-checkboxes" class="flex flex-wrap gap-2 text-xs"></div>
@@ -7140,11 +7155,12 @@ function renderBoardingCareChecklist() {
     // ========================================================
 // 【修改版】editServiceItem(id) — 支援設備資源動態回填
 // ========================================================
+// 編輯回填服務項目
 function editServiceItem(id) {
   const s = (backendData.services || []).find(item => String(item.id) === String(id));
   if (!s) return Swal.fire('找不到該項目資料', '', 'error');
   
-  populateCategoryPresets(); // 刷新美業 / 寵美大分類下拉選單
+  populateCategoryPresets();
   
   document.getElementById('edit-svc-id').value = s.id;
   document.getElementById('svc-name').value = s.name || '';
@@ -7156,12 +7172,21 @@ function editServiceItem(id) {
   document.getElementById('svc-price').value = s.price || '';
   document.getElementById('svc-duration').value = s.duration || 60;
   document.getElementById('svc-type').value = s.type || 'Group_A';
+
+  // 🌟 回填 Group A 人數並切換顯示
+  const capBox = document.getElementById('group-a-capacity-box');
+  const capInput = document.getElementById('svc-group-a-capacity');
+  if (s.type === 'Group_A') {
+    if (capBox) capBox.classList.remove('hidden');
+    if (capInput) capInput.value = s.group_a_capacity || s.max_clients || 2;
+  } else {
+    if (capBox) capBox.classList.add('hidden');
+    if (capInput) capInput.value = 2;
+  }
   
-  // 設備與席位資源回填
   const assignedResource = s.required_resource || s.resource || 'none';
   populateServiceResourceDropdown(assignedResource);
 
-  // 負責專員複選框回填
   if (typeof renderStaffCheckboxesForService === 'function') {
     renderStaffCheckboxesForService(s.assigned_staff || []);
   }
@@ -7175,7 +7200,6 @@ function editServiceItem(id) {
   document.getElementById('svc-form-title').innerText = `修改服務項目【${s.name}】`;
   document.getElementById('svc-cancel-btn').classList.remove('hidden');
   
-  // 自動平滑滾動至編輯表單
   document.getElementById('svc-form-title').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -7185,9 +7209,15 @@ function editServiceItem(id) {
   document.getElementById('svc-category').value = '';
   document.getElementById('svc-price').value = '';
   document.getElementById('svc-duration').value = '60';
-  document.getElementById('svc-type').value = 'Group_A';
+  document.getElementById('svc-type').value = 'Group_B'; // 預設為 Group B
   document.getElementById('svc-is-addon').checked = false;
   document.getElementById('svc-is-active').checked = true;
+
+  // 🌟 收合 Group A 人數設定
+  const capBox = document.getElementById('group-a-capacity-box');
+  const capInput = document.getElementById('svc-group-a-capacity');
+  if (capBox) capBox.classList.add('hidden');
+  if (capInput) capInput.value = 2;
 
   populateCategoryPresets();
   renderBOMCheckboxes([]);
@@ -7230,7 +7260,7 @@ function renderStaffCheckboxesForService(selectedStaffList = []) {
   }).join('');
 }
 
-// 替換 saveServiceItem 函式
+// 儲存服務項目 (加入 Group A 人數上限欄位)
 async function saveServiceItem() {
   const id = document.getElementById('edit-svc-id').value.trim();
   const name = document.getElementById('svc-name').value.trim();
@@ -7241,6 +7271,11 @@ async function saveServiceItem() {
   const resource = document.getElementById('svc-resource').value;
   const isAddon = document.getElementById('svc-is-addon').checked;
   const isActive = document.getElementById('svc-is-active').checked;
+  
+  // 🌟 讀取 Group A 人數上限
+  const groupACapacity = (type === 'Group_A') 
+    ? Number(document.getElementById('svc-group-a-capacity')?.value || 2) 
+    : 1;
 
   const assignedStaff = Array.from(document.querySelectorAll('.svc-staff-cb:checked')).map(cb => cb.value);
 
@@ -7260,6 +7295,7 @@ async function saveServiceItem() {
     price: priceStr,
     duration_minutes: Number(duration || 60),
     service_type: type,
+    group_a_capacity: groupACapacity, // 🌟 存入人數上限
     required_resource: resource,
     assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
     is_active: isActive,
@@ -7267,7 +7303,6 @@ async function saveServiceItem() {
     materials: selectedBOM
   };
 
-  // 1. 本地記憶體即時反應（零延遲）
   const localItem = {
     id: id || ('temp_' + Date.now()),
     name: name,
@@ -7275,6 +7310,7 @@ async function saveServiceItem() {
     price: priceStr,
     duration: Number(duration || 60),
     type: type,
+    group_a_capacity: groupACapacity,
     required_resource: resource,
     assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
     isActive: isActive,
@@ -7290,12 +7326,10 @@ async function saveServiceItem() {
     backendData.services.push(localItem);
   }
 
-  // 自動切換到該大分類標籤，讓店家立刻看到新項目
   activeServiceCategoryFilter = category;
   resetServiceForm();
   renderServiceList();
 
-  // 2. 背景非同步寫入 Supabase
   try {
     if (id && !id.startsWith('temp_') && !id.startsWith('def-')) {
       await directSupabasePatch('services', `id=eq.${id}`, payload);
@@ -7381,10 +7415,8 @@ function renderServiceList() {
   const services = backendData.services || [];
   populateCategoryPresets();
 
-  // 1. 抓取目前已有的所有大分類
   const categories = Array.from(new Set(services.map(s => s.category || '一般服務')));
 
-  // 2. 渲染頂部大分類切換標籤列
   if (filterBar) {
     filterBar.innerHTML = `
       <button type="button" onclick="activeServiceCategoryFilter='ALL'; renderServiceList();" class="px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${activeServiceCategoryFilter === 'ALL' ? 'bg-[#8C7355] text-white shadow-xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
@@ -7402,7 +7434,6 @@ function renderServiceList() {
     `;
   }
 
-  // 3. 依據大分類分組展示卡片
   const displayCategories = (activeServiceCategoryFilter === 'ALL') ? categories : [activeServiceCategoryFilter];
 
   if (services.length === 0) {
@@ -7416,17 +7447,38 @@ function renderServiceList() {
 
     return `
       <div class="space-y-2 pt-2">
-        <div class="flex items-center gap-2 px-1">
-          <span class="w-2 h-3.5 bg-[#8C7355] rounded-full"></span>
-          <span class="font-black text-xs text-brand-900">${cat}</span>
-          <span class="text-[10px] text-brand-400 font-mono">(${groupItems.length} 項)</span>
+        <!-- 🌟【升級】：分類名稱旁邊新增「編輯」與「刪除」操作按鈕 -->
+        <div class="flex justify-between items-center px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-3.5 bg-[#8C7355] rounded-full"></span>
+            <span class="font-black text-xs text-brand-900">${cat}</span>
+            <span class="text-[10px] text-brand-400 font-mono">(${groupItems.length} 項)</span>
+          </div>
+          ${cat !== '一般服務' ? `
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="renameCategoryPrompt('${cat}')" class="text-[11px] text-[#8C7355] hover:text-[#7A6246] font-bold flex items-center gap-1">
+                <i class="fa-solid fa-pen text-[10px]"></i> 編輯名稱
+              </button>
+              <button type="button" onclick="deleteCategoryPrompt('${cat}')" class="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-trash-can text-[10px]"></i> 刪除分類
+              </button>
+            </div>
+          ` : ''}
         </div>
+
         <div class="space-y-2">
           ${groupItems.map(s => {
             const isActive = (s.isActive !== false && s.is_active !== false);
             const staffText = (Array.isArray(s.assigned_staff) && s.assigned_staff.length > 0 && !s.assigned_staff.includes('all'))
               ? s.assigned_staff.join(', ')
               : '全體專員通用';
+
+            // Group A 人數標籤
+            const isGroupA = (s.type === 'Group_A');
+            const capVal = s.group_a_capacity || s.max_clients || 2;
+            const groupBadge = isGroupA 
+              ? `<span class="px-1.5 py-0.5 bg-purple-100 text-purple-900 rounded font-bold text-[10px]"><i class="fa-solid fa-users text-[9px] mr-0.5"></i>可容納 ${capVal} 人</span>`
+              : `<span class="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded font-bold text-[10px]">專屬 1 對 1</span>`;
 
             return `
               <div class="p-3 bg-white rounded-2xl border ${isActive ? 'border-brand-200' : 'border-gray-200 bg-gray-50/60 opacity-60'} flex justify-between items-center text-xs transition">
@@ -7436,6 +7488,7 @@ function renderServiceList() {
                     <button type="button" onclick="toggleServiceActiveStatus('${s.id}',${isActive})" class="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono transition ${isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'}">
                       ${isActive ? '✓ 上架中' : '✕ 已下架'}
                     </button>
+                    ${groupBadge}
                     ${s.required_resource && s.required_resource !== 'none' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-900 rounded font-bold text-[10px]"><i class="fa-solid fa-couch mr-0.5"></i> ${s.required_resource}</span>` : ''}
                   </div>
                   <div class="text-[11px] text-brand-500 font-mono">
@@ -7443,7 +7496,6 @@ function renderServiceList() {
                   </div>
                 </div>
 
-                <!-- 🌟【補回】：上下移動箭頭 ＋ 修改 ＋ 刪除 -->
                 <div class="flex gap-1 items-center shrink-0">
                   <button type="button" onclick="moveServiceOrderById('${s.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向上移動">▲</button>
                   <button type="button" onclick="moveServiceOrderById('${s.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向下移動">▼</button>
@@ -12605,6 +12657,129 @@ function renderSearchResults(list, titleText) {
       ${list.map(a => renderSingleCardHTML(a)).join('')}
     </div>
   `;
+}
+
+    // ==========================================
+// 大分類管理：編輯名稱與刪除分類
+// ==========================================
+
+// 編輯大分類名稱（連動更新底下所有服務項目並寫入資料庫）
+async function renameCategoryPrompt(oldCat) {
+  const { value: newCat } = await Swal.fire({
+    title: `編輯分類名稱 -【${oldCat}】`,
+    input: 'text',
+    inputValue: oldCat,
+    inputPlaceholder: '請輸入新的大分類名稱',
+    showCancelButton: true,
+    confirmButtonText: '確認變更',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#8C7355',
+    inputValidator: (val) => {
+      const trimmed = (val || '').trim();
+      if (!trimmed) return '分類名稱不能為空！';
+      if (trimmed === oldCat) return '新名稱不可與原名稱相同！';
+    }
+  });
+
+  if (newCat) {
+    Swal.showLoading();
+    const cleanNewCat = newCat.trim();
+    const svcs = backendData.services || [];
+    
+    // 1. 本地資料同步更新
+    let updateCount = 0;
+    svcs.forEach(s => {
+      if ((s.category || '一般服務') === oldCat) {
+        s.category = cleanNewCat;
+        updateCount++;
+      }
+    });
+
+    // 2. 雲端資料庫批次 PATCH
+    try {
+      await directSupabasePatch(
+        'services',
+        `store_id=eq.${CURRENT_STORE_ID}&category=eq.${encodeURIComponent(oldCat)}`,
+        { category: cleanNewCat }
+      );
+
+      // 自動將當前分頁篩選切至新名稱
+      activeServiceCategoryFilter = cleanNewCat;
+      populateCategoryPresets(cleanNewCat);
+      renderServiceList();
+
+      Swal.fire({
+        title: '大分類名稱已更新！',
+        text: `已同步更新 ${updateCount} 項底下的服務。`,
+        icon: 'success',
+        timer: 1000,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire('更新失敗', err.message, 'error');
+    }
+  }
+}
+
+// 刪除大分類（將底下的項目轉移至「一般服務」，不刪除項目）
+async function deleteCategoryPrompt(cat) {
+  const svcs = (backendData.services || []).filter(s => (s.category || '一般服務') === cat);
+  
+  const { isConfirmed } = await Swal.fire({
+    title: `確定刪除大分類【${cat}】？`,
+    html: `
+      <div class="text-left text-xs bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950 space-y-1.5 leading-relaxed">
+        <div>• 該分類目前包含：<b>${svcs.length}</b> 個服務項目</div>
+        <div class="text-amber-800">※ <b>刪除分類不會刪除服務項目</b>，此分類旗下的所有項目將自動移至<b>【一般服務】</b>。</div>
+      </div>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: '確定刪除分類',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#E11D48'
+  });
+
+  if (isConfirmed) {
+    Swal.showLoading();
+    try {
+      // 1. 本地轉移
+      backendData.services.forEach(s => {
+        if ((s.category || '一般服務') === cat) {
+          s.category = '一般服務';
+        }
+      });
+
+      // 2. 雲端同步更新
+      await directSupabasePatch(
+        'services',
+        `store_id=eq.${CURRENT_STORE_ID}&category=eq.${encodeURIComponent(cat)}`,
+        { category: '一般服務' }
+      );
+
+      activeServiceCategoryFilter = 'ALL';
+      populateCategoryPresets();
+      renderServiceList();
+
+      Swal.fire({
+        title: '分類已刪除！',
+        text: '底下的服務項目已安全歸類至【一般服務】。',
+        icon: 'success',
+        timer: 1200,
+        showConfirmButton: false
+      });
+    } catch (err) {
+      Swal.fire('刪除失敗', err.message, 'error');
+    }
+  }
+}
+
+    // 插單屬性切換時動態展開/收合 Group A 人數設定
+function handleServiceTypeChange(typeVal) {
+  const box = document.getElementById('group-a-capacity-box');
+  if (box) {
+    box.classList.toggle('hidden', typeVal !== 'Group_A');
+  }
 }
   </script>
 </body>
