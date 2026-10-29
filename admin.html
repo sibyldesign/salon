@@ -7415,8 +7415,14 @@ function renderServiceList() {
   const services = backendData.services || [];
   populateCategoryPresets();
 
-  const categories = Array.from(new Set(services.map(s => s.category || '一般服務')));
+  // 1. 抓取目前所有分類 (依照 services 的排序順序萃取)
+  const categories = [];
+  services.forEach(s => {
+    const c = s.category || '一般服務';
+    if (!categories.includes(c)) categories.push(c);
+  });
 
+  // 2. 渲染頂部大分類切換標籤列 (順序同步連動)
   if (filterBar) {
     filterBar.innerHTML = `
       <button type="button" onclick="activeServiceCategoryFilter='ALL'; renderServiceList();" class="px-3 py-1 rounded-full text-xs font-bold transition whitespace-nowrap ${activeServiceCategoryFilter === 'ALL' ? 'bg-[#8C7355] text-white shadow-xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
@@ -7444,28 +7450,40 @@ function renderServiceList() {
   container.innerHTML = displayCategories.map(cat => {
     const groupItems = services.filter(s => (s.category || '一般服務') === cat);
     if (groupItems.length === 0) return '';
+    const catIdx = categories.indexOf(cat);
 
     return `
       <div class="space-y-2 pt-2">
-        <!-- 🌟【升級】：分類名稱旁邊新增「編輯」與「刪除」操作按鈕 -->
-        <div class="flex justify-between items-center px-1">
+        <!-- 🌟 分類抬頭列：整合「分類整組移動 ▲ ▼」與「編輯 / 刪除」 -->
+        <div class="flex justify-between items-center px-1 bg-brand-50/60 p-2 rounded-xl border border-brand-200/70">
           <div class="flex items-center gap-2">
-            <span class="w-2 h-3.5 bg-[#8C7355] rounded-full"></span>
+            <span class="w-2.5 h-4 bg-[#8C7355] rounded-full"></span>
             <span class="font-black text-xs text-brand-900">${cat}</span>
-            <span class="text-[10px] text-brand-400 font-mono">(${groupItems.length} 項)</span>
+            <span class="text-[10px] text-brand-500 font-mono">(${groupItems.length} 項)</span>
           </div>
-          ${cat !== '一般服務' ? `
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="renameCategoryPrompt('${cat}')" class="text-[11px] text-[#8C7355] hover:text-[#7A6246] font-bold flex items-center gap-1">
-                <i class="fa-solid fa-pen text-[10px]"></i> 編輯名稱
+
+          <div class="flex items-center gap-1.5">
+            <!-- 🌟 整組分類上下移動箭頭 (在全部檢視模式下可自由換位) -->
+            ${activeServiceCategoryFilter === 'ALL' ? `
+              <div class="flex items-center gap-1 mr-1">
+                <button type="button" onclick="moveCategoryOrder('${cat}', -1)" ${catIdx === 0 ? 'disabled' : ''} class="w-6 h-6 flex items-center justify-center bg-white hover:bg-brand-100 disabled:opacity-30 border border-brand-200 rounded text-brand-700 font-bold text-[10px] transition shadow-2xs" title="整個分類向上移">▲</button>
+                <button type="button" onclick="moveCategoryOrder('${cat}', 1)" ${catIdx === categories.length - 1 ? 'disabled' : ''} class="w-6 h-6 flex items-center justify-center bg-white hover:bg-brand-100 disabled:opacity-30 border border-brand-200 rounded text-brand-700 font-bold text-[10px] transition shadow-2xs" title="整個分類向下移">▼</button>
+              </div>
+            ` : ''}
+
+            <!-- 編輯名稱與刪除分類 -->
+            ${cat !== '一般服務' ? `
+              <button type="button" onclick="renameCategoryPrompt('${cat}')" class="px-2 py-1 bg-white hover:bg-brand-50 border border-brand-200 rounded-lg text-[10.5px] text-[#8C7355] font-bold transition flex items-center gap-1">
+                <i class="fa-solid fa-pen text-[9px]"></i> 編輯
               </button>
-              <button type="button" onclick="deleteCategoryPrompt('${cat}')" class="text-[11px] text-rose-500 hover:text-rose-700 font-bold flex items-center gap-1">
-                <i class="fa-solid fa-trash-can text-[10px]"></i> 刪除分類
+              <button type="button" onclick="deleteCategoryPrompt('${cat}')" class="px-2 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-[10.5px] text-rose-600 font-bold transition flex items-center gap-1">
+                <i class="fa-solid fa-trash-can text-[9px]"></i> 刪除
               </button>
-            </div>
-          ` : ''}
+            ` : ''}
+          </div>
         </div>
 
+        <!-- 該分類旗下服務項目卡片 -->
         <div class="space-y-2">
           ${groupItems.map(s => {
             const isActive = (s.isActive !== false && s.is_active !== false);
@@ -7473,7 +7491,6 @@ function renderServiceList() {
               ? s.assigned_staff.join(', ')
               : '全體專員通用';
 
-            // Group A 人數標籤
             const isGroupA = (s.type === 'Group_A');
             const capVal = s.group_a_capacity || s.max_clients || 2;
             const groupBadge = isGroupA 
@@ -7496,9 +7513,10 @@ function renderServiceList() {
                   </div>
                 </div>
 
+                <!-- 單一項目排序與操作 -->
                 <div class="flex gap-1 items-center shrink-0">
-                  <button type="button" onclick="moveServiceOrderById('${s.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向上移動">▲</button>
-                  <button type="button" onclick="moveServiceOrderById('${s.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="向下移動">▼</button>
+                  <button type="button" onclick="moveServiceOrderById('${s.id}', -1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="單項向上移動">▲</button>
+                  <button type="button" onclick="moveServiceOrderById('${s.id}', 1)" class="w-7 h-7 flex items-center justify-center bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg text-brand-700 font-bold text-xs transition" title="單項向下移動">▼</button>
                   <button type="button" onclick="editServiceItem('${s.id}')" class="px-2.5 py-1.5 bg-blue-50 text-blue-700 font-bold rounded-lg hover:bg-blue-100 transition">修改</button>
                   <button type="button" onclick="deleteServiceItem('${s.id}')" class="px-2.5 py-1.5 bg-rose-50 text-rose-700 font-bold rounded-lg hover:bg-rose-100 transition">刪除</button>
                 </div>
@@ -7509,6 +7527,47 @@ function renderServiceList() {
       </div>
     `;
   }).join('');
+}
+    
+    // ==========================================
+// 整個大分類整組上下移動排序
+// ==========================================
+async function moveCategoryOrder(catName, dir) {
+  const svcs = backendData.services || [];
+  
+  // 1. 抓取目前畫面上已出現的分類順序清單
+  const categories = [];
+  svcs.forEach(s => {
+    const c = s.category || '一般服務';
+    if (!categories.includes(c)) categories.push(c);
+  });
+
+  const curIdx = categories.indexOf(catName);
+  if (curIdx === -1) return;
+  const targetIdx = curIdx + dir;
+  if (targetIdx < 0 || targetIdx >= categories.length) return;
+
+  // 2. 交換兩大分類的排列順序
+  const temp = categories[curIdx];
+  categories[curIdx] = categories[targetIdx];
+  categories[targetIdx] = temp;
+
+  // 3. 依據全新的分類順序，將服務項目整組重新拼接
+  const reorderedServices = [];
+  categories.forEach(c => {
+    const itemsInCat = svcs.filter(s => (s.category || '一般服務') === c);
+    reorderedServices.push(...itemsInCat);
+  });
+  backendData.services = reorderedServices;
+
+  // 4. 零延遲即時重繪清單與頂部標籤列
+  renderServiceList();
+
+  // 5. 背景非同步更新資料庫所有服務項目的排序編號 (sort_order)
+  for (let i = 0; i < backendData.services.length; i++) {
+    backendData.services[i].sortOrder = i;
+    directSupabasePatch('services', `id=eq.${backendData.services[i].id}`, { sort_order: i }).catch(() => {});
+  }
 }
     
     async function moveServiceOrderById(id, dir) {
