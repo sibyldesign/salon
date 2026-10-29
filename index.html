@@ -1179,7 +1179,7 @@
 <script>
   const SUPABASE_URL = "https://kwbxskvnfejfguuwzqfr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_JnpaLZVnGkW9Jr967LeYuQ_d8bXwfnz";
-  const API_URL = "https://script.google.com/macros/s/AKfycbyMb9YNZPkRKQBEXXohKvyKBDRUWPuu1EKLWgMGMjV_Uv60SFBJylLxQr1xKQoOXPc/exec";
+  const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
   
   const urlParams = new URLSearchParams(window.location.search);
   let CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
@@ -5125,10 +5125,16 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     // ==========================================================================
 
     try {
+      const sCfg = window.storeSettings || (window.storeData && window.storeData.settings) || {};
+      const sInfo = window.currentStore || {};
+
+      webhookPayload.owner_email = sCfg.owner_email || sInfo.owner_email || "";
+      webhookPayload.line_channel_token = db.lineChannelToken || sCfg.line_channel_token || sInfo.line_channel_token || "";
+      webhookPayload.owner_line_uid = db.ownerLineUid || sCfg.owner_line_uid || sInfo.owner_line_uid || "";
+      webhookPayload.enable_line_push = Boolean(webhookPayload.line_channel_token && webhookPayload.owner_line_uid);
+
       await fetch(API_URL, {
         method: "POST",
-        mode: "no-cors",
-        keepalive: true,
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(webhookPayload)
       }).catch(err => console.warn("GAS Webhook 略過:", err));
