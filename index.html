@@ -583,10 +583,10 @@
     </div>
     <div class="text-[11px] text-brand-500 mt-0.5">歡迎直接線上溝通</div>
   </div>
-  <a href="https://line.me/R/ti/p/@710zzzzy" target="_blank" class="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0">
+  <button type="button" onclick="contactSpecialist()" class="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-2xs shrink-0">
     <span>聯繫專人</span>
     <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-  </a>
+  </button>
 </div>
         
         <!-- 美容洗澡模式：項目選擇區塊 -->
@@ -1452,6 +1452,10 @@ function applyIndustryModeUI(mode) {
       const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
       const sInfo = (Array.isArray(stores) && stores.length > 0) ? stores[0] : {};
 
+      // 🌟【關鍵位置：修改三放在這裡】：註冊全域變數，供送單與 LINE 按鈕調用
+      window.storeSettings = sCfg;
+      window.currentStore = sInfo;
+      
       // 🌟 核心防禦：判定是否為買斷版與總管授權清單
       const isLifetime = Boolean(
         sInfo.plan_type === 'lifetime' || 
@@ -4694,6 +4698,9 @@ function applyFrontEndMarketingControls(storeInfo) {
 document.getElementById('bookForm').onsubmit = async function(e) {
   e.preventDefault();
 
+  // 🌟【關鍵修復】：在此宣告 sCfg，解決送單時找不到變數的錯誤！
+  const sCfg = window.storeSettings || {};
+  const sInfo = window.currentStore || {};
   const nameVal = document.getElementById('name')?.value.trim() || '';
   const phoneVal = document.getElementById('phone')?.value.trim() || '';
   const emailVal = document.getElementById('email')?.value.trim() || '';
@@ -5017,8 +5024,8 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     let safePhone = String(phoneVal || '').replace(/\D/g, '');
     if (safePhone.length === 9 && safePhone.startsWith('9')) safePhone = '0' + safePhone;
 
-    const isZheliStore = (CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb') ||
-                         Boolean(db.storeName && db.storeName.includes('這理'));
+    // 🌟【關鍵修復】：只依真實店名判定，確保 KEMI 預約絕不連動這理髮型試算表
+    const isZheliStore = Boolean(db.storeName && db.storeName.includes('這理'));
     const currentActualStoreName = db.storeName || "沙龍門市";
 
     const webhookPayload = {
@@ -5386,6 +5393,178 @@ function selectQuickSlotDirect(dateSlash, timeStr) {
     timer: 800,
     showConfirmButton: false
   });
+}
+
+  // ==========================================
+// 預約送單核心函式（修復 sCfg 報錯，買斷/訂閱雙模兼容）
+// ==========================================
+async function submitBooking() {
+  // 🌟【關鍵修復 1】：安全提取當前門市設定 sCfg，杜絕 Can't find variable: sCfg 崩潰
+  const sCfg = window.storeSettings || (window.storeData && window.storeData.settings) || (typeof backendData !== 'undefined' && backendData.settings) || {};
+  const sInfo = window.currentStore || (window.storeData && window.storeData.storeInfo) || (typeof backendData !== 'undefined' && backendData.storeInfo) || {};
+
+  // 1. 取得表單欄位資料
+  const name = (document.getElementById('booking-name')?.value || '').trim();
+  const phone = (document.getElementById('booking-phone')?.value || '').trim().replace(/\D/g, '');
+  const date = document.getElementById('booking-date')?.value || '';
+  const time = document.getElementById('booking-time')?.value || '';
+  const notes = (document.getElementById('booking-notes')?.value || '').trim();
+
+  if (!name || !phone) {
+    return Swal.fire('請填寫完整資訊', '顧客姓名與手機號碼為必填欄位！', 'warning');
+  }
+  if (!date || !time) {
+    return Swal.fire('請選擇時段', '請選取預約日期與進場時間！', 'warning');
+  }
+
+  // 取得所選服務項目與金額
+  const selectedServices = getSelectedServices(); // 依前台取得項目之函式
+  if (!selectedServices || selectedServices.length === 0) {
+    return Swal.fire('請選擇項目', '請至少勾選一項施作服務項目！', 'warning');
+  }
+
+  const serviceNames = selectedServices.map(s => s.name).join(', ');
+  const totalPrice = selectedServices.reduce((sum, s) => sum + Number(s.price || 0), 0);
+
+  Swal.fire({
+    title: '正在傳送預約申請...',
+    text: '請稍候，系統正在為您登記排程...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  });
+
+  try {
+    // 2. 構建預約資料 Payload
+    const bookingPayload = {
+      store_id: CURRENT_STORE_ID,
+      customer_name: name,
+      customer_phone: phone,
+      service_names: serviceNames,
+      price: totalPrice,
+      final_price: totalPrice,
+      appointment_time: `${date.replace(/\//g, '-')}T${time}:00+08:00`,
+      status: (sCfg.enable_audit_booking === false) ? '已確認' : '待確認',
+      notes: notes,
+      customer_type: 'new'
+    };
+
+    // 寫入 Supabase 資料表
+    const insertRes = await directSupabaseUpsert('bookings', bookingPayload, 'id');
+    const newBookingId = (Array.isArray(insertRes) && insertRes[0]) ? insertRes[0].id : (insertRes ? insertRes.id : null);
+
+    // ----------------------------------------------------
+    // 🌟【關鍵修復 2】：背景非同步通知（即使外部連線異常，預約依然 100% 成功）
+    // ----------------------------------------------------
+    
+    // A. 業主個人 LINE 預約通報
+    const ownerLineToken = sCfg.line_channel_token || sInfo.line_channel_token;
+    const ownerLineUid = sCfg.owner_line_uid || sInfo.owner_line_uid;
+    const isOwnerPushEnabled = (sCfg.enable_owner_line_push !== false);
+
+    if (ownerLineToken && ownerLineUid && isOwnerPushEnabled) {
+      fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "sendLinePushProxy",
+          token: ownerLineToken,
+          to: ownerLineUid,
+          cardType: "ownerNewBooking",
+          themeKey: sCfg.line_card_theme || "latte",
+          data: {
+            bookingId: newBookingId,
+            name: name,
+            phone: phone,
+            date: date,
+            time: time,
+            service: serviceNames,
+            price: totalPrice,
+            storeId: CURRENT_STORE_ID
+          }
+        })
+      }).catch(err => console.warn("LINE 通報背景略過:", err));
+    }
+
+    // B. 買斷版特定試算表同步（僅在有設定試算表時才觸發，一般訂閱版/無試算表店家自動跳過）
+    const gasUrl = sCfg.sheets_gas_url;
+    const sheetId = sCfg.sheets_spreadsheet_id;
+    const isSheetsEnabled = (sCfg.enable_sheets_sync === true);
+
+    if (isSheetsEnabled && gasUrl && sheetId) {
+      fetch(gasUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "syncBookingToSheet",
+          store_id: CURRENT_STORE_ID,
+          store_name: sInfo.store_name || sCfg.display_title || "門市預約",
+          spreadsheet_id: sheetId,
+          date: date.replace(/-/g, '/'),
+          time: time,
+          customer_name: name,
+          phone: phone,
+          service_name: serviceNames,
+          final_price: totalPrice,
+          status: bookingPayload.status,
+          notes: notes
+        })
+      }).catch(err => console.warn("試算表同步背景略過:", err));
+    }
+
+    // 3. 送單成功彈窗提示
+    Swal.fire({
+      title: '🎉 預約申請已成功送出！',
+      html: `
+        <div class="text-left text-xs bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-amber-950 space-y-1.5 leading-relaxed font-sans">
+          <div>• 顧客姓名：<b>${name}</b></div>
+          <div>• 預約時段：<b>${date} ${time}</b></div>
+          <div>• 預約項目：<b>${serviceNames}</b></div>
+          <div class="pt-1 text-[11px] text-amber-800 border-t border-amber-200">
+            店家審核確認後，將透過簡訊或 LINE 與您確認排程！
+          </div>
+        </div>
+      `,
+      icon: 'success',
+      confirmButtonText: '確定',
+      confirmButtonColor: '#8C7355'
+    }).then(() => {
+      // 重置表單或回到頂部
+      window.location.reload();
+    });
+
+  } catch (err) {
+    console.error("預約送單失敗:", err);
+    Swal.fire('預約傳送失敗', err.message || '請檢查網路連線或稍後再試', 'error');
+  }
+}
+
+  // ==========================================
+// 動態聯繫業主官方 LINE（自動適配 KEMI 或任何店家）
+// ==========================================
+function contactSpecialist(serviceName = '') {
+  const sCfg = window.storeSettings || {};
+  const sInfo = window.currentStore || {};
+
+  // 依序讀取：設定檔 line_url -> stores 表 line_url -> 本地 db.line
+  let lineUrl = sCfg.line_url || sCfg.line || sInfo.line_url || (typeof db !== 'undefined' ? db.line : '') || '';
+
+  if (!lineUrl || lineUrl === '#' || lineUrl.trim() === '') {
+    const storePhone = sCfg.store_phone || sInfo.phone || (typeof db !== 'undefined' ? db.storePhone : '');
+    return Swal.fire({
+      title: '門市線上諮詢',
+      text: storePhone ? `本項目需先諮詢，店家尚未設定官方 LINE，請致電門市：${storePhone}` : '本項目需先進行諮詢，請洽詢門市服務人員。',
+      icon: 'info',
+      confirmButtonColor: '#8C7355'
+    });
+  }
+
+  lineUrl = lineUrl.trim();
+  if (!lineUrl.startsWith('http://') && !lineUrl.startsWith('https://')) {
+    lineUrl = 'https://' + lineUrl;
+  }
+
+  window.open(lineUrl, '_blank');
 }
 </script>
 </body>
