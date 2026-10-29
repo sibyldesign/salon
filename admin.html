@@ -4577,20 +4577,28 @@ async function fetchDataAndRender() {
 
       scheduleDates: availableDates.map(dStr => ({ date: dStr })),
 
-      services: (services && services.length > 0) ? services.map(s => ({
-        id: s.id,
-        name: s.service_name || s.name,
-        category: s.category || '一般服務',
-        duration: Number(s.duration_minutes || s.duration || 60),
-        type: s.service_type || s.type || "Group_A",
-        price: s.price || 0,
-        isAddon: s.is_addon === true || s.isAddon === true,
-        sortOrder: s.sort_order || 0,
-        assigned_staff: Array.isArray(s.assigned_staff) ? s.assigned_staff : (s.assigned_staff ? [s.assigned_staff] : ['all']),
-        required_resource: s.required_resource || s.resource || 'none',
-        isActive: s.is_active !== false && s.isActive !== false,
-        materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
-      })) : [],
+      services: (services && services.length > 0) ? services.map(s => {
+        const sName = s.service_name || s.name;
+        // 🌟 讀取備援的 Group A 人數設定（預設為 2）
+        const groupACaps = sCfg.service_group_a_capacities || {};
+        const capVal = s.group_a_capacity || groupACaps[sName] || 2;
+
+        return {
+          id: s.id,
+          name: sName,
+          category: s.category || '一般服務',
+          duration: Number(s.duration_minutes || s.duration || 60),
+          type: s.service_type || s.type || "Group_A",
+          group_a_capacity: capVal, // 👈 補齊此欄位，避免重整被刷掉
+          price: s.price || 0,
+          isAddon: s.is_addon === true || s.isAddon === true,
+          sortOrder: s.sort_order || 0,
+          assigned_staff: Array.isArray(s.assigned_staff) ? s.assigned_staff : (s.assigned_staff ? [s.assigned_staff] : ['all']),
+          required_resource: s.required_resource || s.resource || 'none',
+          isActive: s.is_active !== false && s.isActive !== false,
+          materials: Array.isArray(s.materials) ? s.materials : (s.material_name && s.material_name !== 'none' ? [{ name: s.material_name, dosage: s.material_dosage || '50ml' }] : [])
+        };
+      }) : [],
 
       portfolio: (portfolios && portfolios.length > 0) ? portfolios.map(p => ({
         id: p.id,
@@ -7261,6 +7269,9 @@ function renderStaffCheckboxesForService(selectedStaffList = []) {
 }
 
 // 儲存服務項目 (加入 Group A 人數上限欄位)
+// ==========================================
+// 服務項目安全儲存（防止欄位不存在導致儲存失敗回滾）
+// ==========================================
 async function saveServiceItem() {
   const id = document.getElementById('edit-svc-id').value.trim();
   const name = document.getElementById('svc-name').value.trim();
@@ -7272,7 +7283,6 @@ async function saveServiceItem() {
   const isAddon = document.getElementById('svc-is-addon').checked;
   const isActive = document.getElementById('svc-is-active').checked;
   
-  // 🌟 讀取 Group A 人數上限
   const groupACapacity = (type === 'Group_A') 
     ? Number(document.getElementById('svc-group-a-capacity')?.value || 2) 
     : 1;
@@ -7288,6 +7298,8 @@ async function saveServiceItem() {
 
   if (!name || !priceStr) return Swal.fire('項目名稱與金額為必填', '', 'warning');
 
+  Swal.fire({ title: '正在儲存服務項目...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
   const payload = {
     store_id: CURRENT_STORE_ID,
     service_name: name,
@@ -7295,7 +7307,6 @@ async function saveServiceItem() {
     price: priceStr,
     duration_minutes: Number(duration || 60),
     service_type: type,
-    group_a_capacity: groupACapacity, // 🌟 存入人數上限
     required_resource: resource,
     assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
     is_active: isActive,
@@ -7303,44 +7314,62 @@ async function saveServiceItem() {
     materials: selectedBOM
   };
 
-  const localItem = {
-    id: id || ('temp_' + Date.now()),
-    name: name,
-    category: category,
-    price: priceStr,
-    duration: Number(duration || 60),
-    type: type,
-    group_a_capacity: groupACapacity,
-    required_resource: resource,
-    assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
-    isActive: isActive,
-    isAddon: isAddon,
-    materials: selectedBOM
-  };
-
-  if (!backendData.services) backendData.services = [];
-  const existingIdx = backendData.services.findIndex(s => String(s.id) === String(id));
-  if (existingIdx !== -1) {
-    backendData.services[existingIdx] = localItem;
-  } else {
-    backendData.services.push(localItem);
-  }
-
-  activeServiceCategoryFilter = category;
-  resetServiceForm();
-  renderServiceList();
-
   try {
+    let savedId = id;
+
+    // 1. 寫入 services 資料表（安全檢查）
     if (id && !id.startsWith('temp_') && !id.startsWith('def-')) {
-      await directSupabasePatch('services', `id=eq.${id}`, payload);
+      const res = await directSupabasePatch('services', `id=eq.${id}`, payload);
+      // 若回傳為空，表示欄位有問題或更新失敗
+      if (!res || res.length === 0) {
+        throw new Error('資料庫拒絕更新，請確認資料格式');
+      }
     } else {
       const res = await directSupabaseUpsert('services', payload, 'id');
-      if (res && res[0]) localItem.id = res[0].id;
+      if (res && res[0]) savedId = res[0].id;
     }
-    Swal.fire({ title: '服務項目已儲存！', icon: 'success', timer: 800, showConfirmButton: false });
+
+    // 2. 將 Group A 人數設定安全存入 store_settings（保證不用改 DB 結構也不遺失）
+    if (!backendData.settings) backendData.settings = {};
+    if (!backendData.settings.serviceGroupACapacities) backendData.settings.serviceGroupACapacities = {};
+    backendData.settings.serviceGroupACapacities[name] = groupACapacity;
+
+    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
+      service_group_a_capacities: backendData.settings.serviceGroupACapacities
+    }).catch(() => {});
+
+    // 3. 更新本地記憶體
+    const localItem = {
+      id: savedId || ('svc_' + Date.now()),
+      name: name,
+      category: category,
+      price: priceStr,
+      duration: Number(duration || 60),
+      type: type,
+      group_a_capacity: groupACapacity,
+      required_resource: resource,
+      assigned_staff: assignedStaff.length > 0 ? assignedStaff : ['all'],
+      isActive: isActive,
+      isAddon: isAddon,
+      materials: selectedBOM
+    };
+
+    if (!backendData.services) backendData.services = [];
+    const existingIdx = backendData.services.findIndex(s => String(s.id) === String(savedId));
+    if (existingIdx !== -1) {
+      backendData.services[existingIdx] = localItem;
+    } else {
+      backendData.services.push(localItem);
+    }
+
+    activeServiceCategoryFilter = category;
+    resetServiceForm();
+    renderServiceList();
+
+    Swal.fire({ title: '服務項目已成功儲存！', icon: 'success', timer: 1000, showConfirmButton: false });
   } catch (e) {
     console.error("儲存失敗:", e);
-    Swal.fire('雲端儲存異常', e.message, 'error');
+    Swal.fire('儲存失敗', `資料庫寫入未成功：${e.message}`, 'error');
   }
 }
 
