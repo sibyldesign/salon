@@ -1183,7 +1183,23 @@
   
   const urlParams = new URLSearchParams(window.location.search);
   let CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
-  let guestLineUid = "";
+  // 優先從網址取 UID (作法 B)，若無則準備由 LIFF 取 (作法 A)
+let guestLineUid = (urlParams.get('uid') || urlParams.get('line_uid') || '').trim();
+
+// 若在 LINE 內開啟且未帶 uid 參數，嘗試由 LIFF 快速抓取
+if (!guestLineUid && window.liff && typeof liff.init === 'function') {
+  liff.init({ liffId: "您的_LIFF_ID" }).then(() => {
+    if (liff.isLoggedIn()) {
+      liff.getProfile().then(profile => {
+        if (profile && profile.userId) {
+          guestLineUid = profile.userId;
+          const lineNameInput = document.getElementById('lineName');
+          if (lineNameInput && !lineNameInput.value) lineNameInput.value = profile.displayName || '';
+        }
+      }).catch(() => {});
+    }
+  }).catch(() => {});
+}
   let activeBookingSubMode = 'grooming';
 
   const DEFAULT_SERVICES = [
@@ -4143,6 +4159,10 @@ async function checkCustomerBenefitsByPhone() {
         welcomeMsg.innerText = `✓ 歡迎回來！已為您自動帶入歷史預約與資產資料`;
         welcomeMsg.classList.remove('hidden');
       }
+      // 若目前網址沒有帶 UID，從過往紀錄自動補上
+if (!guestLineUid && custs && custs.length > 0 && custs[0].line_user_id) {
+  guestLineUid = custs[0].line_user_id;
+}
     }
 
     // 儲值與包卡資產卡片展示 (若未加購開通，就算客人資料庫有歷史餘額也絕不顯示！)
@@ -4935,13 +4955,17 @@ document.getElementById('bookForm').onsubmit = async function(e) {
 
   const appointmentIso = `${dValRaw.replace(/\//g, '-')}T${tVal}:00+08:00`;
 
+  // 🌟【上線加固版】：確保無論從 LINE 導流、LIFF 或是電話帶入，UID 絕對不會漏掉
+  const finalGuestLineUid = guestLineUid || (typeof customerLineUid !== 'undefined' ? customerLineUid : '') || '';
+
   const dbPayload = {
     store_id: CURRENT_STORE_ID,
     customer_name: nameVal,
     customer_phone: phoneVal,
     customer_type: document.getElementById('custType')?.value || 'old',
     customer_notes: document.getElementById('custNotes')?.value.trim() || '',
-    line_name: guestLineUid || document.getElementById('lineName')?.value.trim() || '',
+    line_name: document.getElementById('lineName')?.value.trim() || '',
+    line_user_id: finalGuestLineUid, // 👈 確保 UID 確實寫入預約資料表
     notes: notesArray.join(' | '),
     service_names: sVal,
     price: finalBasePrice,
@@ -5533,12 +5557,18 @@ async function submitBooking() {
   });
 
   try {
+    if (guestLineUid) {
+  directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}`, {
+    line_user_id: guestLineUid
+  }).catch(() => {});
+}
     // 2. 構建預約資料 Payload
     const bookingPayload = {
       store_id: CURRENT_STORE_ID,
       customer_name: name,
       customer_phone: phone,
       service_names: serviceNames,
+      line_user_id: guestLineUid,
       price: totalPrice,
       final_price: totalPrice,
       appointment_time: `${date.replace(/\//g, '-')}T${time}:00+08:00`,
