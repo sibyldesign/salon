@@ -634,11 +634,17 @@ function isLifetimeStore(s) {
                 <button type="button" onclick="promptEditStoreEmail('${s.id}')" class="text-brand-500 hover:text-brand-800 px-1.5 py-0.5 rounded bg-white border border-brand-200 text-[10px]">修改信箱</button>
               </div>
 
-              <div class="flex items-center gap-1">
-                <b>LINE UID：</b>
-                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${hasLineUid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">${hasLineUid ? '已綁定' : '未綁定'}</span>
-                <button type="button" onclick="promptEditStoreLineUid('${s.id}')" class="text-blue-600 underline text-[10px] ml-1">手動填</button>
-                <button type="button" onclick="navigator.clipboard.writeText('${lineBindUrl}'); Swal.fire('已複製業主專屬 LINE 綁定連結！', '貼給業主點擊即可自動綁定', 'success')" class="text-brand-500 underline text-[10px] ml-1">複製綁定連結</button>
+              <div class="flex items-center justify-between">
+                <div>
+                  <b>業主 LINE UID：</b>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${hasLineUid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}">
+                    ${hasLineUid ? s.owner_line_uid : '未綁定'}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button type="button" onclick="promptEditStoreLineUid('${s.id}')" class="text-blue-600 underline text-[10px]">手動填</button>
+                  <button type="button" onclick="copyOwnerBindCommand('${s.id}')" class="text-brand-500 underline text-[10px] ml-1">複製綁定指令</button>
+                </div>
               </div>
 
               <div><b>後台密碼：</b><code>${s.admin_pin || '8888'}</code></div>
@@ -647,8 +653,11 @@ function isLifetimeStore(s) {
 
             <div class="flex gap-2 flex-wrap items-center justify-between pt-1 border-t border-brand-100">
               <div class="flex gap-1.5 flex-wrap">
+                <button type="button" onclick="sendLineBillNoticePrompt('${s.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-xs flex items-center gap-1">
+                  <i class="fa-brands fa-line"></i> LINE 直推催繳
+                </button>
                 <button type="button" onclick="copyDunText('${s.id}')" class="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold shadow-xs flex items-center gap-1">
-                  <i class="fa-brands fa-line"></i> LINE 催繳
+                  <i class="fa-regular fa-copy"></i> 複製文字
                 </button>
                 <button type="button" onclick="copyEmailDunText('${s.id}')" class="px-2.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-xs flex items-center gap-1">
                   <i class="fa-solid fa-envelope"></i> Email 催繳
