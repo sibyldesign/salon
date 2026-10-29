@@ -10553,8 +10553,14 @@ function populateSettings() {
   });
 
   // 2. 特殊店休日標準化 (轉換為 yyyy/MM/dd 統一格式，去除無效空值)
+  // 確保從後台設定讀取自訂店休日期
   const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
-  customOffDatesArray = rawCustomOff.map(d => String(d).trim().replace(/-/g, '/')).filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
+  customOffDatesArray = rawCustomOff
+    .map(d => String(d).trim().replace(/-/g, '/'))
+    .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
+
+  // 渲染迷你月曆與下方標籤清單
+  renderOffDateCalendar('lt');
   renderOffDateCalendar('');
 
   const logoPreviewBox = document.getElementById('logo-preview-box');
@@ -10779,6 +10785,10 @@ function routeToSettingsPage(btnEl) {
 // 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
 // ========================================================
 function populateLifetimeSettings() {
+  const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
+  customOffDatesArray = rawCustomOff
+    .map(d => String(d).trim().replace(/-/g, '/'))
+    .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
   const ltPage = document.getElementById('page-settings-lifetime');
   const subPage = document.getElementById('page-settings');
   // 🌟【防呆核心】：回填前徹底拔除監聽器，防止瀏覽器填入時誤觸發「未儲存提示條」
@@ -10936,6 +10946,8 @@ function populateLifetimeSettings() {
 
       renderAdminRoomTiers('lt');
       renderAdminMealOptions('lt');
+      renderOffDateCalendar('lt');
+  renderOffDateCalendar('');
     }
   }
 
@@ -12117,6 +12129,9 @@ function renderOffDateCalendar(prefix = '') {
 
 // 點擊切換休假選定/取消
 function toggleCustomOffDate(dStr, prefix = '') {
+  // 確保陣列存在
+  if (!Array.isArray(customOffDatesArray)) customOffDatesArray = [];
+  
   const idx = customOffDatesArray.indexOf(dStr);
   if (idx !== -1) {
     customOffDatesArray.splice(idx, 1);
@@ -12124,8 +12139,12 @@ function toggleCustomOffDate(dStr, prefix = '') {
     customOffDatesArray.push(dStr);
     customOffDatesArray.sort();
   }
+
+  // 重新渲染訂閱版與買斷版的月曆與標籤
   renderOffDateCalendar('lt');
   renderOffDateCalendar('');
+
+  // 標記為未儲存狀態
   if (prefix === 'lt' && typeof markLifetimeSettingsUnsaved === 'function') markLifetimeSettingsUnsaved();
   if (prefix === '' && typeof markSettingsUnsaved === 'function') markSettingsUnsaved();
 }
