@@ -6195,6 +6195,15 @@ function renderSingleCardHTML(a) {
       <i class="fa-solid fa-user-slash text-[9px]"></i> 黑名單
     </button>
   `;
+  const storeDisplayName = backendData.settings?.storeName || '門市';
+const lineNoticeText = `【${storeDisplayName} 預約排程確認】\n親愛的 ${a.name} 您好：\n您的預約已為您確認保留！\n• 預約時段：${a.date} ${a.time}\n• 施作項目：${a.service}\n• 服務專員：${a.staffName || '不指定'}\n期待為您服務！`;
+const lineShareUrl = `https://line.me/R/msg/text/?${encodeURIComponent(lineNoticeText)}`;
+
+const lineShareBtnHtml = `
+  <a href="${lineShareUrl}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-lg text-[10.5px] font-bold shadow-xs" title="免UID：點擊直接開啟手機LINE發送給客人">
+    <i class="fa-brands fa-line text-xs"></i> 傳LINE
+  </a>
+`;
 
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
@@ -6304,6 +6313,7 @@ function renderSingleCardHTML(a) {
           <a href="https://wa.me/${intlPhone}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#5A7F71] hover:bg-[#48685C] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
             <i class="fa-brands fa-whatsapp text-xs"></i> 通訊
           </a>
+          ${lineShareBtnHtml}
           ${blacklistBtnHtml}
           ${signBtnHtml}
           ${receiptBtnHtml}
@@ -6677,7 +6687,7 @@ function renderCustomer() {
         if (appt) appt.status = newStatus;
         renderCustomer();
 
-        // 🌟【關鍵補上】：狀態更新成功後，立即通知顧客（LINE / Email）
+        // 🌟 狀態變更時自動通知顧客 (有 UID 發 LINE，無 UID 發 Email)
         if (typeof notifyCustomerStatusChanged === 'function') {
           notifyCustomerStatusChanged(id, newStatus);
         }
@@ -6687,7 +6697,7 @@ function renderCustomer() {
         Swal.fire('更新失敗', e.message, 'error');
       }
     }
-
+    
     // 在後台 auditOrder(id, status, name) 與 quickUpdateStatus 內加入：
 // ==========================================
 // 狀態變更時自動通知顧客 (功能 4：接單/婉拒推播)
@@ -6774,7 +6784,7 @@ async function notifyCustomerStatusChanged(bookingId, newStatus) {
       }
       await directSupabasePatch('bookings', `id=eq.${id}`, { status: '已確認' });
 
-      // 🌟【關鍵補上】：接單核准後，立即通知顧客
+      // 🌟 審核接單成功時自動通知顧客
       if (typeof notifyCustomerStatusChanged === 'function') {
         notifyCustomerStatusChanged(id, '已確認');
       }
@@ -11803,9 +11813,6 @@ function openCustomBoundSpreadsheet() {
 // ==========================================
 // 測試業主 LINE 推播（修復 undefined 報錯）
 // ==========================================
-// ==========================================
-// 測試業主 LINE 推播（修復 undefined 報錯）
-// ==========================================
 async function testOwnerLinePush() {
   const ltToken = (document.getElementById('lt-cfg-line-token')?.value || '').trim();
   const subToken = (document.getElementById('cfg-line-token')?.value || '').trim();
@@ -11816,12 +11823,8 @@ async function testOwnerLinePush() {
   let token = ltToken || subToken;
   let ownerUid = ltUid || subUid;
 
-  if (!token) {
-    return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
-  }
-  if (!ownerUid || !ownerUid.startsWith('U')) {
-    return Swal.fire('請填寫正確的 LINE UID', '業主個人 LINE User ID 必須為 U 開頭字串', 'warning');
-  }
+  if (!token) return Swal.fire('請填寫 Channel Access Token', '發訊金鑰不能為空', 'warning');
+  if (!ownerUid || !ownerUid.startsWith('U')) return Swal.fire('請填寫正確的 LINE UID', '業主個人 LINE User ID 必須為 U 開頭字串', 'warning');
 
   Swal.fire({
     title: '正在發送測試推播...',
@@ -11856,44 +11859,24 @@ async function testOwnerLinePush() {
 
     const rawText = await res.text();
     let result = {};
-    try {
-      result = JSON.parse(rawText);
-    } catch (parseErr) {
-      result = { status: "ERROR", message: rawText || "GAS 伺服器未回傳有效 JSON" };
-    }
+    try { result = JSON.parse(rawText); } catch (e) { result = { status: "ERROR", message: rawText || "未回傳有效 JSON" }; }
 
     if (result.status === "SUCCESS") {
       Swal.fire({
         title: '🎉 測試推播已送達！',
-        html: `
-          <div class="text-left text-xs bg-emerald-50 p-3.5 rounded-2xl border border-emerald-200 text-emerald-950 space-y-1">
-            <div>• <b>接收對象 UID：</b><span class="font-mono text-emerald-800 font-bold">${ownerUid}</span></div>
-            <div>• <b>發送狀態：</b>LINE 官方伺服器已成功接收並派發</div>
-            <div class="pt-1 text-[11px] text-emerald-700">請確認該 UID 帳號的手機 LINE 聊天室是否已收到即時通知。</div>
-          </div>
-        `,
+        html: `<div class="text-xs text-emerald-800">接收對象 UID: <b>${ownerUid}</b><br>請查看手機 LINE 聊天室是否已收到即時通知。</div>`,
         icon: 'success'
       });
     } else {
-      // 🌟 安全提取各種可能的回傳欄位，絕不再顯示 undefined
-      const errorMsg = result.message || result.error || result.response || result.details || (typeof result === 'object' ? JSON.stringify(result) : String(result));
+      const errorMsg = result.message || result.error || result.response || JSON.stringify(result);
       Swal.fire({
         title: 'LINE 伺服器退件',
-        html: `
-          <div class="text-left text-xs text-rose-800 bg-rose-50 p-3 rounded-xl border border-rose-200 font-mono leading-relaxed">
-            <b>退件原因：</b><br>${errorMsg}
-          </div>
-          <div class="text-left text-[11px] text-gray-500 mt-2 leading-relaxed">
-            ※ 常見退件原因：<br>
-            1. 該 UID <b>尚未將此官方帳號加為好友</b>（未加好友無法接收主動推播）。<br>
-            2. Channel Access Token 已失效、複製遺漏或與此官方帳號不匹配。
-          </div>
-        `,
+        html: `<div class="text-left text-xs text-rose-800 bg-rose-50 p-3 rounded-xl border border-rose-200 font-mono"><b>退件原因：</b><br>${errorMsg}</div><div class="text-[11px] text-gray-500 mt-2 text-left">常見原因：該 UID 尚未加入此官方帳號好友，或 Token 已過期失效。</div>`,
         icon: 'error'
       });
     }
   } catch (err) {
-    Swal.fire('連線逾時', `無法與 GAS 伺服器通訊：${err.message}`, 'error');
+    Swal.fire('連線逾時', `無法與伺服器通訊：${err.message}`, 'error');
   }
 }
 
