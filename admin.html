@@ -1361,6 +1361,7 @@
         </div>
       </div>
     </div>
+  </div>
 
   <!-- 3. 9:16 活動宣傳圖輪播與置頂公告 (標配) -->
   <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
@@ -10073,9 +10074,13 @@ function toggleSelectAllDateSlots(dayStr, btn) {
 // ========================================================
 function isStoreLifetime() {
   const s = backendData.storeInfo || {};
+  // 優先排除明確為訂閱、月繳、年繳之門市
+  if (s.plan_type === 'subscription' || s.plan_type === 'monthly' || s.plan_type === 'yearly') {
+    return false;
+  }
   const storeName = s.store_name || backendData.settings?.storeName || '';
   const storeSlug = s.slug || '';
-  const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
+  const isZheli = storeName.includes('這理') || storeSlug.includes('zheli');
   return Boolean(
     s.plan_type === 'lifetime' || 
     s.plan_status === 'lifetime' || 
@@ -10882,7 +10887,7 @@ function populateLifetimeSettings() {
   setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
 
   // 公休日與特殊休假標籤回填（補齊）
-  const offDays = s.weekly_off_days || [];
+  const offDays = (Array.isArray(s.weekly_off_days) ? s.weekly_off_days : []).map(Number);
   document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
     input.checked = offDays.includes(Number(input.value));
   });
@@ -12287,6 +12292,157 @@ function renderCustomOffDatesTags(prefix = '') {
       <button type="button" onclick="toggleCustomOffDate('${d}', '${prefix}')" class="text-rose-500 hover:text-rose-700 font-bold ml-0.5">✕</button>
     </span>
   `).join('');
+}
+
+    // ==========================================
+// 專員管理渲染與新增 (補齊缺失函式)
+// ==========================================
+function renderStaffManager(prefix = '') {
+  const isLt = (prefix === 'lt');
+  const container = document.getElementById(isLt ? 'lt-staff-manager-list' : 'staff-manager-list');
+  const badge = document.getElementById(isLt ? 'lt-staff-count-badge' : 'staff-count-badge');
+  if (!container) return;
+
+  const staffList = backendData.settings?.staffList || [];
+  const validStaff = staffList.filter(s => s.id !== 'all');
+  if (badge) badge.innerText = `${validStaff.length} 位專員`;
+
+  if (validStaff.length === 0) {
+    container.innerHTML = '<div class="text-center py-3 text-brand-400 text-xs bg-brand-50 rounded-xl">尚無專員名冊，請於下方新增</div>';
+    return;
+  }
+
+  container.innerHTML = validStaff.map((st, idx) => `
+    <div class="p-3 bg-brand-50/70 rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+      <div>
+        <div class="font-bold text-brand-900">${st.name} <span class="text-brand-400 font-mono text-[10px]">(${st.id})</span></div>
+        <div class="text-[10px] text-brand-500 font-mono mt-0.5">登入密碼：<b>${st.pin || '8888'}</b></div>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <button type="button" onclick="copyStaffWorkspaceLink('${st.id}')" class="px-2.5 py-1 bg-white border border-brand-200 text-brand-800 rounded-lg text-[10.5px] font-bold hover:bg-brand-100 transition">複製工作台</button>
+        <button type="button" onclick="deleteStaffMember(${idx}, '${prefix}')" class="px-2 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[10.5px] font-bold hover:bg-rose-100 transition">刪除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addStaffMember(prefix = '') {
+  const isLt = (prefix === 'lt');
+  const id = document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')?.value.trim();
+  const name = document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')?.value.trim();
+  const pin = document.getElementById(isLt ? 'lt-new-staff-pin' : 'new-staff-pin')?.value.trim() || '8888';
+
+  if (!id || !name) return Swal.fire('請填寫專員編號與姓名', '', 'warning');
+
+  const staffList = backendData.settings?.staffList || [{ id: 'all', name: '不指定', pin: '8888' }];
+  staffList.push({ id, name, pin });
+  backendData.settings.staffList = staffList;
+
+  directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: staffList });
+  renderStaffManager(prefix);
+
+  if (document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id')) document.getElementById(isLt ? 'lt-new-staff-id' : 'new-staff-id').value = '';
+  if (document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name')) document.getElementById(isLt ? 'lt-new-staff-name' : 'new-staff-name').value = '';
+  if (document.getElementById(isLt ? 'lt-new-staff-pin' : 'new-staff-pin')) document.getElementById(isLt ? 'lt-new-staff-pin' : 'new-staff-pin').value = '';
+
+  Swal.fire({ title: '專員已建立！', icon: 'success', timer: 1000, showConfirmButton: false });
+}
+
+function deleteStaffMember(idx, prefix = '') {
+  const staffList = backendData.settings?.staffList || [];
+  const validStaff = staffList.filter(s => s.id !== 'all');
+  const target = validStaff[idx];
+  if (!target) return;
+
+  const realIdx = staffList.findIndex(s => s.id === target.id);
+  if (realIdx !== -1) staffList.splice(realIdx, 1);
+
+  directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, { staff_list: staffList });
+  renderStaffManager(prefix);
+}
+
+function copyStaffWorkspaceLink(staffId) {
+  const url = `${window.location.origin}${window.location.pathname}?store_id=${CURRENT_STORE_ID}&staff=${staffId}`;
+  navigator.clipboard.writeText(url);
+  Swal.fire({ title: '已複製專屬工作台連結！', text: url, icon: 'success' });
+}
+
+// ==========================================
+// 宣傳圖九宮格渲染 (補齊缺失函式)
+// ==========================================
+function renderUploadSlots(prefix = '') {
+  const isLt = (prefix === 'lt');
+  const grid = document.getElementById(isLt ? 'lt-promo-upload-grid' : 'promo-upload-grid');
+  if (!grid) return;
+
+  grid.innerHTML = promoImgsArray.map((url, idx) => {
+    if (url) {
+      return `
+        <div class="relative aspect-[9/16] rounded-xl overflow-hidden border border-brand-200 bg-cover bg-center shadow-xs" style="background-image:url('${url}')">
+          <button type="button" onclick="removePromoImg(${idx}, '${prefix}')" class="absolute top-1 right-1 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center text-[10px] shadow font-bold">×</button>
+        </div>
+      `;
+    }
+    return `
+      <label class="aspect-[9/16] rounded-xl border-2 border-dashed border-brand-200 flex flex-col items-center justify-center text-brand-400 hover:border-brand-400 cursor-pointer bg-brand-50/50 transition">
+        <i class="fa-solid fa-plus text-xs"></i>
+        <span class="text-[9px] mt-0.5">圖 ${idx + 1}</span>
+        <input type="file" accept="image/*" class="hidden" onchange="uploadPromoImg(this, ${idx}, '${prefix}')">
+      </label>
+    `;
+  }).join('');
+
+  const txtEl = document.getElementById('cfg-promo-imgs-text');
+  if (txtEl) txtEl.value = promoImgsArray.filter(u => u && u.trim()).join('\n');
+}
+
+async function uploadPromoImg(input, idx, prefix = '') {
+  const file = input.files?.[0];
+  if (!file) return;
+  Swal.showLoading();
+  try {
+    const url = await uploadToSupabaseStorage(file, 'promo');
+    promoImgsArray[idx] = url;
+    renderUploadSlots(prefix);
+    Swal.fire({ title: '宣傳圖上傳成功！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch (e) {
+    Swal.fire('上傳失敗', e.message, 'error');
+  }
+}
+
+function removePromoImg(idx, prefix = '') {
+  promoImgsArray[idx] = '';
+  renderUploadSlots(prefix);
+}
+
+async function uploadLogoImg(prefix = '') {
+  const fileInput = document.getElementById(prefix === 'lt' ? 'lt-logo-file-input' : 'logo-file-input');
+  const file = fileInput?.files?.[0];
+  if (!file) return Swal.fire('請先選擇圖檔', '', 'warning');
+  Swal.showLoading();
+  try {
+    const url = await uploadToSupabaseStorage(file, 'logo');
+    if (document.getElementById('cfg-logo')) document.getElementById('cfg-logo').value = url;
+    if (document.getElementById('lt-logo')) document.getElementById('lt-logo').value = url;
+    const prevBox = document.getElementById('logo-preview-box');
+    const prevImg = document.getElementById('logo-preview-img');
+    if (prevBox && prevImg) {
+      prevImg.src = url;
+      prevBox.classList.remove('hidden');
+    }
+    Swal.fire({ title: 'LOGO 上傳成功！', icon: 'success', timer: 800, showConfirmButton: false });
+  } catch (e) {
+    Swal.fire('上傳失敗', e.message, 'error');
+  }
+}
+
+function loadMohwContractTemplate(prefix = '') {
+  const targetId = (prefix === 'lt') ? 'lt-contract-content' : 'cfg-contract-content';
+  const el = document.getElementById(targetId);
+  if (el) {
+    el.value = DEFAULT_MOHW_BEAUTY_CONTRACT;
+    Swal.fire({ title: '已載入官方定型化契約範本！', icon: 'success', timer: 1000, showConfirmButton: false });
+  }
 }
   </script>
 </body>
