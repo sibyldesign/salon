@@ -2028,20 +2028,21 @@
       </label>
     </div>
 
-    <!-- 🌟【新增】：圖文選單設定教學與專屬查詢網址一鍵複製卡片 -->
+    <!-- 🌟【買斷版：圖文選單設定教學與專屬查詢網址卡片】 -->
     <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-2 mt-1.5">
       <div class="font-bold text-emerald-950 flex items-center justify-between">
         <span class="flex items-center gap-1.5">
-          <i class="fa-solid fa-link text-emerald-600"></i> 圖文選單專屬「查詢預約」連結
+          <i class="fa-solid fa-link text-emerald-600"></i> 圖文選單專屬「查詢預約」連結 (買斷專用)
         </span>
         <span class="text-[10px] bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md font-bold">0元不扣訊息則數</span>
       </div>
       <p class="text-[11px] text-emerald-900/90 leading-relaxed">
         將下方專屬連結貼入 LINE 官方帳號後台「圖文選單」的動作【開啟連結 (URI)】，客人點擊即可直接輸入手機號碼自主查閱歷史預約與排程狀態：
+        <br><span class="text-[10.5px] text-gray-500 font-mono">（網址結構範例：https://您的網址/?store_id=您的門市ID#query）</span>
       </p>
       <div class="flex items-center gap-1.5">
-        <input type="text" id="lt-front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-600 outline-none select-all" value="正在生成專屬連結...">
-        <button type="button" onclick="copyFrontMenuQueryUrl()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
+        <input type="text" id="lt-front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-700 outline-none select-all" value="https://salon.heysibyl.com/?store_id=2deb066f-98f2-4283-945b-6ae0d6a89acb#query">
+        <button type="button" onclick="copyFrontMenuQueryUrl('lt-front-menu-query-url')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
           <i class="fa-regular fa-copy"></i> 複製連結
         </button>
       </div>
@@ -2575,7 +2576,7 @@
       </label>
     </div>
 
-    <!-- 🌟【新增】：圖文選單設定教學與專屬查詢網址一鍵複製卡片 -->
+    <!-- 🌟【圖文選單設定教學與專屬查詢網址卡片訂閱版】 -->
     <div class="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs space-y-2 mt-1.5">
       <div class="font-bold text-emerald-950 flex items-center justify-between">
         <span class="flex items-center gap-1.5">
@@ -2585,10 +2586,11 @@
       </div>
       <p class="text-[11px] text-emerald-900/90 leading-relaxed">
         將下方專屬連結貼入 LINE 官方帳號後台「圖文選單」的動作【開啟連結 (URI)】，客人點擊即可直接輸入手機號碼自主查閱歷史預約與排程狀態：
+        <br><span class="text-[10.5px] text-gray-500 font-mono">（網址結構範例：https://您的網址/?store_id=您的門市ID#query）</span>
       </p>
       <div class="flex items-center gap-1.5">
-        <input type="text" id="front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-600 outline-none select-all" value="正在生成專屬連結...">
-        <button type="button" onclick="copyFrontMenuQueryUrl()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
+        <input type="text" id="front-menu-query-url" readonly class="flex-1 p-2 rounded-xl border border-emerald-300 bg-white font-mono text-[11px] text-gray-700 outline-none select-all" value="https://salon.heysibyl.com/?store_id=2deb066f-98f2-4283-945b-6ae0d6a89acb#query">
+        <button type="button" onclick="copyFrontMenuQueryUrl('front-menu-query-url')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-2xs transition shrink-0 flex items-center gap-1">
           <i class="fa-regular fa-copy"></i> 複製連結
         </button>
       </div>
@@ -11132,6 +11134,7 @@ function routeToSettingsPage(btnEl) {
       subPage.style.setProperty('display', 'block', 'important');
       if (typeof populateSettings === 'function') {
         populateSettings();
+        updateFrontMenuQueryUrlDisplay();
       }
     }
   }
@@ -12953,29 +12956,54 @@ function handleServiceTypeChange(typeVal) {
     // ==========================================
 // 圖文選單專屬「查詢預約」網址生成與複製
 // ==========================================
+// ==========================================
+// 圖文選單專屬「查詢預約」網址動態產生與複製 (強固版)
+// ==========================================
 function updateFrontMenuQueryUrlDisplay() {
-  // 自動依當前網域與門市 ID 組合完整網址
-  const baseUrl = window.location.origin + window.location.pathname.replace(/admin\.html|index\.html/g, '');
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-  const queryUrl = `${cleanBase}?store_id=${CURRENT_STORE_ID}#query`;
+  // 1. 安全取得當前有效門市 ID
+  const storeId = CURRENT_STORE_ID || urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
 
+  // 2. 智慧推導前台網址 (將 admin.html 替換成 index.html 或根路徑)
+  let origin = window.location.origin;
+  let path = window.location.pathname;
+
+  // 去除路徑尾部的 admin.html 或多餘檔名
+  let basePath = path.substring(0, path.lastIndexOf('/') + 1);
+  if (!basePath.endsWith('/')) basePath += '/';
+
+  // 若為本地檔案 (file://) 則保底使用正式網址
+  let finalFrontUrl = '';
+  if (origin === 'null' || !origin.startsWith('http')) {
+    finalFrontUrl = `https://salon.heysibyl.com/?store_id=${storeId}#query`;
+  } else {
+    finalFrontUrl = `${origin}${basePath}?store_id=${storeId}#query`;
+  }
+
+  // 3. 同步回填到訂閱版與買斷版的輸入框
   const subInput = document.getElementById('front-menu-query-url');
   const ltInput = document.getElementById('lt-front-menu-query-url');
-  if (subInput) subInput.value = queryUrl;
-  if (ltInput) ltInput.value = queryUrl;
+
+  if (subInput) subInput.value = finalFrontUrl;
+  if (ltInput) ltInput.value = finalFrontUrl;
 }
 
-function copyFrontMenuQueryUrl() {
-  const input = document.getElementById('front-menu-query-url') || document.getElementById('lt-front-menu-query-url');
+// 支援直接指定 ID 複製
+function copyFrontMenuQueryUrl(elementId = 'front-menu-query-url') {
+  let input = document.getElementById(elementId);
+  if (!input) {
+    input = document.getElementById('front-menu-query-url') || document.getElementById('lt-front-menu-query-url');
+  }
   if (!input || !input.value) return;
 
   navigator.clipboard.writeText(input.value).then(() => {
     Swal.fire({
       title: '已複製圖文選單連結！',
       html: `
-        <div class="text-left text-xs bg-brand-50 p-3 rounded-xl border border-brand-200 text-brand-900 space-y-1">
-          <div>• 複製網址：<b class="font-mono text-emerald-800 break-all">${input.value}</b></div>
-          <div class="text-[11px] text-gray-500 pt-1">請至 LINE Official Account Manager 的圖文選單中，將動作設為「開啟連結 (URI)」並貼上此網址即可。</div>
+        <div class="text-left text-xs bg-brand-50 p-3.5 rounded-2xl border border-brand-200 text-brand-900 space-y-1.5 font-sans">
+          <div>• 專屬查詢網址：<b class="font-mono text-emerald-800 break-all select-all">${input.value}</b></div>
+          <div class="text-[11px] text-gray-500 pt-1 border-t border-brand-200 leading-relaxed">
+            請至 <b>LINE Official Account Manager</b> 的圖文選單設定中，將點擊動作設為<b>【開啟連結 (URI)】</b>並貼上此網址即可！
+          </div>
         </div>
       `,
       icon: 'success',
