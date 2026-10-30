@@ -1181,12 +1181,14 @@
         <div class="flex gap-2">
           <input type="text" id="txn-search-kw" oninput="renderTransactionsList()" placeholder="搜尋流水號 (TXN)、姓名、電話..." class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none">
           <select id="txn-archive-filter" onchange="renderTransactionsList()" class="p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-white outline-none">
-    <option value="ALL">全部狀態紀錄 (比照母表)</option>
-    <option value="待確認">僅看 待確認</option>
-    <option value="已確認">僅看 已確認</option>
-    <option value="已結單">僅看 已結單</option>
-    <option value="已取消">僅看 已取消/婉拒</option>
-  </select>
+            <option value="ALL">全部狀態紀錄 (比照母表)</option>
+            <option value="MANUAL_INSERT">⚡ 僅看【現場快速插單】</option>
+            <option value="STAFF_OFF">☕ 僅看【專員休假排休】</option>
+            <option value="待確認">僅看 待確認</option>
+            <option value="已確認">僅看 已確認</option>
+            <option value="已結單">僅看 已結單</option>
+            <option value="已取消">僅看 已取消/婉拒</option>
+          </select>
         </div>
 
         <!-- 流水帳對帳表格 -->
@@ -3821,6 +3823,9 @@ async function promptChangeAdminPin() {
     // ==========================================
 // 財務流水帳：比照純 GAS 試算表，記錄全部狀態與完整時間戳記
 // ==========================================
+// ==========================================
+// 財務流水帳：支援記錄全部狀態、現場插單與專員排休
+// ==========================================
 function renderTransactionsList() {
   const tbody = document.getElementById('txn-table-tbody');
   if (!tbody) return;
@@ -3828,10 +3833,9 @@ function renderTransactionsList() {
   const kw = (document.getElementById('txn-search-kw')?.value || '').trim().toLowerCase();
   const filter = document.getElementById('txn-archive-filter')?.value || 'ALL';
 
-  // 🌟【關鍵修改】：不再只抓「已結單」！比照試算表，包含「待確認、已確認、已結單、已取消、婉拒」所有歷史紀錄
   const allAppts = (backendData.appointments || []).slice();
 
-  // 依照下單時間 (created_at) 由新到舊倒序排列（先下單的排前面或依建立順序）
+  // 依照建立時間或預約日期由新到舊排序
   allAppts.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
 
   let list = allAppts.map(a => {
@@ -3840,8 +3844,12 @@ function renderTransactionsList() {
     return { ...a, txnNo };
   });
 
-  // 狀態過濾
-  if (filter !== 'ALL') {
+  // 🌟 特殊與狀態過濾
+  if (filter === 'MANUAL_INSERT') {
+    list = list.filter(t => (t.notes || '').includes('現場快速插單'));
+  } else if (filter === 'STAFF_OFF') {
+    list = list.filter(t => (t.notes || '').includes('專員休假') || t.service === '時段封鎖' || t.phone === '專員排休');
+  } else if (filter !== 'ALL') {
     list = list.filter(t => t.status === filter);
   }
 
@@ -3851,7 +3859,8 @@ function renderTransactionsList() {
       t.txnNo.toLowerCase().includes(kw) || 
       (t.name || '').toLowerCase().includes(kw) || 
       String(t.phone || '').includes(kw) ||
-      (t.service || '').toLowerCase().includes(kw)
+      (t.service || '').toLowerCase().includes(kw) ||
+      (t.notes || '').toLowerCase().includes(kw)
     );
   }
 
@@ -3861,16 +3870,27 @@ function renderTransactionsList() {
   }
 
   tbody.innerHTML = list.map(t => {
-    // 依狀態賦予專屬標籤
+    const isManual = (t.notes || '').includes('現場快速插單');
+    const isOff = (t.notes || '').includes('專員休假') || t.service === '時段封鎖' || t.phone === '專員排休';
+
+    // 依狀態與來源賦予專屬徽章
     let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">待確認</span>';
-    if (t.status === '已確認') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">已確認</span>';
-    else if (t.status === '已結單') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">已結單</span>';
-    else if (t.status === '已取消' || t.status === '婉拒') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">已取消/婉拒</span>';
+    if (isOff) {
+      statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-200 text-stone-700">☕ 專員排休</span>';
+    } else if (t.status === '已確認') {
+      statusBadge = isManual 
+        ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">⚡ 現場插單</span>' 
+        : '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">已確認</span>';
+    } else if (t.status === '已結單') {
+      statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">已結單</span>';
+    } else if (t.status === '已取消' || t.status === '婉拒') {
+      statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">已取消/婉拒</span>';
+    }
 
     const timestamp = t.created_at ? formatFriendlyTime(t.created_at) : `${t.date} ${t.time}`;
 
     return `
-      <tr class="hover:bg-brand-50/50 border-b border-brand-100 text-xs">
+      <tr class="hover:bg-brand-50/50 border-b border-brand-100 text-xs ${isOff ? 'bg-stone-50/60' : ''}">
         <td class="py-2.5 px-2 font-bold text-brand-900 font-mono">${t.txnNo}</td>
         <td class="py-2.5 px-2 text-gray-500 font-mono text-[10.5px] whitespace-nowrap">${timestamp}</td>
         <td class="py-2.5 px-2 font-bold font-sans">${t.name} <span class="text-gray-400 font-normal">(${t.phone})</span></td>
@@ -3884,7 +3904,6 @@ function renderTransactionsList() {
     `;
   }).join('');
 }
-
 // 補齊 CSV 匯出引擎（自帶 UTF-8 BOM，Excel 打開不亂碼）
 function exportTransactionsCSV() {
   const finalized = (backendData.appointments || []).filter(a => a.status === '已結單');
@@ -5765,8 +5784,17 @@ function quickInsertBooking(date, time, staffId, staffName) {
         noteText = `【毛孩1: ${r.value.petName} / 項目: ${r.value.service}】 | ` + noteText;
       }
 
+      // 🌟 自動生成唯一的現場插單流水帳號 (TXN-日期-亂碼)
+      const txnNumber = (typeof generateTransactionId === 'function') 
+        ? generateTransactionId() 
+        : `TXN-${r.value.date.replace(/-/g, '')}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+      // 將流水號與插單標記寫入備註，雙重保險
+      const finalNote = `【交易流水號: ${txnNumber}】 | ${noteText}`.trim();
+
       const payload = {
         store_id: CURRENT_STORE_ID,
+        transaction_no: txnNumber, // 👈 寫入專屬流水號欄位
         customer_name: r.value.name,
         customer_phone: r.value.phone,
         line_name: r.value.line,
@@ -5777,7 +5805,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
         staff_id: staffId,
         staff_name: staffName,
         status: '已確認',
-        notes: noteText
+        notes: finalNote
       };
 
       await directSupabaseUpsert('bookings', payload, 'id');
