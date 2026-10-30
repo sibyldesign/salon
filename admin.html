@@ -5289,10 +5289,12 @@ function renderOverviewGridCanvas() {
         </div>
       `;
 
+      const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
+
       return `
         <div style="top: ${topOffset}px; height: ${cardHeight}px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
              class="absolute rounded-md shadow-2xs border border-white/20 cursor-pointer hover:opacity-90 transition overflow-hidden"
-             onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur})">
+             onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur}, '${safeLine}')">
           ${innerLayoutHtml}
         </div>
       `;
@@ -12569,40 +12571,54 @@ function createThemedBookingCard(themeKey, data) {
   // ========================================================
 // 🌟【一鍵釋出時段】openAppointmentDetailModal — 支援現場快速刪單釋出
 // ========================================================
-function openAppointmentDetailModal(apptId, name, phone, service, price, time, duration) {
+// ========================================================
+// 🌟【排程明細彈窗】：補上 LINE 稱呼與一鍵複製
+// ========================================================
+function openAppointmentDetailModal(apptId, name, phone, service, price, time, duration, lineName = '') {
   const currentRole = window.currentUserRole || localStorage.getItem('zy_admin_role') || 'owner';
+  
+  // 若未傳入 lineName，自動從本地快取補撈
+  if (!lineName) {
+    const matchedAppt = (backendData.appointments || []).find(a => String(a.id) === String(apptId));
+    lineName = matchedAppt?.lineName || matchedAppt?.line_name || '';
+  }
 
   Swal.fire({
     title: `📋 預約排程明細`,
     html: `
       <div class="text-left text-xs space-y-2.5 p-1 font-sans">
-        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
-          <div class="flex justify-between items-center text-sm font-black text-brand-900">
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1.5 leading-relaxed">
+          <div class="flex justify-between items-center text-sm font-black text-brand-900 border-b border-brand-200/60 pb-1">
             <span>${name}</span>
-            <span class="text-xs text-theme-primary font-mono">${time} (${duration}分鐘)</span>
+            <span class="text-xs text-theme-primary font-mono font-bold">${time} (${duration}分鐘)</span>
           </div>
-          <div class="text-brand-600 font-mono">📞 電話：${phone || '無資料'}</div>
+          <div class="flex justify-between items-center pt-0.5">
+            <span class="text-brand-700 font-mono">📞 電話：<b>${phone || '無電話'}</b></span>
+            <!-- 🌟 補上 LINE 名稱 -->
+            <span class="flex items-center gap-1 font-bold text-brand-900">
+              <i class="fa-brands fa-line text-emerald-600 text-sm"></i>
+              LINE：<b class="text-emerald-800 bg-white px-2 py-0.5 rounded-lg border border-brand-200 font-mono">${lineName || '未填寫'}</b>
+            </span>
+          </div>
           <div class="text-brand-800 font-bold">✂️ 項目：${service}</div>
-          <div class="text-emerald-800 font-bold font-mono">💰 實收預估：NT$ ${price.toLocaleString()} 元</div>
+          <div class="text-emerald-800 font-bold font-mono">💰 實收預估：NT$ ${Number(price || 0).toLocaleString()} 元</div>
         </div>
       </div>
     `,
     showDenyButton: true,
     showCancelButton: true,
     confirmButtonText: '結帳 / 完成施作',
-    denyButtonText: '🗑️ 刪除預約 (釋出時段)', // 🌟 店長最想要的快速按鈕
+    denyButtonText: '🗑️ 刪除預約 (釋出時段)',
     cancelButtonText: '返回',
     confirmButtonColor: '#8C7355',
     denyButtonColor: '#E11D48',
   }).then(async (result) => {
     if (result.isConfirmed) {
-      // 導向結帳
       openCheckoutModal(apptId, name, phone, service, price);
     } else if (result.isDenied) {
-      // 🌟 二次確認刪除並釋出
       const confirmDelete = await Swal.fire({
         title: '確定要取消並釋出此時段？',
-        text: `取消後，【${name}】的時段將立即恢復為白格，供其他顧客預約或現場插單。`,
+        text: `取消後，【${name}】的時段將立即恢復為空檔，供其他顧客預約或現場插單。`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '確定取消釋出',
@@ -12612,13 +12628,11 @@ function openAppointmentDetailModal(apptId, name, phone, service, price, time, d
 
       if (confirmDelete.isConfirmed) {
         Swal.showLoading();
-        // 將狀態改為已取消，該時段即刻釋出
         await directSupabasePatch('bookings', `id=eq.${apptId}`, {
           status: '已取消',
           cancel_reason: '現場人員於總覽手動取消並釋出時段'
         });
 
-        // 重新拉取並重繪畫布
         await fetchDataAndRender();
         renderOverviewGridCanvas();
 
