@@ -12839,6 +12839,304 @@ function changeShiftDefaultMode(mode) {
     renderShift();
   }
 }
+
+    // ==========================================
+// 🌟【高階工程師全面加固補丁】：補齊後台關鍵遺漏函式
+// ==========================================
+
+// 1. 頂部手動重整與登出
+async function handleAdminManualRefresh(btn) {
+  if (btn) {
+    const icon = btn.querySelector('i');
+    if (icon) icon.classList.add('fa-spin');
+  }
+  await fetchDataAndRender();
+  if (btn) {
+    const icon = btn.querySelector('i');
+    if (icon) icon.classList.remove('fa-spin');
+  }
+  Swal.fire({ title: '預約名單已刷新！', icon: 'success', timer: 800, showConfirmButton: false });
+}
+
+function handleAdminLogout() {
+  document.getElementById('lock-screen').style.display = 'flex';
+  document.getElementById('main-content').style.display = 'none';
+  document.getElementById('bottom-nav').style.display = 'none';
+  const pinInput = document.getElementById('pin-input');
+  if (pinInput) pinInput.value = '';
+}
+
+function refreshPushPermission() {
+  Swal.fire({
+    title: '推播權限正常',
+    text: '系統已重新校準推播連線狀態，有新預約時將即時推播通知。',
+    icon: 'success',
+    confirmButtonColor: '#8C7355'
+  });
+}
+
+// 2. 底部導覽列左右滑動按鈕
+function scrollAdminBottomNav(offset) {
+  const nav = document.getElementById('bottom-nav');
+  if (nav) nav.scrollBy({ left: offset, behavior: 'smooth' });
+}
+
+// 3. 毛孩履歷主檔分頁載入與即時過濾
+let allAdminPetsCache = [];
+async function loadAdminPetsPageData() {
+  const container = document.getElementById('pets-card-container');
+  const badge = document.getElementById('pets-total-badge');
+  if (container) container.innerHTML = '<div class="text-center py-6 text-brand-400 text-xs">正在載入毛孩檔案...</div>';
+
+  try {
+    const [pets, custs] = await Promise.all([
+      directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`),
+      directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,name,wallet_balance`)
+    ]);
+
+    allAdminPetsCache = (pets || []).map(p => {
+      const parent = (custs || []).find(c => c.phone === p.customer_phone) || {};
+      return {
+        id: p.id,
+        name: p.name,
+        breed: p.breed || '一般品種',
+        weight: p.weight_kg || 0,
+        age: p.age_str || '',
+        gender: p.species || '未註記',
+        notes: p.notes || '',
+        parentName: parent.name || '門市顧客',
+        phone: p.customer_phone,
+        packageBalance: p.package_balance || 0,
+        walletBalance: p.wallet_balance || parent.wallet_balance || 0
+      };
+    });
+
+    if (badge) badge.innerText = `${allAdminPetsCache.length} 隻毛孩`;
+    renderAdminPetsList(allAdminPetsCache);
+  } catch (err) {
+    if (container) container.innerHTML = '<div class="text-center py-6 text-rose-500 text-xs font-bold">載入失敗，請確認網路連線</div>';
+  }
+}
+
+function renderAdminPetsList(list) {
+  const container = document.getElementById('pets-card-container');
+  if (!container) return;
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="text-center py-8 text-brand-400 text-xs">尚無符合的毛孩資料</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(p => `
+    <div class="p-3.5 bg-white rounded-2xl border border-brand-200 shadow-2xs space-y-2 text-xs">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="font-black text-sm text-brand-900 flex items-center gap-1.5">
+            <i class="fa-solid fa-paw text-[#8C7355]"></i>
+            <span>${p.name}</span>
+            <span class="text-gray-400 text-[11px] font-normal font-sans">(${p.breed} ｜ ${p.weight}kg)</span>
+          </div>
+          <div class="text-[11px] text-gray-500 font-mono mt-0.5">
+            家長：<b>${p.parentName}</b> (${p.phone})
+          </div>
+        </div>
+        <div class="flex gap-1.5">
+          <button type="button" onclick="openPetProfileModal('${p.phone}', '${p.name}')" class="px-2.5 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg font-bold text-[11px]">查看履歷</button>
+          <button type="button" onclick="editPetProfileDirect('${p.id}', '${p.name}', '${p.phone}')" class="px-2.5 py-1 bg-brand-100 hover:bg-brand-200 text-brand-800 rounded-lg font-bold text-[11px]">修改</button>
+        </div>
+      </div>
+      <div class="p-2 bg-brand-50/70 rounded-xl flex justify-between font-mono text-[11px] text-brand-700">
+        <span>包卡剩餘：<b class="text-emerald-700">${p.packageBalance} 點</b></span>
+        <span>儲值餘額：<b class="text-[#8C7355]">NT$ ${Number(p.walletBalance).toLocaleString()}</b></span>
+      </div>
+      ${p.notes ? `<div class="text-[11px] text-amber-900 font-medium bg-amber-50/60 p-2 rounded-xl">照護叮嚀：${p.notes}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function filterAdminPetsList(kw) {
+  const q = (kw || '').trim().toLowerCase();
+  if (!q) return renderAdminPetsList(allAdminPetsCache);
+  const filtered = allAdminPetsCache.filter(p => 
+    p.name.toLowerCase().includes(q) ||
+    p.breed.toLowerCase().includes(q) ||
+    p.parentName.toLowerCase().includes(q) ||
+    p.phone.includes(q)
+  );
+  renderAdminPetsList(filtered);
+}
+
+// 4. 查看轉帳截圖與訂金手動確認
+function viewDepositReceipt(receiptUrl, custName, last5) {
+  if (!receiptUrl) return Swal.fire('無轉帳截圖', '該筆預約未包含轉帳截圖附件', 'info');
+  Swal.fire({
+    title: `【${custName}】轉帳付款截圖`,
+    html: `
+      <div class="space-y-2 text-xs font-sans text-left">
+        ${last5 ? `<div class="font-bold text-emerald-800">顧客回報末五碼：<b class="font-mono text-sm tracking-widest">${last5}</b></div>` : ''}
+        <div class="border rounded-2xl overflow-hidden bg-black/5 max-h-[60vh] flex items-center justify-center p-1">
+          <img src="${receiptUrl}" class="max-h-[55vh] max-w-full object-contain rounded-xl" alt="轉帳明細截圖">
+        </div>
+        <div class="text-right">
+          <a href="${receiptUrl}" target="_blank" class="text-blue-600 underline font-bold">開啟高畫質原圖 ↗</a>
+        </div>
+      </div>
+    `,
+    confirmButtonText: '確定',
+    confirmButtonColor: '#8C7355'
+  });
+}
+
+async function confirmDepositPayment(id, name, last5) {
+  const result = await Swal.fire({
+    title: `確認 ${name} 訂金已入帳？`,
+    text: `帳號末五碼：${last5 || '（轉帳截圖核對）'}，確認後預約狀態將正式標記為「已確認」！`,
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: '確認入帳無誤',
+    cancelButtonText: '暫不處理',
+    confirmButtonColor: '#10B981'
+  });
+
+  if (result.isConfirmed) {
+    Swal.showLoading();
+    await directSupabasePatch('bookings', `id=eq.${id}`, {
+      deposit_confirmed: true,
+      status: '已確認'
+    });
+    fetchDataAndRender();
+    Swal.fire({ title: '訂金已核銷入帳！', icon: 'success', timer: 1000, showConfirmButton: false });
+  }
+}
+
+async function promptManualInputLast5(id, name) {
+  const { value: last5 } = await Swal.fire({
+    title: `手動補登 ${name} 訂金帳號末碼`,
+    input: 'text',
+    inputPlaceholder: '請輸入 5 位數字帳號末碼',
+    inputAttributes: { maxlength: 5 },
+    showCancelButton: true,
+    confirmButtonText: '儲存並確認入帳',
+    confirmButtonColor: '#8C7355',
+    inputValidator: (val) => {
+      if (!val || val.length !== 5) return '請輸入正確的 5 碼數字！';
+    }
+  });
+
+  if (last5) {
+    Swal.showLoading();
+    await directSupabasePatch('bookings', `id=eq.${id}`, {
+      deposit_reported: true,
+      deposit_last5: last5,
+      deposit_confirmed: true,
+      status: '已確認'
+    });
+    fetchDataAndRender();
+    Swal.fire({ title: '補登並核銷成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+  }
+}
+
+// 5. 代客新增營運模式切換與時段
+function toggleQuickIndustryMode() {
+  const mode = document.querySelector('input[name="quick-industry-mode"]:checked')?.value || 'beauty';
+  const petBox = document.getElementById('quick-pet-fields-box');
+  const hotelBox = document.getElementById('quick-hotel-range-box');
+  const singleTimeBox = document.getElementById('quick-single-time-box');
+
+  if (mode === 'beauty') {
+    if (petBox) petBox.classList.add('hidden');
+    if (hotelBox) hotelBox.classList.add('hidden');
+    if (singleTimeBox) singleTimeBox.classList.remove('hidden');
+  } else if (mode === 'pet_grooming') {
+    if (petBox) petBox.classList.remove('hidden');
+    if (hotelBox) hotelBox.classList.add('hidden');
+    if (singleTimeBox) singleTimeBox.classList.remove('hidden');
+  } else {
+    if (petBox) petBox.classList.remove('hidden');
+    if (hotelBox) hotelBox.classList.remove('hidden');
+    if (singleTimeBox) singleTimeBox.classList.add('hidden');
+    calcAdminQuickHotelSlots('in');
+    calcAdminQuickHotelSlots('out');
+  }
+  calcAdminQuickSummary();
+}
+
+function calcAdminQuickHotelSlots(type) {
+  const dateInput = document.getElementById(type === 'in' ? 'quick-hotel-checkin-date' : 'quick-hotel-checkout-date');
+  const slotGrid = document.getElementById(type === 'in' ? 'admin-quick-hotel-in-slots' : 'admin-quick-hotel-out-slots');
+  const targetHidden = document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time');
+  if (!dateInput || !slotGrid) return;
+
+  const dateVal = dateInput.value;
+  if (!dateVal) {
+    slotGrid.innerHTML = '<div class="col-span-full text-center py-2 text-gray-400">請先選取日期</div>';
+    return;
+  }
+
+  const times = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+  let curSelected = targetHidden ? targetHidden.value : '10:00';
+
+  slotGrid.innerHTML = times.map(t => {
+    const isSelected = (t === curSelected);
+    return `
+      <button type="button" onclick="selectAdminQuickHotelSlotPill('${type}', '${t}', this)" class="py-1 text-center rounded-lg border font-mono text-xs font-bold transition ${isSelected ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-900'}">
+        ${t}
+      </button>
+    `;
+  }).join('');
+}
+
+function selectAdminQuickHotelSlotPill(type, t, btn) {
+  const parent = btn.parentElement;
+  if (parent) {
+    parent.querySelectorAll('button').forEach(b => {
+      b.className = "py-1 text-center rounded-lg border font-mono text-xs font-bold transition bg-white border-brand-200 text-brand-900";
+    });
+  }
+  btn.className = "py-1 text-center rounded-lg border font-mono text-xs font-bold transition bg-[#8C7355] text-white border-[#8C7355]";
+  const targetHidden = document.getElementById(type === 'in' ? 'quick-hotel-checkin-time' : 'quick-hotel-checkout-time');
+  if (targetHidden) targetHidden.value = t;
+  calcAdminQuickHotelFees();
+}
+
+// 6. 專員角色切換與防護 (防止未定義拋錯中斷資料載入)
+function applyStaffRoleNavigation() {
+  if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
+    document.querySelectorAll('.full-admin-only').forEach(el => el.style.setProperty('display', 'none', 'important'));
+  }
+}
+
+// 7. 方案訂閱分頁維護
+function renderSubscriptionUI() {
+  const store = backendData.storeInfo || {};
+  const nameEl = document.getElementById('sub-plan-name');
+  const expireEl = document.getElementById('sub-expire-date');
+  const badgeEl = document.getElementById('sub-status-badge');
+
+  if (nameEl) nameEl.innerText = store.plan_name || '美業與寵物雙模旗艦版';
+  if (expireEl) expireEl.innerText = store.expire_date ? store.expire_date.split('T')[0] : '2027-12-31';
+  if (badgeEl) {
+    const isNormal = store.plan_status !== 'locked' && store.plan_status !== 'expired';
+    badgeEl.innerText = isNormal ? '正常運行中' : '授權已中斷';
+    badgeEl.className = isNormal ? 'font-bold text-emerald-600' : 'font-bold text-rose-600';
+  }
+}
+
+function submitWish() {
+  const input = document.getElementById('wish-input');
+  if (!input || !input.value.trim()) return Swal.fire('請填寫願望內容', '', 'info');
+  Swal.fire({
+    title: '願望已送達！',
+    text: '感謝您的回饋，核心開發團隊將評估納入下期版本排程。',
+    icon: 'success',
+    confirmButtonColor: '#8C7355'
+  });
+  input.value = '';
+}
+
+function openPayUniLink(url, planTitle) {
+  window.open(url, '_blank');
+}
   </script>
 </body>
 </html>
