@@ -1535,6 +1535,7 @@ function applyIndustryModeUI(mode) {
       const formattedServices = (services && services.length > 0) ? services.map(s => ({
         id: s.id,
         name: s.service_name || s.name || '未命名項目',
+        category: s.category || '精選服務', // 👈 補上此行，對齊後台自訂大分類
         duration: Number(s.duration_minutes || s.duration || 60),
         type: s.service_type || s.type || "Group_A",
         price: s.price !== undefined ? String(s.price) : "0",
@@ -2958,10 +2959,15 @@ function renderHotelTimeGrid(type, dateStr) {
     const mainSvcs = allServices.filter(s => !s.isAddon);
     const addonSvcs = allServices.filter(s => s.isAddon);
 
-    // 1. 美業模式：依大分類分組排版，兼具質感與層次感
+    // 1. 美業模式：依後台設置大分類排版
     if (svcGrid) {
       svcGrid.innerHTML = '';
-      const categories = Array.from(new Set(allServices.map(s => s.category || '精選服務')));
+      // 依服務原排序動態萃取大分類，保持與後台相同順序
+      const categories = [];
+      allServices.forEach(s => {
+        const catName = s.category || '精選服務';
+        if (!categories.includes(catName)) categories.push(catName);
+      });
 
       let html = '';
       categories.forEach(cat => {
@@ -2969,8 +2975,8 @@ function renderHotelTimeGrid(type, dateStr) {
         if (catItems.length === 0) return;
 
         html += `
-          <div class="col-span-full mt-3 first:mt-0">
-            <!-- 質感大分類標題列 -->
+          <div class="col-span-full mt-4 first:mt-0">
+            <!-- 後台自訂大分類標題 -->
             <div class="flex items-center gap-2 mb-2 px-1">
               <span class="w-2 h-3.5 bg-theme-primary rounded-full inline-block"></span>
               <span class="font-black text-xs text-brand-900 tracking-wide">${cat}</span>
@@ -2980,7 +2986,11 @@ function renderHotelTimeGrid(type, dateStr) {
             <div class="grid grid-cols-1 gap-2">
               ${catItems.map(s => {
                 const isAddon = (s.isAddon === true);
-                const priceText = (db.enableShowPrice !== false) ? `NT$ ${s.price}` : '現場確認';
+                // 🌟 若不顯示金額則完全空白，不顯示「現場確認」
+                const priceHtml = (db.enableShowPrice !== false) 
+                  ? `<span class="text-theme-primary font-black font-mono text-xs whitespace-nowrap pl-1">NT$ ${s.price}</span>` 
+                  : '';
+
                 return `
                   <label class="service-card flex items-center justify-between p-3.5 rounded-2xl border border-brand-200/90 bg-white cursor-pointer hover:border-theme-primary transition shadow-2xs">
                     <div class="flex items-center gap-3 flex-1 pr-2">
@@ -2990,12 +3000,12 @@ function renderHotelTimeGrid(type, dateStr) {
                           ${isAddon ? '<span class="text-[9.5px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-bold shrink-0">[加購]</span>' : ''}
                           <span class="font-bold text-brand-900 text-xs">${s.name}</span>
                         </div>
-                        <div class="text-[10.5px] text-brand-400 font-mono mt-0.5 flex items-center gap-2">
-                          <span><i class="fa-regular fa-clock text-[10px] mr-0.5"></i>${s.duration} 分鐘</span>
+                        <div class="text-[10.5px] text-brand-400 font-mono mt-0.5">
+                          <i class="fa-regular fa-clock text-[10px] mr-0.5"></i>${s.duration} 分鐘
                         </div>
                       </div>
                     </div>
-                    <span class="text-theme-primary font-black font-mono text-xs whitespace-nowrap pl-1">${priceText}</span>
+                    ${priceHtml}
                   </label>
                 `;
               }).join('')}
@@ -3008,7 +3018,12 @@ function renderHotelTimeGrid(type, dateStr) {
 
     // 2. 寵美模式：毛孩 1 服務選單依大分類排版
     if (pet1SvcGrid) {
-      const petCats = Array.from(new Set(mainSvcs.map(s => s.category || '精選美容')));
+      const petCats = [];
+      mainSvcs.forEach(s => {
+        const c = s.category || '精選美容';
+        if (!petCats.includes(c)) petCats.push(c);
+      });
+
       pet1SvcGrid.innerHTML = petCats.map(cat => {
         const items = mainSvcs.filter(s => (s.category || '精選美容') === cat);
         return `
@@ -3017,28 +3032,34 @@ function renderHotelTimeGrid(type, dateStr) {
               <span class="w-1.5 h-2.5 bg-theme-primary rounded-full"></span>
               <span>${cat}</span>
             </div>
-            ${items.map(s => `
-              <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
-                <div class="flex items-center gap-2 flex-1 pr-2">
-                  <input type="checkbox" class="pet-1-svc rounded accent-theme-primary shrink-0" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
-                  <span class="font-bold text-brand-900">${s.name}</span>
-                </div>
-                <span class="font-mono font-bold text-brand-700 text-xs">NT$ ${s.price}</span>
-              </label>
-            `).join('')}
+            ${items.map(s => {
+              const priceHtml = (db.enableShowPrice !== false) ? `<span class="font-mono font-bold text-brand-700 text-xs">NT$ ${s.price}</span>` : '';
+              return `
+                <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
+                  <div class="flex items-center gap-2 flex-1 pr-2">
+                    <input type="checkbox" class="pet-1-svc rounded accent-theme-primary shrink-0" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
+                    <span class="font-bold text-brand-900">${s.name}</span>
+                  </div>
+                  ${priceHtml}
+                </label>
+              `;
+            }).join('')}
           </div>
         `;
       }).join('');
     }
 
     if (pet1AddonGrid) {
-      pet1AddonGrid.innerHTML = addonSvcs.map(a => `
-        <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 text-[11px] cursor-pointer hover:bg-brand-50/50 transition">
-          <input type="checkbox" class="pet-1-addon rounded accent-theme-primary" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
-          <span class="text-[10px] text-brand-400 font-bold bg-brand-100 px-1 py-0.2 rounded">[加購]</span>
-          <span class="font-medium">${a.name} (+NT$ ${a.price})</span>
-        </label>
-      `).join('');
+      pet1AddonGrid.innerHTML = addonSvcs.map(a => {
+        const addonPriceHtml = (db.enableShowPrice !== false) ? ` (+NT$ ${a.price})` : '';
+        return `
+          <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 text-[11px] cursor-pointer hover:bg-brand-50/50 transition">
+            <input type="checkbox" class="pet-1-addon rounded accent-theme-primary" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
+            <span class="text-[10px] text-brand-400 font-bold bg-brand-100 px-1 py-0.2 rounded">[加購]</span>
+            <span class="font-medium">${a.name}${addonPriceHtml}</span>
+          </label>
+        `;
+      }).join('');
     }
   }
 
@@ -3145,8 +3166,9 @@ function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
     }
     if (!isShiftOpen) continue;
     if (isToday && (m < (currentMinutesNow + bufferMinutes))) continue;
-    if (m + totalDuration > endMin + interval) continue;
-
+    // 🌟 嚴格防呆：時段開始 + 項目耗時 必須在營業結束時間 (endMin) 前完工！
+    if (m + totalDuration > endMin) continue;
+    
     // B. 撞期衝突排查
     let isConflict = false;
     const sameStaffAppts = dayAppts.filter(a => targetStaffId === 'all' || a.staff_id === targetStaffId || a.staffId === targetStaffId);
@@ -3509,7 +3531,8 @@ const resourceMaxCapacity = {};
 
     if (!isShiftOpen) return;
     if (isToday && (t < (currentMinutesNow + bufferMinutes))) return;
-    if (t + totalDuration > endMin + interval) return;
+    // 🌟 嚴格防呆：不可超過下班時間
+    if (t + totalDuration > endMin) return;
 
     // B. 美容師個人時段獨佔衝突檢驗 (Group_B)
     let staffConflict = false;
