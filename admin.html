@@ -4741,6 +4741,7 @@ async function fetchDataAndRender() {
         shiftInterval: Number(sCfg.shift_interval || 30),
         shift_interval: Number(sCfg.shift_interval || 30),
         weekly_off_days: weeklyOffDays,
+        custom_off_dates: sCfg.custom_off_dates || [],
         commissionRate: Number(sCfg.commission_rate || 50),
         designatedBonus: Number(sCfg.designated_bonus || 50),
         publishedSlots: sCfg.published_slots || [],
@@ -10871,12 +10872,11 @@ function populateLifetimeSettings() {
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
   if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
-  // 🌟 必須先定義 s 與 store，杜絕 ReferenceError
+  // 🌟 必須先宣告 s，才能讀取裡面的 custom_off_dates！
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
 
-  // 🌟 正確提取並正規化店休陣列
-  const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : (backendData.settings?.customOffDates || []);
+  const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
   customOffDatesArray = rawCustomOff
     .map(d => String(d).trim().replace(/-/g, '/'))
     .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
