@@ -5466,6 +5466,75 @@ function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, ne
     // ========================================================
 // 🌟 總覽排程看板：升級版插單與專員休假排休引擎 (全功能縫合版)
 // ========================================================
+// ========================================================
+// 🌟 總覽排程防撞核心：Group A/B 獨佔與人數上限檢驗
+// ========================================================
+function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, newDurMins, newServiceType, newServiceName) {
+  const [nSH, nSM] = newStartTime.split(':').map(Number);
+  const newStartMin = nSH * 60 + nSM;
+  const newEndMin = newStartMin + Number(newDurMins);
+
+  // 1. 取得當日同專員之有效預約名單（排除取消與婉拒）
+  const sameStaffAppts = (backendData.appointments || []).filter(a => {
+    if ((a.date || '').replace(/-/g, '/') !== dateSlash) return false;
+    if (a.status === '已取消' || a.status === '婉拒') return false;
+    const aStaff = String(a.staffName || '').trim();
+    const aStaffId = String(a.staffId || '').trim();
+    return (aStaff === staffName || (staffId && aStaffId === staffId));
+  });
+
+  // 2. 篩選出任何時間有交集（重疊）的既有預約
+  const overlappingAppts = sameStaffAppts.filter(a => {
+    const [aH, aM] = (a.time || '09:00').split(':').map(Number);
+    const aStart = aH * 60 + aM;
+    const aEnd = aStart + Number(a.duration || 60);
+    return Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd);
+  });
+
+  if (overlappingAppts.length === 0) return { conflict: false };
+
+  // 3. 讀取新項目的屬性與服務清單
+  const svcList = backendData.services || [];
+  const currentSvcObj = svcList.find(s => s.name === newServiceName);
+  const isNewGroupB = (newServiceType === 'Group_B' || !newServiceType);
+  const maxCap = currentSvcObj?.group_a_capacity || currentSvcObj?.max_clients || 2;
+
+  // 規則一：如果新插項目是 Group B (全程專屬類)，只要該時段有人，絕對阻斷！
+  if (isNewGroupB) {
+    const conflictAppt = overlappingAppts[0];
+    return {
+      conflict: true,
+      message: `【Group B 專屬衝突】專員在 ${conflictAppt.time} 已有【${conflictAppt.name} - ${conflictAppt.service}】，全程專屬項目時段完全獨佔，禁止穿插預約！`
+    };
+  }
+
+  // 規則二：如果新插項目是 Group A (等待期技術類)，檢查重疊預約中是否含有 Group B
+  const hasGroupB = overlappingAppts.some(a => {
+    const foundSvc = svcList.find(s => (a.service || '').includes(s.name));
+    return foundSvc ? (foundSvc.type === 'Group_B') : true; // 未特別註記者預設皆為專屬類
+  });
+
+  if (hasGroupB) {
+    return {
+      conflict: true,
+      message: `【專員時段衝突】該時段已有 Group B (全程專屬類) 項目施作中，禁止穿插預約！`
+    };
+  }
+
+  // 規則三：全部為 Group A 時，檢查重疊人數是否超過上限 (group_a_capacity)
+  if (overlappingAppts.length >= maxCap) {
+    return {
+      conflict: true,
+      message: `【超過人數承載上限】該專員此等待時段已排入 ${overlappingAppts.length} 位顧客，已達上限 ${maxCap} 人，禁止再插單！`
+    };
+  }
+
+  return { conflict: false };
+}
+
+// ========================================================
+// 🌟 總覽快速插單：補齊 data-type 與 data-res 屬性綁定
+// ========================================================
 let currentOverviewStep = 30;
 let currentInsertMode = 'booking';
 let currentMatchedPetsList = [];
@@ -5476,9 +5545,14 @@ function quickInsertBooking(date, time, staffId, staffName) {
   const isPetMode = (backendData.settings?.industryMode !== 'beauty');
   const serviceList = (backendData.services || []).filter(s => s.isActive !== false);
 
+  // 🌟【關鍵修復 1】：完整綁定 data-dur、data-price、data-type、data-res
   const serviceOptionsHtml = `<option value="">-- 請選擇服務項目 --</option>` +
-    serviceList.map(s => `<option value="${s.name}" data-dur="${s.duration || 60}" data-price="${s.price || 0}">${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`).join('') +
-    `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
+    serviceList.map(s => {
+      const typeName = s.type || s.service_type || 'Group_B';
+      const resName = s.required_resource || s.resource || 'none';
+      return `<option value="${s.name}" data-dur="${s.duration || 60}" data-price="${s.price || 0}" data-type="${typeName}" data-res="${resName}">[${typeName === 'Group_B' ? '專屬' : '可重疊'}] ${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`;
+    }).join('') +
+    `<option value="CUSTOM" data-dur="60" data-price="0" data-type="Group_B" data-res="none">＋ 現場臨時其他項目 (手動填寫)</option>`;
 
   Swal.fire({
     title: '⚡ 現場快速排程 / 專員排休登記',
@@ -5494,7 +5568,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
           </button>
         </div>
 
-        <!-- 2. 排程時間與步進器 (15/30/60 分鐘微調) -->
+        <!-- 2. 排程時間與步進器 -->
         <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 space-y-2">
           <div class="flex justify-between items-center text-[11px] font-bold text-brand-900">
             <span>指定專員：<b>${staffName}</b></span>
@@ -5517,10 +5591,10 @@ function quickInsertBooking(date, time, staffId, staffName) {
           </div>
         </div>
 
-        <!-- 3A. 顧客預約模式容器 (姓名、手機、LINE 名稱擇一填寫) -->
+        <!-- 3A. 顧客預約模式容器 (姓名、手機、LINE 擇一填寫) -->
         <div id="ins-box-booking" class="space-y-2.5">
           <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
-            <div class="text-[10px] text-amber-800 font-bold mb-1">※ 姓名、手機、LINE 名稱擇一填寫即可快速插單!客資第一次填入系統則需完整填齊</div>
+            <div class="text-[10px] text-amber-800 font-bold mb-1">※ 姓名、手機、LINE 名稱擇一填寫即可快速插單：</div>
             <div class="grid grid-cols-3 gap-1.5">
               <div>
                 <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名</label>
@@ -5539,7 +5613,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
 
             ${isPetMode ? `
               <div id="quick-ins-pet-wrapper" class="space-y-1 pt-1 border-t border-amber-200/60">
-                <label class="block text-[10.5px] font-bold text-amber-950">🐾 施作毛孩：</label>
+                <label class="block text-[10.5px] font-bold text-amber-950">🐾 選擇施作毛孩：</label>
                 <input id="quick-ins-new-pet-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="請輸入毛孩姓名 (例: 圓圓)">
               </div>
             ` : ''}
@@ -5607,7 +5681,9 @@ function quickInsertBooking(date, time, staffId, staffName) {
           time: finalT,
           service: '時段封鎖',
           price: 0,
-          duration: Number(document.getElementById('quick-ins-off-dur')?.value || 60)
+          duration: Number(document.getElementById('quick-ins-off-dur')?.value || 60),
+          type: 'Group_B',
+          resource: 'none'
         };
       }
 
@@ -5615,18 +5691,17 @@ function quickInsertBooking(date, time, staffId, staffName) {
       let phone = document.getElementById('quick-ins-phone')?.value.trim();
       let line = document.getElementById('quick-ins-line')?.value.trim();
 
-      // 擇一填寫檢驗
       if (!name && !phone && !line) {
         Swal.showValidationMessage('請至少填寫「姓名」、「手機」或「LINE 名稱」其中一項！');
         return false;
       }
 
-      // 自動補齊未填欄位
       if (!name) name = line ? line : (phone ? `顧客(${phone.slice(-4)})` : '現場客');
       if (!phone) phone = '現場客';
       if (!line) line = '';
 
       const sel = document.getElementById('quick-ins-service-select');
+      const opt = sel.options[sel.selectedIndex];
       let serviceName = sel.value;
       if (serviceName === 'CUSTOM') {
         serviceName = document.getElementById('quick-ins-custom-service')?.value.trim() || '現場臨時服務';
@@ -5641,6 +5716,10 @@ function quickInsertBooking(date, time, staffId, staffName) {
         chosenPet = document.getElementById('quick-ins-new-pet-name')?.value.trim() || '';
       }
 
+      // 🌟【關鍵修復 2】：從選取的 option 正確提取 type 與 resource
+      const optType = opt ? (opt.getAttribute('data-type') || 'Group_B') : 'Group_B';
+      const optRes = opt ? (opt.getAttribute('data-res') || 'none') : 'none';
+
       return {
         isOff: false,
         name: name,
@@ -5651,14 +5730,16 @@ function quickInsertBooking(date, time, staffId, staffName) {
         petName: chosenPet,
         service: serviceName,
         price: Number(document.getElementById('quick-ins-price')?.value || 0),
-        duration: Number(document.getElementById('quick-ins-duration')?.value || 60)
+        duration: Number(document.getElementById('quick-ins-duration')?.value || 60),
+        type: optType,
+        resource: optRes
       };
     }
   }).then(async r => {
     if (r.isConfirmed && r.value) {
-      // 🌟【防撞阻斷】：送單前嚴格檢查 Group A / Group B 與重疊人數上限
+      // 🌟【關鍵修復 3】：送單前執行「雙重防撞檢驗」，有衝突立即彈窗阻斷！
       if (!r.value.isOff) {
-        const checkResult = checkStaffGroupConflict(
+        const conflictCheck = checkStaffGroupConflict(
           staffName,
           staffId,
           r.value.date.replace(/-/g, '/'),
@@ -5668,10 +5749,10 @@ function quickInsertBooking(date, time, staffId, staffName) {
           r.value.service
         );
 
-        if (checkResult.conflict) {
+        if (conflictCheck.conflict) {
           return Swal.fire({
-            title: '排程衝撞警報！',
-            text: checkResult.message,
+            title: '⚠️ 排程衝撞阻斷',
+            html: `<div class="text-left text-xs text-rose-800 bg-rose-50 p-3 rounded-xl border border-rose-200 leading-relaxed font-sans">${conflictCheck.message}</div>`,
             icon: 'error',
             confirmButtonColor: '#8C7355'
           });
@@ -5705,6 +5786,22 @@ function quickInsertBooking(date, time, staffId, staffName) {
       Swal.fire({ title: r.value.isOff ? '休假登記完成！' : '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
     }
   });
+}
+
+// 輔助函式：下拉選單選取項目時自動帶入時長與金額
+function onQuickServiceSelection(sel) {
+  const customInput = document.getElementById('quick-ins-custom-service');
+  if (sel.value === 'CUSTOM') {
+    customInput?.classList.remove('hidden');
+    customInput?.focus();
+    return;
+  }
+  customInput?.classList.add('hidden');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt) {
+    document.getElementById('quick-ins-duration').value = opt.getAttribute('data-dur') || 60;
+    document.getElementById('quick-ins-price').value = opt.getAttribute('data-price') || 0;
+  }
 }
     // 智慧回補：輸入任一項目自動帶出其他兩項
 function autoLookupAnyCustomer(type, val) {
