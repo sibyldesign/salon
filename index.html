@@ -2954,48 +2954,87 @@ function renderHotelTimeGrid(type, dateStr) {
     const pet1SvcGrid = document.getElementById('pet1-service-grid');
     const pet1AddonGrid = document.getElementById('pet1-addon-grid');
 
-    const mainSvcs = (db.services || []).filter(s => !s.isAddon);
-    const addonSvcs = (db.services || []).filter(s => s.isAddon);
+    const allServices = db.services || [];
+    const mainSvcs = allServices.filter(s => !s.isAddon);
+    const addonSvcs = allServices.filter(s => s.isAddon);
 
-    // 1. 美業模式單一清單
+    // 1. 美業模式：依大分類分組排版，兼具質感與層次感
     if (svcGrid) {
-    svcGrid.innerHTML = '';
-    const hasMainSelected = Array.from(document.querySelectorAll('#service-grid input[data-isaddon="false"]:checked')).length > 0;
-    db.services.forEach(s => {
-      const isAddon = (s.isAddon === true);
-      const disabledClass = isAddon && !hasMainSelected ? 'opacity-40 pointer-events-none' : '';
-      const priceText = (db.enableShowPrice !== false) ? `NT$ ${s.price}` : '';
-      svcGrid.innerHTML += `
-        <label class="service-card flex items-start justify-between p-3 rounded-2xl border border-brand-200 bg-white cursor-pointer transition text-xs ${disabledClass}">
-          <div class="flex items-start gap-2.5 flex-1 pr-2">
-            <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="mt-0.5 rounded accent-[#8C7355] shrink-0">
-            <div class="flex-1 whitespace-normal break-words leading-snug">
-              ${isAddon ? '<span class="text-[9.5px] text-brand-500 bg-brand-100 px-1.5 py-0.5 rounded font-bold mr-1 inline-block">[加購]</span>' : ''}
-              <span class="font-bold text-brand-900 ${s.name.length > 12 ? 'text-[11px]' : 'text-xs'}">${s.name}</span>
+      svcGrid.innerHTML = '';
+      const categories = Array.from(new Set(allServices.map(s => s.category || '精選服務')));
+
+      let html = '';
+      categories.forEach(cat => {
+        const catItems = allServices.filter(s => (s.category || '精選服務') === cat);
+        if (catItems.length === 0) return;
+
+        html += `
+          <div class="col-span-full mt-3 first:mt-0">
+            <!-- 質感大分類標題列 -->
+            <div class="flex items-center gap-2 mb-2 px-1">
+              <span class="w-2 h-3.5 bg-theme-primary rounded-full inline-block"></span>
+              <span class="font-black text-xs text-brand-900 tracking-wide">${cat}</span>
+              <span class="text-[10px] text-brand-400 font-mono">(${catItems.length})</span>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-2">
+              ${catItems.map(s => {
+                const isAddon = (s.isAddon === true);
+                const priceText = (db.enableShowPrice !== false) ? `NT$ ${s.price}` : '現場確認';
+                return `
+                  <label class="service-card flex items-center justify-between p-3.5 rounded-2xl border border-brand-200/90 bg-white cursor-pointer hover:border-theme-primary transition shadow-2xs">
+                    <div class="flex items-center gap-3 flex-1 pr-2">
+                      <input type="checkbox" value="${s.name}" data-price="${s.price}" data-isaddon="${isAddon}" data-duration="${s.duration}" onchange="handleServiceChange(this)" class="rounded accent-theme-primary w-4 h-4 shrink-0">
+                      <div class="flex-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          ${isAddon ? '<span class="text-[9.5px] text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded font-bold shrink-0">[加購]</span>' : ''}
+                          <span class="font-bold text-brand-900 text-xs">${s.name}</span>
+                        </div>
+                        <div class="text-[10.5px] text-brand-400 font-mono mt-0.5 flex items-center gap-2">
+                          <span><i class="fa-regular fa-clock text-[10px] mr-0.5"></i>${s.duration} 分鐘</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span class="text-theme-primary font-black font-mono text-xs whitespace-nowrap pl-1">${priceText}</span>
+                  </label>
+                `;
+              }).join('')}
             </div>
           </div>
-          ${priceText ? `<span class="text-theme-primary font-bold shrink-0 font-mono text-xs whitespace-nowrap pl-1">${priceText}</span>` : ''}
-        </label>`;
-    });
-  }
+        `;
+      });
+      svcGrid.innerHTML = html;
+    }
 
-  // 2. 寵美模式：毛孩 1 卡片內項目渲染（同樣支援長名稱換行）
-  if (pet1SvcGrid) {
-    pet1SvcGrid.innerHTML = mainSvcs.map(s => `
-      <label class="flex items-start justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
-        <div class="flex items-start gap-2 flex-1 pr-2">
-          <input type="checkbox" class="pet-1-svc rounded accent-[#8C7355] mt-0.5 shrink-0" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
-          <span class="font-bold text-brand-900 whitespace-normal break-words leading-snug ${s.name.length > 12 ? 'text-[11px]' : 'text-xs'}">${s.name}</span>
-        </div>
-        <span class="font-mono font-bold text-brand-700 shrink-0 text-xs whitespace-nowrap">NT$ ${s.price}</span>
-      </label>
-    `).join('');
+    // 2. 寵美模式：毛孩 1 服務選單依大分類排版
+    if (pet1SvcGrid) {
+      const petCats = Array.from(new Set(mainSvcs.map(s => s.category || '精選美容')));
+      pet1SvcGrid.innerHTML = petCats.map(cat => {
+        const items = mainSvcs.filter(s => (s.category || '精選美容') === cat);
+        return `
+          <div class="space-y-1.5 mt-2 first:mt-0">
+            <div class="text-[11px] font-bold text-brand-700 flex items-center gap-1">
+              <span class="w-1.5 h-2.5 bg-theme-primary rounded-full"></span>
+              <span>${cat}</span>
+            </div>
+            ${items.map(s => `
+              <label class="flex items-center justify-between p-2.5 rounded-xl border border-brand-200 bg-white text-xs cursor-pointer hover:bg-brand-50/50 transition">
+                <div class="flex items-center gap-2 flex-1 pr-2">
+                  <input type="checkbox" class="pet-1-svc rounded accent-theme-primary shrink-0" value="${s.name}" data-price="${s.price}" onchange="updateCheckoutSummary()">
+                  <span class="font-bold text-brand-900">${s.name}</span>
+                </div>
+                <span class="font-mono font-bold text-brand-700 text-xs">NT$ ${s.price}</span>
+              </label>
+            `).join('')}
+          </div>
+        `;
+      }).join('');
     }
 
     if (pet1AddonGrid) {
       pet1AddonGrid.innerHTML = addonSvcs.map(a => `
         <label class="inline-flex items-center gap-1.5 bg-white px-2.5 py-1.5 rounded-xl border border-brand-200 text-[11px] cursor-pointer hover:bg-brand-50/50 transition">
-          <input type="checkbox" class="pet-1-addon rounded accent-[#8C7355]" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
+          <input type="checkbox" class="pet-1-addon rounded accent-theme-primary" value="${a.name}" data-price="${a.price}" onchange="updateCheckoutSummary()">
           <span class="text-[10px] text-brand-400 font-bold bg-brand-100 px-1 py-0.2 rounded">[加購]</span>
           <span class="font-medium">${a.name} (+NT$ ${a.price})</span>
         </label>
