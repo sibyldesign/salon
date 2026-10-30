@@ -5314,105 +5314,160 @@ function renderOverviewGridCanvas() {
 }
     
 // ========================================================
-// 【莫蘭迪色系字典】依服務項目自動對應高級低飽和色票
+// 莫蘭迪 6 階循環色票（粉橙黃綠藍紫）＋ 灰階加深循環
 // ========================================================
+const STRICT_MORANDI_PALETTE = [
+  // 第 1 輪 (經典莫蘭迪柔彩色)
+  { bg: '#E5A9A9', border: '#D49595', text: '#FFFFFF' }, // 0. 煙粉
+  { bg: '#E8B298', border: '#D69E83', text: '#FFFFFF' }, // 1. 暖杏橙
+  { bg: '#EDD382', border: '#DBC06E', text: '#3D3126' }, // 2. 麥香黃
+  { bg: '#9EBC9E', border: '#8AA88A', text: '#FFFFFF' }, // 3. 鼠尾草綠
+  { bg: '#97B3C6', border: '#839FB2', text: '#FFFFFF' }, // 4. 霧霾藍
+  { bg: '#BFA8C0', border: '#AA93AB', text: '#FFFFFF' }, // 5. 丁香灰紫
+  // 第 2 輪 (灰階加深沉穩色，項目過多時自動遞補)
+  { bg: '#BA8B8B', border: '#A87979', text: '#FFFFFF' }, // 6. 灰陶粉
+  { bg: '#C28B75', border: '#AF7761', text: '#FFFFFF' }, // 7. 焦糖灰橙
+  { bg: '#C4AE6C', border: '#B09B59', text: '#3D3126' }, // 8. 灰芥末黃
+  { bg: '#7D987D', border: '#6B866B', text: '#FFFFFF' }, // 9. 灰墨綠
+  { bg: '#778D9B', border: '#657B89', text: '#FFFFFF' }, // 10. 灰板岩藍
+  { bg: '#968197', border: '#846F85', text: '#FFFFFF' }  // 11. 深灰紫
+];
+
+const serviceColorMapCache = {};
+let serviceColorCounter = 0;
+
 function getServiceMorandiColor(serviceName) {
-  const s = String(serviceName || '').toUpperCase();
-  if (s.includes('燙') || s.includes('縮毛') || s.includes('PERM')) {
-    return { bg: '#9A6B75', text: '#FFFFFF', lightBg: '#FAF0F2', border: '#E8D0D6', tag: '燙髮' }; // 暮粉煙燻
+  if (!serviceName) return STRICT_MORANDI_PALETTE[0];
+  const cleanName = serviceName.split(',')[0].trim();
+  if (!serviceColorMapCache[cleanName]) {
+    serviceColorMapCache[cleanName] = STRICT_MORANDI_PALETTE[serviceColorCounter % STRICT_MORANDI_PALETTE.length];
+    serviceColorCounter++;
   }
-  if (s.includes('染') || s.includes('漂') || s.includes('挑染') || s.includes('COLOR')) {
-    return { bg: '#8C7A6B', text: '#FFFFFF', lightBg: '#F5F1ED', border: '#DFD6CE', tag: '染髮' }; // 焙茶茶木
-  }
-  if (s.includes('剪') || s.includes('CUT') || s.includes('造型')) {
-    return { bg: '#5D737E', text: '#FFFFFF', lightBg: '#EEF2F6', border: '#D4DDE6', tag: '剪髮' }; // 霧霾灰藍
-  }
-  if (s.includes('護') || s.includes('SPA') || s.includes('頭皮') || s.includes('保養')) {
-    return { bg: '#607466', text: '#FFFFFF', lightBg: '#F0F5F2', border: '#D0E0D6', tag: '護髮' }; // 鼠尾草綠
-  }
-  if (s.includes('住宿') || s.includes('安親') || s.includes('HOTEL')) {
-    return { bg: '#C27D56', text: '#FFFFFF', lightBg: '#FDF6F0', border: '#F2DFD3', tag: '住宿' }; // 暖陶土橘
-  }
-  return { bg: '#7E766D', text: '#FFFFFF', lightBg: '#F8F6F4', border: '#E3DDD7', tag: '服務' }; // 燕麥冷灰
+  return serviceColorMapCache[cleanName];
 }
 
 // ========================================================
-// 【智慧升級】quickInsertBooking — 寵美自動長出毛孩選單＋全資料回補
+// 🌟 總覽排程看板：升級版插單與專員休假排休引擎 (全功能縫合版)
 // ========================================================
+let currentOverviewStep = 30;
+let currentInsertMode = 'booking'; // 'booking' 或 'off'
 let currentMatchedPetsList = [];
 
 function quickInsertBooking(date, time, staffId, staffName) {
+  currentInsertMode = 'booking';
   currentMatchedPetsList = [];
-  const isPetMode = (backendData.settings?.industryType !== 'beauty');
+  const isPetMode = (backendData.settings?.industryMode !== 'beauty');
   const serviceList = (backendData.services || []).filter(s => s.isActive !== false);
 
-  let serviceOptionsHtml = serviceList.map(s => {
-    return `<option value="${s.name}" data-duration="${s.duration || 60}" data-price="${s.price || 0}">${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`;
-  }).join('');
-  serviceOptionsHtml = `<option value="">-- 請選擇服務項目 --</option>` + serviceOptionsHtml + `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
+  const serviceOptionsHtml = `<option value="">-- 請選擇服務項目 --</option>` +
+    serviceList.map(s => {
+      const resName = s.required_resource || s.resource || 'none';
+      const typeName = s.type || 'Group_B';
+      return `<option value="${s.name}" data-dur="${s.duration || 60}" data-price="${s.price || 0}" data-res="${resName}" data-type="${typeName}">${s.name} (${s.duration || 60}分 - NT$ ${s.price})</option>`;
+    }).join('') +
+    `<option value="CUSTOM">＋ 現場臨時其他項目 (手動填寫)</option>`;
 
   Swal.fire({
-    title: '⚡ 現場快速插單',
+    title: '⚡ 現場快速排程 / 專員排休登記',
     html: `
-      <div class="text-left text-xs space-y-2.5 font-sans">
-        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 text-brand-800 font-mono">
-          <div>排入專員：<b class="text-brand-900">${staffName}</b></div>
+      <div class="text-left text-xs space-y-3 font-sans">
+        <!-- 1. 模式切換按鈕 -->
+        <div class="flex p-1 bg-brand-100/70 rounded-xl gap-1 font-bold text-xs">
+          <button type="button" id="btn-ins-booking" onclick="switchInsertMode('booking')" class="flex-1 py-1.5 rounded-lg bg-white shadow-2xs text-[#8C7355]">
+            <i class="fa-solid fa-user-plus mr-1"></i>顧客預約插單
+          </button>
+          <button type="button" id="btn-ins-off" onclick="switchInsertMode('off')" class="flex-1 py-1.5 rounded-lg text-brand-400">
+            <i class="fa-solid fa-mug-hot mr-1"></i>專員登記排休
+          </button>
         </div>
 
-        <!-- 自由微調日期與時間 -->
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-bold mb-1 text-[11px]">排程日期</label>
-            <input type="date" id="quick-ins-date" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${date.replace(/\//g, '-')}">
+        <!-- 2. 排程時間與步進器 (支援 15/30/60 分鐘微調) -->
+        <div class="p-2.5 bg-brand-50 rounded-xl border border-brand-200 space-y-2">
+          <div class="flex justify-between items-center text-[11px] font-bold text-brand-900">
+            <span>指定專員：<b>${staffName}</b></span>
+            <div class="flex items-center gap-1">
+              <span class="text-brand-400 text-[10px]">間隔:</span>
+              <button type="button" onclick="setOverviewStep(15)" id="btn-ov-step-15" class="px-1.5 py-0.5 rounded border border-brand-200 bg-white font-mono font-bold text-[10px]">15分</button>
+              <button type="button" onclick="setOverviewStep(30)" id="btn-ov-step-30" class="px-1.5 py-0.5 rounded border border-[#8C7355] bg-[#8C7355] text-white font-mono font-bold text-[10px]">30分</button>
+              <button type="button" onclick="setOverviewStep(60)" id="btn-ov-step-60" class="px-1.5 py-0.5 rounded border border-brand-200 bg-white font-mono font-bold text-[10px]">60分</button>
+            </div>
           </div>
-          <div>
-            <label class="block font-bold mb-1 text-[11px]">排程時間 (可自由微調)</label>
-            <input type="time" id="quick-ins-time" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${time}">
-          </div>
-        </div>
-
-        <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名 *</label>
-              <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="王小美" oninput="debounceQuickCustomerSearch()">
+              <label class="block text-[10px] text-gray-500 mb-0.5">排程日期</label>
+              <input type="date" id="quick-ins-date" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${date.replace(/\//g, '-')}">
             </div>
             <div>
-              <label class="block text-[10px] text-gray-500 mb-0.5">聯絡手機</label>
-              <input id="quick-ins-phone" class="swal2-input !m-0 !w-full text-xs font-mono" placeholder="0912345678" oninput="debounceQuickCustomerSearch()">
+              <label class="block text-[10px] text-gray-500 mb-0.5">開始時間 (可自由微調)</label>
+              <select id="quick-ins-time" class="swal2-input !m-0 !w-full text-xs font-mono font-bold text-center"></select>
             </div>
           </div>
+        </div>
 
-          <!-- 🌟 寵美模式專屬：毛孩下拉選單區塊 -->
-          ${isPetMode ? `
-            <div id="quick-ins-pet-wrapper" class="space-y-1 pt-1 border-t border-amber-200/60">
-              <label class="block text-[10.5px] font-bold text-amber-950">🐾 選擇施作毛孩：</label>
-              <select id="quick-ins-pet-select" class="swal2-input !m-0 !w-full text-xs font-bold bg-white" onchange="onQuickInsertPetChange(this)">
-                <option value="NEW">＋ 現場臨時新毛孩 (下方填寫)</option>
-              </select>
-              <input id="quick-ins-new-pet-name" class="swal2-input !m-0 !w-full text-xs mt-1" placeholder="請輸入毛孩姓名 (例: 圓圓)">
+        <!-- 3A. 顧客預約模式容器 -->
+        <div id="ins-box-booking" class="space-y-2.5">
+          <div class="p-3 bg-amber-50/70 rounded-2xl border border-amber-200 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-gray-500 mb-0.5">顧客姓名 *</label>
+                <input id="quick-ins-name" class="swal2-input !m-0 !w-full text-xs font-bold" placeholder="王小美" oninput="debounceQuickCustomerSearch()">
+              </div>
+              <div>
+                <label class="block text-[10px] text-gray-500 mb-0.5">聯絡手機</label>
+                <input id="quick-ins-phone" class="swal2-input !m-0 !w-full text-xs font-mono" placeholder="0912345678" oninput="debounceQuickCustomerSearch()">
+              </div>
             </div>
-          ` : ''}
 
-          <div id="quick-ins-match-hint" class="text-[11px] font-bold min-h-[16px] leading-tight"></div>
-        </div>
+            <!-- 寵美模式專屬：毛孩選單 -->
+            ${isPetMode ? `
+              <div id="quick-ins-pet-wrapper" class="space-y-1 pt-1 border-t border-amber-200/60">
+                <label class="block text-[10.5px] font-bold text-amber-950">🐾 選擇施作毛孩：</label>
+                <select id="quick-ins-pet-select" class="swal2-input !m-0 !w-full text-xs font-bold bg-white" onchange="onQuickInsertPetChange(this)">
+                  <option value="NEW">＋ 現場臨時新毛孩 (下方填寫)</option>
+                </select>
+                <input id="quick-ins-new-pet-name" class="swal2-input !m-0 !w-full text-xs mt-1" placeholder="請輸入毛孩姓名 (例: 圓圓)">
+              </div>
+            ` : ''}
 
-        <div>
-          <label class="font-bold block mb-1">服務項目 *</label>
-          <select id="quick-ins-service-select" class="swal2-input !m-0 !w-full text-xs font-bold" onchange="onQuickInsertServiceSelect(this)">
-            ${serviceOptionsHtml}
-          </select>
-          <input id="quick-ins-custom-service" class="swal2-input !m-0 !w-full text-xs mt-1.5 hidden" placeholder="請手動輸入服務項目名稱">
-        </div>
+            <div id="quick-ins-match-hint" class="text-[11px] font-bold min-h-[16px] leading-tight"></div>
+          </div>
 
-        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="font-bold block mb-1">費用預算 (NT$)</label>
-            <input type="number" id="quick-ins-price" class="swal2-input !m-0 !w-full text-xs font-mono font-bold text-emerald-800" value="0">
+            <label class="font-bold block mb-1">服務項目 *</label>
+            <select id="quick-ins-service-select" class="swal2-input !m-0 !w-full text-xs font-bold" onchange="onQuickServiceSelection(this)">
+              ${serviceOptionsHtml}
+            </select>
+            <input id="quick-ins-custom-service" class="swal2-input !m-0 !w-full text-xs mt-1.5 hidden" placeholder="請手動輸入服務項目名稱">
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="font-bold block mb-1">費用預算 (NT$)</label>
+              <input type="number" id="quick-ins-price" class="swal2-input !m-0 !w-full text-xs font-mono font-bold text-emerald-800" value="0">
+            </div>
+            <div>
+              <label class="font-bold block mb-1">施作時長 (分鐘)</label>
+              <input type="number" id="quick-ins-duration" class="swal2-input !m-0 !w-full text-xs font-bold font-mono" value="60">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3B. 專員排休模式容器 -->
+        <div id="ins-box-off" class="space-y-2.5 hidden">
+          <div>
+            <label class="block font-bold text-gray-700 text-[11px] mb-1">休假長度：</label>
+            <select id="quick-ins-off-dur" class="swal2-input !m-0 !w-full text-xs font-bold">
+              <option value="30">休息 30 分鐘</option>
+              <option value="60" selected>休息 1 小時</option>
+              <option value="90">休息 1.5 小時</option>
+              <option value="120">休息 2 小時</option>
+              <option value="240">半日休假 (4 小時)</option>
+              <option value="480">全日公休 (8 小時)</option>
+            </select>
           </div>
           <div>
-            <label class="font-bold block mb-1">時長 (分)</label>
-            <input type="number" id="quick-ins-duration" class="swal2-input !m-0 !w-full text-xs font-bold font-mono" value="60">
+            <label class="block font-bold text-gray-700 text-[11px] mb-1">休假事由：</label>
+            <input type="text" id="quick-ins-off-reason" class="swal2-input !m-0 !w-full text-xs font-bold" value="專員排休 / 用餐外出">
           </div>
         </div>
       </div>
@@ -5421,25 +5476,48 @@ function quickInsertBooking(date, time, staffId, staffName) {
     confirmButtonText: '確認排入排程',
     cancelButtonText: '取消',
     confirmButtonColor: '#8C7355',
+    didOpen: () => {
+      populateInsTimeOptions(time);
+    },
     preConfirm: () => {
-      let name = document.getElementById('quick-ins-name')?.value.trim();
-      let phone = document.getElementById('quick-ins-phone')?.value.trim();
+      const isOff = (currentInsertMode === 'off');
       const finalD = document.getElementById('quick-ins-date')?.value;
       const finalT = document.getElementById('quick-ins-time')?.value;
 
+      if (isOff) {
+        return {
+          isOff: true,
+          name: document.getElementById('quick-ins-off-reason')?.value.trim() || '專員排休',
+          phone: '專員排休',
+          date: finalD,
+          time: finalT,
+          service: '時段封鎖',
+          price: 0,
+          duration: Number(document.getElementById('quick-ins-off-dur')?.value || 60),
+          resource: 'none',
+          type: 'Group_B'
+        };
+      }
+
+      const name = document.getElementById('quick-ins-name')?.value.trim();
+      const phone = document.getElementById('quick-ins-phone')?.value.trim();
+      const sel = document.getElementById('quick-ins-service-select');
+      const opt = sel.options[sel.selectedIndex];
+
+      let serviceName = opt.value;
+      if (serviceName === 'CUSTOM') {
+        serviceName = document.getElementById('quick-ins-custom-service')?.value.trim() || '現場臨時服務';
+      }
+
       if (!name && !phone) {
-        Swal.showValidationMessage('請至少填寫顧客姓名或手機號碼！');
+        Swal.showValidationMessage('請至少填寫顧客姓名或手機！');
+        return false;
+      }
+      if (!serviceName) {
+        Swal.showValidationMessage('請挑選服務項目！');
         return false;
       }
 
-      // 重名檢驗防呆
-      const hint = document.getElementById('quick-ins-match-hint')?.innerText || '';
-      if (hint.includes('⚠️ 門市有多位同名顧客') && (!phone || phone.length < 8)) {
-        Swal.showValidationMessage('門市有多位同名顧客，請務必補填手機號碼！');
-        return false;
-      }
-
-      // 取得毛孩名稱
       let chosenPet = '';
       if (isPetMode) {
         const petSel = document.getElementById('quick-ins-pet-select')?.value;
@@ -5447,21 +5525,34 @@ function quickInsertBooking(date, time, staffId, staffName) {
       }
 
       return {
+        isOff: false,
         name: name || (phone ? `顧客(${phone.slice(-4)})` : '現場客'),
-        phone: phone || '0900000000',
+        phone: phone || '現場客',
         date: finalD,
         time: finalT,
         petName: chosenPet,
-        service: document.getElementById('quick-ins-service-select')?.value,
+        service: serviceName,
         price: Number(document.getElementById('quick-ins-price')?.value || 0),
-        duration: Number(document.getElementById('quick-ins-duration')?.value || 60)
+        duration: Number(document.getElementById('quick-ins-duration')?.value || 60),
+        resource: opt.getAttribute('data-res') || 'none',
+        type: opt.getAttribute('data-type') || 'Group_B'
       };
     }
   }).then(async r => {
     if (r.isConfirmed && r.value) {
+      // 席位設備容量防撞核算
+      if (!r.value.isOff && r.value.resource && r.value.resource !== 'none') {
+        const hasConflict = checkOverviewResourceCapacity(r.value.resource, r.value.date, r.value.time, r.value.duration);
+        if (hasConflict) {
+          return Swal.fire('席位設備防撞警報！', `門市【${r.value.resource}】在該時段已達全店容量上限！`, 'warning');
+        }
+      }
+
       Swal.showLoading();
-      let noteText = `現場快速插單 (時長: ${r.value.duration}分)`;
-      if (r.value.petName) noteText = `【毛孩1: ${r.value.petName} / 項目: ${r.value.service}】 | ` + noteText;
+      let noteText = r.value.isOff ? '【專員休假排休】' : `現場快速插單 (時長: ${r.value.duration}分)`;
+      if (r.value.petName) {
+        noteText = `【毛孩1: ${r.value.petName} / 項目: ${r.value.service}】 | ` + noteText;
+      }
 
       const payload = {
         store_id: CURRENT_STORE_ID,
@@ -5480,11 +5571,94 @@ function quickInsertBooking(date, time, staffId, staffName) {
       await directSupabaseUpsert('bookings', payload, 'id');
       await fetchDataAndRender();
       renderOverviewGridCanvas();
-      Swal.fire({ title: '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
+      Swal.fire({ title: r.value.isOff ? '休假登記完成！' : '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
     }
   });
 }
 
+// 輔助函式：切換插單模式 (預約 vs 排休)
+function switchInsertMode(mode) {
+  currentInsertMode = mode;
+  const isBooking = (mode === 'booking');
+  document.getElementById('btn-ins-booking').className = isBooking ? "flex-1 py-1.5 rounded-lg bg-white shadow-2xs text-[#8C7355] font-bold" : "flex-1 py-1.5 rounded-lg text-brand-400 font-bold";
+  document.getElementById('btn-ins-off').className = !isBooking ? "flex-1 py-1.5 rounded-lg bg-white shadow-2xs text-rose-700 font-bold" : "flex-1 py-1.5 rounded-lg text-brand-400 font-bold";
+  document.getElementById('ins-box-booking').classList.toggle('hidden', !isBooking);
+  document.getElementById('ins-box-off').classList.toggle('hidden', isBooking);
+}
+
+// 輔助函式：15/30/60 分鐘步進器
+function setOverviewStep(step) {
+  currentOverviewStep = step;
+  [15, 30, 60].forEach(s => {
+    const btn = document.getElementById(`btn-ov-step-${s}`);
+    if (btn) btn.className = (s === step) ? "px-1.5 py-0.5 rounded border border-[#8C7355] bg-[#8C7355] text-white font-mono font-bold text-[10px]" : "px-1.5 py-0.5 rounded border border-brand-200 bg-white font-mono font-bold text-[10px] text-brand-700";
+  });
+  const curTime = document.getElementById('quick-ins-time')?.value || '10:00';
+  populateInsTimeOptions(curTime);
+}
+
+function populateInsTimeOptions(targetTime) {
+  const sel = document.getElementById('quick-ins-time');
+  if (!sel) return;
+  const start = backendData.settings?.shiftStartTime || '09:00';
+  const end = backendData.settings?.shiftEndTime || '21:00';
+  const [sH, sM] = start.split(':').map(Number);
+  const [eH, eM] = end.split(':').map(Number);
+
+  let html = '';
+  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += currentOverviewStep) {
+    const hh = String(Math.floor(m / 60)).padStart(2, '0');
+    const mm = String(m % 60).padStart(2, '0');
+    const tStr = `${hh}:${mm}`;
+    html += `<option value="${tStr}" ${tStr === targetTime ? 'selected' : ''}>${tStr}</option>`;
+  }
+  sel.innerHTML = html;
+}
+
+// 輔助函式：下拉選單選取項目時自動帶入時長與金額
+function onQuickServiceSelection(sel) {
+  const customInput = document.getElementById('quick-ins-custom-service');
+  if (sel.value === 'CUSTOM') {
+    customInput?.classList.remove('hidden');
+    customInput?.focus();
+    return;
+  }
+  customInput?.classList.add('hidden');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt) {
+    document.getElementById('quick-ins-duration').value = opt.getAttribute('data-dur') || 60;
+    document.getElementById('quick-ins-price').value = opt.getAttribute('data-price') || 0;
+  }
+}
+
+// 輔助函式：全店硬體設備席位容量防撞校驗
+function checkOverviewResourceCapacity(resName, dateStr, timeStr, durMins) {
+  const resList = storeResourcesList || [];
+  const resObj = resList.find(r => r.name === resName);
+  const maxCap = resObj ? Number(resObj.capacity || 1) : 1;
+
+  const [sh, sm] = timeStr.split(':').map(Number);
+  const newStart = sh * 60 + sm;
+  const newEnd = newStart + durMins;
+  const dSlash = dateStr.replace(/-/g, '/');
+
+  let activeCount = 0;
+  (backendData.appointments || []).forEach(a => {
+    if (a.date !== dSlash || a.status === '已取消' || a.status === '婉拒') return;
+    const [ah, am] = (a.time || '10:00').split(':').map(Number);
+    const aStart = ah * 60 + am;
+    const aEnd = aStart + (Number(a.duration) || 60);
+
+    const svc = (backendData.services || []).find(s => (a.service || '').includes(s.name));
+    if (svc && (svc.required_resource === resName || svc.resource === resName)) {
+      if (Math.max(newStart, aStart) < Math.min(newEnd, aEnd)) {
+        activeCount++;
+      }
+    }
+  });
+
+  return activeCount >= maxCap;
+}
 // 防抖搜尋：支援姓名 / 電話 / LINE 即時智慧判定
 let searchCustomerTimer = null;
 function debounceQuickCustomerSearch() {
