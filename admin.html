@@ -182,6 +182,19 @@
         <div class="text-[11px] font-bold text-brand-500">專員班表切換</div>
         <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar" id="staff-shift-buttons"></div>
       </div>
+      <!-- 🌟【新增】：排班頁上班日預設狀態設定條 -->
+      <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-2xs flex items-center justify-between text-xs">
+        <div class="flex items-center gap-1.5 font-bold text-brand-800">
+          <i class="fa-solid fa-sliders text-[#8C7355]"></i>
+          <span>新日期排班預設狀態：</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <select id="shift-default-mode-select" onchange="changeShiftDefaultMode(this.value)" class="text-xs font-bold border border-brand-200 rounded-xl px-2.5 py-1.5 bg-brand-50/70 text-brand-900 outline-none cursor-pointer">
+            <option value="open">🟢 上班日預設全開 (休假日自動全休)</option>
+            <option value="closed">🔴 任何日子預設全關 (由專員手動點開)</option>
+          </select>
+        </div>
+      </div>
       <div class="flex gap-2 overflow-x-auto pb-2 border-b border-dashed border-brand-300 no-scrollbar" id="shift-scroll-area"></div>
       <div id="shift-content-area"></div>
     </div>
@@ -1168,10 +1181,12 @@
         <div class="flex gap-2">
           <input type="text" id="txn-search-kw" oninput="renderTransactionsList()" placeholder="搜尋流水號 (TXN)、姓名、電話..." class="flex-1 p-2.5 rounded-xl border border-brand-200 text-xs bg-brand-50/50 outline-none">
           <select id="txn-archive-filter" onchange="renderTransactionsList()" class="p-2.5 rounded-xl border border-brand-200 text-xs font-bold bg-white outline-none">
-            <option value="ACTIVE">近期 45 天內帳務</option>
-            <option value="ARCHIVED">滿 45 天已封存歷史帳務</option>
-            <option value="ALL">全部歷史紀錄</option>
-          </select>
+    <option value="ALL">全部狀態紀錄 (比照母表)</option>
+    <option value="待確認">僅看 待確認</option>
+    <option value="已確認">僅看 已確認</option>
+    <option value="已結單">僅看 已結單</option>
+    <option value="已取消">僅看 已取消/婉拒</option>
+  </select>
         </div>
 
         <!-- 流水帳對帳表格 -->
@@ -3803,32 +3818,41 @@ async function promptChangeAdminPin() {
   }
 }
     
-    // 渲染財務流水帳與 45 天歷史歸檔
+    // ==========================================
+// 財務流水帳：比照純 GAS 試算表，記錄全部狀態與完整時間戳記
+// ==========================================
 function renderTransactionsList() {
   const tbody = document.getElementById('txn-table-tbody');
   if (!tbody) return;
 
   const kw = (document.getElementById('txn-search-kw')?.value || '').trim().toLowerCase();
-  const filter = document.getElementById('txn-archive-filter')?.value || 'ACTIVE';
-  const nowMs = Date.now();
-  const fortyFiveDaysMs = 45 * 24 * 60 * 60 * 1000;
+  const filter = document.getElementById('txn-archive-filter')?.value || 'ALL';
 
-  const finalizedList = (backendData.appointments || []).filter(a => a.status === '已結單');
+  // 🌟【關鍵修改】：不再只抓「已結單」！比照試算表，包含「待確認、已確認、已結單、已取消、婉拒」所有歷史紀錄
+  const allAppts = (backendData.appointments || []).slice();
 
-  let list = finalizedList.map(a => {
-    const apptMs = new Date(a.date.replace(/\//g, '-')).getTime();
-    const isArchived = (nowMs - apptMs) >= fortyFiveDaysMs;
+  // 依照下單時間 (created_at) 由新到舊倒序排列（先下單的排前面或依建立順序）
+  allAppts.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
+
+  let list = allAppts.map(a => {
     const matchTxn = (a.notes || '').match(/【交易流水號:\s*([^】]+)】/);
-    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-${a.date.replace(/\//g,'')}-${String(a.id).substring(0,4).toUpperCase()}`);
-
-    return { ...a, txnNo, isArchived };
+    const txnNo = a.transaction_no || (matchTxn ? matchTxn[1] : `TXN-${(a.date || '').replace(/\//g,'')}-${String(a.id).substring(0,4).toUpperCase()}`);
+    return { ...a, txnNo };
   });
 
-  if (filter === 'ACTIVE') list = list.filter(t => !t.isArchived);
-  else if (filter === 'ARCHIVED') list = list.filter(t => t.isArchived);
+  // 狀態過濾
+  if (filter !== 'ALL') {
+    list = list.filter(t => t.status === filter);
+  }
 
+  // 關鍵字搜尋
   if (kw) {
-    list = list.filter(t => t.txnNo.toLowerCase().includes(kw) || t.name.toLowerCase().includes(kw) || t.phone.includes(kw));
+    list = list.filter(t => 
+      t.txnNo.toLowerCase().includes(kw) || 
+      (t.name || '').toLowerCase().includes(kw) || 
+      String(t.phone || '').includes(kw) ||
+      (t.service || '').toLowerCase().includes(kw)
+    );
   }
 
   if (list.length === 0) {
@@ -3836,21 +3860,29 @@ function renderTransactionsList() {
     return;
   }
 
-  tbody.innerHTML = list.map(t => `
-    <tr class="hover:bg-brand-50/50">
-      <td class="py-2.5 px-2 font-bold text-brand-900 font-mono">${t.txnNo}</td>
-      <td class="py-2.5 px-2 text-gray-500 font-sans text-[11px] whitespace-nowrap">${t.date} ${t.time}</td>
-      <td class="py-2.5 px-2 font-bold font-sans">${t.name} <span class="text-gray-400 font-normal">(${t.phone})</span></td>
-      <td class="py-2.5 px-2 font-sans whitespace-normal break-words min-w-[120px]">${t.service}</td>
-      <td class="py-2.5 px-2 font-black text-emerald-700 font-mono whitespace-nowrap">NT$ ${Number(t.finalPrice).toLocaleString()}</td>
-      <td class="py-2.5 px-2 font-sans text-[10.5px] text-gray-600 whitespace-normal break-words leading-relaxed min-w-[180px]">${t.notes}</td>
-      <td class="py-2.5 px-2 text-right font-sans whitespace-nowrap">
-        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.isArchived ? 'bg-gray-100 text-gray-600' : 'bg-emerald-100 text-emerald-800'}">
-          ${t.isArchived ? '已封存(>45天)' : '常態中'}
-        </span>
-      </td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = list.map(t => {
+    // 依狀態賦予專屬標籤
+    let statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">待確認</span>';
+    if (t.status === '已確認') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800">已確認</span>';
+    else if (t.status === '已結單') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">已結單</span>';
+    else if (t.status === '已取消' || t.status === '婉拒') statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">已取消/婉拒</span>';
+
+    const timestamp = t.created_at ? formatFriendlyTime(t.created_at) : `${t.date} ${t.time}`;
+
+    return `
+      <tr class="hover:bg-brand-50/50 border-b border-brand-100 text-xs">
+        <td class="py-2.5 px-2 font-bold text-brand-900 font-mono">${t.txnNo}</td>
+        <td class="py-2.5 px-2 text-gray-500 font-mono text-[10.5px] whitespace-nowrap">${timestamp}</td>
+        <td class="py-2.5 px-2 font-bold font-sans">${t.name} <span class="text-gray-400 font-normal">(${t.phone})</span></td>
+        <td class="py-2.5 px-2 font-sans whitespace-normal break-words min-w-[120px]">${t.service}</td>
+        <td class="py-2.5 px-2 font-black text-emerald-700 font-mono whitespace-nowrap">NT$ ${Number(t.finalPrice || t.price || 0).toLocaleString()}</td>
+        <td class="py-2.5 px-2 font-sans text-[10.5px] text-gray-600 whitespace-normal break-words leading-relaxed min-w-[160px]">${t.notes || '一般預約'}</td>
+        <td class="py-2.5 px-2 text-right font-sans whitespace-nowrap">
+          ${statusBadge}
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // 補齊 CSV 匯出引擎（自帶 UTF-8 BOM，Excel 打開不亂碼）
@@ -6195,23 +6227,27 @@ function renderSingleCardHTML(a) {
       <i class="fa-solid fa-user-slash text-[9px]"></i> 黑名單
     </button>
   `;
-  const storeDisplayName = backendData.settings?.storeName || '門市';
-const lineNoticeText = `【${storeDisplayName} 預約排程確認】\n親愛的 ${a.name} 您好：\n您的預約已為您確認保留！\n• 預約時段：${a.date} ${a.time}\n• 施作項目：${a.service}\n• 服務專員：${a.staffName || '不指定'}\n期待為您服務！`;
-const lineShareUrl = `https://line.me/R/msg/text/?${encodeURIComponent(lineNoticeText)}`;
 
-const lineShareBtnHtml = `
-  <a href="${lineShareUrl}" target="_blank" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-lg text-[10.5px] font-bold shadow-xs" title="免UID：點擊直接開啟手機LINE發送給客人">
-    <i class="fa-brands fa-line text-xs"></i> 傳LINE
-  </a>
-`;
+  // 🌟【雙軌並行傳 LINE 按鈕】：官方推播 + 直達官方後台聊天室 (chat.line.biz)
+  const custUid = a.line_user_id || (a.lineName && a.lineName.startsWith('U') ? a.lineName : '');
+  const safeName = (a.name || '').replace(/'/g, "\\'");
+  const safeService = (a.service || '').replace(/'/g, "\\'");
+  const safeDate = a.date || '';
+  const safeTime = a.time || '';
+  const safeStaff = (a.staffName || '不指定').replace(/'/g, "\\'");
+
+  const lineShareBtnHtml = `
+    <button type="button" onclick="openDualLineActionModal('${a.id}', '${safeName}', '${custUid}', '${safeDate}', '${safeTime}', '${safeService}', '${safeStaff}')" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#06C755] hover:bg-[#05b34c] text-white rounded-lg text-[10.5px] font-bold shadow-xs transition" title="開啟官方 LINE 發送/對話雙軌選單">
+      <i class="fa-brands fa-line text-xs"></i> 傳LINE
+    </button>
+  `;
 
   return `
     <div class="bg-white p-4 rounded-2xl border-l-4 ${a.status === '已結單' ? 'border-l-emerald-500' : 'border-l-[#8C7355]'} border ${cardBorderClass} shadow-sm space-y-2.5 text-xs transition">
       
-      <!-- 頂部資訊列 -->
+      <!-- 頂部資訊列 (時間、姓名、電話、黑名單標記) -->
       <div class="flex justify-between items-start">
         <div class="space-y-1">
-          <!-- 時間與顧客類型標籤 -->
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-black text-[#8C7355] bg-brand-50 px-2.5 py-1 rounded-xl border border-brand-200 font-mono tracking-wide flex items-center gap-1.5">
               <i class="fa-solid fa-clock text-xs text-brand-500"></i>
@@ -6223,10 +6259,10 @@ const lineShareBtnHtml = `
             </span>
           </div>
 
-          <!-- 顧客姓名、電話、黑名單標籤與毛孩履歷按鈕 -->
           <div class="font-bold text-brand-900 text-sm flex items-center gap-2 pt-0.5">
             <span class="${isCustBlocked ? 'text-rose-700 font-black' : ''}">${a.name}</span>
-            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>${isCustBlocked ? `
+            <span class="text-brand-400 font-normal font-mono">(${a.phone})</span>
+            ${isCustBlocked ? `
               <span class="px-2 py-0.5 bg-rose-600 text-white rounded-md text-[10px] font-black tracking-wider shadow-xs animate-pulse inline-flex items-center gap-1">
                 <i class="fa-solid fa-ban text-[9px]"></i> 黑名單
               </span>
@@ -6239,7 +6275,7 @@ const lineShareBtnHtml = `
           </div>
         </div>
 
-        <!-- 狀態切換選單與專員標籤 (乾淨單一區塊，排除重複貼上的 DOM) -->
+        <!-- 狀態選單與專員標籤 -->
         <div class="flex flex-col items-end gap-1">
           <select class="text-[11px] font-bold border border-brand-200 rounded-lg px-2 py-0.5 bg-brand-50 outline-none cursor-pointer" onchange="quickUpdateStatus('${a.id}', this.value)">
             <option value="待確認" ${a.status === '待確認' ? 'selected' : ''}>待確認</option>
@@ -6252,19 +6288,20 @@ const lineShareBtnHtml = `
             ${a.staffName}
           </span>
         </div>
-      </div> <!-- 頂部資訊列結束 -->
+      </div>
 
       <!-- 訂金狀態提示 -->
       ${depositBadgeHtml}
 
-      <!-- 預約項目與費用 (結構化清楚呈現：主項目、加購、使用方案抵扣) -->
+      <!-- 預約項目與費用 -->
       <div class="p-3 bg-brand-50 rounded-2xl space-y-1.5 font-mono text-xs border border-brand-200/70">
         <div class="font-bold text-brand-900 font-sans flex items-start gap-1">
           <i class="fa-solid fa-scissors text-brand-500 mt-0.5"></i>
           <span class="leading-relaxed">施作項目：<b>${a.service || '無指定項目'}</b></span>
         </div>
         <div class="flex justify-between items-center text-brand-700 font-bold border-t border-brand-200/50 pt-1">
-          <span>預估費用：${priceDisplay}</span>${a.status === '已結單' ? `<span class="text-emerald-700 font-black font-sans text-xs bg-emerald-100 px-2 py-0.5 rounded-lg">實收: NT$ ${Number(a.finalPrice).toLocaleString()}</span>` : ''}
+          <span>預估費用：${priceDisplay}</span>
+          ${a.status === '已結單' ? `<span class="text-emerald-700 font-black font-sans text-xs bg-emerald-100 px-2 py-0.5 rounded-lg">實收: NT$ ${Number(a.finalPrice).toLocaleString()}</span>` : ''}
         </div>
         ${addonTags.length > 0 ? `
           <div class="pt-1 border-t border-brand-200/50 flex flex-wrap gap-1 font-sans">
@@ -6273,10 +6310,10 @@ const lineShareBtnHtml = `
         ` : ''}
       </div>
 
-      <!-- 照護明細區 (含專車接送點擊導航與複製) -->
+      <!-- 照護明細區 (寵美專用) -->
       ${careDetailsHtml}
 
-      <!-- 通訊與契約 -->
+      <!-- LINE 暱稱與顧客備註 -->
       <div class="p-2.5 bg-brand-50/70 rounded-xl text-[11px] space-y-1.5">
         <div class="flex justify-between items-center">
           <span class="flex items-center gap-1.5 font-bold text-brand-900 text-xs">
@@ -6296,7 +6333,7 @@ const lineShareBtnHtml = `
         ` : ''}
       </div>
 
-      <!-- 純淨內部備註欄 (完全抽離毛孩資訊，只供店家記錄) -->
+      <!-- 店內內部備註欄 -->
       <div class="w-full flex items-center gap-2 pt-1">
         <input type="text" id="admin-note-${a.id}" placeholder="點此輸入店內內部筆記..." value="${cleanUserNote}" class="flex-1 min-w-0 p-2.5 text-xs border border-brand-200 rounded-xl bg-white outline-none focus:border-brand-500 font-medium">
         <button type="button" onclick="saveAdminNoteClean('${a.id}', '${parsedEmail}')" class="px-3.5 py-2.5 bg-[#8C7355] hover:bg-[#7A6246] text-white rounded-xl font-bold text-xs shrink-0 shadow-xs transition">
@@ -6304,7 +6341,7 @@ const lineShareBtnHtml = `
         </button>
       </div>
 
-      <!-- 操作按鈕列 -->
+      <!-- 底部操作按鈕列 (撥號、通訊、雙軌傳LINE、黑名單、改期、改項目、結單) -->
       <div class="flex flex-wrap justify-between items-center pt-2 border-t border-brand-100 gap-2">
         <div class="flex items-center gap-1.5">
           <a href="tel:${rawPhone}" class="inline-flex items-center gap-1 px-2.5 py-1 bg-[#6E8771] hover:bg-[#5C725E] text-white rounded-lg text-[10.5px] font-bold shadow-xs">
@@ -6330,7 +6367,8 @@ const lineShareBtnHtml = `
           <button type="button" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs" onclick="openCheckoutModal('${a.id}', '${a.name}', '${a.phone}', '${a.service}', ${a.price || 0}, ${Boolean(shuttleText)})">結單</button>
         </div>
       </div>
-    </div>`;
+    </div>
+  `;
 }
     function formatFriendlyTime(isoStr) {
       if (!isoStr) return '';
@@ -7082,12 +7120,13 @@ function renderBoardingCareChecklist() {
   }
     
     // ==========================================
-    // 8. 專員排班調度 (高對比色切換)
-    // ==========================================
-    function renderShift() {
-  let staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+// 8. 專員排班調度 (智慧休假連動與高對比色切換)
+// ==========================================
+function renderShift() {
+  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   const staffBtns = document.getElementById('staff-shift-buttons');
 
+  // A. 專員切換按鈕列
   if (staffBtns) {
     if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
       activeShiftStaffId = CURRENT_STAFF_PARAM;
@@ -7103,7 +7142,7 @@ function renderBoardingCareChecklist() {
 
       if (hasStaff) {
         allStoreBtn = `
-          <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" onclick="Swal.fire('排班提醒', '門市已建立專員名冊，請直接點選下方專員個別編輯排班！', 'info')">
+          <button type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" onclick="Swal.fire('排班提醒', '門市已建立個別專員名冊，請直接點選下方專員個別編輯排班！', 'info')">
             <i class="fa-solid fa-lock mr-1"></i> 全店不指定 (已鎖定)
           </button>
         `;
@@ -7124,16 +7163,20 @@ function renderBoardingCareChecklist() {
     }
   }
 
-  // 1. 日期導航按鈕列（核心優化：橫排顯示「週幾」＋ 門市公休日智慧阻斷）
+  // B. 日期導航按鈕列 (智慧顯示週幾，公休鎖定反灰)
   const dates = backendData.scheduleDates || [];
   const scrollArea = document.getElementById('shift-scroll-area');
-  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days : [];
-  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : [];
+  const weeklyOff = Array.isArray(backendData.settings?.weekly_off_days) ? backendData.settings.weekly_off_days.map(Number) : [];
+  const customOff = Array.isArray(backendData.settings?.custom_off_dates) ? backendData.settings.custom_off_dates : (customOffDatesArray || []);
   const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
   if (scrollArea) {
-    let html = `<div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-700'}" onclick="selectShiftDate('ALL')">全部日期</div>`;
-    
+    let html = `
+      <div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === 'ALL' ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-700'}" onclick="selectShiftDate('ALL')">
+        全部日期
+      </div>
+    `;
+
     dates.forEach(d => {
       const dObj = new Date(d.date);
       const dayOfWeek = dObj.getDay();
@@ -7143,47 +7186,70 @@ function renderBoardingCareChecklist() {
       const isStoreOff = isWeeklyOff || isCustomOff;
 
       if (isStoreOff) {
-        // 公休日自動鎖定反灰，點擊提示公休，禁止排班
         html += `
           <div class="shrink-0 px-3 py-1.5 rounded-xl text-center border text-xs font-bold bg-gray-100 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed select-none" onclick="Swal.fire('門市公休', '${d.date} (${weekStr}) 為門市公休日，無法排班', 'info')">
             <div class="text-[9.5px]">${weekStr} (公休)</div>
             <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
-          </div>`;
+          </div>
+        `;
       } else {
         html += `
           <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectShiftDate('${d.date}')">
             <div class="text-[9.5px] opacity-70">${weekStr}</div>
             <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
-          </div>`;
+          </div>
+        `;
       }
     });
     scrollArea.innerHTML = html;
   }
 
-  // 2. 時段內容區域
+  // C. 時段內容網格
   const content = document.getElementById('shift-content-area');
   if (!content) return;
 
   if (currentShiftDate === 'ALL') {
-    content.innerHTML = `<div class="space-y-2">${dates.map(d => `
-      <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
-        <div><div class="font-bold text-brand-900">${d.date}</div><div class="text-[11px] text-brand-400">點擊右側排定開放時段</div></div>
-        <button class="px-3.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 font-bold rounded-xl text-xs transition" onclick="selectShiftDate('${d.date}')">排定時段 ➔</button>
+    content.innerHTML = `
+      <div class="space-y-2">
+        ${dates.map(d => `
+          <div class="p-3.5 bg-white rounded-2xl border border-brand-200 flex justify-between items-center text-xs">
+            <div>
+              <div class="font-bold text-brand-900">${d.date}</div>
+              <div class="text-[11px] text-brand-400">點擊右側排定開放時段</div>
+            </div>
+            <button class="px-3.5 py-1.5 bg-brand-100 hover:bg-brand-200 text-brand-800 font-bold rounded-xl text-xs transition" onclick="selectShiftDate('${d.date}')">
+              排定時段 ➔
+            </button>
+          </div>
+        `).join('')}
       </div>
-    `).join('')}</div>`;
+    `;
     return;
   }
 
-  const start = backendData.settings?.shiftStartTime || '09:00';
-  const end = backendData.settings?.shiftEndTime || '19:00';
-  const interval = Number(backendData.settings?.shiftInterval || 30);
+  // 判定選定日期是否為公休日
+  const currentDObj = new Date(currentShiftDate);
+  const currentDayOfWeek = currentDObj.getDay();
+  const isWeeklyOff = weeklyOff.includes(currentDayOfWeek);
+  const isCustomOff = customOff.includes(currentShiftDate) || customOff.includes(currentShiftDate.replace(/\//g, '-'));
+  const isTodayStoreOff = isWeeklyOff || isCustomOff;
+
+  const start = backendData.settings?.shiftStartTime || backendData.settings?.shift_start_time || '09:00';
+  const end = backendData.settings?.shiftEndTime || backendData.settings?.shift_end_time || '19:00';
+  const interval = Number(backendData.settings?.shiftInterval || backendData.settings?.shift_interval || 30);
   const [sH, sM] = start.split(':').map(Number);
   const [eH, eM] = end.split(':').map(Number);
   const slots = [];
   for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
-    let hh = Math.floor(m / 60); let mm = m % 60;
+    const hh = Math.floor(m / 60);
+    const mm = m % 60;
     slots.push((hh < 10 ? '0' + hh : hh) + ':' + (mm === 0 ? '00' : mm));
   }
+
+  // 🌟 讀取排班頁當前選擇的預設偏好模式 ('open' 或 'closed')
+  const defaultMode = localStorage.getItem(`zy_shift_default_mode_${CURRENT_STORE_ID}`) || 'open';
+  const defaultModeSelect = document.getElementById('shift-default-mode-select');
+  if (defaultModeSelect) defaultModeSelect.value = defaultMode;
 
   const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
   if (!shiftSlotStates[staffKey]) {
@@ -7192,33 +7258,48 @@ function renderBoardingCareChecklist() {
       shiftSlotStates[staffKey] = { ...savedSchedules[staffKey] };
     } else {
       shiftSlotStates[staffKey] = {};
-      slots.forEach(t => shiftSlotStates[staffKey][t] = false);
+      // 🌟 核心分流：
+      // 若設定為 'closed' ➔ 任何日子初次打開皆全關 (false)
+      // 若設定為 'open'   ➔ 上班日全開 (true)，休假日自動全關 (false)
+      const defaultState = (defaultMode === 'closed') ? false : !isTodayStoreOff;
+      slots.forEach(t => shiftSlotStates[staffKey][t] = defaultState);
     }
   }
 
   content.innerHTML = `
     <div class="bg-white rounded-3xl border border-brand-200 overflow-hidden shadow-sm text-xs">
       <div class="p-4 bg-brand-50 border-b border-brand-200 flex justify-between items-center">
-        <div><div class="font-bold text-brand-900 text-sm">${currentShiftDate} 班表設定</div><div class="text-[10px] text-brand-400">鮮綠為開放預約，亮紅為休息關閉</div></div>
+        <div>
+          <div class="font-bold text-brand-900 text-sm flex items-center gap-1.5">
+            <span>${currentShiftDate} 班表設定</span>
+            ${isTodayStoreOff ? '<span class="px-2 py-0.5 bg-rose-100 text-rose-700 text-[10px] rounded-md font-bold">門市休假日</span>' : '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] rounded-md font-bold">正常營業日</span>'}
+          </div>
+          <div class="text-[10px] text-brand-400">鮮綠為開放預約，亮紅為休息關閉</div>
+        </div>
         <div class="flex gap-2">
-          <button type="button" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', false)">全休</button>
-          <button type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', true)">全開</button>
+          <button type="button" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', false)">全時段關閉</button>
+          <button type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', true)">全時段開啟</button>
         </div>
       </div>
-      <div class="divide-y divide-brand-100 max-h-[60vh] overflow-y-auto">${slots.map(t => {
-        const isOpen = shiftSlotStates[staffKey][t] === true;
-        return `
-          <div class="p-3 flex justify-between items-center">
-            <span class="font-bold text-brand-900 font-mono text-sm">${t}</span>
-            <button type="button" class="px-4 py-1.5 rounded-full font-black text-xs transition border ${
-              isOpen ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
-            }" onclick="toggleSlotState('${staffKey}', '${t}', this)">
-              ${isOpen ? '✓ 上班中 (開放預約)' : '✕ 已關閉 (休息)'}
-            </button>
-          </div>`;
-      }).join('')}</div>
-    </div>`;
+      <div class="divide-y divide-brand-100 max-h-[60vh] overflow-y-auto">
+        ${slots.map(t => {
+          const isOpen = shiftSlotStates[staffKey][t] === true;
+          return `
+            <div class="p-3 flex justify-between items-center">
+              <span class="font-bold text-brand-900 font-mono text-sm">${t}</span>
+              <button type="button" class="px-4 py-1.5 rounded-full font-black text-xs transition border ${
+                isOpen ? 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-600 shadow-xs' : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+              }" onclick="toggleSlotState('${staffKey}', '${t}', this)">
+                ${isOpen ? '✓ 上班中 (開放預約)' : '✕ 已關閉 (休息)'}
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
 }
+    
     function switchShiftStaff(id) { activeShiftStaffId = id; renderShift(); }
     function selectShiftDate(dStr) { currentShiftDate = dStr; renderShift(); }
     function toggleSlotState(staffKey, timeStr, btn) {
@@ -10785,18 +10866,21 @@ function routeToSettingsPage(btnEl) {
 // 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
 // ========================================================
 function populateLifetimeSettings() {
+  const ltPage = document.getElementById('page-settings-lifetime');
+  const subPage = document.getElementById('page-settings');
+  if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
+  if (subPage) { subPage.oninput = null; subPage.onchange = null; }
+
+  // 🌟 正確宣告 s 於最前方，杜絕 ReferenceError 崩潰
+  const s = backendData.settings || {};
+  const store = backendData.storeInfo || {};
+
+  // 🌟 正確回填店休日期陣列
   const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
   customOffDatesArray = rawCustomOff
     .map(d => String(d).trim().replace(/-/g, '/'))
     .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
-  const ltPage = document.getElementById('page-settings-lifetime');
-  const subPage = document.getElementById('page-settings');
-  // 🌟【防呆核心】：回填前徹底拔除監聽器，防止瀏覽器填入時誤觸發「未儲存提示條」
-  if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
-  if (subPage) { subPage.oninput = null; subPage.onchange = null; }
-
-  const s = backendData.settings || {};
-  const store = backendData.storeInfo || {};
+  
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
   const currentMode = s.industryMode || store.industry_type || 'beauty';
 
@@ -11058,6 +11142,8 @@ function populateLifetimeSettings() {
   // 關閉未儲存提示條
   markLifetimeSettingsSaved();
   markSettingsSaved();
+  renderOffDateCalendar('lt');
+  renderOffDateCalendar('');
 
   // 延遲掛回監聽器，確保回填過程完全結束才開始監聽手動異動
   setTimeout(() => {
@@ -12610,6 +12696,127 @@ function copyFrontMenuQueryUrl(elementId = 'front-menu-query-url') {
       confirmButtonColor: '#8C7355'
     });
   });
+}
+
+    // ========================================================
+// 🌟【雙軌防禦核心】官方推播 Flex 卡片 ＋ 直達 chat.line.biz 官方聊天室
+// ========================================================
+function openDualLineActionModal(bookingId, custName, custUid, date, time, service, staffName) {
+  const storeName = backendData.settings?.storeName || '門市';
+  const hasUid = Boolean(custUid && custUid.startsWith('U'));
+
+  // 1. 若客人沒有 UID (從外部瀏覽器下單) ➔ 直達 chat.line.biz 並自動複製預約文案
+  if (!hasUid) {
+    const defaultCopyText = `【${storeName} 預約排程確認】\n親愛的 ${custName} 您好：\n您的預約已為您確認保留！\n• 預約時段：${date} ${time}\n• 施作項目：${service}\n• 服務專員：${staffName}\n期待為您服務！`;
+    navigator.clipboard.writeText(defaultCopyText);
+
+    Swal.fire({
+      title: '前往官方後台聊天室',
+      html: `
+        <div class="text-left text-xs bg-amber-50 p-3.5 rounded-2xl border border-amber-200 text-amber-950 space-y-2 leading-relaxed">
+          <div>• 顧客姓名：<b>${custName}</b></div>
+          <div class="text-emerald-700 font-bold">✓ 預約確認文案已自動複製至剪貼簿！</div>
+          <div class="text-[11px] text-gray-500 pt-1 border-t border-amber-200">
+            該客人無登入 UID（由外部瀏覽器下單），點擊下方按鈕將開啟 <b>LINE 官方帳號管理後台 (chat.line.biz)</b>，您可以搜尋該客人並直接貼上發送！
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: '開啟 chat.line.biz 聊天室',
+      cancelButtonText: '關閉',
+      confirmButtonColor: '#06C755'
+    }).then(r => {
+      if (r.isConfirmed) {
+        window.open('https://chat.line.biz/', '_blank');
+      }
+    });
+    return;
+  }
+
+  // 2. 若客人有 UID (U 開頭) ➔ 提供【官方主動推播】與【直達專屬聊天室】二合一選單
+  Swal.fire({
+    title: `LINE 官方通知與對話 - ${custName}`,
+    html: `
+      <div class="text-left text-xs space-y-3 font-sans">
+        <div class="p-3 bg-brand-50 rounded-2xl border border-brand-200 space-y-1">
+          <div class="flex justify-between items-center">
+            <span class="text-brand-900 font-bold">顧客姓名：${custName}</span>
+            <span class="text-emerald-700 font-mono font-bold text-[10px] bg-emerald-100 px-2 py-0.5 rounded-md">✓ 已綁定 UID</span>
+          </div>
+          <div class="text-gray-500 font-mono text-[11px] truncate">UID: ${custUid}</div>
+          <div class="text-brand-800 text-[11.5px] pt-1 border-t border-brand-200/60 font-bold">
+            排程：${date} ${time} ｜ ${service}
+          </div>
+        </div>
+
+        <div class="text-[11.5px] text-gray-600 space-y-2">
+          <div class="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60">
+            <b class="text-emerald-900">方法一：官方機器人推播 Flex 卡片</b>
+            <div class="text-[10.5px] text-emerald-800">直接以官方帳號發送精緻排程確認卡片至客人的 LINE 視窗（扣除 1 則額度）。</div>
+          </div>
+          <div class="p-2.5 rounded-xl border border-blue-200 bg-blue-50/60">
+            <b class="text-blue-900">方法二：直達官方後台聊天室 (chat.line.biz)</b>
+            <div class="text-[10.5px] text-blue-800">免扣則數！直接在新分頁開啟該顧客在 LINE 官方後台的一對一對話視窗。</div>
+          </div>
+        </div>
+      </div>
+    `,
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: '🚀 方法一：官方推播卡片',
+    denyButtonText: '💬 方法二：開啟官方聊天室',
+    cancelButtonText: '取消',
+    confirmButtonColor: '#06C755',
+    denyButtonColor: '#2563EB'
+  }).then(async r => {
+    // 執行方法一：官方主動推播 Flex 卡片
+    if (r.isConfirmed) {
+      if (typeof notifyCustomerStatusChanged === 'function') {
+        notifyCustomerStatusChanged(bookingId, '已確認');
+        Swal.fire({
+          title: '已發送預約確認卡片！',
+          text: `官方帳號已自動將排程卡片推送至 ${custName} 的 LINE 視窗。`,
+          icon: 'success',
+          timer: 1200,
+          showConfirmButton: false
+        });
+      }
+    } 
+    // 執行方法二：開啟 chat.line.biz 官方聊天室
+    else if (r.isDenied) {
+      // 複製確認文案備用
+      const defaultCopyText = `【${storeName} 預約排程確認】\n親愛的 ${custName} 您好：\n您的預約已為您確認保留！\n• 預約時段：${date} ${time}\n• 施作項目：${service}\n• 服務專員：${staffName}\n期待為您服務！`;
+      navigator.clipboard.writeText(defaultCopyText);
+
+      // 直達 LINE 官方後台該顧客對話
+      window.open(`https://chat.line.biz/`, '_blank');
+    }
+  });
+}
+
+    // ==========================================
+// 切換排班頁上班日初次預設狀態 ('open' 或 'closed')
+// ==========================================
+function changeShiftDefaultMode(mode) {
+  localStorage.setItem(`zy_shift_default_mode_${CURRENT_STORE_ID}`, mode);
+
+  // 提示切換成功
+  Swal.fire({
+    title: mode === 'open' ? '已切換為：上班日預設全開' : '已切換為：預設全時段關閉',
+    text: mode === 'open' ? '上班日初次切換將預設開放全部時段，休假日自動全休。' : '初次進入任何日期將預設全時段關閉，由人員自行點擊開放。',
+    icon: 'success',
+    timer: 1000,
+    showConfirmButton: false
+  });
+
+  // 如果目前查看的日期尚未儲存排班資料，立即套用新預設重繪
+  const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
+  const savedSchedules = backendData.settings?.staffSchedules || {};
+  if (!savedSchedules[staffKey]) {
+    delete shiftSlotStates[staffKey];
+    renderShift();
+  }
 }
   </script>
 </body>
