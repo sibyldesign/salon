@@ -10871,16 +10871,16 @@ function populateLifetimeSettings() {
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
   if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
-  // 🌟 正確宣告 s 於最前方，杜絕 ReferenceError 崩潰
+  // 🌟 必須先定義 s 與 store，杜絕 ReferenceError
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
 
-  // 🌟 正確回填店休日期陣列
-  const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
+  // 🌟 正確提取並正規化店休陣列
+  const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : (backendData.settings?.customOffDates || []);
   customOffDatesArray = rawCustomOff
     .map(d => String(d).trim().replace(/-/g, '/'))
     .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
-  
+
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
   const currentMode = s.industryMode || store.industry_type || 'beauty';
 
@@ -11032,6 +11032,8 @@ function populateLifetimeSettings() {
       renderAdminMealOptions('lt');
       renderOffDateCalendar('lt');
   renderOffDateCalendar('');
+      renderCustomOffDatesTags('lt');
+  renderCustomOffDatesTags('');
     }
   }
 
@@ -11164,6 +11166,10 @@ async function saveLifetimeStoreSettings() {
   const getVal = id => (document.getElementById(id)?.value || '').trim();
 
   const weeklyOff = Array.from(document.querySelectorAll('#lt-weekly-off-grid input:checked')).map(el => Number(el.value));
+  
+  // 🌟 確保從當前已選店休陣列去重並排序格式化
+  const cleanCustomOff = Array.from(new Set((customOffDatesArray || []).map(d => String(d).trim().replace(/-/g, '/')))).filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d)).sort();
+
   const selectedTheme = getVal('lt-theme-color') || 'latte';
   const storeTitle = getVal('lt-title') || backendData.settings?.storeName || '沙龍門市';
 
@@ -11331,13 +11337,18 @@ async function saveLifetimeStoreSettings() {
       }
     }
 
-    if (backendData.settings) Object.assign(backendData.settings, payload);
+    if (backendData.settings) {
+      Object.assign(backendData.settings, payload);
+      backendData.settings.custom_off_dates = cleanCustomOff; // 確保記憶體同步更新店休陣列
+    }
+    customOffDatesArray = cleanCustomOff; // 確保全域店休陣列同步
+
     if (backendData.storeInfo) {
       backendData.storeInfo.line_channel_token = lineTokenVal;
       backendData.storeInfo.owner_line_uid = ownerUidVal;
       backendData.storeInfo.owner_email = ownerEmailVal;
     }
-
+    
     markLifetimeSettingsSaved();
     markSettingsSaved();
     Swal.fire({ title: '設定已成功儲存！', text: '已更新至雲端，重整網頁不會遺失。', icon: 'success', timer: 1200, showConfirmButton: false });
