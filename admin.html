@@ -4550,15 +4550,13 @@ async function fetchDataAndRender() {
     customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
     
     const availableDates = [];
-    const today = new Date();
-    for (let i = 0; i < 60; i++) {
-      const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-      const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
-      if (!weeklyOffDays.includes(target.getDay()) && !customOffDatesArray.includes(dStr)) {
+      const today = new Date();
+      for (let i = 0; i < 60; i++) {
+        const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+        const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+        // 🌟 60 天全部推入，休假按鈕不隱藏，方便後台排班與私約急客
         availableDates.push(dStr);
       }
-    }
-
     // 🌟【修復】：支援字串與陣列雙向相容解析，確保多圖 100% 正確載入九宮格
     let loadedPromo = [];
     if (sCfg.promo_imgs) {
@@ -7186,18 +7184,30 @@ function renderShift() {
       const isCustomOff = customOff.includes(d.date) || customOff.includes(d.date.replace(/\//g, '-'));
       const isStoreOff = isWeeklyOff || isCustomOff;
 
+      const isSelected = (currentShiftDate === d.date);
+
       if (isStoreOff) {
+        // 🌟 休假日按鈕：醒目淡紅底標註 (休)，但允許點擊切換進去手動開班！
         html += `
-          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center border text-xs font-bold bg-gray-100 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed select-none" onclick="Swal.fire('門市公休', '${d.date} (${weekStr}) 為門市公休日，無法排班', 'info')">
-            <div class="text-[9.5px]">${weekStr} (公休)</div>
-            <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${
+            isSelected 
+              ? 'bg-rose-600 text-white border-rose-600 shadow-sm' 
+              : 'bg-rose-50/80 hover:bg-rose-100 border-rose-200 text-rose-800'
+          }" onclick="selectShiftDate('${d.date}')" title="門市休假（點擊可進入手動為私約急客開放時段）">
+            <div class="text-[9.5px] ${isSelected ? 'text-white' : 'text-rose-600'} font-bold">${weekStr} (休)</div>
+            <div class="font-bold text-xs font-mono">${d.date.split('/')[2]}日</div>
           </div>
         `;
       } else {
+        // 正常上班日按鈕
         html += `
-          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${currentShiftDate === d.date ? 'bg-[#8C7355] text-white border-[#8C7355]' : 'bg-white border-brand-200 text-brand-800'}" onclick="selectShiftDate('${d.date}')">
+          <div class="shrink-0 px-3 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${
+            isSelected 
+              ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' 
+              : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+          }" onclick="selectShiftDate('${d.date}')">
             <div class="text-[9.5px] opacity-70">${weekStr}</div>
-            <div class="font-bold text-xs">${d.date.split('/')[2]}日</div>
+            <div class="font-bold text-xs font-mono">${d.date.split('/')[2]}日</div>
           </div>
         `;
       }
