@@ -1541,11 +1541,15 @@ function applyIndustryModeUI(mode) {
       localStorage.setItem('zy_cached_theme', resolvedTheme);
       applyThemeColors(resolvedTheme);
 
+      // 🌟 依據後台設定開放的月數動態計算天數 (每月約30天)
+      const openMonths = Number(sCfg.booking_open_months || 3);
+      const totalDaysToOpen = openMonths * 31;
+
       const weeklyOffDays = Array.isArray(sCfg.weekly_off_days) ? sCfg.weekly_off_days.map(Number) : [];
       const customOffDates = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates.map(d => d.replace(/-/g, '/')) : [];
       const availableDates = [];
       const today = new Date();
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < totalDaysToOpen; i++) {
         const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
         const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
         if (!weeklyOffDays.includes(target.getDay()) && !customOffDates.includes(dStr)) {
@@ -3166,37 +3170,40 @@ function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
     const timeFormatted = `${hh}:${mm}`;
 
     // A. 班表是否開放
-    // A. 班表是否開放 (🌟 修復：未個別排班之營業日，自動預設全開，防止日期變全灰)
+    // A. 班表是否開放檢驗 (全開/全關與後台 100% 同步)
     let isShiftOpen = false;
+    const defaultMode = sCfg.shift_default_mode || 'open'; // 讀取後台預設全開或全關
+
     if (targetStaffId !== 'all') {
       const staffKey = `${targetStaffId}_${dSlash}`;
-      if (schedules[staffKey]) {
+      if (schedules[staffKey] && schedules[staffKey][timeFormatted] !== undefined) {
         isShiftOpen = (schedules[staffKey][timeFormatted] === true);
       } else {
-        isShiftOpen = true; // 上班日未排班預設開放
+        isShiftOpen = (defaultMode === 'open'); // 後台設全開此處就是開，設全關就是關
       }
     } else {
       const allStoreKey = `all_${dSlash}`;
-      if (schedules[allStoreKey]) {
+      if (schedules[allStoreKey] && schedules[allStoreKey][timeFormatted] !== undefined) {
         isShiftOpen = (schedules[allStoreKey][timeFormatted] === true);
       } else {
         const staffList = (db.staffList || []).filter(s => s.id !== 'all');
         if (staffList.length === 0) {
-          isShiftOpen = true;
+          isShiftOpen = (defaultMode === 'open');
         } else {
-          // 若無特別紀錄，營業日預設為開
-          let hasRecordedSchedule = false;
+          let hasExplicitRecord = false;
           for (let s of staffList) {
             const key = `${s.id}_${dSlash}`;
-            if (schedules[key]) {
-              hasRecordedSchedule = true;
+            if (schedules[key] && schedules[key][timeFormatted] !== undefined) {
+              hasExplicitRecord = true;
               if (schedules[key][timeFormatted] === true) {
                 isShiftOpen = true;
                 break;
               }
             }
           }
-          if (!hasRecordedSchedule) isShiftOpen = true;
+          if (!hasExplicitRecord) {
+            isShiftOpen = (defaultMode === 'open');
+          }
         }
       }
     }
