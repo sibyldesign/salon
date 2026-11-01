@@ -3166,21 +3166,37 @@ function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
     const timeFormatted = `${hh}:${mm}`;
 
     // A. 班表是否開放
+    // A. 班表是否開放 (🌟 修復：未個別排班之營業日，自動預設全開，防止日期變全灰)
     let isShiftOpen = false;
     if (targetStaffId !== 'all') {
       const staffKey = `${targetStaffId}_${dSlash}`;
-      isShiftOpen = (schedules[staffKey] && schedules[staffKey][timeFormatted] === true);
+      if (schedules[staffKey]) {
+        isShiftOpen = (schedules[staffKey][timeFormatted] === true);
+      } else {
+        isShiftOpen = true; // 上班日未排班預設開放
+      }
     } else {
       const allStoreKey = `all_${dSlash}`;
-      if (schedules[allStoreKey] && schedules[allStoreKey][timeFormatted] === true) {
-        isShiftOpen = true;
+      if (schedules[allStoreKey]) {
+        isShiftOpen = (schedules[allStoreKey][timeFormatted] === true);
       } else {
         const staffList = (db.staffList || []).filter(s => s.id !== 'all');
-        for (let s of staffList) {
-          if (schedules[`${s.id}_${dSlash}`] && schedules[`${s.id}_${dSlash}`][timeFormatted] === true) {
-            isShiftOpen = true;
-            break;
+        if (staffList.length === 0) {
+          isShiftOpen = true;
+        } else {
+          // 若無特別紀錄，營業日預設為開
+          let hasRecordedSchedule = false;
+          for (let s of staffList) {
+            const key = `${s.id}_${dSlash}`;
+            if (schedules[key]) {
+              hasRecordedSchedule = true;
+              if (schedules[key][timeFormatted] === true) {
+                isShiftOpen = true;
+                break;
+              }
+            }
           }
+          if (!hasRecordedSchedule) isShiftOpen = true;
         }
       }
     }
@@ -4180,9 +4196,8 @@ function handlePetDropdownChange(val) {
   }
 }
 
-// 輸入電話帶入（加入 lastLoadedPhone 鎖，杜絕重複刷新洗掉新毛孩）
 // ========================================================
-// 【局部改 3】黑名單即時攔截 ＋ 防閃退電話自動帶入
+// 🌟 舊客電話自動帶入：姓名、LINE名稱、信箱與毛孩資產
 // ========================================================
 async function checkCustomerBenefitsByPhone() {
   const phoneInput = document.getElementById('phone');
@@ -4195,13 +4210,13 @@ async function checkCustomerBenefitsByPhone() {
 
   try {
     const [bookings, custs, pkgs, pets] = await Promise.all([
-      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=1&select=*`),
+      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc&limit=3&select=*`),
       directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}`),
       directSupabaseFetch(`customer_packages?store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phone}&remaining_times=gt.0`),
       directSupabaseFetch(`pets?store_id=eq.${CURRENT_STORE_ID}&customer_phone=eq.${phone}&order=created_at.desc`)
     ]);
 
-    // 【黑名單攔截】：若被標記為黑名單，清空電話並委婉拒絕預約
+    // 【黑名單攔截】
     if (custs && custs.length > 0 && custs[0].is_blacklisted === true) {
       phoneInput.value = '';
       lastLoadedPhone = '';
@@ -4218,20 +4233,37 @@ async function checkCustomerBenefitsByPhone() {
     const emailInput = document.getElementById('email');
     const welcomeMsg = document.getElementById('welcome-msg');
 
-    if (Array.isArray(bookings) && bookings.length > 0) {
-      const lastBooking = bookings[0];
-      if (nameInput && !nameInput.value) nameInput.value = lastBooking.customer_name || '';
-      if (lineInput && !lineInput.value && lastBooking.line_name && !lastBooking.line_name.startsWith('U')) lineInput.value = lastBooking.line_name;
-      if (emailInput && !emailInput.value && lastBooking.notes && lastBooking.notes.includes('Email:')) {
-        emailInput.value = lastBooking.notes.split('Email:')[1].trim().split(' ')[0].split('|')[0].trim();
-      }
-    }
+    let foundName = '';
+    let foundLine = '';
+    let foundEmail = '';
 
+    // 1. 優先由 customers 主檔讀取
     if (custs && custs.length > 0) {
-      if (nameInput && !nameInput.value) nameInput.value = custs[0].name || '';
+      foundName = custs[0].name || '';
+      foundLine = custs[0].line_name || '';
+      foundEmail = custs[0].email || '';
       memberData.walletBalance = Number(custs[0].wallet_balance || 0);
       memberData.discountPercent = Number(custs[0].member_discount || 1);
     }
+
+    // 2. 從歷史預約輔助補齊
+    if (bookings && bookings.length > 0) {
+      if (!foundName) foundName = bookings[0].customer_name || '';
+      if (!foundLine && bookings[0].line_name && !bookings[0].line_name.startsWith('U')) {
+        foundLine = bookings[0].line_name;
+      }
+      for (let b of bookings) {
+        if (!foundEmail && b.notes && b.notes.includes('Email:')) {
+          foundEmail = b.notes.split('Email:')[1].trim().split(' ')[0].split('|')[0].trim();
+        }
+      }
+    }
+
+    // 3. 自動帶入三項資訊（姓名、LINE名稱、信箱）
+    if (foundName && nameInput) nameInput.value = foundName;
+    if (foundLine && lineInput) lineInput.value = foundLine;
+    if (foundEmail && emailInput) emailInput.value = foundEmail;
+
     memberData.packages = pkgs || [];
 
     if ((custs && custs.length > 0) || (bookings && bookings.length > 0)) {
@@ -4241,13 +4273,12 @@ async function checkCustomerBenefitsByPhone() {
         welcomeMsg.innerText = `✓ 歡迎回來！已為您自動帶入歷史預約與資產資料`;
         welcomeMsg.classList.remove('hidden');
       }
-      // 若目前網址沒有帶 UID，從過往紀錄自動補上
-if (!guestLineUid && custs && custs.length > 0 && custs[0].line_user_id) {
-  guestLineUid = custs[0].line_user_id;
-}
+      if (!guestLineUid && custs && custs.length > 0 && custs[0].line_user_id) {
+        guestLineUid = custs[0].line_user_id;
+      }
     }
 
-    // 儲值與包卡資產卡片展示 (若未加購開通，就算客人資料庫有歷史餘額也絕不顯示！)
+    // 資產卡片
     const walletCard = document.getElementById('memberWalletCard');
     const dispWallet = document.getElementById('displayWalletBalance');
     const dispPkgs = document.getElementById('displayPackagesList');
@@ -4268,7 +4299,7 @@ if (!guestLineUid && custs && custs.length > 0 && custs[0].line_user_id) {
       if (dispPkgs) dispPkgs.classList.add('hidden');
     }
 
-    // 同框毛孩下拉選單渲染
+    // 毛孩名冊下拉選單
     userPetProfiles = pets || [];
     const dropdown = document.getElementById('multiPetDropdown');
     if (dropdown) {
@@ -5075,15 +5106,22 @@ document.getElementById('bookForm').onsubmit = async function(e) {
     const newBookingId = (Array.isArray(resData) && resData[0]) ? resData[0].id : null;
 
     // 同步顧客主檔
-    await directSupabaseUpsert('customers', {
+    // 🌟 覆蓋更新顧客最新資料 (姓名、LINE名稱、信箱)
+    const lineValNow = document.getElementById('lineName')?.value.trim() || '';
+    const custProfilePayload = {
       store_id: CURRENT_STORE_ID,
       phone: phoneVal,
       name: nameVal,
       email: emailVal || '',
-      line_name: document.getElementById('lineName')?.value.trim() || '',
+      line_name: lineValNow,
       updated_at: new Date().toISOString()
-    }, 'store_id,phone');
+    };
+    if (guestLineUid) custProfilePayload.line_user_id = guestLineUid;
 
+    const custUpsertRes = await directSupabaseUpsert('customers', custProfilePayload, 'store_id,phone');
+    if (!custUpsertRes || custUpsertRes.length === 0) {
+      await directSupabasePatch('customers', `store_id=eq.${CURRENT_STORE_ID}&phone=eq.${phoneVal}`, custProfilePayload);
+    }
     // ========================================================
     // 🌟【唯一性防禦】：毛孩資料庫精確防重複更新 (比對電話+名字，覆寫不長新卡)
     // ========================================================
