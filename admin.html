@@ -5770,13 +5770,32 @@ function quickInsertBooking(date, time, staffId, staffName) {
           r.value.service
         );
 
+        // 🌟【老闆需求】：改為彈窗提醒，但允許老闆自由確認是否強制插單！
         if (conflictCheck.conflict) {
-          return Swal.fire({
-            title: '⚠️ 排程衝撞阻斷',
-            html: `<div class="text-left text-xs text-rose-800 bg-rose-50 p-3 rounded-xl border border-rose-200 leading-relaxed font-sans">${conflictCheck.message}</div>`,
-            icon: 'error',
-            confirmButtonColor: '#8C7355'
+          const forceConfirm = await Swal.fire({
+            title: '⚠️ 時段重疊提醒',
+            html: `
+              <div class="text-left text-xs space-y-2 font-sans">
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed">
+                  ${conflictCheck.message}
+                </div>
+                <div class="text-brand-700 font-bold text-center pt-1">
+                  現場若確認空檔可穿插施作，是否仍要「強制排入」此筆預約？
+                </div>
+              </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '⚡ 確定強制插單',
+            cancelButtonText: '返回修改時段',
+            confirmButtonColor: '#8C7355',
+            cancelButtonColor: '#E5E7EB'
           });
+
+          // 若老闆選擇返回修改，才中止送單
+          if (!forceConfirm.isConfirmed) {
+            return;
+          }
         }
       }
 
