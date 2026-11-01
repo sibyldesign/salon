@@ -195,6 +195,29 @@
           </select>
         </div>
       </div>
+      <!-- 🌟【新增】：開放預約月數下拉選單 (1~12個月) -->
+      <div class="p-3 bg-white rounded-2xl border border-brand-200 shadow-2xs flex items-center justify-between text-xs mt-2">
+        <div class="flex items-center gap-1.5 font-bold text-brand-800">
+          <i class="fa-solid fa-calendar-days text-[#8C7355]"></i>
+          <span>前台開放預約期程範圍：</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <select id="booking-open-months-select" onchange="changeBookingOpenMonths(this.value)" class="text-xs font-bold border border-brand-200 rounded-xl px-2.5 py-1.5 bg-brand-50/70 text-brand-900 outline-none cursor-pointer">
+            <option value="1">開放未來 1 個月</option>
+            <option value="2">開放未來 2 個月</option>
+            <option value="3" selected>開放未來 3 個月 (預設)</option>
+            <option value="4">開放未來 4 個月</option>
+            <option value="5">開放未來 5 個月</option>
+            <option value="6">開放未來 6 個月</option>
+            <option value="7">開放未來 7 個月</option>
+            <option value="8">開放未來 8 個月</option>
+            <option value="9">開放未來 9 個月</option>
+            <option value="10">開放未來 10 個月</option>
+            <option value="11">開放未來 11 個月</option>
+            <option value="12">開放未來 12 個月 (全年度)</option>
+          </select>
+        </div>
+      </div>
       <div class="flex gap-2 overflow-x-auto pb-2 border-b border-dashed border-brand-300 no-scrollbar" id="shift-scroll-area"></div>
       <div id="shift-content-area"></div>
     </div>
@@ -4477,6 +4500,9 @@ async function adminQuickCheckCustomer(phoneVal) {
 // 【修復升級】fetchDataAndRender — 解決 sInfo TDZ 語法崩潰，保證設定秒回填
 // ========================================================
 async function fetchDataAndRender() {
+  const openMonths = sCfg.booking_open_months || localStorage.getItem(`zy_booking_open_months_${CURRENT_STORE_ID}`) || 3;
+const monthsSel = document.getElementById('booking-open-months-select');
+if (monthsSel) monthsSel.value = String(openMonths);
   const dispStoreId = document.getElementById('disp-current-store-id');
   if (dispStoreId && CURRENT_STORE_ID) {
     dispStoreId.innerText = `ID: ${CURRENT_STORE_ID}`;
@@ -13330,6 +13356,28 @@ function changeShiftDefaultMode(mode) {
   }
 }
 
+    // ========================================================
+// 🌟 變更前台開放預約月數 (1~12個月) 同步寫入雲端
+// ========================================================
+async function changeBookingOpenMonths(months) {
+  const m = Number(months || 3);
+  localStorage.setItem(`zy_booking_open_months_${CURRENT_STORE_ID}`, m);
+  if (!backendData.settings) backendData.settings = {};
+  backendData.settings.booking_open_months = m;
+
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
+    booking_open_months: m,
+    updated_at: new Date().toISOString()
+  });
+
+  Swal.fire({
+    title: `已設定前台開放未來 ${m} 個月預約！`,
+    icon: 'success',
+    timer: 1000,
+    showConfirmButton: false
+  });
+}
+    
     // ==========================================
 // 🌟【高階工程師全面加固補丁】：補齊後台關鍵遺漏函式
 // ==========================================
