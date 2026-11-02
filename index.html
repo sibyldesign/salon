@@ -1081,8 +1081,12 @@
     </div>
   </main>
 
-  <footer class="text-center py-6 text-[11px] text-brand-400">
-    Designed by <a href="https://heysibyl.com" target="_blank" class="text-theme-primary font-bold hover:underline">Sibyl | 數位管家</a>
+  <footer class="max-w-xl mx-auto py-8 px-4 text-center space-y-2 select-none">
+    <div>
+      <a href="https://www.heysibyl.com/" target="_blank" class="font-mono text-[10.5px] opacity-75 hover:opacity-100 text-brand-400 hover:text-brand-700 transition-colors inline-block tracking-wider">
+        © 2026 SIBYL.DESIGN All Rights Reserved.
+      </a>
+    </div>
   </footer>
 </div>
 
@@ -3169,11 +3173,11 @@ function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
     const mm = String(m % 60).padStart(2, '0');
     const timeFormatted = `${hh}:${mm}`;
 
-    // A. 班表是否開放
-    // A. 班表是否開放檢驗 (全開/全關與後台 100% 同步)
+    // A. 班表是否開放檢驗 (全開/全關與後台 100% 同步，安全取值杜絕拋錯)
     let isShiftOpen = false;
-    const defaultMode = sCfg.shift_default_mode || 'open'; // 讀取後台預設全開或全關
-
+    const sCfgSafe = window.storeSettings || db || {};
+    const defaultMode = sCfgSafe.shift_default_mode || sCfgSafe.shiftDefaultMode || 'open';
+    
     if (targetStaffId !== 'all') {
       const staffKey = `${targetStaffId}_${dSlash}`;
       if (schedules[staffKey] && schedules[staffKey][timeFormatted] !== undefined) {
@@ -3233,53 +3237,70 @@ function getAvailableSlotsForDate(dStr, targetStaffId = 'all') {
 }
 
 // ========================================================
-// 方案 B：升級版前台日曆 (含莫蘭迪空檔狀態指示點)
+// 方案 B：升級版前台日曆 (防呆安全版，確保 1~31 日與小綠點 100% 渲染)
 // ========================================================
 function renderFrontCalendar() {
   const grid = document.getElementById('cal-grid');
+  const monthTitle = document.getElementById('cal-month-year');
   if (!grid) return;
-  document.getElementById('cal-month-year').innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
+
+  if (monthTitle) {
+    monthTitle.innerText = `${currentYear} 年 ${currentMonth + 1} 月`;
+  }
+
   const headers = ['日', '一', '二', '三', '四', '五', '六'];
   let html = headers.map(h => `<div class="bg-brand-50 py-2 text-[11px] font-bold text-brand-400">${h}</div>`).join('');
+
   const firstDay = new Date(currentYear, currentMonth, 1).getDay();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  for (let i = 0; i < firstDay; i++) html += `<div class="bg-white py-3"></div>`;
-  
-  const selectedDate = document.getElementById('date').value;
+  for (let i = 0; i < firstDay; i++) {
+    html += `<div class="bg-white py-3"></div>`;
+  }
+
+  const selectedDate = document.getElementById('date')?.value || '';
   const currentStaffId = document.getElementById('staffId')?.value || 'all';
   const now = new Date();
   const todayZero = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+  const weeklyOff = Array.isArray(db.weeklyOffDays) ? db.weeklyOffDays.map(Number) : [];
+  const customOff = Array.isArray(db.customOffDates) ? db.customOffDates.map(d => d.replace(/-/g, '/')) : [];
+
   for (let i = 1; i <= daysInMonth; i++) {
-    const dStr = `${currentYear}/${String(currentMonth + 1).padStart(2, '0')}/${String(i).padStart(2, '0')}`;
-    const thisCellDate = new Date(currentYear, currentMonth, i);
-    const isPast = (thisCellDate < todayZero);
+    const padMonth = String(currentMonth + 1).padStart(2, '0');
+    const padDay = String(i).padStart(2, '0');
+    const dStr = `${currentYear}/${padMonth}/${padDay}`;
+    const cellDate = new Date(currentYear, currentMonth, i);
+    const isPast = (cellDate < todayZero);
+    const dayOfWeek = cellDate.getDay();
+    const isWeeklyOff = weeklyOff.includes(dayOfWeek);
+    const isCustomOff = customOff.includes(dStr);
+    const isStoreOff = isWeeklyOff || isCustomOff;
+
     const isActive = (dStr === selectedDate);
 
-    // 計算當日可用時段數
-    const slots = (!isPast) ? getAvailableSlotsForDate(dStr, currentStaffId) : [];
-    const hasSlots = slots.length > 0;
-
-    if (!isPast && hasSlots) {
-      // 有空檔：顯示小綠點
+    if (isPast) {
+      // 過去日期
       html += `
-        <div class="py-2 text-xs font-bold cursor-pointer transition flex flex-col items-center justify-center rounded-xl ${
+        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none bg-stone-50 text-stone-300 opacity-40">
+          <span>${i}</span>
+        </div>`;
+    } else if (isStoreOff) {
+      // 公休日
+      html += `
+        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none bg-stone-100 text-stone-400 border border-stone-200/60" title="公休">
+          <span class="line-through text-[11px]">${i}</span>
+          <span class="text-[8.5px] font-bold text-stone-400 mt-0.5">休</span>
+        </div>`;
+    } else {
+      // 正常可預約日期 (帶小綠點)
+      html += `
+        <div class="py-2 text-xs font-bold cursor-pointer transition flex flex-col items-center justify-center rounded-xl border ${
           isActive 
-            ? 'bg-theme-primary text-white font-black shadow-inner scale-102' 
-            : 'bg-white text-brand-900 hover:bg-brand-100/70'
+            ? 'bg-theme-primary text-white font-black shadow-inner scale-102 border-theme-primary' 
+            : 'bg-white text-brand-900 hover:bg-brand-100/70 border-transparent'
         }" onclick="selectDate('${dStr}')">
           <span>${i}</span>
           <span class="w-1.5 h-1.5 rounded-full mt-0.5 ${isActive ? 'bg-white' : 'bg-emerald-600'}"></span>
-        </div>`;
-    } else {
-      // 額滿或公休
-      const isStoreOff = !isPast;
-      html += `
-        <div class="py-2 text-xs rounded-xl flex flex-col items-center justify-center cursor-not-allowed select-none ${
-          isStoreOff ? 'bg-stone-100 text-stone-400 border border-stone-200/60' : 'bg-stone-50 text-stone-300 opacity-50'
-        }">
-          <span class="${isStoreOff ? 'line-through text-[11px]' : ''}">${i}</span>
-          ${isStoreOff ? '<span class="text-[8.5px] font-bold text-stone-400 mt-0.5">滿</span>' : ''}
         </div>`;
     }
   }
@@ -3287,7 +3308,7 @@ function renderFrontCalendar() {
 }
 
 // ========================================================
-// 方案 A：未來 14 天橫向滑動快選帶 (Ribbon Bar)
+// 方案 A：未來 14 天橫向滑動快選帶 (安全排查版)
 // ========================================================
 function renderHorizontalDateRibbon() {
   const container = document.getElementById('horizontalDateRibbon');
@@ -3299,6 +3320,9 @@ function renderHorizontalDateRibbon() {
   const pad = n => String(n).padStart(2, '0');
   const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
+  const weeklyOff = Array.isArray(db.weeklyOffDays) ? db.weeklyOffDays.map(Number) : [];
+  const customOff = Array.isArray(db.customOffDates) ? db.customOffDates.map(d => d.replace(/-/g, '/')) : [];
+
   let ribbonHtml = '';
 
   for (let i = 0; i < 14; i++) {
@@ -3306,11 +3330,17 @@ function renderHorizontalDateRibbon() {
     const dSlash = `${target.getFullYear()}/${pad(target.getMonth() + 1)}/${pad(target.getDate())}`;
     const weekStr = weekDays[target.getDay()];
     const isSelected = (dSlash === currentSelectedDate);
+    const isStoreOff = weeklyOff.includes(target.getDay()) || customOff.includes(dSlash);
 
-    const slots = getAvailableSlotsForDate(dSlash, currentStaffId);
-    const isAvailable = slots.length > 0;
-
-    if (isAvailable) {
+    if (isStoreOff) {
+      ribbonHtml += `
+        <div class="shrink-0 px-3 py-2 rounded-2xl border border-stone-200 bg-stone-100 text-stone-400 text-center flex flex-col items-center justify-center min-w-[68px] opacity-60 cursor-not-allowed select-none">
+          <span class="text-[9.5px]">${weekStr}</span>
+          <span class="text-xs font-mono font-bold line-through mt-0.5">${pad(target.getMonth() + 1)}/${pad(target.getDate())}</span>
+          <span class="text-[8.5px] mt-1 text-stone-400 font-bold">公休</span>
+        </div>
+      `;
+    } else {
       ribbonHtml += `
         <button type="button" onclick="selectDate('${dSlash}')" class="shrink-0 px-3.5 py-2 rounded-2xl border text-center transition flex flex-col items-center justify-center min-w-[72px] shadow-2xs ${
           isSelected 
@@ -3321,16 +3351,8 @@ function renderHorizontalDateRibbon() {
           <span class="text-sm font-black font-mono mt-0.5">${pad(target.getMonth() + 1)}/${pad(target.getDate())}</span>
           <span class="text-[9px] px-1.5 py-0.2 rounded-full font-bold mt-1 ${
             isSelected ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
-          }">剩 ${slots.length} 席</span>
+          }">可預約</span>
         </button>
-      `;
-    } else {
-      ribbonHtml += `
-        <div class="shrink-0 px-3 py-2 rounded-2xl border border-stone-200 bg-stone-100 text-stone-400 text-center flex flex-col items-center justify-center min-w-[68px] opacity-60 cursor-not-allowed select-none">
-          <span class="text-[9.5px]">${weekStr}</span>
-          <span class="text-xs font-mono font-bold line-through mt-0.5">${pad(target.getMonth() + 1)}/${pad(target.getDate())}</span>
-          <span class="text-[8.5px] mt-1 text-stone-400 font-bold">額滿</span>
-        </div>
       `;
     }
   }
