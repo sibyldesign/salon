@@ -5180,8 +5180,8 @@ function renderOverviewGridCanvas() {
   const timelineEndMinutes = (rawEM > 0) ? (rawEH + 1) * 60 : rawEH * 60;
   const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
 
-  // 3. 尺寸與直欄規格 (全屏自適應均分；滑動版寬度為精巧 110px)
-  const slotHeight = isFitMode ? 15 : 22; 
+  // 3. 尺寸與直欄規格
+  const slotHeight = isFitMode ? 16 : 22; 
   const totalTimelineHeight = totalSlotsCount * slotHeight;
   
   const staffColStyle = isFitMode 
@@ -5229,9 +5229,8 @@ function renderOverviewGridCanvas() {
     </div>
   `).join('');
 
-  // 5. 專員排程內容 (復刻示範圖：背景印淺灰時間 + 預約色塊緊湊直排)
+  // 5. 專員排程內容 (含智慧重疊與極限插單排版)
   let staffColumnsHtml = displayStaffList.map((st, staffIdx) => {
-    // 嚴防幽靈預約：不指定只給第一位
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
       const aStaffId = String(a.staffId || '').trim();
@@ -5245,7 +5244,7 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin);
 
-    // Group A/B 碰撞運算
+    // Group A/B 重疊排程運算
     const processedAppts = [];
     stAppts.forEach(appt => {
       const overlapping = processedAppts.filter(other =>
@@ -5287,42 +5286,66 @@ function renderOverviewGridCanvas() {
           : "left: calc(51% + 0.5px); width: calc(49% - 1px);";
       }
 
-      // 乾淨純姓名，寬度受限時去掉冗餘後綴避免吃字
       const displayName = (a.name || '現場客') + (petName ? `(${petName})` : '');
-      const cleanServiceName = (a.service || '服務').split(',')[0].trim();
-      const isUltraShort = (a.dur <= 30); // 30 分鐘以內超短單
+      
+      // 🌟【關鍵優化】：精準切分項目，防範多項目擠在一起破版
+      const svcParts = (a.service || '服務').split(/[,，+＋/]/).map(s => s.trim()).filter(Boolean);
+      let displaySvc = svcParts[0] || '服務';
+      if (isNarrow && svcParts.length > 1) {
+        displaySvc = `${displaySvc}+${svcParts.length - 1}`;
+      }
 
-      // 🌟【極限清楚呈現】：字體緊密無截斷排版
+      const isUltraShort = (a.dur <= 30);
+      const isMedium = (a.dur > 30 && a.dur <= 60);
+
       let innerLayoutHtml = '';
 
       if (isUltraShort) {
-        // A. 15~30 分鐘超短單：高緊湊兩行微字體，上方顯示[時間 姓名]，下方顯示[項目]
+        // A. 15~30 分鐘超短單：高緊湊兩行微字體，零重疊
         innerLayoutHtml = `
           <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
-            <div class="flex items-center gap-1 font-bold text-white text-[8.5px] truncate">
-              <span class="font-mono opacity-85 text-[8px]">${a.time}</span>
-              <span class="font-black">${displayName}</span>
+            <div class="flex items-center justify-between text-[8px] font-black text-white">
+              <span class="font-mono opacity-85 text-[7.5px]">${a.time}</span>
+              <span class="truncate ml-0.5">${displayName}</span>
             </div>
-            <div class="text-[8px] font-medium text-white/95 truncate mt-0.5">
-              ${cleanServiceName}
+            <div class="text-[7.5px] font-medium text-white/90 truncate mt-0.5">
+              ${displaySvc}
+            </div>
+          </div>
+        `;
+      } else if (isMedium) {
+        // B. 45~60 分鐘中等單（截圖 10:15 / 10:30 極限插單場景）：時間時長同一行、名字項目不壓字
+        innerLayoutHtml = `
+          <div class="flex flex-col justify-between h-full p-1 leading-none select-none font-sans overflow-hidden">
+            <div>
+              <div class="flex items-center justify-between font-mono text-[7.5px] font-bold text-white/80 pb-0.5 border-b border-white/20">
+                <span>${a.time}</span>
+                <span class="opacity-75">${a.dur}m</span>
+              </div>
+              <div class="font-black text-white ${isNarrow ? 'text-[8.5px]' : 'text-[9.5px]'} truncate mt-1 tracking-tight" title="${displayName}">
+                ${displayName}
+              </div>
+            </div>
+            <div class="text-white/95 font-bold ${isNarrow ? 'text-[7.5px]' : 'text-[8.5px]'} truncate mt-auto">
+              ${displaySvc}
             </div>
           </div>
         `;
       } else {
-        // B. 45~180 分鐘中長單：頂部顯示時間時長，中間放大粗體姓名，底部固定呈現施作項目
+        // C. 75 分鐘以上長單：層次分明，項目帶透明底塊
         innerLayoutHtml = `
           <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
             <div>
-              <div class="flex justify-between items-center font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
+              <div class="flex items-center justify-between font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
                 <span>${a.time}</span>
-                <span class="bg-black/20 px-1 rounded text-[7.5px]">${a.dur}m</span>
+                <span class="bg-black/20 px-1 rounded text-[7px]">${a.dur}m</span>
               </div>
-              <div class="font-black text-white ${isNarrow ? 'text-[9.5px]' : 'text-[11px]'} tracking-tight break-all mt-0.5 leading-snug">
+              <div class="font-black text-white ${isNarrow ? 'text-[9.5px]' : 'text-[11px]'} tracking-tight break-all mt-0.5 leading-snug" title="${displayName}">
                 ${displayName}
               </div>
             </div>
-            <div class="text-white/95 font-bold ${isNarrow ? 'text-[8.5px]' : 'text-[10px]'} break-all bg-black/15 px-1 py-0.5 rounded leading-tight">
-              ${cleanServiceName}
+            <div class="text-white/95 font-bold ${isNarrow ? 'text-[8px]' : 'text-[9.5px]'} break-all bg-black/15 px-1 py-0.5 rounded leading-tight mt-auto">
+              ${displaySvc}
             </div>
           </div>
         `;
@@ -5341,7 +5364,6 @@ function renderOverviewGridCanvas() {
 
     return `
       <div style="${staffColStyle} height: ${totalTimelineHeight}px; box-sizing: border-box;" class="relative border-r border-[#EBE5DF] last:border-r-0">
-        <!-- 🌟【復刻示範圖背景】：每一欄的背景網格自己印著淺灰色整點時間！ -->
         <div class="absolute inset-0 z-0">
           ${Array.from({ length: totalSlotsCount }).map((_, idx) => {
             const m = timelineStartMinutes + idx * interval;
@@ -5356,8 +5378,6 @@ function renderOverviewGridCanvas() {
                      isClosedSlot ? 'bg-gray-50/70 cursor-not-allowed' : 'hover:bg-brand-50/60 cursor-pointer'
                    }"
                    onclick="${isClosedSlot ? `Swal.fire('非營業時段', '門市營業時間為 ${rawStartTime} ~ ${rawEndTime}', 'info')` : `quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')`}">
-                
-                <!-- 示範圖同款：整點印淺灰色時間 (8:00, 9:00...)，被預約色塊蓋住時自然隱藏 -->
                 ${isHourLine ? `<span class="text-[9px] font-mono font-medium text-gray-300 pointer-events-none select-none mt-0.5">${Number(hh)}:00</span>` : ''}
               </div>
             `;
@@ -5368,21 +5388,16 @@ function renderOverviewGridCanvas() {
     `;
   }).join('');
 
-  // 6. 乾淨外框（完全無需任何 sticky 凍結時間軸，徹底告別捲動錯位與遮擋！）
+  // 6. 組合外框
   canvas.innerHTML = controlsHtml + `
     <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative overflow-hidden">
       <div class="${isFitMode ? 'w-full' : 'overflow-x-auto relative'}" style="-webkit-overflow-scrolling: touch;">
-        
-        <!-- 表頭 (專員名稱列) -->
         <div class="flex border-b border-[#EBE5DF] bg-[#FAF8F5] ${isFitMode ? 'w-full' : 'min-w-max'}">
           ${headerColsHtml}
         </div>
-
-        <!-- 畫布主體 -->
         <div class="flex ${isFitMode ? 'w-full' : 'min-w-max'} relative" style="height: ${totalTimelineHeight}px;">
           ${staffColumnsHtml}
         </div>
-
       </div>
     </div>
   `;
