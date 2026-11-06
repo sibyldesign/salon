@@ -5186,7 +5186,7 @@ function renderOverviewGridCanvas() {
   
   const staffColStyle = isFitMode 
     ? "flex: 1 1 0%; min-width: 0;" 
-    : "width: 105px; min-width: 105px; flex-shrink: 0;";
+    : "width: 126px; min-width: 126px; flex-shrink: 0;";
 
   const currentIndustryMode = backendData.settings?.industryMode || backendData.storeInfo?.industry_type || 'beauty';
   const isPetMode = (currentIndustryMode !== 'beauty');
@@ -5278,50 +5278,61 @@ function renderOverviewGridCanvas() {
         if (match && match[1]) petName = match[1].trim();
       }
 
-      // 瘦身寬度：雙單各佔 48%，單單左右留白 2px
-      let posStyle = "left: 2px; right: 2px;";
-      if (a.totalCols === 2) {
+      // 判斷重疊插單欄位寬度
+      const isNarrow = (a.totalCols >= 2);
+      let posStyle = "left: 1.5px; right: 1.5px;";
+      if (isNarrow) {
         posStyle = (a.colIndex === 0)
-          ? "left: 1px; width: calc(48% - 1px);"
-          : "left: calc(52% + 1px); width: calc(48% - 1px);";
+          ? "left: 1px; width: calc(49% - 1px);"
+          : "left: calc(51% + 0.5px); width: calc(49% - 1px);";
       }
 
-      const custLineDisplay = a.lineName || a.line_name || '';
-      const topNameLine = `${a.name}${custLineDisplay ? ` (${custLineDisplay})` : ''} ${petName ? `(${petName})` : ''}`.trim();
-      const isShort = (a.dur <= 30); // 30 分鐘以下短時段
+      // 乾淨純姓名，寬度受限時去掉冗餘後綴避免吃字
+      const displayName = (a.name || '現場客') + (petName ? `(${petName})` : '');
+      const cleanServiceName = (a.service || '服務').split(',')[0].trim();
+      const isUltraShort = (a.dur <= 30); // 30 分鐘以內超短單
 
-      // 🌟 智慧雙模排列：短時段單行橫向並排、長時段層次直排，字樣 100% 完整保留且不壓縮
-      const innerLayoutHtml = isShort ? `
-        <!-- 短時段 (<=30分)：單行橫向並排 (時間 | 姓名 | 項目) -->
-        <div class="flex items-center gap-1.5 h-full px-1 overflow-hidden select-none font-sans leading-none">
-          <span class="font-mono ${isFitMode ? 'text-[7.5px]' : 'text-[8.5px]'} font-bold opacity-90 shrink-0 bg-black/20 px-1 py-0.5 rounded">${a.time}</span>
-          <span class="font-bold ${isFitMode ? 'text-[8.5px]' : 'text-[9.5px]'} truncate shrink-0 max-w-[45%]" title="${topNameLine}">${topNameLine}</span>
-          <span class="text-white/30 text-[9px] shrink-0">|</span>
-          <span class="${isFitMode ? 'text-[7.5px]' : 'text-[8.5px]'} opacity-90 truncate font-medium text-white/95" title="${a.service}">${a.service}</span>
-        </div>
-      ` : `
-        <!-- 長時段 (>30分)：縱向層次直排 -->
-        <div class="flex flex-col justify-between h-full p-1.5 leading-tight overflow-hidden select-none font-sans">
-          <div>
-            <div class="flex justify-between items-center font-mono ${isFitMode ? 'text-[7.5px]' : 'text-[8.5px]'} font-bold opacity-90 pb-0.5 border-b border-white/20">
-              <span>${a.time}</span>
-              <span class="bg-black/20 px-1 rounded text-[7.5px]">${a.dur}分</span>
+      // 🌟【極限清楚呈現】：字體緊密無截斷排版
+      let innerLayoutHtml = '';
+
+      if (isUltraShort) {
+        // A. 15~30 分鐘超短單：高緊湊兩行微字體，上方顯示[時間 姓名]，下方顯示[項目]
+        innerLayoutHtml = `
+          <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
+            <div class="flex items-center gap-1 font-bold text-white text-[8.5px] truncate">
+              <span class="font-mono opacity-85 text-[8px]">${a.time}</span>
+              <span class="font-black">${displayName}</span>
             </div>
-            <div class="font-bold ${isFitMode ? 'text-[8.5px]' : 'text-[9.5px]'} truncate mt-0.5" title="${topNameLine}">
-              ${topNameLine}
+            <div class="text-[8px] font-medium text-white/95 truncate mt-0.5">
+              ${cleanServiceName}
             </div>
           </div>
-          <div class="${isFitMode ? 'text-[7.5px]' : 'text-[8.5px]'} opacity-90 truncate font-medium text-white/95 mt-0.5" title="${a.service}">
-            ${a.service}
+        `;
+      } else {
+        // B. 45~180 分鐘中長單：頂部顯示時間時長，中間放大粗體姓名，底部固定呈現施作項目
+        innerLayoutHtml = `
+          <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
+            <div>
+              <div class="flex justify-between items-center font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
+                <span>${a.time}</span>
+                <span class="bg-black/20 px-1 rounded text-[7.5px]">${a.dur}m</span>
+              </div>
+              <div class="font-black text-white ${isNarrow ? 'text-[9.5px]' : 'text-[11px]'} tracking-tight break-all mt-0.5 leading-snug">
+                ${displayName}
+              </div>
+            </div>
+            <div class="text-white/95 font-bold ${isNarrow ? 'text-[8.5px]' : 'text-[10px]'} break-all bg-black/15 px-1 py-0.5 rounded leading-tight">
+              ${cleanServiceName}
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      }
 
       const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
 
       return `
         <div style="top: ${topOffset}px; height: ${cardHeight}px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
-             class="absolute rounded-md shadow-2xs border border-white/20 cursor-pointer hover:opacity-90 transition overflow-hidden"
+             class="absolute rounded-lg shadow-2xs border border-white/20 cursor-pointer hover:opacity-90 transition overflow-hidden"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur}, '${safeLine}')">
           ${innerLayoutHtml}
         </div>
