@@ -5325,40 +5325,27 @@ function renderOverviewGridCanvas() {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
-      const isUltraShort = (a.dur <= 20); // 10~20 分鐘極短單
-      const isShort = (a.dur > 20 && a.dur <= 35); // 25~35 分鐘短單
+      // 🌟【全面相容短單】：只要時長 <= 35 分鐘，一律單行橫排 (時間 | 姓名 | 項目)，保證看見項目名稱！
+      const isSingleLineSlot = (a.dur <= 35);
       const isNarrow = (totalCols >= 2);
 
       let innerLayoutHtml = '';
 
-      if (isUltraShort) {
-        // A. 10~20 分鐘極短單：水平單行橫排 (11:30 | AAA | 項目名稱) 一行到底完整顯示
+      if (isSingleLineSlot) {
+        // A. 10~35 分鐘短單：單行橫向並排，字體緊湊不截斷 (12:30 | 張小姐 | 剪髮)
         innerLayoutHtml = `
-          <div class="flex items-center gap-1 h-full px-1.5 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
+          <div class="flex items-center gap-1 h-full px-1 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
             <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
             <span class="text-white/40 text-[8px] shrink-0">|</span>
             <span class="text-[8.5px] font-black text-white shrink-0">${displayName}</span>
             <span class="text-white/40 text-[8px] shrink-0">|</span>
-            <span class="text-[8px] font-medium text-white/95 truncate">
+            <span class="text-[8px] font-bold text-white/95 truncate">
               ${displaySvc}
             </span>
           </div>
         `;
-      } else if (isShort) {
-        // B. 25~35 分鐘短單：上下兩行微排版
-        innerLayoutHtml = `
-          <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
-            <div class="flex items-center justify-between text-[8px] font-black text-white">
-              <span class="font-mono opacity-85 text-[7.5px]">${a.time}</span>
-              <span class="truncate ml-0.5 font-bold">${displayName}</span>
-            </div>
-            <div class="text-[7.5px] font-medium text-white/90 truncate mt-0.5">
-              ${displaySvc}
-            </div>
-          </div>
-        `;
       } else {
-        // C. 45 分鐘以上中長單：頂部時間+時長，中間姓名，底部項目帶底色
+        // B. 45 分鐘以上長單：頂部時間+時長，中間姓名，底部項目名稱
         innerLayoutHtml = `
           <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
             <div>
@@ -5570,69 +5557,55 @@ function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, ne
 // ========================================================
 // 🌟 總覽排程防撞核心：Group A/B 獨佔與人數上限檢驗
 // ========================================================
+// ========================================================
+// 🌟 後台專員排程衝突檢驗（支援老闆極限插單放行版）
+// ========================================================
 function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, newDurMins, newServiceType, newServiceName) {
-  const [nSH, nSM] = newStartTime.split(':').map(Number);
-  const newStartMin = nSH * 60 + nSM;
-  const newEndMin = newStartMin + Number(newDurMins);
+  try {
+    if (!newStartTime || typeof newStartTime !== 'string') return { conflict: false };
 
-  // 1. 取得當日同專員之有效預約名單（排除取消與婉拒）
-  const sameStaffAppts = (backendData.appointments || []).filter(a => {
-    if ((a.date || '').replace(/-/g, '/') !== dateSlash) return false;
-    if (a.status === '已取消' || a.status === '婉拒') return false;
-    const aStaff = String(a.staffName || '').trim();
-    const aStaffId = String(a.staffId || '').trim();
-    return (aStaff === staffName || (staffId && aStaffId === staffId));
-  });
+    const timeParts = newStartTime.split(':').map(Number);
+    const nSH = timeParts[0] || 0;
+    const nSM = timeParts[1] || 0;
+    const newStartMin = nSH * 60 + nSM;
+    const newEndMin = newStartMin + Number(newDurMins || 60);
 
-  // 2. 篩選出任何時間有交集（重疊）的既有預約
-  const overlappingAppts = sameStaffAppts.filter(a => {
-    const [aH, aM] = (a.time || '09:00').split(':').map(Number);
-    const aStart = aH * 60 + aM;
-    const aEnd = aStart + Number(a.duration || 60);
-    return Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd);
-  });
+    // 1. 取得當日同專員之有效預約名單（排除取消與婉拒）
+    const appointments = (backendData && Array.isArray(backendData.appointments)) ? backendData.appointments : [];
+    const sameStaffAppts = appointments.filter(a => {
+      if ((a.date || '').replace(/-/g, '/') !== dateSlash) return false;
+      if (a.status === '已取消' || a.status === '婉拒') return false;
+      const aStaff = String(a.staffName || '').trim();
+      const aStaffId = String(a.staffId || '').trim();
+      return (aStaff === staffName || (staffId && aStaffId === staffId));
+    });
 
-  if (overlappingAppts.length === 0) return { conflict: false };
+    // 2. 篩選出任何時間交集重疊的既有預約
+    const overlappingAppts = sameStaffAppts.filter(a => {
+      const aParts = (a.time || '09:00').split(':').map(Number);
+      const aH = aParts[0] || 0;
+      const aM = aParts[1] || 0;
+      const aStart = aH * 60 + aM;
+      const aEnd = aStart + Number(a.duration || 60);
+      return Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd);
+    });
 
-  // 3. 讀取新項目的屬性與服務清單
-  const svcList = backendData.services || [];
-  const currentSvcObj = svcList.find(s => s.name === newServiceName);
-  const isNewGroupB = (newServiceType === 'Group_B' || !newServiceType);
-  const maxCap = currentSvcObj?.group_a_capacity || currentSvcObj?.max_clients || 2;
+    if (overlappingAppts.length === 0) return { conflict: false };
 
-  // 規則一：如果新插項目是 Group B (全程專屬類)，只要該時段有人，絕對阻斷！
-  if (isNewGroupB) {
-    const conflictAppt = overlappingAppts[0];
+    // 3. 重疊提醒（非硬性阻斷，僅彈窗提醒已有重疊單）
+    const count = overlappingAppts.length;
+    const firstConflict = overlappingAppts[0];
+    const conflictNames = overlappingAppts.map(o => o.name || '顧客').join('、');
+
     return {
       conflict: true,
-      message: `【Group B 專屬衝突】專員在 ${conflictAppt.time} 已有【${conflictAppt.name} - ${conflictAppt.service}】，全程專屬項目時段完全獨佔，禁止穿插預約！`
+      message: `專員在 ${newStartTime} 已有 ${count} 筆預約進行中（${conflictNames}），插單將進行多軌並排。`
     };
+  } catch (err) {
+    console.warn("衝突檢驗防呆跳過:", err);
+    return { conflict: false };
   }
-
-  // 規則二：如果新插項目是 Group A (等待期技術類)，檢查重疊預約中是否含有 Group B
-  const hasGroupB = overlappingAppts.some(a => {
-    const foundSvc = svcList.find(s => (a.service || '').includes(s.name));
-    return foundSvc ? (foundSvc.type === 'Group_B') : true; // 未特別註記者預設皆為專屬類
-  });
-
-  if (hasGroupB) {
-    return {
-      conflict: true,
-      message: `【專員時段衝突】該時段已有 Group B (全程專屬類) 項目施作中，禁止穿插預約！`
-    };
-  }
-
-  // 規則三：全部為 Group A 時，檢查重疊人數是否超過上限 (group_a_capacity)
-  if (overlappingAppts.length >= maxCap) {
-    return {
-      conflict: true,
-      message: `【超過人數承載上限】該專員此等待時段已排入 ${overlappingAppts.length} 位顧客，已達上限 ${maxCap} 人，禁止再插單！`
-    };
-  }
-
-  return { conflict: false };
 }
-
 // ========================================================
 // 🌟 總覽快速插單：補齊 data-type 與 data-res 屬性綁定
 // ========================================================
@@ -9471,26 +9444,81 @@ if (enableBomDeduct) {
       });
     }
 
+    // ========================================================
+    // 🌟 名單改期引擎：支援改期後即時更新畫布與同步雲端
+    // ========================================================
     function openRescheduleModal(id, name, oldDate, oldTime) {
+      const cleanDate = (oldDate || '').replace(/\//g, '-');
+      const cleanTime = (oldTime || '10:00').slice(0, 5);
+
       Swal.fire({
-        title: `幫 ${name} 改期`,
+        title: `幫【${name}】改期與改時段`,
         html: `
-          <input id="resched-date" type="date" class="swal2-input text-xs" style="width:85%;" value="${(oldDate||'').replace(/\//g, '-')}">
-          <input id="resched-time" type="time" class="swal2-input text-xs" style="width:85%;" value="${oldTime||'10:00'}">
+          <div class="text-left text-xs space-y-3 p-1 font-sans">
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">預約日期：</label>
+              <input id="resched-date" type="date" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${cleanDate}">
+            </div>
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">進場時段 (例如 10:30)：</label>
+              <input id="resched-time" type="time" class="swal2-input !m-0 !w-full text-xs font-mono font-bold text-center" value="${cleanTime}">
+            </div>
+          </div>
         `,
         showCancelButton: true,
         confirmButtonText: '確定改期',
+        cancelButtonText: '取消',
         confirmButtonColor: '#8C7355',
-        preConfirm: () => ({
-          date: document.getElementById('resched-date').value.replace(/-/g, '/'),
-          time: document.getElementById('resched-time').value
-        })
+        preConfirm: () => {
+          const d = document.getElementById('resched-date')?.value;
+          const t = document.getElementById('resched-time')?.value;
+          if (!d || !t) {
+            Swal.showValidationMessage('請完整選擇日期與時間！');
+            return false;
+          }
+          return { date: d, time: t };
+        }
       }).then(async r => {
-        if (r.isConfirmed && r.value.date && r.value.time) {
-          const appointmentIso = `${r.value.date.replace(/\//g, '-')}T${r.value.time}:00+08:00`;
-          await directSupabasePatch('bookings', `id=eq.${id}`, { appointment_time: appointmentIso });
-          Swal.fire('改期成功！', '', 'success');
-          fetchDataAndRender();
+        if (r.isConfirmed && r.value) {
+          Swal.fire({ title: '正在變更時段...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+          const newDateHyphen = r.value.date;
+          const newDateSlash = newDateHyphen.replace(/-/g, '/');
+          const newTime = r.value.time;
+          const appointmentIso = `${newDateHyphen}T${newTime}:00+08:00`;
+
+          try {
+            // 1. 同步更新 Supabase 資料庫
+            await directSupabasePatch('bookings', `id=eq.${id}`, { 
+              appointment_time: appointmentIso 
+            });
+
+            // 2. 🌟 關鍵修復：立即更新本地記憶體快取中的時間與日期
+            const appt = (backendData.appointments || []).find(a => String(a.id) === String(id));
+            if (appt) {
+              appt.date = newDateSlash;
+              appt.time = newTime;
+              appt.appointment_time = appointmentIso;
+            }
+
+            // 3. 同步刷新所有分頁畫面（名單、日曆、總覽畫布）
+            renderCustomer();
+            renderCalendar();
+            if (selectedCalendarDate) showApptsInCalendar(selectedCalendarDate);
+            if (typeof renderOverviewGridCanvas === 'function') {
+              renderOverviewGridCanvas();
+            }
+
+            Swal.fire({
+              title: '改期成功！',
+              text: `已變更為：${newDateSlash} ${newTime}`,
+              icon: 'success',
+              timer: 1200,
+              showConfirmButton: false
+            });
+          } catch (err) {
+            Swal.fire('改期失敗', err.message, 'error');
+          }
         }
       });
     }
