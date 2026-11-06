@@ -5244,23 +5244,58 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin);
 
-    // Group A/B 重疊排程運算
+    // 🌟【全新多重重疊軌道演算法】：徹底解決 10:15 / 10:30 / 10:45 多人插單重疊覆蓋吃字問題
     const processedAppts = [];
+    const clusters = [];
+
+    // 1. 群組化相交的預約
     stAppts.forEach(appt => {
-      const overlapping = processedAppts.filter(other =>
-        Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
-      );
-      if (overlapping.length > 0) {
-        appt.colIndex = overlapping.some(o => o.colIndex === 0) ? 1 : 0;
-        appt.totalCols = 2;
-        overlapping.forEach(o => o.totalCols = 2);
-      } else {
-        appt.colIndex = 0;
-        appt.totalCols = 1;
+      let placedInCluster = false;
+      for (let cluster of clusters) {
+        const hasOverlap = cluster.some(other => 
+          Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
+        );
+        if (hasOverlap) {
+          cluster.push(appt);
+          placedInCluster = true;
+          break;
+        }
       }
-      processedAppts.push(appt);
+      if (!placedInCluster) {
+        clusters.push([appt]);
+      }
     });
 
+    // 2. 針對每個相交群組分配獨立軌道（Track/Column），確保絕不互相遮擋
+    clusters.forEach(cluster => {
+      cluster.sort((a, b) => a.startMin - b.startMin || (b.dur - a.dur));
+      const tracks = []; // 記錄每條軌道當前的結束時間
+
+      cluster.forEach(appt => {
+        let assignedTrack = -1;
+        for (let i = 0; i < tracks.length; i++) {
+          if (tracks[i] <= appt.startMin) {
+            assignedTrack = i;
+            tracks[i] = appt.endMin;
+            break;
+          }
+        }
+        if (assignedTrack === -1) {
+          assignedTrack = tracks.length;
+          tracks.push(appt.endMin);
+        }
+        appt.trackIndex = assignedTrack;
+      });
+
+      const totalTracks = Math.max(1, tracks.length);
+      cluster.forEach(appt => {
+        appt.totalCols = totalTracks;
+        appt.colIndex = appt.trackIndex;
+        processedAppts.push(appt);
+      });
+    });
+
+    // 3. 渲染卡片：精確依軌道排開，文字零重疊
     let apptCardsHtml = processedAppts.map(a => {
       const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
@@ -5277,74 +5312,55 @@ function renderOverviewGridCanvas() {
         if (match && match[1]) petName = match[1].trim();
       }
 
-      // 判斷重疊插單欄位寬度
-      const isNarrow = (a.totalCols >= 2);
-      let posStyle = "left: 1.5px; right: 1.5px;";
-      if (isNarrow) {
-        posStyle = (a.colIndex === 0)
-          ? "left: 1px; width: calc(49% - 1px);"
-          : "left: calc(51% + 0.5px); width: calc(49% - 1px);";
-      }
+      // 🌟 精確計算左右位置與寬度，3 單、4 單各自分開絕不疊合
+      const totalCols = a.totalCols || 1;
+      const colIdx = a.colIndex || 0;
+      const widthPct = (100 / totalCols).toFixed(2);
+      const leftPct = (colIdx * (100 / totalCols)).toFixed(2);
+      
+      const posStyle = (totalCols > 1)
+        ? `left: calc(${leftPct}% + 1px); width: calc(${widthPct}% - 2px);`
+        : `left: 2px; right: 2px;`;
 
       const displayName = (a.name || '現場客') + (petName ? `(${petName})` : '');
-      
-      // 🌟【關鍵優化】：精準切分項目，防範多項目擠在一起破版
       const svcParts = (a.service || '服務').split(/[,，+＋/]/).map(s => s.trim()).filter(Boolean);
       let displaySvc = svcParts[0] || '服務';
-      if (isNarrow && svcParts.length > 1) {
+      if (totalCols >= 2 && svcParts.length > 1) {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
       const isUltraShort = (a.dur <= 30);
-      const isMedium = (a.dur > 30 && a.dur <= 60);
+      const isNarrow = (totalCols >= 2);
 
+      // 🌟【全新緊湊版型】：第一時間把「時間 + 姓名」並在最上方，名字絕對不再被遮擋！
       let innerLayoutHtml = '';
 
       if (isUltraShort) {
-        // A. 15~30 分鐘超短單：高緊湊兩行微字體，零重疊
         innerLayoutHtml = `
           <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
             <div class="flex items-center justify-between text-[8px] font-black text-white">
               <span class="font-mono opacity-85 text-[7.5px]">${a.time}</span>
-              <span class="truncate ml-0.5">${displayName}</span>
+              <span class="truncate ml-0.5 font-bold">${displayName}</span>
             </div>
-            <div class="text-[7.5px] font-medium text-white/90 truncate mt-0.5">
-              ${displaySvc}
-            </div>
-          </div>
-        `;
-      } else if (isMedium) {
-        // B. 45~60 分鐘中等單（截圖 10:15 / 10:30 極限插單場景）：時間時長同一行、名字項目不壓字
-        innerLayoutHtml = `
-          <div class="flex flex-col justify-between h-full p-1 leading-none select-none font-sans overflow-hidden">
-            <div>
-              <div class="flex items-center justify-between font-mono text-[7.5px] font-bold text-white/80 pb-0.5 border-b border-white/20">
-                <span>${a.time}</span>
-                <span class="opacity-75">${a.dur}m</span>
-              </div>
-              <div class="font-black text-white ${isNarrow ? 'text-[8.5px]' : 'text-[9.5px]'} truncate mt-1 tracking-tight" title="${displayName}">
-                ${displayName}
-              </div>
-            </div>
-            <div class="text-white/95 font-bold ${isNarrow ? 'text-[7.5px]' : 'text-[8.5px]'} truncate mt-auto">
+            <div class="text-[7.5px] font-medium text-white/95 truncate mt-0.5">
               ${displaySvc}
             </div>
           </div>
         `;
       } else {
-        // C. 75 分鐘以上長單：層次分明，項目帶透明底塊
+        // 中長單（含 45~60m 與極限插單）：頂部時間時長合一，名字緊接在頂部呈現
         innerLayoutHtml = `
           <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
             <div>
-              <div class="flex items-center justify-between font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
+              <div class="flex items-center justify-between font-mono text-[7.5px] font-bold text-white/80 pb-0.5 border-b border-white/20">
                 <span>${a.time}</span>
-                <span class="bg-black/20 px-1 rounded text-[7px]">${a.dur}m</span>
+                <span class="opacity-80">${a.dur}m</span>
               </div>
-              <div class="font-black text-white ${isNarrow ? 'text-[9.5px]' : 'text-[11px]'} tracking-tight break-all mt-0.5 leading-snug" title="${displayName}">
+              <div class="font-black text-white ${isNarrow ? 'text-[8.5px]' : 'text-[10px]'} truncate mt-1 tracking-tight" title="${displayName}">
                 ${displayName}
               </div>
             </div>
-            <div class="text-white/95 font-bold ${isNarrow ? 'text-[8px]' : 'text-[9.5px]'} break-all bg-black/15 px-1 py-0.5 rounded leading-tight mt-auto">
+            <div class="text-white/95 font-bold ${isNarrow ? 'text-[7.5px]' : 'text-[8.5px]'} truncate mt-auto bg-black/15 px-0.5 py-0.5 rounded">
               ${displaySvc}
             </div>
           </div>
