@@ -5295,8 +5295,9 @@ function renderOverviewGridCanvas() {
       const topOffset = slotUnitsFromStart * slotHeight;
       
       // 🌟 保底高度計算：10~15分鐘極短單保證有 18px 高度，絕不壓扁
+      // 🌟 保底高度計算：極短單至少給 20px，確保能完整容納文字
       const calcH = (a.dur / interval) * slotHeight - 2;
-      const cardHeight = Math.max(18, calcH);
+      const cardHeight = Math.max(20, calcH);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
@@ -5325,27 +5326,41 @@ function renderOverviewGridCanvas() {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
-      // 🌟【全面相容短單】：只要時長 <= 35 分鐘，一律單行橫排 (時間 | 姓名 | 項目)，保證看見項目名稱！
-      const isSingleLineSlot = (a.dur <= 35);
+      const isShortSlot = (a.dur <= 35); // 35 分鐘以內短單
       const isNarrow = (totalCols >= 2);
 
       let innerLayoutHtml = '';
 
-      if (isSingleLineSlot) {
-        // A. 10~35 分鐘短單：單行橫向並排，字體緊湊不截斷 (12:30 | 張小姐 | 剪髮)
-        innerLayoutHtml = `
-          <div class="flex items-center gap-1 h-full px-1 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
-            <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
-            <span class="text-white/40 text-[8px] shrink-0">|</span>
-            <span class="text-[8.5px] font-black text-white shrink-0">${displayName}</span>
-            <span class="text-white/40 text-[8px] shrink-0">|</span>
-            <span class="text-[8px] font-bold text-white/95 truncate">
-              ${displaySvc}
-            </span>
-          </div>
-        `;
+      if (isShortSlot) {
+        if (!isNarrow) {
+          // A-1. 全寬短單 (如 11:30 綠色橫條)：寬度充足，單行優雅並排
+          innerLayoutHtml = `
+            <div class="flex items-center gap-1.5 h-full px-2 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
+              <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
+              <span class="text-white/40 text-[8px] shrink-0">|</span>
+              <span class="text-[9px] font-black text-white shrink-0">${displayName}</span>
+              <span class="text-white/40 text-[8px] shrink-0">|</span>
+              <span class="text-[8.5px] font-bold text-white/95 truncate">
+                ${displaySvc}
+              </span>
+            </div>
+          `;
+        } else {
+          // A-2. 🌟 窄欄插單短單 (如 10:45 黃、12:30 橘)：上下兩行微排版，項目獨佔第二行，絕不被吃字！
+          innerLayoutHtml = `
+            <div class="flex flex-col justify-center h-full px-1 leading-[1.1] select-none font-sans overflow-hidden">
+              <div class="flex items-center justify-between text-white font-bold">
+                <span class="text-[8px] font-black truncate">${displayName}</span>
+                <span class="font-mono text-[7px] opacity-75 shrink-0 ml-0.5">${a.time}</span>
+              </div>
+              <div class="text-[7.5px] font-bold text-white/95 truncate mt-0.5">
+                ${displaySvc}
+              </div>
+            </div>
+          `;
+        }
       } else {
-        // B. 45 分鐘以上長單：頂部時間+時長，中間姓名，底部項目名稱
+        // B. 45 分鐘以上中長單：頂部時間時長，中間姓名，底部項目
         innerLayoutHtml = `
           <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
             <div>
