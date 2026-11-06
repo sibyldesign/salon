@@ -5137,9 +5137,6 @@ function switchOverviewStaffTab(staffId) {
 // ========================================================
 // 🌟【甘特圖專業修復版】：修復幽靈重複複製 + 真·時間軸凍結 + 全屏一頁看完全員
 // ========================================================
-// ========================================================
-// 🌟【甘特圖專業示範圖架構版】：格子自帶淺灰時間 + 預約色塊直排資訊
-// ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
@@ -5244,11 +5241,10 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur };
     }).sort((a, b) => a.startMin - b.startMin);
 
-    // 🌟【全新多重重疊軌道演算法】：徹底解決 10:15 / 10:30 / 10:45 多人插單重疊覆蓋吃字問題
+    // 多重重疊軌道分配
     const processedAppts = [];
     const clusters = [];
 
-    // 1. 群組化相交的預約
     stAppts.forEach(appt => {
       let placedInCluster = false;
       for (let cluster of clusters) {
@@ -5266,10 +5262,9 @@ function renderOverviewGridCanvas() {
       }
     });
 
-    // 2. 針對每個相交群組分配獨立軌道（Track/Column），確保絕不互相遮擋
     clusters.forEach(cluster => {
       cluster.sort((a, b) => a.startMin - b.startMin || (b.dur - a.dur));
-      const tracks = []; // 記錄每條軌道當前的結束時間
+      const tracks = [];
 
       cluster.forEach(appt => {
         let assignedTrack = -1;
@@ -5295,11 +5290,13 @@ function renderOverviewGridCanvas() {
       });
     });
 
-    // 3. 渲染卡片：精確依軌道排開，文字零重疊
     let apptCardsHtml = processedAppts.map(a => {
       const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
-      const cardHeight = Math.max(slotHeight - 2, (a.dur / interval) * slotHeight - 2);
+      
+      // 🌟 保底高度計算：10~15分鐘極短單保證有 18px 高度，絕不壓扁
+      const calcH = (a.dur / interval) * slotHeight - 2;
+      const cardHeight = Math.max(18, calcH);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
@@ -5312,7 +5309,6 @@ function renderOverviewGridCanvas() {
         if (match && match[1]) petName = match[1].trim();
       }
 
-      // 🌟 精確計算左右位置與寬度，3 單、4 單各自分開絕不疊合
       const totalCols = a.totalCols || 1;
       const colIdx = a.colIndex || 0;
       const widthPct = (100 / totalCols).toFixed(2);
@@ -5329,26 +5325,40 @@ function renderOverviewGridCanvas() {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
-      const isUltraShort = (a.dur <= 30);
+      const isUltraShort = (a.dur <= 20); // 10~20 分鐘極短單
+      const isShort = (a.dur > 20 && a.dur <= 35); // 25~35 分鐘短單
       const isNarrow = (totalCols >= 2);
 
-      // 🌟【全新緊湊版型】：第一時間把「時間 + 姓名」並在最上方，名字絕對不再被遮擋！
       let innerLayoutHtml = '';
 
       if (isUltraShort) {
+        // A. 10~20 分鐘極短單：水平單行橫排 (11:30 | AAA | 項目名稱) 一行到底完整顯示
+        innerLayoutHtml = `
+          <div class="flex items-center gap-1 h-full px-1.5 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
+            <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
+            <span class="text-white/40 text-[8px] shrink-0">|</span>
+            <span class="text-[8.5px] font-black text-white shrink-0">${displayName}</span>
+            <span class="text-white/40 text-[8px] shrink-0">|</span>
+            <span class="text-[8px] font-medium text-white/95 truncate">
+              ${displaySvc}
+            </span>
+          </div>
+        `;
+      } else if (isShort) {
+        // B. 25~35 分鐘短單：上下兩行微排版
         innerLayoutHtml = `
           <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
             <div class="flex items-center justify-between text-[8px] font-black text-white">
               <span class="font-mono opacity-85 text-[7.5px]">${a.time}</span>
               <span class="truncate ml-0.5 font-bold">${displayName}</span>
             </div>
-            <div class="text-[7.5px] font-medium text-white/95 truncate mt-0.5">
+            <div class="text-[7.5px] font-medium text-white/90 truncate mt-0.5">
               ${displaySvc}
             </div>
           </div>
         `;
       } else {
-        // 中長單（含 45~60m 與極限插單）：頂部時間時長合一，名字緊接在頂部呈現
+        // C. 45 分鐘以上中長單：頂部時間+時長，中間姓名，底部項目帶底色
         innerLayoutHtml = `
           <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
             <div>
