@@ -65,29 +65,29 @@
       will-change: transform, opacity;
     }
 
-    /* 頂部 Header 向上滑出 */
-    body.nav-hidden header {
-      transform: translateY(-100%) !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-    }
+    /* 🌟 偵測滑動時，將整條底部導覽底座（含左右箭頭按鈕）完整移出螢幕 */
+body.nav-hidden header {
+  transform: translateY(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 
-    /* 底部導覽列、兩側箭頭、底座容器整列向下滑出螢幕外 */
-    body.nav-hidden #bottom-nav,
-    body.nav-hidden nav,
-    body.nav-hidden footer,
-    body.nav-hidden [class*="fixed bottom-0"] {
-      transform: translateY(160%) !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-      visibility: hidden !important;
-    }
+body.nav-hidden #bottom-nav,
+body.nav-hidden [class*="fixed bottom-0"],
+body.nav-hidden div:has(> #bottom-nav),
+body.nav-hidden footer {
+  transform: translateY(180%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
 
     /* 隱藏時畫布自動解鎖全螢幕高度 */
     body.nav-hidden main {
       padding-top: 0.25rem !important;
       padding-bottom: 0.25rem !important;
     }
+
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-32">
@@ -145,8 +145,8 @@
 
   <main class="max-w-2xl mx-auto p-4" id="main-content" style="display: none;">
     
-    <!-- 即時推播狀態卡片 -->
-    <div class="bg-amber-50/90 border border-amber-200 p-3.5 rounded-2xl mb-4 shadow-xs text-xs text-amber-900 space-y-2">
+    <!-- 即時推播狀態卡片先隱藏 -->
+    <div style="display: none !important;" class="bg-amber-50/90 border border-amber-200 p-3.5 rounded-2xl mb-4 shadow-xs text-xs text-amber-900 space-y-2">
       <div class="flex justify-between items-center font-bold">
         <span class="flex items-center gap-1.5">
           <i class="fa-solid fa-bell text-amber-600"></i> 手機即時推播通知運作中
@@ -4411,9 +4411,10 @@ async function checkPin() {
   fetchDataAndRender();
       // 🌟 啟動 Facebook 級絲滑上下滾動自動隱藏 / 浮現導航
   initFacebookScrollNav();
-      // 🌟 啟動全站 Facebook 式上下滑動滿版 & 初始化空檔介面
-  initFacebookScrollNav();
-  if (typeof renderSlotsMasterInterface === 'function') renderSlotsMasterInterface();
+      // 🌟 初始化空檔月曆與專員色票
+  if (typeof renderSlotsMasterInterface === 'function') {
+    renderSlotsMasterInterface();
+  }
 }
 
     // 🌟 Facebook 式自動隱藏頂部與底部分頁列
@@ -4427,10 +4428,10 @@ function initFacebookScrollNav() {
         const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
         const diff = currentScrollY - lastScrollY;
 
-        // 往下滾動超過 10px 且離開頂部時自動收起；往上一推立刻現身
-        if (diff > 10 && currentScrollY > 50) {
+        // 往下滑動（頁面下滾 / 手指上滑）超過 4px 即刻隱藏
+        if (diff > 4 && currentScrollY > 30) {
           document.body.classList.add('nav-hidden');
-        } else if (diff < -8 || currentScrollY <= 20) {
+        } else if (diff < -6 || currentScrollY <= 10) {
           document.body.classList.remove('nav-hidden');
         }
 
@@ -11020,12 +11021,19 @@ if (peakChartBox) {
     }
 
     // ========================================================
-    // 18. 🌟 空檔釋出旗艦模組 (支援多專員、項目色彩備註、滿額標記與滿版切換)
+    // 18. 🌟 空檔旗艦排程系統 (4位專員多色共存 + 批次填寫備註 + 專員圖例對照)
     // ========================================================
-    let currentSlotViewMode = 'calendar'; // 'calendar' (月曆) | 'buttons' (時段清單)
     let currentSlotStaffId = 'all';
-    let slotCalYear = new Date().getFullYear();
-    let slotCalMonth = new Date().getMonth() + 1;
+    let slotCalYear = 2026;
+    let slotCalMonth = 11;
+
+    // 專員 4 色代表盤配置
+    const SLOT_STAFF_PALETTE = [
+      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', name: '專員 1' }, // 柔櫻粉
+      { bg: '#FFEDD5', text: '#9A3412', dot: '#EA580C', name: '專員 2' }, // 暖杏橘
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', name: '專員 3' }, // 薰衣紫
+      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', name: '專員 4' }  // 霧天藍
+    ];
 
     function initSlotsLiveUrl() {
       const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
@@ -11036,104 +11044,59 @@ if (peakChartBox) {
       }
     }
 
-    // 🌟 Facebook 式自動隱藏頂部與底部分頁列引擎
-    function initFacebookScrollNav() {
-      let lastScrollY = window.pageYOffset || document.documentElement.scrollTop;
-      let ticking = false;
-
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          window.requestAnimationFrame(() => {
-            const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
-            const diff = currentScrollY - lastScrollY;
-
-            // 往下滾動超過 12px 且離開頂部時自動收起；往上一推立刻現身
-            if (diff > 12 && currentScrollY > 50) {
-              document.body.classList.add('nav-hidden');
-            } else if (diff < -8 || currentScrollY <= 20) {
-              document.body.classList.remove('nav-hidden');
-            }
-
-            lastScrollY = currentScrollY;
-            ticking = false;
-          });
-          ticking = true;
-        }
-      }, { passive: true });
+    // 取得專員與色票映射
+    function getSlotStaffColorMap() {
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      const map = {};
+      staffList.forEach((st, idx) => {
+        const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
+        map[st.id] = { ...c, name: st.name };
+        map[st.name] = { ...c, name: st.name };
+      });
+      return map;
     }
 
-    // 切換月曆 / 時段按鈕模式
-    function switchSlotViewMode(mode) {
-      currentSlotViewMode = mode;
-      renderSlotsMasterInterface();
-    }
-
-    // 切換專員
-    function selectSlotStaffTab(staffId) {
-      currentSlotStaffId = staffId;
-      renderSlotsMasterInterface();
-    }
-
-    // 切換月份
-    function changeSlotCalMonth(offset) {
-      slotCalMonth += offset;
-      if (slotCalMonth > 12) { slotCalMonth = 1; slotCalYear++; }
-      else if (slotCalMonth < 1) { slotCalMonth = 12; slotCalYear--; }
-      renderSlotsMasterInterface();
-    }
-
-    // 🌟 空檔主控排程面板 (月曆與按鈕雙模切換)
+    // 🌟 渲染主日曆控制面板
     function renderSlotsMasterInterface() {
       const mountPoint = document.getElementById('slot-picker-checkboxes');
       if (!mountPoint) return;
 
-      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-      if (currentSlotStaffId === 'all' && staffList.length > 0) {
-        currentSlotStaffId = staffList[0].id;
+      // 自動從後台設定回填既有時段
+      if (pendingSlotsList.length === 0 && backendData.settings?.published_slots) {
+        pendingSlotsList = [...backendData.settings.published_slots];
       }
 
-      // 控制列：模式切換 + 專員選擇
-      let headerNavHtml = `
-        <div class="col-span-full bg-white rounded-2xl p-2.5 border border-brand-200 shadow-sm mb-2 font-sans">
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <div class="inline-flex p-1 bg-brand-100/80 rounded-xl border border-brand-200 shadow-2xs">
-              <button type="button" onclick="switchSlotViewMode('calendar')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${currentSlotViewMode === 'calendar' ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-700'}">
-                <i class="fa-solid fa-calendar-days text-[11px] mr-1"></i>月曆
-              </button>
-              <button type="button" onclick="switchSlotViewMode('buttons')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${currentSlotViewMode === 'buttons' ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-700'}">
-                <i class="fa-solid fa-clock text-[11px] mr-1"></i>時段清單
-              </button>
-            </div>
-            <span class="text-[11px] font-bold text-brand-600 font-mono">點擊日期格可直接新增/標記</span>
-          </div>
+      const staffMap = getSlotStaffColorMap();
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
 
-          <!-- 多位專員切換 Tab (如 Yvonne, Sunny, Penny) -->
-          <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-            <button type="button" onclick="selectSlotStaffTab('all')" class="px-3 py-1 rounded-full text-xs font-bold shrink-0 transition ${currentSlotStaffId === 'all' ? 'bg-brand-900 text-white shadow-2xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
-              全體專員
-            </button>
-            ${staffList.map(st => `
-              <button type="button" onclick="selectSlotStaffTab('${st.id}')" class="px-3 py-1 rounded-full text-xs font-bold shrink-0 transition ${currentSlotStaffId === st.id ? 'bg-brand-900 text-white shadow-2xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
-                ${st.name}
-              </button>
-            `).join('')}
+      // 1. 專員代表色圖例對照表
+      let legendHtml = `
+        <div class="col-span-full bg-white rounded-2xl p-3 border border-brand-200 shadow-sm mb-2 font-sans">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-brand-900">專員顏色對照表</span>
+            <span class="text-[10px] text-brand-500 font-medium">點選下方任一日曆格可批次勾選與填寫備註</span>
+          </div>
+          <div class="flex flex-wrap gap-2.5">
+            ${staffList.map(st => {
+              const c = staffMap[st.id] || SLOT_STAFF_PALETTE[0];
+              return `
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand-200 bg-[#FAF7F2] text-xs font-bold">
+                  <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${c.dot};"></span>
+                  <span class="text-brand-900">${st.name}</span>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
 
-      if (currentSlotViewMode === 'buttons') {
-        mountPoint.innerHTML = headerNavHtml;
-        handleSlotRangeChange(true);
-        return;
-      }
-
-      // 月曆網格產生
+      // 2. 當月網格計算
       const daysInMonth = new Date(slotCalYear, slotCalMonth, 0).getDate();
       const firstDayWeekIndex = new Date(slotCalYear, slotCalMonth - 1, 1).getDay();
 
-      let calendarCellsHtml = '';
+      let cellsHtml = '';
       for (let b = 0; b < firstDayWeekIndex; b++) {
-        calendarCellsHtml += `<div class="bg-gray-50/50 min-h-[85px] border-b border-r border-[#EFECE8] p-1"></div>`;
+        cellsHtml += `<div class="bg-gray-50/50 min-h-[92px] border-b border-r border-[#EFECE8] p-1"></div>`;
       }
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -11141,31 +11104,36 @@ if (peakChartBox) {
         const dd = String(d).padStart(2, '0');
         const dayStr = `${slotCalYear}/${mm}/${dd}`;
 
-        const daySlots = pendingSlotsList.filter(s => {
-          const cDate = (s.date || '').replace(/-/g, '/');
-          return cDate === dayStr && (currentSlotStaffId === 'all' || s.staffId === currentSlotStaffId || !s.staffId);
-        });
+        // 該日所有專員設定之時段
+        const daySlots = pendingSlotsList.filter(s => (s.date || '').replace(/-/g, '/') === dayStr);
         const isDayFull = daySlots.some(s => s.isFull);
 
-        calendarCellsHtml += `
-          <div class="bg-white min-h-[85px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative hover:bg-brand-50/30 transition cursor-pointer select-none"
-               onclick="openDaySlotDetailModal('${dayStr}', '${currentSlotStaffId}')">
+        cellsHtml += `
+          <div class="bg-white min-h-[92px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative hover:bg-brand-50/40 transition cursor-pointer select-none"
+               onclick="openBatchSlotModal('${dayStr}')">
             <div class="flex justify-between items-center mb-1">
-              <span class="text-[11px] font-mono font-bold ${isDayFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
-              ${isDayFull ? `<span class="bg-[#FEF3C7] text-[#B45309] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
+              <span class="text-[11px] font-mono font-black ${isDayFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
+              ${isDayFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
             </div>
 
+            <!-- 多專員時段色塊展示 -->
             <div class="flex flex-col gap-0.5 overflow-hidden">
               ${daySlots.map(s => {
-                const hasNote = Boolean(s.note && s.note.trim() && !s.note.includes('滿'));
-                const badgeStyle = s.isFull 
-                  ? 'bg-[#FEF3C7] text-[#B45309]' 
-                  : (hasNote ? 'bg-[#FFE4E6] text-[#BE123C]' : 'bg-[#F4F0EA] text-brand-900');
+                const stKey = s.staffId || s.staffName || '';
+                const c = staffMap[stKey] || SLOT_STAFF_PALETTE[0];
+                const note = (s.note || '').trim();
+
+                let bgStyle = c.bg;
+                let textStyle = c.text;
+                if (s.isFull) {
+                  bgStyle = '#FEF3C7';
+                  textStyle = '#92400E';
+                }
 
                 return `
-                  <div class="${badgeStyle} text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between">
-                    <span>${s.time}</span>
-                    ${hasNote ? `<span class="font-black scale-90">${s.note}</span>` : ''}
+                  <div style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between">
+                    <span class="font-mono">${s.time}</span>
+                    <span class="font-black scale-90 truncate ml-0.5">${note || c.name}</span>
                   </div>
                 `;
               }).join('')}
@@ -11174,270 +11142,207 @@ if (peakChartBox) {
         `;
       }
 
-      mountPoint.innerHTML = headerNavHtml + `
+      mountPoint.innerHTML = legendHtml + `
         <div class="col-span-full bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden font-sans">
+          <!-- 月份切換 -->
           <div class="flex items-center justify-between px-3.5 py-2 border-b border-[#EFECE8] bg-[#FAF8F5]">
-            <button type="button" onclick="changeSlotCalMonth(-1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-left"></i></button>
-            <span class="font-black text-xs text-brand-900 font-mono">${slotCalYear} 年 ${slotCalMonth} 月</span>
-            <button type="button" onclick="changeSlotCalMonth(1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-right"></i></button>
+            <button type="button" onclick="changeAdminSlotMonth(-1)" class="w-7 h-7 rounded-lg bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="font-black text-xs text-brand-900 font-mono tracking-wide">${slotCalYear} 年 ${slotCalMonth} 月 空檔月曆</span>
+            <button type="button" onclick="changeAdminSlotMonth(1)" class="w-7 h-7 rounded-lg bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
 
-          <div class="grid grid-cols-7 text-center py-1 border-b border-[#EFECE8] bg-white text-[10.5px] font-bold text-brand-500">
+          <!-- 星期列 -->
+          <div class="grid grid-cols-7 text-center py-1.5 border-b border-[#EFECE8] bg-white text-[10.5px] font-bold text-brand-500">
             <span class="text-rose-500">週日</span>
             <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
             <span class="text-rose-500">週六</span>
           </div>
 
+          <!-- 日期網格 -->
           <div class="grid grid-cols-7 border-l border-t border-[#EFECE8] bg-[#EFECE8]">
-            ${calendarCellsHtml}
+            ${cellsHtml}
           </div>
         </div>
       `;
+
+      renderPendingSlotsList();
     }
 
-    // 點選日期彈窗：可填寫「10:00 撥筋」限定項目，或勾選滿單
-    // 🌟 後台空檔彈窗：支援直接輸入特殊項目詞 (如 撥筋、做臉、剪髮)
-    // 🌟 彈窗支援快捷標籤與自訂備註（撥筋、做臉等）
-function openDaySlotDetailModal(dayStr, staffId) {
-  const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-  const staff = staffList.find(s => s.id === staffId);
-  const staffName = staff ? staff.name : (staffId === 'all' ? '全體專員' : '指定專員');
-  const daySlots = pendingSlotsList.filter(s => (s.date || '').replace(/-/g, '/') === dayStr && (staffId === 'all' || s.staffId === staffId || !s.staffId));
+    function changeAdminSlotMonth(offset) {
+      slotCalMonth += offset;
+      if (slotCalMonth > 12) { slotCalMonth = 1; slotCalYear++; }
+      else if (slotCalMonth < 1) { slotCalMonth = 12; slotCalYear--; }
+      renderSlotsMasterInterface();
+    }
 
-  Swal.fire({
-    title: `${dayStr} 空檔與項目設定`,
-    html: `
-      <div class="text-left text-xs font-sans space-y-3 p-1">
-        <div class="font-bold text-brand-800">專員：<span class="text-[#8C7355]">${staffName}</span></div>
-        
-        <div class="space-y-1">
-          <label class="block text-[11px] font-bold text-brand-900">選擇時間與填寫特殊項目：</label>
-          <div class="flex gap-2">
-            <input id="swal-new-slot-time" type="time" class="swal2-input !m-0 !w-1/2 text-xs font-mono font-bold" value="10:00">
-            <input id="swal-new-slot-note" type="text" class="swal2-input !m-0 !w-1/2 text-xs" placeholder="自訂項目 (如: 撥筋、做臉)">
-          </div>
-          <!-- 快捷填寫按鈕 -->
-          <div class="flex gap-1 pt-1">
-            <button type="button" onclick="document.getElementById('swal-new-slot-note').value='撥筋'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10px] font-bold">＋ 撥筋</button>
-            <button type="button" onclick="document.getElementById('swal-new-slot-note').value='做臉'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10px] font-bold">＋ 做臉</button>
-            <button type="button" onclick="document.getElementById('swal-new-slot-note').value='剪髮'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10px] font-bold">＋ 剪髮</button>
-          </div>
-        </div>
+    // 🌟 核心彈窗：勾選多個時段 ➔ 統一填寫備註（如撥筋） ➔ 儲存
+    function openBatchSlotModal(dayStr) {
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      const times = [
+        '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+        '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+        '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+        '18:00', '18:30', '19:00', '19:30', '20:00'
+      ];
 
-        <div class="flex items-center gap-2 pt-1 border-t border-brand-100">
-          <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-800">
-            <input type="checkbox" id="swal-day-full" class="rounded"> 標記此日為【已額滿】
-          </label>
-        </div>
+      const dayExistingSlots = pendingSlotsList.filter(s => (s.date || '').replace(/-/g, '/') === dayStr);
 
-        <div class="border-t pt-2 max-h-36 overflow-y-auto space-y-1.5">
-          <div class="text-[11px] font-bold text-gray-500">當日已設定時段：</div>
-          ${daySlots.length === 0 ? '<div class="text-gray-400 text-xs">尚未加入任何時段</div>' : daySlots.map(s => `
-            <div class="flex justify-between items-center bg-brand-50 px-2.5 py-1.5 rounded-lg border border-brand-200">
-              <span class="font-mono font-bold text-brand-900">${s.time}</span>
-              <span class="${s.note ? 'text-rose-700 font-bold' : 'text-brand-600 font-bold'}">${s.note || (s.isFull ? '額滿' : '開放預約')}</span>
-              <button type="button" onclick="removeSpecificSlot('${s.date}', '${s.time}', '${s.staffId || staffId}')" class="text-gray-400 hover:text-red-500 font-bold px-1 text-sm">×</button>
+      Swal.fire({
+        title: `${dayStr} 空檔批次設定`,
+        width: '400px',
+        html: `
+          <div class="text-left text-xs font-sans space-y-3 p-1">
+            <!-- 1. 選擇套用專員 -->
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">1. 指定專員：</label>
+              <select id="swal-batch-staff" class="swal2-select !m-0 !w-full text-xs font-bold border-brand-300">
+                ${staffList.map(st => `<option value="${st.id}">${st.name}</option>`).join('')}
+              </select>
             </div>
-          `).join('')}
-        </div>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '加入時段',
-    cancelButtonText: '完成關閉',
-    confirmButtonColor: '#8C7355',
-    preConfirm: () => {
-      const t = document.getElementById('swal-new-slot-time')?.value;
-      const n = document.getElementById('swal-new-slot-note')?.value?.trim() || '';
-      const isFull = document.getElementById('swal-day-full')?.checked || false;
-      if (!t) return false;
-      return { time: t, note: n, isFull };
-    }
-  }).then(r => {
-    if (r.isConfirmed && r.value) {
-      pendingSlotsList.push({
-        date: dayStr,
-        time: r.value.time,
-        note: r.value.note,
-        staffId: staffId,
-        staffName: staff ? staff.name : '',
-        isFull: r.value.isFull
-      });
-      renderSlotsMasterInterface();
-      renderPendingSlotsList();
-    }
-  });
-}
 
-// 🌟 雙軌寫入 Supabase，確保 slots.html 100% 讀得到！
-async function publishSlotsToPage() {
-  if (pendingSlotsList.length === 0) return Swal.fire('請至少設定一個時段再發布', '', 'warning');
-  Swal.showLoading();
-  try {
-    // 同步儲存於 published_slots 欄位與 settings JSON 內部，確保萬無一失
-    const payload = {
-      published_slots: pendingSlotsList,
-      settings: {
-        ...(backendData.settings || {}),
-        published_slots: pendingSlotsList
-      }
-    };
+            <!-- 2. 統一填寫特殊項目備註 (附帶快捷按鈕) -->
+            <div>
+              <label class="block font-bold text-brand-900 mb-1">2. 統一填寫特殊項目備註：</label>
+              <input id="swal-batch-note" type="text" class="swal2-input !m-0 !w-full text-xs" placeholder="例如: 撥筋、做臉、剪髮 (留空代表常態)">
+              <div class="flex gap-1.5 pt-1.5">
+                <button type="button" onclick="document.getElementById('swal-batch-note').value='撥筋'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10.5px] font-bold">＋ 撥筋</button>
+                <button type="button" onclick="document.getElementById('swal-batch-note').value='做臉'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10.5px] font-bold">＋ 做臉</button>
+                <button type="button" onclick="document.getElementById('swal-batch-note').value='剪髮'" class="px-2 py-0.5 bg-rose-50 border border-rose-200 text-rose-700 rounded text-[10.5px] font-bold">＋ 剪髮</button>
+                <button type="button" onclick="document.getElementById('swal-batch-note').value=''" class="px-2 py-0.5 bg-gray-50 border border-gray-200 text-gray-600 rounded text-[10.5px]">清空</button>
+              </div>
+            </div>
 
-    await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, payload);
-    if (!backendData.settings) backendData.settings = {};
-    backendData.settings.published_slots = pendingSlotsList;
+            <!-- 3. 勾選欲排入的時段清單 -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="font-bold text-brand-900">3. 勾選欲開放的時段：</label>
+                <button type="button" onclick="document.querySelectorAll('.swal-time-cb').forEach(c => c.checked = !c.checked)" class="text-[10px] text-brand-600 underline font-bold">反向選取</button>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-brand-50 rounded-xl border border-brand-200">
+                ${times.map(t => `
+                  <label class="flex items-center justify-center gap-1 bg-white p-1 rounded border border-brand-200 cursor-pointer hover:border-brand-500 text-[11px]">
+                    <input type="checkbox" value="${t}" class="swal-time-cb accent-[#8C7355] rounded">
+                    <span class="font-mono font-bold text-brand-900">${t}</span>
+                  </label>
+                `).join('')}
+              </div>
+            </div>
 
-    const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
-    Swal.fire({
-      title: '空檔已成功發布！',
-      html: `
-        <div class="text-xs text-brand-800 space-y-2 text-left bg-brand-50 p-3 rounded-2xl border border-brand-200">
-          <div><b>預約時間表網址：</b><br><a href="${slotsUrl}" target="_blank" class="text-blue-600 underline break-all font-mono">${slotsUrl}</a></div>
-          <p class="text-[11px] text-brand-500">已同步至前台預約時間表，顧客點選時段即可直接預約！</p>
-        </div>
-      `,
-      icon: 'success'
-    });
-  } catch (e) {
-    Swal.fire('發布失敗', e.message, 'error');
-  }
-}
+            <div class="flex items-center gap-2 pt-1 border-t border-brand-200">
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-800">
+                <input type="checkbox" id="swal-batch-full" class="rounded"> 標記此日為【已額滿】
+              </label>
+            </div>
 
-    function removeSpecificSlot(d, t, staffId) {
-      pendingSlotsList = pendingSlotsList.filter(s => !((s.date || '').replace(/-/g, '/') === (d || '').replace(/-/g, '/') && s.time === t && (s.staffId === staffId || staffId === 'all')));
-      Swal.close();
-      renderSlotsMasterInterface();
-      renderPendingSlotsList();
-    }
-
-    // 相容原版時段按鈕生成
-    function handleSlotRangeChange(appendOnly) {
-      const startVal = document.getElementById('slot-start-date')?.value;
-      const endVal = document.getElementById('slot-end-date')?.value;
-      if (!startVal) return;
-
-      if (!appendOnly) {
-        pendingSlotsList = [];
-        renderPendingSlotsList();
-      }
-
-      const container = document.getElementById('slot-picker-checkboxes');
-      if (!container) return;
-
-      const startTime = backendData.settings?.shiftStartTime || '09:00';
-      const endTime = backendData.settings?.shiftEndTime || '19:00';
-      const interval = Number(backendData.settings?.shiftInterval || 30);
-      
-      const [sH, sM] = startTime.split(':').map(Number);
-      const [eH, eM] = endTime.split(':').map(Number);
-      const times = [];
-      for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
-        const hh = String(Math.floor(m / 60)).padStart(2, '0');
-        const mm = String(m % 60).padStart(2, '0');
-        times.push(`${hh}:${mm}`);
-      }
-
-      const startDate = new Date(startVal);
-      const endDate = endVal ? new Date(endVal) : new Date(startVal);
-
-      const daysList = [];
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
-      }
-
-      const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-
-      const buttonsHtml = daysList.map(dayStr => {
-        const dObj = new Date(dayStr.replace(/\//g, '-'));
-        const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekDays[dObj.getDay()]})`;
-
-        return `
-          <div class="col-span-full flex justify-between items-center bg-brand-50/80 px-3 py-2 rounded-xl border border-brand-200 mt-2">
-            <span class="font-bold text-xs text-brand-900 flex items-center gap-1.5 font-mono">
-              <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
-              <span>${dayStr} ${weekStr}</span>
-            </span>
-            <button type="button" onclick="toggleSelectAllDateSlots('${dayStr}', this)" class="px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs">
-              ＋ 當日全選
-            </button>
+            <!-- 當日既有紀錄與刪除 -->
+            <div class="border-t border-brand-200 pt-2">
+              <div class="text-[10.5px] font-bold text-brand-500 mb-1">當日已設定時段（點擊 × 刪除）：</div>
+              <div class="max-h-24 overflow-y-auto space-y-1">
+                ${dayExistingSlots.length === 0 ? '<div class="text-gray-400 text-xs">尚無時段</div>' : dayExistingSlots.map((s, idx) => `
+                  <div class="flex justify-between items-center bg-white px-2 py-1 rounded border border-brand-200 text-xs">
+                    <span class="font-mono font-bold">${s.time}</span>
+                    <span class="text-brand-600 font-bold">${s.staffName || '專員'}</span>
+                    <span class="${s.note ? 'text-rose-700 font-bold' : 'text-gray-500'}">${s.note || (s.isFull ? '額滿' : '常態')}</span>
+                    <button type="button" onclick="deleteExistingSlot('${s.date}', '${s.time}', '${s.staffId}')" class="text-gray-400 hover:text-red-500 font-black px-1">×</button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
           </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '統一加入儲存',
+        cancelButtonText: '關閉',
+        confirmButtonColor: '#8C7355',
+        preConfirm: () => {
+          const staffId = document.getElementById('swal-batch-staff')?.value;
+          const selectedTimes = Array.from(document.querySelectorAll('.swal-time-cb:checked')).map(cb => cb.value);
+          const note = document.getElementById('swal-batch-note')?.value?.trim() || '';
+          const isFull = document.getElementById('swal-batch-full')?.checked || false;
 
-          ${times.map(t => `
-            <label class="p-2 bg-white rounded-xl border border-brand-200 flex items-center justify-between cursor-pointer hover:border-[#8C7355] transition text-xs shadow-2xs">
-              <span class="font-bold font-mono text-brand-900">${t}</span>
-              <input type="checkbox" value="${t}" data-date="${dayStr}" onchange="toggleSlotPick('${dayStr}', '${t}', this)" class="slot-cb-${dayStr.replace(/\//g, '')} accent-[#8C7355] w-3.5 h-3.5 rounded">
-            </label>
-          `).join('')}
-        `;
-      }).join('');
-
-      if (appendOnly) {
-        container.insertAdjacentHTML('beforeend', buttonsHtml);
-      } else {
-        container.innerHTML = buttonsHtml;
-      }
-    }
-
-    function toggleSelectAllDateSlots(dayStr, btn) {
-      const cleanDayClass = dayStr.replace(/\//g, '');
-      const checkboxes = document.querySelectorAll(`.slot-cb-${cleanDayClass}`);
-      if (!checkboxes || checkboxes.length === 0) return;
-
-      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-      const targetState = !allChecked;
-
-      checkboxes.forEach(cb => {
-        cb.checked = targetState;
-        const t = cb.value;
-        if (targetState) {
-          if (!pendingSlotsList.some(s => s.date === dayStr && s.time === t)) {
-            pendingSlotsList.push({ date: dayStr, time: t, staffId: currentSlotStaffId });
+          if (selectedTimes.length === 0 && !isFull) {
+            Swal.showValidationMessage('請至少勾選一個時段！');
+            return false;
           }
-        } else {
-          pendingSlotsList = pendingSlotsList.filter(s => !(s.date === dayStr && s.time === t));
+          return { staffId, selectedTimes, note, isFull };
+        }
+      }).then(r => {
+        if (r.isConfirmed && r.value) {
+          const { staffId, selectedTimes, note, isFull } = r.value;
+          const staff = staffList.find(s => s.id === staffId);
+          const staffName = staff ? staff.name : '';
+
+          selectedTimes.forEach(t => {
+            // 覆蓋同日、同時段、同專員紀錄
+            pendingSlotsList = pendingSlotsList.filter(s => !(s.date === dayStr && s.time === t && s.staffId === staffId));
+            pendingSlotsList.push({
+              date: dayStr,
+              time: t,
+              note: note,
+              staffId: staffId,
+              staffName: staffName,
+              isFull: isFull
+            });
+          });
+
+          renderSlotsMasterInterface();
         }
       });
-
-      btn.innerText = targetState ? '✕ 取消全選' : '＋ 當日全選';
-      btn.className = targetState
-        ? "px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs"
-        : "px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs";
-
-      renderPendingSlotsList();
     }
 
-    function toggleSlotPick(d, t, cb) {
-      if (cb.checked) pendingSlotsList.push({ date: d, time: t, staffId: currentSlotStaffId });
-      else pendingSlotsList = pendingSlotsList.filter(s => !(s.date === d && s.time === t));
-      renderPendingSlotsList();
+    function deleteExistingSlot(d, t, stId) {
+      pendingSlotsList = pendingSlotsList.filter(s => !((s.date || '').replace(/-/g, '/') === (d || '').replace(/-/g, '/') && s.time === t && s.staffId === stId));
+      Swal.close();
+      renderSlotsMasterInterface();
     }
 
-    // 渲染底部待發布標籤清單
+    // 渲染底部待發布標籤
     function renderPendingSlotsList() {
       const box = document.getElementById('selected-slots-display');
       if (!box) return;
       if (pendingSlotsList.length === 0) {
-        box.innerHTML = '<span class="text-xs text-brand-400">尚未挑選時段</span>';
+        box.innerHTML = '<span class="text-xs text-brand-400">尚未挑選任何釋出時段</span>';
         return;
       }
       box.innerHTML = pendingSlotsList.map((s, idx) => `
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 ${s.note ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-brand-100 text-brand-800 border-brand-200'} rounded-full text-xs font-bold border">
-          ${s.date} ${s.time} ${s.note ? `(${s.note})` : ''}
-          <button type="button" onclick="removePendingSlot(${idx})" class="text-brand-400 hover:text-red-500 font-bold ml-0.5">×</button>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 ${s.note ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-brand-100 text-brand-800 border-brand-200'} rounded-full text-xs font-bold border">
+          ${s.date} ${s.time} [${s.staffName || '專員'}] ${s.note ? `(${s.note})` : ''}
+          <button type="button" onclick="pendingSlotsList.splice(${idx}, 1); renderSlotsMasterInterface();" class="text-brand-400 hover:text-red-500 font-bold ml-0.5">×</button>
         </span>
       `).join('');
     }
 
-    function removePendingSlot(idx) {
-      pendingSlotsList.splice(idx, 1);
-      renderPendingSlotsList();
-      if (currentSlotViewMode === 'calendar') renderSlotsMasterInterface();
-    }
+    // 發布空檔到雲端 Supabase
+    async function publishSlotsToPage() {
+      if (pendingSlotsList.length === 0) return Swal.fire('請至少設定一個時段再發布', '', 'warning');
+      Swal.showLoading();
+      try {
+        const payload = {
+          published_slots: pendingSlotsList,
+          settings: {
+            ...(backendData.settings || {}),
+            published_slots: pendingSlotsList
+          }
+        };
 
-    function copySlotsLink() {
-      const url = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
-      navigator.clipboard.writeText(url);
-      Swal.fire('已複製空檔網址！', '', 'success');
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, payload);
+        if (!backendData.settings) backendData.settings = {};
+        backendData.settings.published_slots = pendingSlotsList;
+
+        const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+        Swal.fire({
+          title: '空檔月曆已成功發布！',
+          html: `
+            <div class="text-xs text-brand-800 space-y-2 text-left bg-brand-50 p-3 rounded-2xl border border-brand-200 font-sans">
+              <div><b>預約時間表網址：</b><br><a href="${slotsUrl}" target="_blank" class="text-blue-600 underline break-all font-mono">${slotsUrl}</a></div>
+              <p class="text-[11px] text-brand-500">已同步至前台預約時間表，支援 4 位專員專屬色塊與自訂備註！</p>
+            </div>
+          `,
+          icon: 'success'
+        });
+      } catch (e) {
+        Swal.fire('發布失敗', e.message, 'error');
+      }
     }
 
     function previewSlotsPage() {
