@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>本週空檔時段釋出</title>
+  <title>空檔時段與預約表</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,49 +28,80 @@
   </script>
   <style>
     body { background-color: #F4EFEA; }
-    /* 9:16 極致手機比例容器 */
+    /* 9:16 極致手機比例容器 (自適應高解析度) */
     .story-container {
       width: 100%;
-      max-width: 420px;
+      max-width: 440px;
       min-height: 100vh;
       margin: 0 auto;
       background: #FAF6F0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 1.75rem 1.25rem;
+      padding: 1.25rem 1rem;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="antialiased text-brand-900 selection:bg-brand-400 selection:text-white flex items-center justify-center min-h-screen">
 
   <div class="story-container">
-    <!-- 頂部品牌標題 -->
-    <header class="text-center space-y-2 pt-2">
-      <div class="inline-flex items-center gap-1.5 px-3 py-1 bg-[#8C7355] text-white rounded-full text-[10.5px] font-bold tracking-widest shadow-xs">
-        <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i>
+    <!-- 頂部品牌標題與模式切換 -->
+    <header class="text-center space-y-2 pt-1">
+      <div class="inline-flex items-center gap-1.5 px-3 py-0.5 bg-[#8C7355] text-white rounded-full text-[10px] font-bold tracking-widest shadow-2xs">
+        <i class="fa-solid fa-wand-magic-sparkles text-[8.5px]"></i>
         <span>LIMITED SLOTS AVAILABLE</span>
       </div>
-      <h1 class="font-serif text-2xl font-black text-brand-900 tracking-wider" id="store-title">本週釋出空檔</h1>
-      <p class="text-xs text-brand-600 font-medium" id="store-subtitle">點選下方時段直接預約</p>
+      <h1 class="font-serif text-2xl font-black text-brand-900 tracking-wider" id="store-title">預約空檔時間表</h1>
+      <p class="text-xs text-brand-600 font-medium" id="store-subtitle">歡迎線上預約・先搶先贏</p>
+
+      <!-- 視圖切換 (TimeTree 月曆 / 每日按鈕清單) -->
+      <div class="flex justify-center pt-1">
+        <div class="inline-flex p-1 bg-brand-100/80 rounded-xl border border-brand-200 shadow-2xs">
+          <button type="button" id="btn-view-cal" onclick="switchViewMode('calendar')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition bg-[#8C7355] text-white shadow-xs">
+            <i class="fa-solid fa-calendar-days text-[10px] mr-1"></i>月曆視圖
+          </button>
+          <button type="button" id="btn-view-btn" onclick="switchViewMode('buttons')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition text-brand-700 hover:text-brand-900">
+            <i class="fa-solid fa-clock text-[10px] mr-1"></i>時段清單
+          </button>
+        </div>
+      </div>
+
+      <!-- 多位專員切換列 (如 Yvonne, Sunny, Penny) -->
+      <div id="staff-filter-bar" class="flex justify-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+        <!-- 動態產生專員 Tab -->
+      </div>
     </header>
 
-    <!-- 中間時段緊湊宮格區塊 (依後台所選時段精準呈現) -->
-    <main class="my-auto py-4 space-y-3" id="slots-main-area">
-      <div class="text-center text-xs text-brand-400 py-8">正在讀取釋出時段...</div>
+    <!-- 中間主要呈現區 (依切換模式自動渲染) -->
+    <main class="my-auto py-3 space-y-2.5" id="slots-main-area">
+      <div class="text-center text-xs text-brand-400 py-12">
+        <i class="fa-solid fa-circle-notch fa-spin text-brand-500 text-lg mb-2 block"></i>
+        正在讀取即時釋出空檔...
+      </div>
     </main>
 
-    <!-- 底部行動導引 -->
-    <footer class="text-center space-y-3 pt-2 border-t border-brand-200/80">
+    <!-- 底部小提醒與預約導引 -->
+    <footer class="text-center space-y-2 pt-2 border-t border-brand-200/80">
+      <!-- 示範圖同款小提醒 -->
+      <div class="bg-rose-50/70 border border-rose-200/60 rounded-xl p-2 text-left flex items-start gap-2">
+        <span class="bg-rose-100 text-rose-700 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 mt-0.5">小提醒</span>
+        <div class="text-[10px] text-rose-900 leading-tight space-y-0.5">
+          <div>🌸 粉色標示「限定項目」：僅供該項目專屬預約。</div>
+          <div>✨ 米色標示：一般常態服務皆可開放預約。</div>
+        </div>
+      </div>
+
       <div class="flex gap-2">
         <a id="btn-quick-book" href="#" class="flex-1 py-3 bg-[#8C7355] hover:bg-brand-600 text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5">
           <i class="fa-solid fa-calendar-check text-[11px]"></i>
-          <span>進入線上預約前台</span>
+          <span>進入線上完整預約前台</span>
         </a>
       </div>
-      <div class="text-[10px] text-brand-400 font-medium tracking-wide">
-        📸 手機直接全螢幕截圖即可當 IG 限動美圖發布
+      <div class="text-[9.5px] text-brand-400 font-medium tracking-wide">
+        📸 手機直接全螢幕截圖即可發 IG 限動美圖
       </div>
     </footer>
   </div>
@@ -81,74 +112,279 @@
     const urlParams = new URLSearchParams(window.location.search);
     const CURRENT_STORE_ID = (urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb').trim();
 
+    let allRawSlots = [];
+    let staffList = [];
+    let selectedStaffId = 'all';
+    let currentViewMode = 'calendar'; // 'calendar' (TimeTree) | 'buttons' (原版按鈕)
+
+    // 月曆時間狀態
+    let calYear = new Date().getFullYear();
+    let calMonth = new Date().getMonth() + 1;
+
     async function loadSlotsPage() {
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}&select=display_title,display_subtitle,published_slots`, {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}&select=display_title,display_subtitle,published_slots,settings`, {
           headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
         });
         const data = await res.json();
-        const settings = (Array.isArray(data) && data.length > 0) ? data[0] : {};
+        const settingsRecord = (Array.isArray(data) && data.length > 0) ? data[0] : {};
 
-        document.getElementById('store-title').innerText = settings.display_title || "美業沙龍限定空檔";
-        if (settings.display_subtitle) document.getElementById('store-subtitle').innerText = settings.display_subtitle;
+        document.getElementById('store-title').innerText = settingsRecord.display_title || "美業沙龍限定空檔";
+        if (settingsRecord.display_subtitle) {
+          document.getElementById('store-subtitle').innerText = settingsRecord.display_subtitle;
+        }
         document.getElementById('btn-quick-book').href = `index.html?store_id=${CURRENT_STORE_ID}`;
 
-        const rawSlots = settings.published_slots || [];
-        const mainArea = document.getElementById('slots-main-area');
+        allRawSlots = settingsRecord.published_slots || [];
 
-        if (!Array.isArray(rawSlots) || rawSlots.length === 0) {
-          mainArea.innerHTML = `
-            <div class="p-6 bg-white rounded-3xl border border-brand-200 text-center space-y-2">
-              <div class="text-3xl">✨</div>
-              <div class="text-xs font-bold text-brand-900">目前本週時段已全數約滿</div>
-              <p class="text-[11px] text-brand-500">歡迎點擊下方按鈕查看最新排程</p>
-            </div>
-          `;
-          return;
+        // 讀取專員設定
+        const parsedSettings = settingsRecord.settings || {};
+        staffList = (parsedSettings.staffList || []).filter(s => s.id !== 'all');
+
+        // 若無設定專員，自動從時段資料中提取唯一專員
+        if (staffList.length === 0) {
+          const staffNames = [...new Set(allRawSlots.map(s => s.staffName || s.staffId).filter(Boolean))];
+          staffList = staffNames.map((name, i) => ({ id: `staff_${i+1}`, name: name }));
         }
 
-        // 依日期分組
-        const grouped = {};
-        rawSlots.forEach(s => {
-          if (!grouped[s.date]) grouped[s.date] = [];
-          grouped[s.date].push(s.time);
-        });
+        // 若有時段資料，自動定位到時段發生的該年份月份
+        if (allRawSlots.length > 0 && allRawSlots[0].date) {
+          const firstParts = allRawSlots[0].date.split(/[\/\-]/);
+          if (firstParts.length >= 2) {
+            calYear = parseInt(firstParts[0], 10) || calYear;
+            calMonth = parseInt(firstParts[1], 10) || calMonth;
+          }
+        }
 
-        const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
-        let html = '';
-
-        Object.keys(grouped).forEach(d => {
-          const times = grouped[d];
-          const dObj = new Date(d.replace(/\//g, '-'));
-          const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekMap[dObj.getDay()]})`;
-
-          html += `
-            <div class="bg-white/95 p-3.5 rounded-3xl border border-brand-200 shadow-xs space-y-2">
-              <div class="flex items-center justify-between border-b border-brand-100 pb-1.5">
-                <span class="flex items-center gap-1.5 font-bold text-xs text-brand-900">
-                  <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
-                  <span>${d}</span>
-                  <span class="text-brand-500 font-normal text-[11px]">${weekStr}</span>
-                </span>
-                <span class="text-[10px] bg-brand-100 text-brand-800 font-mono font-bold px-2 py-0.5 rounded-full">
-                  剩 ${times.length} 席
-                </span>
-              </div>
-              <div class="grid grid-cols-3 gap-1.5">
-                ${times.map(t => `
-                  <a href="index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(d)}&time=${encodeURIComponent(t)}" class="py-2.5 px-1 bg-brand-50 hover:bg-[#8C7355] hover:text-white text-brand-900 border border-brand-200 rounded-xl text-center font-mono font-bold text-xs transition shadow-xs">
-                    ${t}
-                  </a>
-                `).join('')}
-              </div>
-            </div>
-          `;
-        });
-
-        mainArea.innerHTML = html;
+        renderStaffFilterBar();
+        renderMainSlotsView();
       } catch(e) {
-        document.getElementById('slots-main-area').innerHTML = '<div class="text-center text-xs text-brand-400 py-8">讀取時段失敗，請重新整理</div>';
+        document.getElementById('slots-main-area').innerHTML = '<div class="text-center text-xs text-brand-400 py-10">讀取時段失敗，請重新整理頁面</div>';
       }
+    }
+
+    // 渲染多專員切換 Bar
+    function renderStaffFilterBar() {
+      const bar = document.getElementById('staff-filter-bar');
+      if (!bar) return;
+
+      if (staffList.length <= 1) {
+        bar.innerHTML = '';
+        return;
+      }
+
+      let html = `
+        <button type="button" onclick="changeStaffFilter('all')" class="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold shrink-0 transition ${selectedStaffId === 'all' ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white text-brand-800 border border-brand-200'}">
+          全體老師
+        </button>
+      `;
+
+      staffList.forEach(st => {
+        const isSel = (selectedStaffId === st.id || selectedStaffId === st.name);
+        html += `
+          <button type="button" onclick="changeStaffFilter('${st.id}')" class="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold shrink-0 transition ${isSel ? 'bg-brand-900 text-white shadow-2xs' : 'bg-white text-brand-800 border border-brand-200'}">
+            ${st.name}
+          </button>
+        `;
+      });
+
+      bar.innerHTML = html;
+    }
+
+    function changeStaffFilter(staffId) {
+      selectedStaffId = staffId;
+      renderStaffFilterBar();
+      renderMainSlotsView();
+    }
+
+    function switchViewMode(mode) {
+      currentViewMode = mode;
+      const btnCal = document.getElementById('btn-view-cal');
+      const btnBtn = document.getElementById('btn-view-btn');
+
+      if (mode === 'calendar') {
+        btnCal.className = "px-3.5 py-1 rounded-lg text-xs font-bold transition bg-[#8C7355] text-white shadow-xs";
+        btnBtn.className = "px-3.5 py-1 rounded-lg text-xs font-bold transition text-brand-700 hover:text-brand-900";
+      } else {
+        btnBtn.className = "px-3.5 py-1 rounded-lg text-xs font-bold transition bg-[#8C7355] text-white shadow-xs";
+        btnCal.className = "px-3.5 py-1 rounded-lg text-xs font-bold transition text-brand-700 hover:text-brand-900";
+      }
+
+      renderMainSlotsView();
+    }
+
+    function changeMonth(offset) {
+      calMonth += offset;
+      if (calMonth > 12) { calMonth = 1; calYear++; }
+      else if (calMonth < 1) { calMonth = 12; calYear--; }
+      renderMainSlotsView();
+    }
+
+    // 核心渲染：月曆模式 vs 時段按鈕模式
+    function renderMainSlotsView() {
+      const mainArea = document.getElementById('slots-main-area');
+      if (!mainArea) return;
+
+      // 依專員過濾時段
+      const filteredSlots = allRawSlots.filter(s => {
+        if (selectedStaffId === 'all') return true;
+        return s.staffId === selectedStaffId || s.staffName === selectedStaffId;
+      });
+
+      if (filteredSlots.length === 0) {
+        mainArea.innerHTML = `
+          <div class="p-6 bg-white rounded-3xl border border-brand-200 text-center space-y-2">
+            <div class="text-3xl">✨</div>
+            <div class="text-xs font-bold text-brand-900">目前本月份時段已全數約滿</div>
+            <p class="text-[11px] text-brand-500">歡迎點擊下方按鈕預約其他日期</p>
+          </div>
+        `;
+        return;
+      }
+
+      if (currentViewMode === 'calendar') {
+        renderTimeTreeCalendar(mainArea, filteredSlots);
+      } else {
+        renderButtonGrid(mainArea, filteredSlots);
+      }
+    }
+
+    // ==========================================
+    // 1. 🌟 TimeTree 月曆模式 (示範圖款)
+    // ==========================================
+    function renderTimeTreeCalendar(container, slots) {
+      const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+      const firstDayWeekIndex = new Date(calYear, calMonth - 1, 1).getDay(); // 0(週日) - 6(週六)
+
+      let gridCellsHtml = '';
+
+      // 填補月初前置空白格
+      for (let b = 0; b < firstDayWeekIndex; b++) {
+        gridCellsHtml += `<div class="bg-gray-50/50 min-h-[72px] border-b border-r border-[#EFECE8] p-0.5"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const mm = String(calMonth).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        const daySlash = `${calYear}/${mm}/${dd}`;
+        const dayHyphen = `${calYear}-${mm}-${dd}`;
+
+        const daySlots = slots.filter(s => {
+          const cDate = (s.date || '').replace(/\//g, '-');
+          return cDate === dayHyphen;
+        });
+
+        const isFull = daySlots.some(s => s.isFull || (s.note && s.note.includes('滿')));
+
+        gridCellsHtml += `
+          <div class="bg-white min-h-[72px] border-b border-r border-[#EFECE8] p-0.5 flex flex-col justify-start relative select-none">
+            <div class="flex justify-between items-center mb-0.5 px-0.5">
+              <span class="text-[10px] font-mono font-black ${isFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
+              ${isFull ? `<span class="bg-[#FEF3C7] text-[#B45309] text-[7px] font-black px-1 rounded leading-none">滿</span>` : ''}
+            </div>
+
+            <div class="flex flex-col gap-0.5 overflow-hidden">
+              ${daySlots.map(s => {
+                const note = s.note ? s.note.trim() : '';
+                const hasNote = Boolean(note && !note.includes('滿'));
+                
+                // 示範圖配色：粉紅(特殊備註如撥筋)、米白(一般時段)
+                const badgeColor = hasNote
+                  ? 'bg-[#FFE4E6] text-[#BE123C] hover:bg-rose-200'
+                  : (s.isFull ? 'bg-[#FEF3C7] text-[#B45309]' : 'bg-[#F4EFEA] text-brand-900 hover:bg-[#8C7355] hover:text-white');
+
+                const bookUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(daySlash)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
+
+                return `
+                  <a href="${bookUrl}" title="點選預約此時段" class="${badgeColor} text-[7.5px] font-bold px-0.5 py-0.5 rounded leading-none truncate flex items-center justify-between transition block">
+                    <span class="font-mono">${s.time}</span>
+                    ${hasNote ? `<span class="font-black scale-90 truncate ml-0.5">${note}</span>` : ''}
+                  </a>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl border border-brand-200 shadow-xs overflow-hidden font-sans">
+          <!-- 月份切換列 -->
+          <div class="flex items-center justify-between px-3 py-2 border-b border-[#EFECE8] bg-[#FAF8F5]">
+            <button type="button" onclick="changeMonth(-1)" class="w-6 h-6 rounded-md bg-white border border-brand-200 flex items-center justify-center text-[11px] text-brand-800 shadow-2xs active:scale-95">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span class="font-black text-xs text-brand-900 font-mono tracking-wide">${calYear} 年 ${calMonth} 月 預約表</span>
+            <button type="button" onclick="changeMonth(1)" class="w-6 h-6 rounded-md bg-white border border-brand-200 flex items-center justify-center text-[11px] text-brand-800 shadow-2xs active:scale-95">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <!-- 星期標頭 -->
+          <div class="grid grid-cols-7 text-center py-1 border-b border-[#EFECE8] bg-white text-[10px] font-black text-brand-500">
+            <span class="text-rose-500">週日</span>
+            <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
+            <span class="text-rose-500">週六</span>
+          </div>
+
+          <!-- 月曆本體 -->
+          <div class="grid grid-cols-7 border-l border-t border-[#EFECE8] bg-[#EFECE8]">
+            ${gridCellsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // ==========================================
+    // 2. 🌟 時段按鈕模式 (原版緊湊宮格，支援項目標記)
+    // ==========================================
+    function renderButtonGrid(container, slots) {
+      const grouped = {};
+      slots.forEach(s => {
+        const d = (s.date || '').replace(/-/g, '/');
+        if (!grouped[d]) grouped[d] = [];
+        grouped[d].push(s);
+      });
+
+      const weekMap = ['日', '一', '二', '三', '四', '五', '六'];
+      let html = '';
+
+      Object.keys(grouped).forEach(d => {
+        const dayItems = grouped[d];
+        const dObj = new Date(d.replace(/\//g, '-'));
+        const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekMap[dObj.getDay()]})`;
+
+        html += `
+          <div class="bg-white/95 p-3 rounded-2xl border border-brand-200 shadow-xs space-y-2">
+            <div class="flex items-center justify-between border-b border-brand-100 pb-1.5">
+              <span class="flex items-center gap-1.5 font-bold text-xs text-brand-900">
+                <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
+                <span class="font-mono">${d}</span>
+                <span class="text-brand-500 font-normal text-[11px]">${weekStr}</span>
+              </span>
+              <span class="text-[9.5px] bg-brand-100 text-brand-800 font-mono font-bold px-2 py-0.5 rounded-full">
+                剩 ${dayItems.length} 席
+              </span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5">
+              ${dayItems.map(s => {
+                const note = s.note ? s.note.trim() : '';
+                const hasNote = Boolean(note && !note.includes('滿'));
+                const bookUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(d)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
+
+                return `
+                  <a href="${bookUrl}" class="p-2 ${hasNote ? 'bg-rose-50 border-rose-200 text-rose-900' : 'bg-brand-50 border-brand-200 text-brand-900'} hover:bg-[#8C7355] hover:text-white border rounded-xl text-center font-mono transition shadow-2xs flex flex-col justify-center items-center">
+                    <span class="font-bold text-xs">${s.time}</span>
+                    ${hasNote ? `<span class="text-[8px] font-black text-rose-600 truncate mt-0.5">${note}</span>` : ''}
+                  </a>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
     }
 
     window.onload = loadSlotsPage;
