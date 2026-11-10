@@ -54,6 +54,30 @@
       padding: 0.6rem 1.4rem !important;
       border: none !important;
     }
+
+    /* 🌟 Facebook 式上下滑動自適應滿版：往下滑全螢幕，往上滑浮現導覽列 */
+    header, #bottom-nav {
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease !important;
+      will-change: transform, opacity;
+    }
+
+    body.nav-hidden header {
+      transform: translateY(-100%) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    body.nav-hidden #bottom-nav {
+      transform: translateY(120%) !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    /* 滿版時消除多餘外距，讓排程畫布、長名單、空檔月曆最大化撐滿螢幕 */
+    body.nav-hidden main {
+      padding-top: 0.25rem !important;
+      padding-bottom: 0.25rem !important;
+    }
   </style>
 </head>
 <body class="bg-brand-50 text-brand-900 antialiased pb-32">
@@ -4348,6 +4372,20 @@ async function checkPin() {
   document.getElementById('main-content').style.display = 'block';
   document.getElementById('bottom-nav').style.display = 'flex';
 
+  // 🌟【關鍵新增】：偵測網址若帶有 mode=fullscreen_overview，立即啟動獨立滿版排程模式
+  const urlParams = new URLSearchParams(window.location.search);
+  const isFullscreenOverview = (urlParams.get('mode') === 'fullscreen_overview');
+
+  if (isFullscreenOverview) {
+    document.body.classList.add('fullscreen-overview-mode');
+    document.getElementById('bottom-nav').style.setProperty('display', 'none', 'important');
+    
+    // 強制直接進入總覽頁面
+    switchPage('overview');
+    fetchDataAndRender();
+    return; // 獨立模式直接返回，不執行下方的日曆初始化
+  }
+
   if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
     document.querySelectorAll('.full-admin-only').forEach(el => el.style.display = 'none');
     activeShiftStaffId = CURRENT_STAFF_PARAM;
@@ -4361,17 +4399,39 @@ async function checkPin() {
   showApptsInCalendar(selectedCalendarDate);
 
   fetchDataAndRender();
+      // 🌟 啟動 Facebook 級絲滑上下滾動自動隱藏 / 浮現導航
+  initFacebookScrollNav();
+      // 🌟 啟動全站 Facebook 式上下滑動滿版 & 初始化空檔介面
+  initFacebookScrollNav();
+  if (typeof renderSlotsMasterInterface === 'function') renderSlotsMasterInterface();
 }
 
-    // ========================================================
-// 【黑名單雙向切換引擎】支援封鎖與解除封鎖 + 視窗詳細機制說明
-// ========================================================
-// ========================================================
-// 【黑名單終極雙向管理視窗】彈窗內含「封鎖」與「解除封鎖」雙按鈕與防呆說明
-// ========================================================
-// ========================================================
-// 【高階修復版】黑名單雙向管理：強制 UPSERT 確保 100% 寫入資料庫
-// ========================================================
+    // 🌟 Facebook 式自動隱藏頂部與底部分頁列
+function initFacebookScrollNav() {
+  let lastScrollY = window.pageYOffset || document.documentElement.scrollTop;
+  let ticking = false;
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+        const diff = currentScrollY - lastScrollY;
+
+        // 往下滾動超過 10px 且離開頂部時自動收起；往上一推立刻現身
+        if (diff > 10 && currentScrollY > 50) {
+          document.body.classList.add('nav-hidden');
+        } else if (diff < -8 || currentScrollY <= 20) {
+          document.body.classList.remove('nav-hidden');
+        }
+
+        lastScrollY = currentScrollY;
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+}
+  
 // ========================================================
 // 【修復版】黑名單管理視窗 (強制 UPSERT + 全介面即時重繪)
 // ========================================================
@@ -10949,9 +11009,14 @@ if (peakChartBox) {
       renderReviewTagsManager();
     }
 
-    // ==========================================
-    // 18. 空檔釋出與 9:16 限動單頁發布
-    // ==========================================
+    // ========================================================
+    // 18. 🌟 空檔釋出旗艦模組 (支援多專員、項目色彩備註、滿額標記與滿版切換)
+    // ========================================================
+    let currentSlotViewMode = 'calendar'; // 'calendar' (TimeTree月曆) | 'buttons' (時段清單)
+    let currentSlotStaffId = 'all';
+    let slotCalYear = new Date().getFullYear();
+    let slotCalMonth = new Date().getMonth() + 1;
+
     function initSlotsLiveUrl() {
       const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
       const liveElem = document.getElementById('slots-live-url');
@@ -10961,107 +11026,335 @@ if (peakChartBox) {
       }
     }
 
-    // ========================================================
-// 【升級版】handleSlotRangeChange() — 每日日期旁新增「全選 / 取消」按鈕
-// ========================================================
-function handleSlotRangeChange() {
-  const startVal = document.getElementById('slot-start-date')?.value;
-  const endVal = document.getElementById('slot-end-date')?.value;
-  if (!startVal) return;
+    // 🌟 Facebook 式自動隱藏頂部與底部分頁列引擎
+    function initFacebookScrollNav() {
+      let lastScrollY = window.pageYOffset || document.documentElement.scrollTop;
+      let ticking = false;
 
-  pendingSlotsList = [];
-  renderPendingSlotsList();
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
+            const diff = currentScrollY - lastScrollY;
 
-  const container = document.getElementById('slot-picker-checkboxes');
-  if (!container) return;
+            // 往下滾動超過 12px 且離開頂部時自動收起；往上一推立刻現身
+            if (diff > 12 && currentScrollY > 50) {
+              document.body.classList.add('nav-hidden');
+            } else if (diff < -8 || currentScrollY <= 20) {
+              document.body.classList.remove('nav-hidden');
+            }
 
-  // 預設常見時段 (或自動讀取營業設定)
-  const startTime = backendData.settings?.shiftStartTime || '09:00';
-  const endTime = backendData.settings?.shiftEndTime || '19:00';
-  const interval = Number(backendData.settings?.shiftInterval || 30);
-  
-  const [sH, sM] = startTime.split(':').map(Number);
-  const [eH, eM] = endTime.split(':').map(Number);
-  const times = [];
-  for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
-    const hh = String(Math.floor(m / 60)).padStart(2, '0');
-    const mm = String(m % 60).padStart(2, '0');
-    times.push(`${hh}:${mm}`);
-  }
-
-  const startDate = new Date(startVal);
-  const endDate = endVal ? new Date(endVal) : new Date(startVal);
-
-  const daysList = [];
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
-  }
-
-  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-
-  container.innerHTML = daysList.map(dayStr => {
-    const dObj = new Date(dayStr.replace(/\//g, '-'));
-    const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekDays[dObj.getDay()]})`;
-
-    return `
-      <!-- 日期表頭 + 當日全選按鈕 -->
-      <div class="col-span-full flex justify-between items-center bg-brand-50/80 px-3 py-2 rounded-xl border border-brand-200 mt-2">
-        <span class="font-bold text-xs text-brand-900 flex items-center gap-1.5 font-mono">
-          <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
-          <span>${dayStr} ${weekStr}</span>
-        </span>
-        <button type="button" onclick="toggleSelectAllDateSlots('${dayStr}', this)" class="px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs">
-          ＋ 當日全選
-        </button>
-      </div>
-
-      <!-- 該日各時段勾選格 -->
-      ${times.map(t => `
-        <label class="p-2 bg-white rounded-xl border border-brand-200 flex items-center justify-between cursor-pointer hover:border-[#8C7355] transition text-xs shadow-2xs">
-          <span class="font-bold font-mono text-brand-900">${t}</span>
-          <input type="checkbox" value="${t}" data-date="${dayStr}" onchange="toggleSlotPick('${dayStr}', '${t}', this)" class="slot-cb-${dayStr.replace(/\//g, '')} accent-[#8C7355] w-3.5 h-3.5 rounded">
-        </label>
-      `).join('')}
-    `;
-  }).join('');
-}
-
-// 支援一鍵全選 / 取消全選指定日期的時段
-function toggleSelectAllDateSlots(dayStr, btn) {
-  const cleanDayClass = dayStr.replace(/\//g, '');
-  const checkboxes = document.querySelectorAll(`.slot-cb-${cleanDayClass}`);
-  if (!checkboxes || checkboxes.length === 0) return;
-
-  // 判定目前是否已經全部勾選
-  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-  const targetState = !allChecked;
-
-  checkboxes.forEach(cb => {
-    cb.checked = targetState;
-    const t = cb.value;
-    if (targetState) {
-      if (!pendingSlotsList.some(s => s.date === dayStr && s.time === t)) {
-        pendingSlotsList.push({ date: dayStr, time: t });
-      }
-    } else {
-      pendingSlotsList = pendingSlotsList.filter(s => !(s.date === dayStr && s.time === t));
+            lastScrollY = currentScrollY;
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
     }
-  });
 
-  btn.innerText = targetState ? '✕ 取消全選' : '＋ 當日全選';
-  btn.className = targetState
-    ? "px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs"
-    : "px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs";
+    // 切換月曆 / 時段按鈕模式
+    function switchSlotViewMode(mode) {
+      currentSlotViewMode = mode;
+      renderSlotsMasterInterface();
+    }
 
-  renderPendingSlotsList();
-}
+    // 切換專員
+    function selectSlotStaffTab(staffId) {
+      currentSlotStaffId = staffId;
+      renderSlotsMasterInterface();
+    }
+
+    // 切換月份
+    function changeSlotCalMonth(offset) {
+      slotCalMonth += offset;
+      if (slotCalMonth > 12) { slotCalMonth = 1; slotCalYear++; }
+      else if (slotCalMonth < 1) { slotCalMonth = 12; slotCalYear--; }
+      renderSlotsMasterInterface();
+    }
+
+    // 🌟 空檔主控排程面板 (月曆與按鈕雙模切換)
+    function renderSlotsMasterInterface() {
+      const mountPoint = document.getElementById('slot-picker-checkboxes');
+      if (!mountPoint) return;
+
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      if (currentSlotStaffId === 'all' && staffList.length > 0) {
+        currentSlotStaffId = staffList[0].id;
+      }
+
+      // 控制列：模式切換 + 專員選擇
+      let headerNavHtml = `
+        <div class="col-span-full bg-white rounded-2xl p-2.5 border border-brand-200 shadow-sm mb-2 font-sans">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="inline-flex p-1 bg-brand-100/80 rounded-xl border border-brand-200 shadow-2xs">
+              <button type="button" onclick="switchSlotViewMode('calendar')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${currentSlotViewMode === 'calendar' ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-700'}">
+                <i class="fa-solid fa-calendar-days text-[11px] mr-1"></i>TimeTree月曆
+              </button>
+              <button type="button" onclick="switchSlotViewMode('buttons')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${currentSlotViewMode === 'buttons' ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-700'}">
+                <i class="fa-solid fa-clock text-[11px] mr-1"></i>時段清單
+              </button>
+            </div>
+            <span class="text-[11px] font-bold text-brand-600 font-mono">點擊日期格可直接新增/標記</span>
+          </div>
+
+          <!-- 多位專員切換 Tab (如 Yvonne, Sunny, Penny) -->
+          <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <button type="button" onclick="selectSlotStaffTab('all')" class="px-3 py-1 rounded-full text-xs font-bold shrink-0 transition ${currentSlotStaffId === 'all' ? 'bg-brand-900 text-white shadow-2xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
+              全體專員
+            </button>
+            ${staffList.map(st => `
+              <button type="button" onclick="selectSlotStaffTab('${st.id}')" class="px-3 py-1 rounded-full text-xs font-bold shrink-0 transition ${currentSlotStaffId === st.id ? 'bg-brand-900 text-white shadow-2xs' : 'bg-brand-50 text-brand-800 border border-brand-200'}">
+                ${st.name}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      if (currentSlotViewMode === 'buttons') {
+        mountPoint.innerHTML = headerNavHtml;
+        handleSlotRangeChange(true);
+        return;
+      }
+
+      // TimeTree 月曆網格產生
+      const daysInMonth = new Date(slotCalYear, slotCalMonth, 0).getDate();
+      const firstDayWeekIndex = new Date(slotCalYear, slotCalMonth - 1, 1).getDay();
+
+      let calendarCellsHtml = '';
+      for (let b = 0; b < firstDayWeekIndex; b++) {
+        calendarCellsHtml += `<div class="bg-gray-50/50 min-h-[85px] border-b border-r border-[#EFECE8] p-1"></div>`;
+      }
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const mm = String(slotCalMonth).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        const dayStr = `${slotCalYear}/${mm}/${dd}`;
+
+        const daySlots = pendingSlotsList.filter(s => {
+          const cDate = (s.date || '').replace(/-/g, '/');
+          return cDate === dayStr && (currentSlotStaffId === 'all' || s.staffId === currentSlotStaffId || !s.staffId);
+        });
+        const isDayFull = daySlots.some(s => s.isFull);
+
+        calendarCellsHtml += `
+          <div class="bg-white min-h-[85px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative hover:bg-brand-50/30 transition cursor-pointer select-none"
+               onclick="openDaySlotDetailModal('${dayStr}', '${currentSlotStaffId}')">
+            <div class="flex justify-between items-center mb-1">
+              <span class="text-[11px] font-mono font-bold ${isDayFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
+              ${isDayFull ? `<span class="bg-[#FEF3C7] text-[#B45309] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
+            </div>
+
+            <div class="flex flex-col gap-0.5 overflow-hidden">
+              ${daySlots.map(s => {
+                const hasNote = Boolean(s.note && s.note.trim() && !s.note.includes('滿'));
+                const badgeStyle = s.isFull 
+                  ? 'bg-[#FEF3C7] text-[#B45309]' 
+                  : (hasNote ? 'bg-[#FFE4E6] text-[#BE123C]' : 'bg-[#F4F0EA] text-brand-900');
+
+                return `
+                  <div class="${badgeStyle} text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between">
+                    <span>${s.time}</span>
+                    ${hasNote ? `<span class="font-black scale-90">${s.note}</span>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      mountPoint.innerHTML = headerNavHtml + `
+        <div class="col-span-full bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden font-sans">
+          <div class="flex items-center justify-between px-3.5 py-2 border-b border-[#EFECE8] bg-[#FAF8F5]">
+            <button type="button" onclick="changeSlotCalMonth(-1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="font-black text-xs text-brand-900 font-mono">${slotCalYear} 年 ${slotCalMonth} 月</span>
+            <button type="button" onclick="changeSlotCalMonth(1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-right"></i></button>
+          </div>
+
+          <div class="grid grid-cols-7 text-center py-1 border-b border-[#EFECE8] bg-white text-[10.5px] font-bold text-brand-500">
+            <span class="text-rose-500">週日</span>
+            <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
+            <span class="text-rose-500">週六</span>
+          </div>
+
+          <div class="grid grid-cols-7 border-l border-t border-[#EFECE8] bg-[#EFECE8]">
+            ${calendarCellsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // 點選日期彈窗：可填寫「10:00 撥筋」限定項目，或勾選滿單
+    function openDaySlotDetailModal(dayStr, staffId) {
+      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+      const staff = staffList.find(s => s.id === staffId);
+      const staffName = staff ? staff.name : (staffId === 'all' ? '不限專員' : '指定專員');
+      const daySlots = pendingSlotsList.filter(s => (s.date || '').replace(/-/g, '/') === dayStr && (staffId === 'all' || s.staffId === staffId || !s.staffId));
+
+      Swal.fire({
+        title: `${dayStr} 空檔管理`,
+        html: `
+          <div class="text-left text-xs font-sans space-y-2.5 p-1">
+            <div class="font-bold text-brand-800">目前指定專員：<span class="text-[#8C7355]">${staffName}</span></div>
+            <div class="flex gap-2">
+              <input id="swal-new-slot-time" type="time" class="swal2-input !m-0 !w-1/2 text-xs font-mono font-bold" value="10:00">
+              <input id="swal-new-slot-note" type="text" class="swal2-input !m-0 !w-1/2 text-xs" placeholder="限定項目(如: 撥筋)">
+            </div>
+            <div class="flex items-center gap-2">
+              <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-amber-800">
+                <input type="checkbox" id="swal-day-full" class="rounded"> 標記此日為【已額滿】
+              </label>
+            </div>
+            <div class="border-t pt-2 max-h-36 overflow-y-auto space-y-1.5">
+              <div class="text-[11px] font-bold text-gray-500">當日既有時段：</div>
+              ${daySlots.length === 0 ? '<div class="text-gray-400 text-xs">尚無任何時段，請由上方加入</div>' : daySlots.map(s => `
+                <div class="flex justify-between items-center bg-brand-50 px-2.5 py-1.5 rounded-lg border border-brand-200">
+                  <span class="font-mono font-bold text-brand-900">${s.time}</span>
+                  <span class="${s.note ? 'text-rose-600 font-bold' : 'text-brand-600 font-bold'}">${s.note || (s.isFull ? '額滿' : '開放預約')}</span>
+                  <button type="button" onclick="removeSpecificSlot('${s.date}', '${s.time}', '${s.staffId || staffId}')" class="text-gray-400 hover:text-red-500 font-bold px-1 text-sm">×</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '加入時段',
+        cancelButtonText: '完成關閉',
+        confirmButtonColor: '#8C7355',
+        preConfirm: () => {
+          const t = document.getElementById('swal-new-slot-time')?.value;
+          const n = document.getElementById('swal-new-slot-note')?.value?.trim() || '';
+          const isFull = document.getElementById('swal-day-full')?.checked || false;
+          if (!t) return false;
+          return { time: t, note: n, isFull };
+        }
+      }).then(r => {
+        if (r.isConfirmed && r.value) {
+          pendingSlotsList.push({
+            date: dayStr,
+            time: r.value.time,
+            note: r.value.note,
+            staffId: staffId,
+            staffName: staff ? staff.name : '',
+            isFull: r.value.isFull
+          });
+          renderSlotsMasterInterface();
+          renderPendingSlotsList();
+        }
+      });
+    }
+
+    function removeSpecificSlot(d, t, staffId) {
+      pendingSlotsList = pendingSlotsList.filter(s => !((s.date || '').replace(/-/g, '/') === (d || '').replace(/-/g, '/') && s.time === t && (s.staffId === staffId || staffId === 'all')));
+      Swal.close();
+      renderSlotsMasterInterface();
+      renderPendingSlotsList();
+    }
+
+    // 相容原版時段按鈕生成
+    function handleSlotRangeChange(appendOnly) {
+      const startVal = document.getElementById('slot-start-date')?.value;
+      const endVal = document.getElementById('slot-end-date')?.value;
+      if (!startVal) return;
+
+      if (!appendOnly) {
+        pendingSlotsList = [];
+        renderPendingSlotsList();
+      }
+
+      const container = document.getElementById('slot-picker-checkboxes');
+      if (!container) return;
+
+      const startTime = backendData.settings?.shiftStartTime || '09:00';
+      const endTime = backendData.settings?.shiftEndTime || '19:00';
+      const interval = Number(backendData.settings?.shiftInterval || 30);
+      
+      const [sH, sM] = startTime.split(':').map(Number);
+      const [eH, eM] = endTime.split(':').map(Number);
+      const times = [];
+      for (let m = sH * 60 + sM; m <= eH * 60 + eM; m += interval) {
+        const hh = String(Math.floor(m / 60)).padStart(2, '0');
+        const mm = String(m % 60).padStart(2, '0');
+        times.push(`${hh}:${mm}`);
+      }
+
+      const startDate = new Date(startVal);
+      const endDate = endVal ? new Date(endVal) : new Date(startVal);
+
+      const daysList = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        daysList.push(`${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`);
+      }
+
+      const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+      const buttonsHtml = daysList.map(dayStr => {
+        const dObj = new Date(dayStr.replace(/\//g, '-'));
+        const weekStr = isNaN(dObj.getDay()) ? '' : ` (週${weekDays[dObj.getDay()]})`;
+
+        return `
+          <div class="col-span-full flex justify-between items-center bg-brand-50/80 px-3 py-2 rounded-xl border border-brand-200 mt-2">
+            <span class="font-bold text-xs text-brand-900 flex items-center gap-1.5 font-mono">
+              <i class="fa-solid fa-calendar-day text-[#8C7355]"></i>
+              <span>${dayStr} ${weekStr}</span>
+            </span>
+            <button type="button" onclick="toggleSelectAllDateSlots('${dayStr}', this)" class="px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs">
+              ＋ 當日全選
+            </button>
+          </div>
+
+          ${times.map(t => `
+            <label class="p-2 bg-white rounded-xl border border-brand-200 flex items-center justify-between cursor-pointer hover:border-[#8C7355] transition text-xs shadow-2xs">
+              <span class="font-bold font-mono text-brand-900">${t}</span>
+              <input type="checkbox" value="${t}" data-date="${dayStr}" onchange="toggleSlotPick('${dayStr}', '${t}', this)" class="slot-cb-${dayStr.replace(/\//g, '')} accent-[#8C7355] w-3.5 h-3.5 rounded">
+            </label>
+          `).join('')}
+        `;
+      }).join('');
+
+      if (appendOnly) {
+        container.insertAdjacentHTML('beforeend', buttonsHtml);
+      } else {
+        container.innerHTML = buttonsHtml;
+      }
+    }
+
+    function toggleSelectAllDateSlots(dayStr, btn) {
+      const cleanDayClass = dayStr.replace(/\//g, '');
+      const checkboxes = document.querySelectorAll(`.slot-cb-${cleanDayClass}`);
+      if (!checkboxes || checkboxes.length === 0) return;
+
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      const targetState = !allChecked;
+
+      checkboxes.forEach(cb => {
+        cb.checked = targetState;
+        const t = cb.value;
+        if (targetState) {
+          if (!pendingSlotsList.some(s => s.date === dayStr && s.time === t)) {
+            pendingSlotsList.push({ date: dayStr, time: t, staffId: currentSlotStaffId });
+          }
+        } else {
+          pendingSlotsList = pendingSlotsList.filter(s => !(s.date === dayStr && s.time === t));
+        }
+      });
+
+      btn.innerText = targetState ? '✕ 取消全選' : '＋ 當日全選';
+      btn.className = targetState
+        ? "px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs"
+        : "px-2.5 py-1 bg-white hover:bg-brand-100 text-[#8C7355] border border-brand-300 rounded-lg text-[10.5px] font-bold transition shadow-2xs";
+
+      renderPendingSlotsList();
+    }
 
     function toggleSlotPick(d, t, cb) {
-      if (cb.checked) pendingSlotsList.push({ date: d, time: t });
+      if (cb.checked) pendingSlotsList.push({ date: d, time: t, staffId: currentSlotStaffId });
       else pendingSlotsList = pendingSlotsList.filter(s => !(s.date === d && s.time === t));
       renderPendingSlotsList();
     }
 
+    // 渲染底部待發布標籤清單
     function renderPendingSlotsList() {
       const box = document.getElementById('selected-slots-display');
       if (!box) return;
@@ -11070,9 +11363,9 @@ function toggleSelectAllDateSlots(dayStr, btn) {
         return;
       }
       box.innerHTML = pendingSlotsList.map((s, idx) => `
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-100 text-brand-800 rounded-full text-xs font-bold border border-brand-200">
-          ${s.date} ${s.time}
-          <button type="button" onclick="removePendingSlot(${idx})" class="text-brand-400 hover:text-red-500 font-bold">×</button>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 ${s.note ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-brand-100 text-brand-800 border-brand-200'} rounded-full text-xs font-bold border">
+          ${s.date} ${s.time} ${s.note ? `(${s.note})` : ''}
+          <button type="button" onclick="removePendingSlot(${idx})" class="text-brand-400 hover:text-red-500 font-bold ml-0.5">×</button>
         </span>
       `).join('');
     }
@@ -11080,8 +11373,10 @@ function toggleSelectAllDateSlots(dayStr, btn) {
     function removePendingSlot(idx) {
       pendingSlotsList.splice(idx, 1);
       renderPendingSlotsList();
+      if (currentSlotViewMode === 'calendar') renderSlotsMasterInterface();
     }
 
+    // 發布空檔到雲端 Supabase
     async function publishSlotsToPage() {
       if (pendingSlotsList.length === 0) return Swal.fire('請至少挑選一個釋出時段', '', 'warning');
       Swal.showLoading();
@@ -11094,7 +11389,7 @@ function toggleSelectAllDateSlots(dayStr, btn) {
           html: `
             <div class="text-xs text-brand-800 space-y-2 text-left bg-brand-50 p-3 rounded-2xl border border-brand-200">
               <div><b>專屬 9:16 空檔網址：</b><br><a href="${slotsUrl}" target="_blank" class="text-blue-600 underline break-all font-mono">${slotsUrl}</a></div>
-              <p class="text-[11px] text-brand-500">手機開啟網址直接截圖即可發 IG 限動，亦可貼入連結貼紙！</p>
+              <p class="text-[11px] text-brand-500">已自動同步至最新 TimeTree 月曆視圖，手機開啟可直接截圖發限動！</p>
             </div>
           `,
           icon: 'success'
