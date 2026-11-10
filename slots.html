@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>預約時間表</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -27,6 +27,7 @@
   </script>
   <style>
     body { background-color: #F7F4F0; }
+    /* 🌟 預留手機瀏覽器頂部安全高度，徹底防範網址列與瀏海遮蔽 */
     .story-card {
       width: 100%;
       max-width: 440px;
@@ -36,45 +37,46 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 1.5rem 1rem;
+      padding-top: max(env(safe-area-inset-top), 2.5rem);
+      padding-bottom: max(env(safe-area-inset-bottom), 1.25rem);
+      padding-left: 1rem;
+      padding-right: 1rem;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="antialiased text-brand-900 flex items-center justify-center min-h-screen">
 
   <div class="story-card">
-    <header class="text-center space-y-2 pt-1">
-      <!-- 正確帶入該店名稱 -->
+    <!-- 頂部店名與大標題 (不被瀏覽器遮擋) -->
+    <header class="text-center space-y-2">
       <div class="text-xs font-bold text-brand-500 tracking-widest uppercase font-mono" id="store-title">
-        載入中...
+        SALON & SPA
       </div>
       
-      <div class="flex items-center justify-center gap-2">
-        <h1 class="font-serif text-3xl font-black text-brand-900 tracking-wider" id="calendar-main-title">
-          預 約 時 間 表
-        </h1>
+      <h1 class="font-serif text-3xl font-black text-brand-900 tracking-wider" id="calendar-main-title">
+        11 月 預 約 時 間 表
+      </h1>
+
+      <!-- 🌟 專員代表色圖例對照表 (圖三同款) -->
+      <div id="staff-legend-box" class="pt-2 flex flex-wrap justify-center items-center gap-3 text-xs font-sans">
+        <!-- 動態依專員產生代表色標記 -->
       </div>
 
-      <!-- 專員分類列 -->
-      <div id="staff-summary-area" class="pt-2 flex justify-center gap-4 text-xs font-sans"></div>
-
-      <!-- 預約規則說明 -->
+      <!-- 預約說明卡 -->
       <div class="bg-[#FFF5F5] border border-[#FED7D7] rounded-xl p-2.5 text-left flex items-start gap-2.5 mt-2">
         <span class="bg-[#FEB2B2] text-[#9B1C1C] text-[10px] font-black px-1.5 py-0.5 rounded shrink-0 mt-0.5">預約須知</span>
         <div class="text-[10.5px] text-[#742A2A] leading-relaxed space-y-0.5 font-medium">
-          <div>粉紅色標示「限定項目」：僅供該項特定技術預約。</div>
-          <div>米灰色無標示：全常態項目皆可預約。</div>
+          <div>標示「限定項目」：僅供該項特定技術預約。</div>
+          <div>無特殊項目標示：全常態項目皆可自由排入。</div>
         </div>
       </div>
 
-      <!-- 切換年月與檢視模式 -->
+      <!-- 切換月份與視圖 -->
       <div class="flex justify-between items-center pt-2 px-1">
         <div class="flex items-center gap-1">
           <button type="button" onclick="changeMonth(-1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800 shadow-2xs"><i class="fa-solid fa-chevron-left"></i></button>
-          <span class="font-mono text-xs font-bold text-brand-800" id="current-month-display">-- 年 -- 月</span>
+          <span class="font-mono text-xs font-bold text-brand-800" id="current-month-display">2026 年 11 月</span>
           <button type="button" onclick="changeMonth(1)" class="w-6 h-6 rounded bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800 shadow-2xs"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
         <div class="inline-flex p-0.5 bg-brand-100 rounded-lg border border-brand-200">
@@ -84,12 +86,12 @@
       </div>
     </header>
 
-    <!-- 日曆主畫布 -->
+    <!-- 中間月曆網格 -->
     <main class="my-auto py-2" id="slots-canvas-container">
-      <div class="text-center text-xs text-brand-500 py-16 font-mono">載入時段中...</div>
+      <div class="text-center text-xs text-brand-500 py-16 font-mono">載入中...</div>
     </main>
 
-    <!-- 底部預約行動鈕 -->
+    <!-- 底部行動鈕 -->
     <footer class="pt-2 border-t border-brand-200/80">
       <a id="btn-to-main-booking" href="#" class="w-full py-3 bg-[#8C7355] hover:bg-brand-600 text-white rounded-2xl text-xs font-bold shadow-md transition flex items-center justify-center gap-2">
         <i class="fa-solid fa-calendar-check text-[11px]"></i>
@@ -107,19 +109,25 @@
     let allSlots = [];
     let storeInfo = {};
     let activeView = 'calendar';
-    let calYear = new Date().getFullYear();
-    let calMonth = new Date().getMonth() + 1;
+    let calYear = 2026;
+    let calMonth = 11;
+
+    // 專員四色盤配置
+    const STAFF_COLORS = [
+      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', border: '#FED7D7', name: '專員 1' }, // 柔粉紅
+      { bg: '#FFEDD5', text: '#9A3412', dot: '#EA580C', border: '#FED7AA', name: '專員 2' }, // 杏暖橘
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#E9D5FF', name: '專員 3' }, // 薰衣紫
+      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', border: '#BAE6FD', name: '專員 4' }  // 霧天藍
+    ];
 
     async function initSlots() {
       try {
-        // 1. 抓取店名與發布之時段
         const res = await fetch(`${SUPABASE_URL}/rest/v1/store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`, {
           headers: { "apikey": SUPABASE_ANON_KEY, "Authorization": `Bearer ${SUPABASE_ANON_KEY}` }
         });
         const data = await res.json();
         storeInfo = (Array.isArray(data) && data.length > 0) ? data[0] : {};
 
-        // 正確帶入店名 (若 store_settings 未填則自動抓 stores 表名稱)
         let storeName = storeInfo.display_title || storeInfo.settings?.storeName;
         if (!storeName) {
           const sRes = await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}&select=name`, {
@@ -129,14 +137,12 @@
           if (Array.isArray(sData) && sData.length > 0) storeName = sData[0].name;
         }
 
-        document.getElementById('store-title').innerText = storeName || "沙龍預約中心";
+        document.getElementById('store-title').innerText = storeName || "沙龍預約時間表";
         document.getElementById('btn-to-main-booking').href = `index.html?store_id=${CURRENT_STORE_ID}`;
 
-        // 🌟 雙重相容解析：從 published_slots 欄位或 settings 物件中提取
         const rawSlots = storeInfo.published_slots || storeInfo.settings?.published_slots || [];
         allSlots = Array.isArray(rawSlots) ? rawSlots : [];
 
-        // 自動定位到有資料的月份
         if (allSlots.length > 0 && allSlots[0].date) {
           const parts = allSlots[0].date.replace(/\//g, '-').split('-');
           if (parts.length >= 2) {
@@ -145,29 +151,56 @@
           }
         }
 
-        renderStaffHeader();
+        renderStaffLegend();
         renderMainView();
       } catch (err) {
         document.getElementById('slots-canvas-container').innerHTML = '<div class="text-center text-xs text-brand-500 py-10">資料讀取中，請稍候重新整理</div>';
       }
     }
 
-    function renderStaffHeader() {
-      const staffList = (storeInfo.settings?.staffList || []).filter(s => s.id !== 'all');
-      const box = document.getElementById('staff-summary-area');
+    // 取得專員清單與配置色系
+    function getStaffColorMapping() {
+      const rawStaffList = (storeInfo.settings?.staffList || []).filter(s => s.id !== 'all');
+      const staffMap = {};
+
+      if (rawStaffList.length > 0) {
+        rawStaffList.forEach((st, idx) => {
+          const color = STAFF_COLORS[idx % STAFF_COLORS.length];
+          staffMap[st.id] = { ...color, name: st.name };
+          staffMap[st.name] = { ...color, name: st.name };
+        });
+      } else {
+        const uniqueStaff = [...new Set(allSlots.map(s => s.staffName || s.staffId).filter(Boolean))];
+        uniqueStaff.forEach((stName, idx) => {
+          const color = STAFF_COLORS[idx % STAFF_COLORS.length];
+          staffMap[stName] = { ...color, name: stName };
+        });
+      }
+
+      return staffMap;
+    }
+
+    // 渲染圖例對照
+    function renderStaffLegend() {
+      const staffMap = getStaffColorMapping();
+      const box = document.getElementById('staff-legend-box');
       if (!box) return;
 
-      if (staffList.length === 0) {
+      const uniqueStaffNames = [...new Set(Object.values(staffMap).map(s => s.name))];
+      if (uniqueStaffNames.length <= 1) {
         box.innerHTML = '';
         return;
       }
 
-      box.innerHTML = staffList.map(st => `
-        <div class="text-center">
-          <div class="font-bold text-brand-900 text-xs">● ${st.name}</div>
-          <div class="text-[10px] text-brand-500 font-medium">${st.title || '專屬設計師'}</div>
-        </div>
-      `).join('');
+      box.innerHTML = uniqueStaffNames.map(name => {
+        const item = staffMap[name];
+        return `
+          <div class="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-full border border-brand-200 shadow-2xs">
+            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${item.dot};"></span>
+            <span class="font-bold text-brand-900 text-[11px]">${name}</span>
+          </div>
+        `;
+      }).join('');
     }
 
     function setViewMode(mode) {
@@ -196,20 +229,22 @@
       if (!container) return;
 
       if (activeView === 'calendar') {
-        renderTimeTreeCalendar(container);
+        renderMultiStaffCalendar(container);
       } else {
         renderListView(container);
       }
     }
 
-    function renderTimeTreeCalendar(container) {
+    // 🌟 多位專員同月曆同格呈現
+    function renderMultiStaffCalendar(container) {
       const daysInMonth = new Date(calYear, calMonth, 0).getDate();
       const firstDayWeek = new Date(calYear, calMonth - 1, 1).getDay();
+      const staffMap = getStaffColorMapping();
 
       let cellsHtml = '';
 
       for (let i = 0; i < firstDayWeek; i++) {
-        cellsHtml += `<div class="bg-[#F2ECE4]/40 min-h-[76px] border-b border-r border-[#EFECE8] p-0.5"></div>`;
+        cellsHtml += `<div class="bg-[#F2ECE4]/40 min-h-[82px] border-b border-r border-[#EFECE8] p-0.5"></div>`;
       }
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -226,27 +261,33 @@
         const isFull = daySlots.some(s => s.isFull || (s.note && s.note.includes('滿')));
 
         cellsHtml += `
-          <div class="bg-white min-h-[76px] border-b border-r border-[#EFECE8] p-0.5 flex flex-col justify-start relative select-none">
+          <div class="bg-white min-h-[82px] border-b border-r border-[#EFECE8] p-0.5 flex flex-col justify-start relative select-none">
             <div class="flex justify-between items-center mb-0.5 px-0.5">
               <span class="text-[10px] font-mono font-black ${isFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
               ${isFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
             </div>
 
+            <!-- 時段條列表：多專員各自色塊展示 -->
             <div class="flex flex-col gap-0.5 overflow-hidden">
               ${daySlots.map(s => {
                 const note = (s.note || '').trim();
-                const isSpecial = Boolean(note && !note.includes('滿'));
+                const stKey = s.staffId || s.staffName || '';
+                const staffColor = staffMap[stKey] || STAFF_COLORS[0];
 
-                const badgeClass = isSpecial 
-                  ? 'bg-[#FDE8E8] text-[#9B1C1C] hover:bg-rose-200' 
-                  : (s.isFull ? 'bg-[#FEF3C7] text-[#92400E]' : 'bg-[#F3F0EB] text-[#374151] hover:bg-brand-200');
+                let bgStyle = staffColor.bg;
+                let textStyle = staffColor.text;
+
+                if (s.isFull) {
+                  bgStyle = '#FEF3C7';
+                  textStyle = '#92400E';
+                }
 
                 const targetUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(daySlash)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
 
                 return `
-                  <a href="${targetUrl}" class="${badgeClass} text-[7.5px] font-bold px-1 py-0.5 rounded leading-none truncate flex items-center justify-between transition block">
+                  <a href="${targetUrl}" style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between transition block">
                     <span class="font-mono">${s.time}</span>
-                    ${isSpecial ? `<span class="font-black scale-90 truncate ml-0.5">${note}</span>` : ''}
+                    ${note ? `<span class="font-black scale-90 truncate ml-0.5">${note}</span>` : ''}
                   </a>
                 `;
               }).join('')}
@@ -271,6 +312,8 @@
 
     function renderListView(container) {
       const grouped = {};
+      const staffMap = getStaffColorMapping();
+
       allSlots.forEach(s => {
         const d = (s.date || '').replace(/-/g, '/');
         if (!grouped[d]) grouped[d] = [];
@@ -293,12 +336,15 @@
             </div>
             <div class="grid grid-cols-3 gap-1.5">
               ${items.map(s => {
-                const isSpecial = Boolean(s.note && !s.note.includes('滿'));
+                const stKey = s.staffId || s.staffName || '';
+                const staffColor = staffMap[stKey] || STAFF_COLORS[0];
+                const note = (s.note || '').trim();
                 const url = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(d)}&time=${encodeURIComponent(s.time)}`;
+
                 return `
-                  <a href="${url}" class="p-2 ${isSpecial ? 'bg-[#FDE8E8] text-[#9B1C1C] border border-[#FED7D7]' : 'bg-[#F3F0EB] text-[#374151] border border-[#E5E0D8]'} rounded-xl text-center font-mono transition flex flex-col justify-center items-center">
+                  <a href="${url}" style="background-color: ${staffColor.bg}; color: ${staffColor.text}; border-color: ${staffColor.border};" class="p-2 border rounded-xl text-center font-mono transition flex flex-col justify-center items-center">
                     <span class="font-bold text-xs">${s.time}</span>
-                    ${isSpecial ? `<span class="text-[8px] font-black mt-0.5">${s.note}</span>` : ''}
+                    <span class="text-[8px] font-black mt-0.5 truncate">${note || staffColor.name}</span>
                   </a>
                 `;
               }).join('')}
