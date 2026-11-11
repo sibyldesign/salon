@@ -4866,10 +4866,10 @@ async function fetchDataAndRender() {
         lineCardTheme: sCfg.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_card_theme') || "latte",
         owner_email: sCfg.owner_email || sInfo.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || "",
         ownerEmail: sCfg.owner_email || sInfo.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_email') || "",
-        lineChannelToken: sCfg.line_channel_token || sInfo.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || "",
-        line_channel_token: sCfg.line_channel_token || sInfo.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_line_token') || "",
-        owner_line_uid: sCfg.owner_line_uid || sInfo.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || "",
-        ownerLineUid: sCfg.owner_line_uid || sInfo.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || localStorage.getItem('zy_owner_uid') || "",
+        lineChannelToken: sCfg.line_channel_token || sInfo.line_channel_token || "",
+        line_channel_token: sCfg.line_channel_token || sInfo.line_channel_token || "",
+        owner_line_uid: sCfg.owner_line_uid || sInfo.owner_line_uid || "",
+        ownerLineUid: sCfg.owner_line_uid || sInfo.owner_line_uid || "",
         
         enable_owner_line_push: sCfg.enable_owner_line_push ?? (localStorage.getItem(`zy_tog_owner_push_${CURRENT_STORE_ID}`) !== 'false'),
         enable_line_one_click_audit: sCfg.enable_line_one_click_audit ?? (localStorage.getItem(`zy_tog_one_click_${CURRENT_STORE_ID}`) !== 'false'),
@@ -11420,9 +11420,8 @@ function populateSettings() {
   // 2. LINE 憑證與獨立開關
   const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
   const effectiveOwnerEmail = s.owner_email || store.owner_email || localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || '';
-  const effectiveLineToken = s.line_channel_token || store.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || '';
-  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || '';
-
+  const effectiveLineToken = s.line_channel_token || store.line_channel_token || '';
+  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || '';
   setVal('cfg-line-card-theme', effectiveCardTheme);
   setVal('cfg-owner-email', effectiveOwnerEmail);
   setVal('cfg-line-token', effectiveLineToken);
@@ -11893,8 +11892,8 @@ function populateLifetimeSettings() {
   // 15. LINE 智慧通報憑證與 7 大子開關（雙向同步，徹底防呆）
   const effectiveCardTheme = localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || s.line_card_theme || 'latte';
   const effectiveOwnerEmail = localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || s.owner_email || store.owner_email || '';
-  const effectiveLineToken = localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`) || s.line_channel_token || store.line_channel_token || '';
-  const effectiveOwnerUid = localStorage.getItem(`zy_owner_uid_${CURRENT_STORE_ID}`) || s.owner_line_uid || store.owner_line_uid || '';
+  const effectiveLineToken = s.line_channel_token || store.line_channel_token || '';
+  const effectiveOwnerUid = s.owner_line_uid || store.owner_line_uid || '';
 
   setVal('lt-setting-line-card-theme', effectiveCardTheme);
   setVal('cfg-line-card-theme', effectiveCardTheme);
@@ -12044,8 +12043,19 @@ async function saveLifetimeStoreSettings() {
   const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
 
   // 🌟【本地多重持久化】：確保重整絕對不丟失
-  localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
-  localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
+  if (lineTokenVal) {
+    localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
+  } else {
+    localStorage.removeItem(`zy_line_token_${CURRENT_STORE_ID}`);
+    localStorage.removeItem('zy_line_token');
+  }
+
+  if (ownerUidVal) {
+    localStorage.setItem(`zy_owner_uid_${CURRENT_STORE_ID}`, ownerUidVal);
+  } else {
+    localStorage.removeItem(`zy_owner_uid_${CURRENT_STORE_ID}`);
+    localStorage.removeItem('zy_owner_uid');
+  }
   localStorage.setItem(`zy_line_card_theme_${CURRENT_STORE_ID}`, lineCardTheme);
   localStorage.setItem(`zy_owner_email_${CURRENT_STORE_ID}`, ownerEmailVal);
 
