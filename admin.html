@@ -5368,68 +5368,56 @@ function renderOverviewGridCanvas() {
       const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
       
-      // 🌟 保底高度計算：10~15分鐘極短單保證有 18px 高度，絕不壓扁
-      // 🌟 保底高度計算：極短單至少給 20px，確保能完整容納文字
-      // 🌟【終極自適應保底高度】：10~15分鐘超短預約強制保底 38px，確保名字、項目、時間缺一不可！
-      // 🌟【10分鐘超短單終極保底高度】：只要小於 45 分鐘或處於全屏窄欄，強制保底 44px，絕不壓扁切字！
+      // 🌟【關鍵核心修正】：10分鐘極短排程強制保底 46px 高度，絕不被壓扁切字！
       const calcH = (a.dur / interval) * slotHeight - 2;
-      const isNarrowSlot = (totalCols >= 2) || isFitMode;
-      const cardHeight = isNarrowSlot ? Math.max(44, calcH) : Math.max(26, calcH);
+      const cardHeight = Math.max(46, calcH);
 
-      let innerLayoutHtml = '';
+      const colorTheme = getServiceMorandiColor(a.service);
+      const safeService = (a.service || '').replace(/'/g, "\\'");
+      const safeName = (a.name || '').replace(/'/g, "\\'");
 
-      if (isFitMode || isNarrowSlot) {
-        // 🌟【全屏窄欄極短單專用】：時間、名字、項目 由上而下依序展開，三者缺一不可！
-        innerLayoutHtml = `
-          <div class="flex flex-col justify-start h-full px-1 py-0.5 leading-[1.05] select-none font-sans overflow-hidden text-left box-border">
-            <div class="font-mono text-[7px] font-bold text-white/80 shrink-0">
-              ${a.time}
-            </div>
-            <div class="font-black text-white text-[8px] truncate mt-0.5" title="${displayName}">
-              ${displayName}
-            </div>
-            <div class="text-white/95 font-bold text-[7.5px] truncate mt-0.5" title="${displaySvc}">
-              ${displaySvc}
-            </div>
-          </div>
-        `;
-      } else if (a.dur <= 35) {
-        // 寬欄短單：單行橫向優雅並排
-        innerLayoutHtml = `
-          <div class="flex items-center gap-1.5 h-full px-2 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
-            <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
-            <span class="text-white/40 text-[8px] shrink-0">|</span>
-            <span class="text-[9px] font-black text-white shrink-0">${displayName}</span>
-            <span class="text-white/40 text-[8px] shrink-0">|</span>
-            <span class="text-[8.5px] font-bold text-white/95 truncate">
-              ${displaySvc}
-            </span>
-          </div>
-        `;
-      } else {
-        // 寬欄長單：寬敞完整結構
-        innerLayoutHtml = `
-          <div class="flex flex-col justify-between h-full p-1.5 leading-tight select-none font-sans overflow-hidden">
-            <div>
-              <div class="flex items-center justify-between font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
-                <span>${a.time}</span>
-                <span class="opacity-80">${a.dur}m</span>
-              </div>
-              <div class="font-black text-white text-[10px] truncate mt-1 tracking-tight" title="${displayName}">
-                ${displayName}
-              </div>
-            </div>
-            <div class="text-white/95 font-bold text-[8.5px] truncate mt-auto bg-black/15 px-1 py-0.5 rounded">
-              ${displaySvc}
-            </div>
-          </div>
-        `;
+      // 解析毛孩名字 (寵美版專用)
+      let petName = '';
+      if (isPetMode) {
+        const match = (a.notes || '').match(/【毛孩(?:\d*)?:?\s*([^/ \]]+)/);
+        if (match && match[1]) petName = match[1].trim();
       }
+
+      const totalCols = a.totalCols || 1;
+      const colIdx = a.colIndex || 0;
+      const widthPct = (100 / totalCols).toFixed(2);
+      const leftPct = (colIdx * (100 / totalCols)).toFixed(2);
+      
+      const posStyle = (totalCols > 1)
+        ? `left: calc(${leftPct}% + 1px); width: calc(${widthPct}% - 2px);`
+        : `left: 2px; right: 2px;`;
+
+      const displayName = (a.name || '現場客') + (petName ? `(${petName})` : '');
+      const svcParts = (a.service || '服務').split(/[,，+＋/]/).map(s => s.trim()).filter(Boolean);
+      let displaySvc = svcParts[0] || '服務';
+      if (totalCols >= 2 && svcParts.length > 1) {
+        displaySvc = `${displaySvc}+${svcParts.length - 1}`;
+      }
+
+      // 🌟【三要素完整呈現】：第1行時間、第2行名字、第3行項目，缺一不可！
+      const innerLayoutHtml = `
+        <div class="flex flex-col justify-evenly h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden text-left box-border">
+          <div class="font-mono text-[7px] font-bold text-white/80 shrink-0">
+            ${a.time}
+          </div>
+          <div class="font-black text-white text-[8px] truncate tracking-tight" title="${displayName}">
+            ${displayName}
+          </div>
+          <div class="text-white/95 font-bold text-[7.5px] truncate tracking-tighter" title="${displaySvc}">
+            ${displaySvc}
+          </div>
+        </div>
+      `;
 
       const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
 
       return `
-        <div style="top: ${topOffset}px; min-height: ${cardHeight}px; height: ${cardHeight}px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
+        <div style="top: ${topOffset}px; height: ${cardHeight}px; min-height: 46px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
              class="absolute rounded-lg shadow-2xs border border-white/20 cursor-pointer hover:opacity-90 transition overflow-hidden"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur}, '${safeLine}')">
           ${innerLayoutHtml}
