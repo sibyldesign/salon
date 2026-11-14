@@ -5405,48 +5405,46 @@ function renderOverviewGridCanvas() {
 
       let innerLayoutHtml = '';
 
-      if (isShortSlot) {
-        if (!isNarrow) {
-          // A-1. 全寬短單 (如 11:30 綠色橫條)：寬度充足，單行優雅並排
-          innerLayoutHtml = `
-            <div class="flex items-center gap-1.5 h-full px-2 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
-              <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
-              <span class="text-white/40 text-[8px] shrink-0">|</span>
-              <span class="text-[9px] font-black text-white shrink-0">${displayName}</span>
-              <span class="text-white/40 text-[8px] shrink-0">|</span>
-              <span class="text-[8.5px] font-bold text-white/95 truncate">
-                ${displaySvc}
-              </span>
-            </div>
-          `;
-        } else {
-          // A-2. 🌟 窄欄插單短單 (如 10:45 黃、12:30 橘)：上下兩行微排版，項目獨佔第二行，絕不被吃字！
-          innerLayoutHtml = `
-            <div class="flex flex-col justify-center h-full px-1 leading-[1.1] select-none font-sans overflow-hidden">
-              <div class="flex items-center justify-between text-white font-bold">
-                <span class="text-[8px] font-black truncate">${displayName}</span>
-                <span class="font-mono text-[7px] opacity-75 shrink-0 ml-0.5">${a.time}</span>
-              </div>
-              <div class="text-[7.5px] font-bold text-white/95 truncate mt-0.5">
-                ${displaySvc}
-              </div>
-            </div>
-          `;
-        }
-      } else {
-        // B. 45 分鐘以上中長單：頂部時間時長，中間姓名，底部項目
+      if (isFitMode || isNarrow) {
+        // 🌟【全屏一覽 / 窄欄插單專用微排版】：移除頂部佔空間的橫線，姓名與項目 100% 露臉不截斷！
         innerLayoutHtml = `
-          <div class="flex flex-col justify-between h-full p-1 leading-tight select-none font-sans overflow-hidden">
+          <div class="flex flex-col justify-center h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden">
+            <div class="flex items-center justify-between text-white font-black text-[8px] truncate">
+              <span class="truncate">${displayName}</span>
+              ${cardHeight >= 32 ? `<span class="font-mono text-[7px] opacity-75 shrink-0 ml-0.5">${a.time}</span>` : ''}
+            </div>
+            <div class="text-white/95 font-bold text-[7.5px] truncate mt-0.5 tracking-tighter" title="${displaySvc}">
+              ${displaySvc}
+            </div>
+          </div>
+        `;
+      } else if (isShortSlot) {
+        // 寬欄短單：單行橫向優雅並排
+        innerLayoutHtml = `
+          <div class="flex items-center gap-1.5 h-full px-2 leading-none select-none font-sans overflow-hidden whitespace-nowrap">
+            <span class="font-mono text-[8px] font-bold opacity-85 shrink-0">${a.time}</span>
+            <span class="text-white/40 text-[8px] shrink-0">|</span>
+            <span class="text-[9px] font-black text-white shrink-0">${displayName}</span>
+            <span class="text-white/40 text-[8px] shrink-0">|</span>
+            <span class="text-[8.5px] font-bold text-white/95 truncate">
+              ${displaySvc}
+            </span>
+          </div>
+        `;
+      } else {
+        // 寬欄長單：寬敞完整結構
+        innerLayoutHtml = `
+          <div class="flex flex-col justify-between h-full p-1.5 leading-tight select-none font-sans overflow-hidden">
             <div>
-              <div class="flex items-center justify-between font-mono text-[7.5px] font-bold text-white/80 pb-0.5 border-b border-white/20">
+              <div class="flex items-center justify-between font-mono text-[8px] font-bold text-white/80 pb-0.5 border-b border-white/20">
                 <span>${a.time}</span>
                 <span class="opacity-80">${a.dur}m</span>
               </div>
-              <div class="font-black text-white ${isNarrow ? 'text-[8.5px]' : 'text-[10px]'} truncate mt-1 tracking-tight" title="${displayName}">
+              <div class="font-black text-white text-[10px] truncate mt-1 tracking-tight" title="${displayName}">
                 ${displayName}
               </div>
             </div>
-            <div class="text-white/95 font-bold ${isNarrow ? 'text-[7.5px]' : 'text-[8.5px]'} truncate mt-auto bg-black/15 px-0.5 py-0.5 rounded">
+            <div class="text-white/95 font-bold text-[8.5px] truncate mt-auto bg-black/15 px-1 py-0.5 rounded">
               ${displaySvc}
             </div>
           </div>
