@@ -5211,6 +5211,10 @@ function switchOverviewStaffTab(staffId) {
 // ========================================================
 // 🌟【甘特圖專業修復版】：修復幽靈重複複製 + 真·時間軸凍結 + 全屏一頁看完全員
 // ========================================================
+// ========================================================
+// 🌟【沙龍單欄半透明層疊看板】：符合圖三老闆指定規格
+// 1. 單欄滿版不分拆 2. 半透明透出時間軸 3. 集中頂部(時間 代號 / 姓名) 4. 10分鐘超短自適應
+// ========================================================
 function renderOverviewGridCanvas() {
   const canvas = document.getElementById('overview-grid-canvas');
   if (!canvas) return;
@@ -5218,7 +5222,6 @@ function renderOverviewGridCanvas() {
   const viewDateHyphen = document.getElementById('overview-view-date')?.value || new Date().toISOString().split('T')[0];
   const targetDateSlash = viewDateHyphen.replace(/-/g, '/');
 
-  // 1. 專員名單判定 (專員登入看自己，店長看全體)
   let rawStaffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   if (rawStaffList.length === 0) rawStaffList = [{ id: 'staff_1', name: '專員' }];
 
@@ -5237,7 +5240,7 @@ function renderOverviewGridCanvas() {
     displayStaffList = allowedStaffList.filter(s => s.id === currentOverviewStaffTab);
   }
 
-  // 2. 時段設定 (08:00 - 20:00，整點起算，以 15 分鐘為最小刻度)
+  // 營業時間刻度 (15 分鐘一格)
   const rawStartTime = backendData.settings?.shiftStartTime || '09:00';
   const rawEndTime = backendData.settings?.shiftEndTime || '20:00';
   const interval = 15;
@@ -5247,26 +5250,22 @@ function renderOverviewGridCanvas() {
   const storeOpenMinutes = rawSH * 60 + rawSM;
   const storeCloseMinutes = rawEH * 60 + rawEM;
 
-  const timelineStartMinutes = rawSH * 60; // 自動向下取整點
+  const timelineStartMinutes = rawSH * 60;
   const timelineEndMinutes = (rawEM > 0) ? (rawEH + 1) * 60 : rawEH * 60;
   const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
 
-  // 3. 尺寸與直欄規格
-  const slotHeight = isFitMode ? 16 : 22; 
+  const slotHeight = isFitMode ? 18 : 24; 
   const totalTimelineHeight = totalSlotsCount * slotHeight;
   
   const staffColStyle = isFitMode 
     ? "flex: 1 1 0%; min-width: 0;" 
-    : "width: 126px; min-width: 126px; flex-shrink: 0;";
-
-  const currentIndustryMode = backendData.settings?.industryMode || backendData.storeInfo?.industry_type || 'beauty';
-  const isPetMode = (currentIndustryMode !== 'beauty');
+    : "width: 130px; min-width: 130px; flex-shrink: 0;";
 
   const apptsToday = (backendData.appointments || []).filter(a => {
     return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
-  // 控制列按鈕
+  // 控制按鈕列
   let controlsHtml = `
     <div class="flex justify-between items-center mb-2 px-1">
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
@@ -5293,14 +5292,14 @@ function renderOverviewGridCanvas() {
     </div>
   `;
 
-  // 4. 專員直欄表頭
   let headerColsHtml = displayStaffList.map(st => `
     <div style="${staffColStyle}" class="text-center py-2 px-1 border-r border-[#EBE5DF] last:border-r-0 bg-white">
       <div class="font-bold text-xs text-brand-900 truncate">${st.name}</div>
     </div>
   `).join('');
 
-  // 5. 專員排程內容 (含智慧重疊與極限插單排版)
+  // 🌟【核心渲染】：單欄重疊、半透明玻璃、文字頂部集中
+  // 🌟【核心渲染】：Group B 滿版覆蓋 / Group A 智慧左右分軌 / 全屏半透明穿透
   let staffColumnsHtml = displayStaffList.map((st, staffIdx) => {
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
@@ -5312,113 +5311,139 @@ function renderOverviewGridCanvas() {
       const [aH, aM] = (a.time || '09:00').split(':').map(Number);
       const startMin = aH * 60 + aM;
       const dur = Number(a.duration || 60);
-      return { ...a, startMin, endMin: startMin + dur, dur };
-    }).sort((a, b) => a.startMin - b.startMin);
 
-    // 多重重疊軌道分配
+      // 判定項目是 Group A 還是 Group B
+      const matchedSvc = (backendData.services || []).find(s => (a.service || '').includes(s.name));
+      const type = a.type || matchedSvc?.type || matchedSvc?.service_type || 'Group_B';
+      const isGroupA = (type === 'Group_A');
+
+      return { ...a, startMin, endMin: startMin + dur, dur, isGroupA };
+    });
+
+    // 🌟【智慧分軌分流演算法】：
+    // 只有同時段重疊且「有 Group A 穿插」時才左右分軌；若為 Group B 則整條滿版
     const processedAppts = [];
     const clusters = [];
 
     stAppts.forEach(appt => {
-      let placedInCluster = false;
+      let placed = false;
       for (let cluster of clusters) {
         const hasOverlap = cluster.some(other => 
           Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
         );
         if (hasOverlap) {
           cluster.push(appt);
-          placedInCluster = true;
+          placed = true;
           break;
         }
       }
-      if (!placedInCluster) {
-        clusters.push([appt]);
-      }
+      if (!placed) clusters.push([appt]);
     });
 
     clusters.forEach(cluster => {
-      cluster.sort((a, b) => a.startMin - b.startMin || (b.dur - a.dur));
-      const tracks = [];
-
-      cluster.forEach(appt => {
-        let assignedTrack = -1;
-        for (let i = 0; i < tracks.length; i++) {
-          if (tracks[i] <= appt.startMin) {
-            assignedTrack = i;
-            tracks[i] = appt.endMin;
-            break;
+      const hasGroupA = cluster.some(c => c.isGroupA);
+      
+      if (!hasGroupA) {
+        // 全是 Group B 或單一預約：通通 100% 滿版
+        cluster.forEach(appt => {
+          appt.totalCols = 1;
+          appt.colIndex = 0;
+          processedAppts.push(appt);
+        });
+      } else {
+        // 有 Group A（可重疊項目）：按時間左右分軌
+        cluster.sort((a, b) => a.startMin - b.startMin || (b.dur - a.dur));
+        const tracks = [];
+        cluster.forEach(appt => {
+          let assignedTrack = -1;
+          for (let i = 0; i < tracks.length; i++) {
+            if (tracks[i] <= appt.startMin) {
+              assignedTrack = i;
+              tracks[i] = appt.endMin;
+              break;
+            }
           }
-        }
-        if (assignedTrack === -1) {
-          assignedTrack = tracks.length;
-          tracks.push(appt.endMin);
-        }
-        appt.trackIndex = assignedTrack;
-      });
+          if (assignedTrack === -1) {
+            assignedTrack = tracks.length;
+            tracks.push(appt.endMin);
+          }
+          appt.trackIndex = assignedTrack;
+        });
 
-      const totalTracks = Math.max(1, tracks.length);
-      cluster.forEach(appt => {
-        appt.totalCols = totalTracks;
-        appt.colIndex = appt.trackIndex;
-        processedAppts.push(appt);
-      });
+        const totalTracks = Math.max(1, tracks.length);
+        cluster.forEach(appt => {
+          appt.totalCols = totalTracks;
+          appt.colIndex = appt.trackIndex;
+          processedAppts.push(appt);
+        });
+      }
     });
 
-    let apptCardsHtml = processedAppts.map(a => {
+    // 渲染色塊卡片
+    let apptCardsHtml = processedAppts.map((a, zIdx) => {
       const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
-      
-      // 🌟【關鍵核心修正】：10分鐘極短排程強制保底 46px 高度，絕不被壓扁切字！
       const calcH = (a.dur / interval) * slotHeight - 2;
-      const cardHeight = Math.max(46, calcH);
+      
+      // 🌟 保底高度：超短單（10~15分）保底 26px，確保兩行字完整露出
+      const cardHeight = Math.max(26, calcH);
 
       const colorTheme = getServiceMorandiColor(a.service);
       const safeService = (a.service || '').replace(/'/g, "\\'");
       const safeName = (a.name || '').replace(/'/g, "\\'");
+      const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
+      const displayName = a.name || '現場客';
 
-      // 解析毛孩名字 (寵美版專用)
-      let petName = '';
-      if (isPetMode) {
-        const match = (a.notes || '').match(/【毛孩(?:\d*)?:?\s*([^/ \]]+)/);
-        if (match && match[1]) petName = match[1].trim();
-      }
-
-      const totalCols = a.totalCols || 1;
-      const colIdx = a.colIndex || 0;
-      const widthPct = (100 / totalCols).toFixed(2);
-      const leftPct = (colIdx * (100 / totalCols)).toFixed(2);
-      
-      const posStyle = (totalCols > 1)
-        ? `left: calc(${leftPct}% + 1px); width: calc(${widthPct}% - 2px);`
-        : `left: 2px; right: 2px;`;
-
-      const displayName = (a.name || '現場客') + (petName ? `(${petName})` : '');
+      // 服務項目名稱處理
       const svcParts = (a.service || '服務').split(/[,，+＋/]/).map(s => s.trim()).filter(Boolean);
       let displaySvc = svcParts[0] || '服務';
-      if (totalCols >= 2 && svcParts.length > 1) {
+      if (svcParts.length > 1) {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
-      // 🌟【三要素完整呈現】：第1行時間、第2行名字、第3行項目，缺一不可！
-      const innerLayoutHtml = `
-        <div class="flex flex-col justify-evenly h-full px-1 py-0.5 leading-none select-none font-sans overflow-hidden text-left box-border">
-          <div class="font-mono text-[7px] font-bold text-white/80 shrink-0">
-            ${a.time}
+      // 🌟【位置計算】：Group B 或單人時滿版；Group A 多人穿插時左右分軌
+      const totalCols = a.totalCols || 1;
+      const colIdx = a.colIndex || 0;
+      let posStyle = 'left: 2px; right: 2px;';
+      if (totalCols > 1) {
+        const widthPct = (100 / totalCols).toFixed(2);
+        const leftPct = (colIdx * (100 / totalCols)).toFixed(2);
+        posStyle = `left: calc(${leftPct}% + 1px); width: calc(${widthPct}% - 2px);`;
+      }
+
+      const zIndexVal = 10 + zIdx * 3;
+
+      // 🌟【文字排版】：統一兩行垂直流，名字與時間絕不擠在同一個死角！
+      // 第一行：時間 + 項目 (緊湊並列)
+      // 第二行：顧客名字 (清晰獨立大字，100% 顯現)
+      // 🌟【自適應排版】：超短單（<=25分鐘）直接單行橫向並排，長單垂直雙行，名字 100% 絕不消失！
+      // 🌟【門檻提升至 40 分鐘】：只要是 30 分鐘或更短的單，一律單行橫排緊貼頂部，絕不被下一筆色塊蓋字！
+      const isShortSlot = (a.dur <= 40);
+
+      const innerLayoutHtml = isShortSlot ? `
+        <!-- 短單（<=40分鐘）：時間 + 名字 + 項目 頂部單行完整排列 -->
+        <div class="flex items-center justify-between h-[20px] px-1.5 leading-none select-none font-sans overflow-hidden whitespace-nowrap text-white w-full">
+          <span class="font-mono text-[8.5px] font-bold opacity-90 shrink-0">${a.time}</span>
+          <span class="font-black text-[9px] truncate mx-1 shrink min-w-0 font-sans">${displayName}</span>
+          <span class="bg-black/30 px-1 py-0.5 rounded text-[7.5px] font-bold shrink-0 leading-none">${displaySvc}</span>
+        </div>
+      ` : `
+        <!-- 長單（45分鐘以上長項目）：頂部緊湊雙行 -->
+        <div class="flex flex-col justify-start h-full p-1 leading-tight select-none font-sans overflow-hidden text-left box-border">
+          <div class="flex items-center justify-between font-bold text-white text-[8px] border-b border-white/20 pb-0.5">
+            <span class="font-mono">${a.time}</span>
+            <span class="bg-black/30 px-1 py-0.2 rounded text-[7.5px] font-bold tracking-tight truncate max-w-[50%] text-right">${displaySvc}</span>
           </div>
-          <div class="font-black text-white text-[8px] truncate tracking-tight" title="${displayName}">
+          <div class="font-black text-white text-[9.5px] truncate mt-1 tracking-tight" title="${displayName}">
             ${displayName}
-          </div>
-          <div class="text-white/95 font-bold text-[7.5px] truncate tracking-tighter" title="${displaySvc}">
-            ${displaySvc}
           </div>
         </div>
       `;
 
-      const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
-
+      // 🌟【半透明效果】：opacity: 0.85 搭配毛玻璃效果，可穿透看見底層時間軸格線
       return `
-        <div style="top: ${topOffset}px; height: ${cardHeight}px; min-height: 46px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: 10; box-sizing: border-box;"
-             class="absolute rounded-lg shadow-2xs border border-white/20 cursor-pointer hover:opacity-90 transition overflow-hidden"
+        <div style="top: ${topOffset}px; height: ${cardHeight}px; min-height: 26px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: ${zIndexVal}; box-sizing: border-box; opacity: 0.85;"
+             class="absolute rounded-lg shadow-sm border border-white/30 backdrop-blur-[1px] cursor-pointer hover:opacity-100 hover:z-50 transition"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur}, '${safeLine}')">
           ${innerLayoutHtml}
         </div>
@@ -5450,8 +5475,7 @@ function renderOverviewGridCanvas() {
       </div>
     `;
   }).join('');
-
-  // 6. 組合外框
+  
   canvas.innerHTML = controlsHtml + `
     <div class="bg-white rounded-2xl border border-brand-200 shadow-sm relative overflow-hidden">
       <div class="${isFitMode ? 'w-full' : 'overflow-x-auto relative'}" style="-webkit-overflow-scrolling: touch;">
