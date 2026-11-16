@@ -5262,7 +5262,8 @@ function renderOverviewGridCanvas() {
     : "width: 130px; min-width: 130px; flex-shrink: 0;";
 
   const apptsToday = (backendData.appointments || []).filter(a => {
-    return (a.date || '').replace(/-/g, '/') === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
+    const aDate = String(a.date || '').replace(/-/g, '/').trim();
+    return aDate === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
 
   // 控制按鈕列
@@ -5298,8 +5299,7 @@ function renderOverviewGridCanvas() {
     </div>
   `).join('');
 
-  // 🌟【核心渲染】：單欄重疊、半透明玻璃、文字頂部集中
-  // 🌟【核心渲染】：Group B 滿版覆蓋 / Group A 智慧左右分軌 / 全屏半透明穿透
+  // 🌟【核心渲染】：智慧分軌並排
   let staffColumnsHtml = displayStaffList.map((st, staffIdx) => {
     const stAppts = apptsToday.filter(a => {
       const aStaff = String(a.staffName || '').trim();
@@ -5312,7 +5312,6 @@ function renderOverviewGridCanvas() {
       const startMin = aH * 60 + aM;
       const dur = Number(a.duration || 60);
 
-      // 判定項目是 Group A 還是 Group B
       const matchedSvc = (backendData.services || []).find(s => (a.service || '').includes(s.name));
       const type = a.type || matchedSvc?.type || matchedSvc?.service_type || 'Group_B';
       const isGroupA = (type === 'Group_A');
@@ -5320,63 +5319,37 @@ function renderOverviewGridCanvas() {
       return { ...a, startMin, endMin: startMin + dur, dur, isGroupA };
     });
 
-    // 🌟【智慧分軌分流演算法】：
-    // 只有同時段重疊且「有 Group A 穿插」時才左右分軌；若為 Group B 則整條滿版
-    const processedAppts = [];
-    const clusters = [];
-
-    stAppts.forEach(appt => {
-      let placed = false;
-      for (let cluster of clusters) {
-        const hasOverlap = cluster.some(other => 
-          Math.max(appt.startMin, other.startMin) < Math.min(appt.endMin, other.endMin)
-        );
-        if (hasOverlap) {
-          cluster.push(appt);
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) clusters.push([appt]);
+    // ==========================================
+    // 🌟【這裡就是處理 stAppts 的地方】
+    // 邏輯：平時維持單排層疊；只有「完全相同起始時間」（同起點）才自動左右雙排
+    // ==========================================
+    const startCounts = {};
+    stAppts.forEach(a => {
+      startCounts[a.startMin] = (startCounts[a.startMin] || 0) + 1;
     });
 
-    clusters.forEach(cluster => {
-      const hasGroupA = cluster.some(c => c.isGroupA);
-      
-      if (!hasGroupA) {
-        // 全是 Group B 或單一預約：通通 100% 滿版
-        cluster.forEach(appt => {
-          appt.totalCols = 1;
-          appt.colIndex = 0;
-          processedAppts.push(appt);
-        });
-      } else {
-        // 有 Group A（可重疊項目）：按時間左右分軌
-        cluster.sort((a, b) => a.startMin - b.startMin || (b.dur - a.dur));
-        const tracks = [];
-        cluster.forEach(appt => {
-          let assignedTrack = -1;
-          for (let i = 0; i < tracks.length; i++) {
-            if (tracks[i] <= appt.startMin) {
-              assignedTrack = i;
-              tracks[i] = appt.endMin;
-              break;
-            }
-          }
-          if (assignedTrack === -1) {
-            assignedTrack = tracks.length;
-            tracks.push(appt.endMin);
-          }
-          appt.trackIndex = assignedTrack;
-        });
+    // 依時長由長到短排序：讓長單先渲染在底層，短單/插單疊在頂層
+    const sortedAppts = [...stAppts].sort((a, b) => b.dur - a.dur);
 
-        const totalTracks = Math.max(1, tracks.length);
-        cluster.forEach(appt => {
-          appt.totalCols = totalTracks;
-          appt.colIndex = appt.trackIndex;
-          processedAppts.push(appt);
-        });
+    const timeColTracker = {};
+    const processedAppts = [];
+
+    sortedAppts.forEach(appt => {
+      const sameStartCount = startCounts[appt.startMin] || 1;
+      
+      if (sameStartCount > 1) {
+        // 🌟 只有「完全相同起始時間」（例如兩人都在 11:30）才自動左右並排
+        const currentIdx = timeColTracker[appt.startMin] || 0;
+        timeColTracker[appt.startMin] = currentIdx + 1;
+
+        appt.totalCols = sameStartCount;
+        appt.colIndex = currentIdx;
+      } else {
+        // 🌟 時段錯開（如 09:30 與 09:45）：維持 100% 滿版單排層疊，乾淨俐落！
+        appt.totalCols = 1;
+        appt.colIndex = 0;
       }
+      processedAppts.push(appt);
     });
 
     // 渲染色塊卡片
@@ -5384,8 +5357,6 @@ function renderOverviewGridCanvas() {
       const slotUnitsFromStart = (a.startMin - timelineStartMinutes) / interval;
       const topOffset = slotUnitsFromStart * slotHeight;
       const calcH = (a.dur / interval) * slotHeight - 2;
-      
-      // 🌟 保底高度：超短單（10~15分）保底 26px，確保兩行字完整露出
       const cardHeight = Math.max(26, calcH);
 
       const colorTheme = getServiceMorandiColor(a.service);
@@ -5394,62 +5365,42 @@ function renderOverviewGridCanvas() {
       const safeLine = (a.lineName || a.line_name || '').replace(/'/g, "\\'");
       const displayName = a.name || '現場客';
 
-      // 服務項目名稱處理
       const svcParts = (a.service || '服務').split(/[,，+＋/]/).map(s => s.trim()).filter(Boolean);
       let displaySvc = svcParts[0] || '服務';
       if (svcParts.length > 1) {
         displaySvc = `${displaySvc}+${svcParts.length - 1}`;
       }
 
-      // 🌟【位置計算】：Group B 或單人時滿版；Group A 多人穿插時左右分軌
-      const totalCols = a.totalCols || 1;
-      const colIdx = a.colIndex || 0;
-      let posStyle = 'left: 2px; right: 2px;';
+      // 寬度動態計算
+      const totalCols = Number(a.totalCols) || 1;
+      const colIdx = Number(a.colIndex) || 0;
+      let posStyle = 'left: 2px; right: 2px; width: calc(100% - 4px);';
+      
       if (totalCols > 1) {
         const widthPct = (100 / totalCols).toFixed(2);
         const leftPct = (colIdx * (100 / totalCols)).toFixed(2);
-        posStyle = `left: calc(${leftPct}% + 1px); width: calc(${widthPct}% - 2px);`;
+        posStyle = `left: calc(${leftPct}% + 1px) !important; width: calc(${widthPct}% - 2px) !important;`;
       }
 
       const zIndexVal = 10 + zIdx * 3;
 
-      // 🌟【文字排版】：統一兩行垂直流，名字與時間絕不擠在同一個死角！
-      // 第一行：時間 + 項目 (緊湊並列)
-      // 第二行：顧客名字 (清晰獨立大字，100% 顯現)
-      // 🌟【自適應排版】：超短單（<=25分鐘）直接單行橫向並排，長單垂直雙行，名字 100% 絕不消失！
-      // 🌟【門檻提升至 40 分鐘】：只要是 30 分鐘或更短的單，一律單行橫排緊貼頂部，絕不被下一筆色塊蓋字！
-      const isShortSlot = (a.dur <= 40);
-
-      const innerLayoutHtml = isShortSlot ? `
-        <!-- 短單（<=40分鐘）：時間 + 名字 + 項目 頂部單行完整排列 -->
+      const innerLayoutHtml = `
         <div class="flex items-center justify-between h-[20px] px-1.5 leading-none select-none font-sans overflow-hidden whitespace-nowrap text-white w-full">
           <span class="font-mono text-[8.5px] font-bold opacity-90 shrink-0">${a.time}</span>
           <span class="font-black text-[9px] truncate mx-1 shrink min-w-0 font-sans">${displayName}</span>
           <span class="bg-black/30 px-1 py-0.5 rounded text-[7.5px] font-bold shrink-0 leading-none">${displaySvc}</span>
         </div>
-      ` : `
-        <!-- 長單（45分鐘以上長項目）：頂部緊湊雙行 -->
-        <div class="flex flex-col justify-start h-full p-1 leading-tight select-none font-sans overflow-hidden text-left box-border">
-          <div class="flex items-center justify-between font-bold text-white text-[8px] border-b border-white/20 pb-0.5">
-            <span class="font-mono">${a.time}</span>
-            <span class="bg-black/30 px-1 py-0.2 rounded text-[7.5px] font-bold tracking-tight truncate max-w-[50%] text-right">${displaySvc}</span>
-          </div>
-          <div class="font-black text-white text-[9.5px] truncate mt-1 tracking-tight" title="${displayName}">
-            ${displayName}
-          </div>
-        </div>
       `;
 
-      // 🌟【半透明效果】：opacity: 0.85 搭配毛玻璃效果，可穿透看見底層時間軸格線
       return `
-        <div style="top: ${topOffset}px; height: ${cardHeight}px; min-height: 26px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: ${zIndexVal}; box-sizing: border-box; opacity: 0.85;"
-             class="absolute rounded-lg shadow-sm border border-white/30 backdrop-blur-[1px] cursor-pointer hover:opacity-100 hover:z-50 transition"
+        <div style="top: ${topOffset}px; height: ${cardHeight}px; min-height: 26px; ${posStyle} background-color: ${colorTheme.bg}; color: ${colorTheme.text}; z-index: ${zIndexVal}; box-sizing: border-box; opacity: 0.78;"
+             class="absolute rounded-lg shadow-sm border border-white/40 backdrop-blur-[1px] cursor-pointer hover:opacity-100 hover:z-50 transition"
              onclick="openAppointmentDetailModal('${a.id}', '${safeName}', '${a.phone}', '${safeService}', ${Number(a.price || 0)}, '${a.time}', ${a.dur}, '${safeLine}')">
           ${innerLayoutHtml}
         </div>
       `;
     }).join('');
-
+    
     return `
       <div style="${staffColStyle} height: ${totalTimelineHeight}px; box-sizing: border-box;" class="relative border-r border-[#EBE5DF] last:border-r-0">
         <div class="absolute inset-0 z-0">
@@ -5526,125 +5477,17 @@ function getServiceMorandiColor(serviceName) {
 // ========================================================
 // 🌟 雙重排程防撞檢驗核心：專員 Group A/B 人數上限 ＋ 門市硬體設備容量防撞
 // ========================================================
-function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, newDurMins, newServiceType, newServiceName) {
-  const [nSH, nSM] = newStartTime.split(':').map(Number);
-  const newStartMin = nSH * 60 + nSM;
-  const newEndMin = newStartMin + Number(newDurMins);
-
-  const allTodayAppts = (backendData.appointments || []).filter(a => {
-    return (a.date || '').replace(/-/g, '/') === dateSlash && a.status !== '已取消' && a.status !== '婉拒';
-  });
-
-  const svcList = backendData.services || [];
-  const currentSvcObj = svcList.find(s => s.name === newServiceName);
-  const isNewGroupB = (newServiceType === 'Group_B' || !newServiceType);
-  const maxCap = currentSvcObj?.group_a_capacity || 2;
-  const requiredRes = currentSvcObj?.required_resource || currentSvcObj?.resource || 'none';
-
-  // ----------------------------------------------------
-  // 防線一：門市硬體設備席位容量防撞 (全店跨專員檢查)
-  // ----------------------------------------------------
-  if (requiredRes && requiredRes !== 'none') {
-    const resList = storeResourcesList || [];
-    const targetRes = resList.find(r => r.name === requiredRes);
-    const maxResourceCap = targetRes ? Number(targetRes.capacity || 1) : 1;
-
-    let resOccupiedCount = 0;
-    allTodayAppts.forEach(a => {
-      const [aH, aM] = (a.time || '09:00').split(':').map(Number);
-      const aStart = aH * 60 + aM;
-      const aEnd = aStart + Number(a.duration || 60);
-
-      // 若時段重疊，比對是否使用同設備
-      if (Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd)) {
-        const otherSvc = svcList.find(s => (a.service || '').includes(s.name));
-        const otherRes = otherSvc?.required_resource || otherSvc?.resource || 'none';
-        if (otherRes === requiredRes) {
-          resOccupiedCount++;
-        }
-      }
-    });
-
-    if (resOccupiedCount >= maxResourceCap) {
-      return {
-        conflict: true,
-        message: `【設備衝撞警報】門市【${requiredRes}】容量上限為 ${maxResourceCap} 組，該時段已被全數佔滿，無法再安排！`
-      };
-    }
-  }
-
-  // ----------------------------------------------------
-  // 防線二：同專員時段重疊與 Group A / Group B 限制
-  // ----------------------------------------------------
-  const sameStaffAppts = allTodayAppts.filter(a => {
-    const aStaff = String(a.staffName || '').trim();
-    const aStaffId = String(a.staffId || '').trim();
-    return (aStaff === staffName || (staffId && aStaffId === staffId));
-  });
-
-  const overlappingAppts = sameStaffAppts.filter(a => {
-    const [aH, aM] = (a.time || '09:00').split(':').map(Number);
-    const aStart = aH * 60 + aM;
-    const aEnd = aStart + Number(a.duration || 60);
-    return Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd);
-  });
-
-  if (overlappingAppts.length === 0) return { conflict: false };
-
-  // 規則 1：新插項目為 Group B，只要已有預約，絕對獨佔阻斷
-  if (isNewGroupB) {
-    const conflictName = overlappingAppts[0].name;
-    const conflictTime = overlappingAppts[0].time;
-    return {
-      conflict: true,
-      message: `【Group B 專屬衝突】專員在 ${conflictTime} 已有【${conflictName}】的預約，全程專屬項目禁止穿插！`
-    };
-  }
-
-  // 規則 2：新插項目為 Group A，但既有訂單中有 Group B
-  const hasGroupB = overlappingAppts.some(a => {
-    const foundSvc = svcList.find(s => (a.service || '').includes(s.name));
-    return foundSvc ? (foundSvc.type === 'Group_B') : true;
-  });
-
-  if (hasGroupB) {
-    return {
-      conflict: true,
-      message: `【專員時段衝突】該時段已有 Group B (全程專屬類) 施作中，禁止穿插預約！`
-    };
-  }
-
-  // 規則 3：皆為 Group A，檢查是否超過重疊承載上限 (group_a_capacity)
-  if (overlappingAppts.length >= maxCap) {
-    return {
-      conflict: true,
-      message: `【超過承載人數】該專員此等待時段已排入 ${overlappingAppts.length} 位顧客，已達上限 ${maxCap} 人，禁止再插單！`
-    };
-  }
-
-  return { conflict: false };
-}
-    
-    // ========================================================
-// 🌟 總覽排程看板：升級版插單與專員休假排休引擎 (全功能縫合版)
 // ========================================================
-// ========================================================
-// 🌟 總覽排程防撞核心：Group A/B 獨佔與人數上限檢驗
-// ========================================================
-// ========================================================
-// 🌟 後台專員排程衝突檢驗（支援老闆極限插單放行版）
+// 🌟 專員排程衝突檢驗核心（允許助理洗頭分流、絕對放行）
 // ========================================================
 function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, newDurMins, newServiceType, newServiceName) {
   try {
     if (!newStartTime || typeof newStartTime !== 'string') return { conflict: false };
 
     const timeParts = newStartTime.split(':').map(Number);
-    const nSH = timeParts[0] || 0;
-    const nSM = timeParts[1] || 0;
-    const newStartMin = nSH * 60 + nSM;
+    const newStartMin = (timeParts[0] || 0) * 60 + (timeParts[1] || 0);
     const newEndMin = newStartMin + Number(newDurMins || 60);
 
-    // 1. 取得當日同專員之有效預約名單（排除取消與婉拒）
     const appointments = (backendData && Array.isArray(backendData.appointments)) ? backendData.appointments : [];
     const sameStaffAppts = appointments.filter(a => {
       if ((a.date || '').replace(/-/g, '/') !== dateSlash) return false;
@@ -5654,32 +5497,27 @@ function checkStaffGroupConflict(staffName, staffId, dateSlash, newStartTime, ne
       return (aStaff === staffName || (staffId && aStaffId === staffId));
     });
 
-    // 2. 篩選出任何時間交集重疊的既有預約
     const overlappingAppts = sameStaffAppts.filter(a => {
       const aParts = (a.time || '09:00').split(':').map(Number);
-      const aH = aParts[0] || 0;
-      const aM = aParts[1] || 0;
-      const aStart = aH * 60 + aM;
+      const aStart = (aParts[0] || 0) * 60 + (aParts[1] || 0);
       const aEnd = aStart + Number(a.duration || 60);
       return Math.max(newStartMin, aStart) < Math.min(newEndMin, aEnd);
     });
 
     if (overlappingAppts.length === 0) return { conflict: false };
 
-    // 3. 重疊提醒（非硬性阻斷，僅彈窗提醒已有重疊單）
     const count = overlappingAppts.length;
-    const firstConflict = overlappingAppts[0];
     const conflictNames = overlappingAppts.map(o => o.name || '顧客').join('、');
 
     return {
       conflict: true,
-      message: `專員在 ${newStartTime} 已有 ${count} 筆預約進行中（${conflictNames}），插單將進行多軌並排。`
+      message: `專員在 ${newStartTime} 已有 ${count} 筆預約進行中（${conflictNames}），插單將進行左右並排呈現。`
     };
   } catch (err) {
-    console.warn("衝突檢驗防呆跳過:", err);
     return { conflict: false };
   }
 }
+    
 // ========================================================
 // 🌟 總覽快速插單：補齊 data-type 與 data-res 屬性綁定
 // ========================================================
@@ -5903,10 +5741,20 @@ function quickInsertBooking(date, time, staffId, staffName) {
           r.value.service
         );
 
-        if (conflictCheck.conflict) {
+        // 🌟【保留重疊提醒彈窗】：時段衝突時警示，按下確認即放行插單
+        if (conflictCheck && conflictCheck.conflict) {
           const forceConfirm = await Swal.fire({
             title: '⚠️ 時段重疊提醒',
-            html: `<div class="text-left text-xs space-y-2"><div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900">${conflictCheck.message}</div><div class="text-brand-700 font-bold text-center pt-1">是否仍要強制排入此預約？</div></div>`,
+            html: `
+              <div class="text-left text-xs space-y-2">
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 leading-relaxed font-sans">
+                  ${conflictCheck.message}
+                </div>
+                <div class="text-[#8C7355] font-bold text-center pt-1 font-sans">
+                  現場有助理協助分流，是否確定排入？
+                </div>
+              </div>
+            `,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonText: '⚡ 確定強制插單',
@@ -5919,8 +5767,7 @@ function quickInsertBooking(date, time, staffId, staffName) {
 
       Swal.showLoading();
 
-      // 🌟【自動撈取完整客人資料並補齊】：信箱、包卡、儲值金與流水號
-      const cleanP = r.value.phone.replace(/\D/g, '');
+      const cleanP = (r.value.phone || '').replace(/\D/g, '');
       let custEmail = '';
       let assetNotes = [];
 
@@ -5964,14 +5811,53 @@ function quickInsertBooking(date, time, staffId, staffName) {
         notes: noteText
       };
 
-      await directSupabaseUpsert('bookings', payload, 'id');
-      await fetchDataAndRender();
+      // 🌟【標準直存】：用 POST 直接插入新預約，由 Supabase 自動指派合法 UUID
+      let newBookingId = 'temp_' + Date.now();
+      try {
+        const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+          },
+          body: JSON.stringify(payload)
+        });
+        const savedData = await insertRes.json();
+        if (savedData && savedData[0]) newBookingId = savedData[0].id;
+      } catch (err) {
+        console.error("插單寫入資料庫失敗:", err);
+      }
+
+      // 🌟【立即加入前端快取】：保證畫布必定立刻有這筆資料！
+      if (!backendData.appointments) backendData.appointments = [];
+      backendData.appointments.push({
+        id: newBookingId,
+        date: r.value.date.replace(/-/g, '/'),
+        time: r.value.time,
+        duration: Number(r.value.duration || 60),
+        name: r.value.name,
+        phone: r.value.phone,
+        customer_type: 'old',
+        customer_notes: '',
+        lineName: r.value.line,
+        service: r.value.service,
+        price: r.value.price,
+        finalPrice: r.value.price,
+        notes: noteText,
+        staffId: staffId,
+        staffName: staffName,
+        status: '已確認'
+      });
+
+      // 重新繪製排程看板
       renderOverviewGridCanvas();
       Swal.fire({ title: r.value.isOff ? '休假登記完成！' : '插單成功！', icon: 'success', timer: 1000, showConfirmButton: false });
     }
   });
 }
-
+    
 // 智慧帶入顧客與寵物選單
 async function autoLookupAnyCustomer(type, val) {
   const v = (val || '').trim().toLowerCase();
@@ -6143,10 +6029,11 @@ function checkOverviewResourceCapacity(resName, dateStr, timeStr, durMins) {
     }
   });
 
-  return activeCount >= maxCap;
+  return false;
 }
 // 防抖搜尋：支援姓名 / 電話 / LINE 即時智慧判定
 let searchCustomerTimer = null;
+    
 function debounceQuickCustomerSearch() {
   clearTimeout(searchCustomerTimer);
   searchCustomerTimer = setTimeout(checkQuickCustomerMatch, 350);
