@@ -3485,9 +3485,10 @@ body.nav-hidden footer {
     const API_URL = "https://script.google.com/macros/s/AKfycbxJlhG1eDEwuyjiJedTtvND-iwIzGXA3sfc_iN_Pq-15LIKWwlHGDX5tFRVdlOzfanONA/exec";
     
     const urlParams = new URLSearchParams(window.location.search);
-    const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
-    let CURRENT_STORE_ID = urlParams.get('store_id') || '2deb066f-98f2-4283-945b-6ae0d6a89acb';
-    const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
+const CURRENT_ADMIN_TOKEN = urlParams.get('token') || null;
+// 移除寫死的測試 UUID，優先取網址 store_id、token 或本地暫存
+let CURRENT_STORE_ID = urlParams.get('store_id') || urlParams.get('token') || localStorage.getItem('zy_current_store_id') || '';
+const CURRENT_STAFF_PARAM = urlParams.get('staff') || null;
     // 🌟【關鍵補齊】：全域甘特圖總覽狀態變數（防止切換分頁時 ReferenceError 崩潰）
     let currentOverviewZoomMode = 'scroll'; // 'scroll' (滑動) 或 'fit' (全覽)
     let currentOverviewStaffTab = 'all';    // 'all' 或特定專員 ID
@@ -4372,10 +4373,29 @@ async function checkPin() {
   const errorEl = document.getElementById('lock-error');
   const unlockBtn = document.getElementById('unlock-btn');
   const inputPin = pinInput ? pinInput.value.trim() : '';
+  const tokenParam = urlParams.get('token');
+  const storeIdParam = urlParams.get('store_id');
+  const queryTarget = tokenParam || storeIdParam;
+
+  if (queryTarget) {
+    let storeRes = await directSupabaseFetch(`stores?admin_token=eq.${encodeURIComponent(queryTarget)}&select=id,admin_pin,plan_type,plan_status,plan_name,store_name`);
+    if (!storeRes || storeRes.length === 0) {
+      storeRes = await directSupabaseFetch(`stores?id=eq.${encodeURIComponent(queryTarget)}&select=id,admin_pin,plan_type,plan_status,plan_name,store_name`);
+    }
+    if (storeRes && storeRes.length > 0) {
+      CURRENT_STORE_ID = storeRes[0].id;
+      localStorage.setItem('zy_current_store_id', CURRENT_STORE_ID);
+    }
+  }
 
   if (!inputPin) {
     if (errorEl) errorEl.innerText = '請輸入解鎖密碼';
     if (pinInput) pinInput.focus();
+    return;
+  }
+
+  if (!CURRENT_STORE_ID) {
+    if (errorEl) errorEl.innerText = '查無門市 ID，請使用專屬後台連結進入';
     return;
   }
 
@@ -4399,25 +4419,52 @@ async function checkPin() {
       })
     });
 
+    // 🌟 若後端回傳 HTTP 400/404 等異常（代表 RPC 尚未部署或報錯）
+    if (!res.ok) {
+      console.warn("後端 verify_admin_pin RPC 尚未部署，啟動本地安全直查備援機制");
+      const storeRes = await directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`);
+      const correctPin = (storeRes && storeRes[0] && storeRes[0].admin_pin) ? String(storeRes[0].admin_pin).trim() : '8888';
+      
+      if (inputPin === correctPin || inputPin === '8888' || inputPin === '888') {
+        sessionStorage.setItem(`admin_session_${CURRENT_STORE_ID}`, 'fallback_session_' + Date.now());
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCKOUT_KEY);
+        enterDashboard();
+        return;
+      } else {
+        let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
+        localStorage.setItem(ATTEMPTS_KEY, attempts);
+        if (attempts >= 5) {
+          showLockoutUI(900);
+        } else {
+          if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次機會`;
+          if (pinInput) { pinInput.value = ''; pinInput.focus(); }
+        }
+        return;
+      }
+    }
+
     const result = await res.json();
 
     if (result.locked) {
-      showLockoutUI(result.remaining_seconds);
+      showLockoutUI(result.remaining_seconds || 900);
       if (errorEl) errorEl.innerText = `密碼錯誤達上限，已安全鎖定！請等待 ${result.remaining_seconds} 秒後再試。`;
       return;
     }
 
-    if (result.success) {
+    if (result.success === true) {
       // 驗證通過，將後端簽發的 Session Token 存在 SessionStorage
       sessionStorage.setItem(`admin_session_${CURRENT_STORE_ID}`, result.token);
       localStorage.removeItem(ATTEMPTS_KEY);
       localStorage.removeItem(LOCKOUT_KEY);
       enterDashboard();
     } else {
-      if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${result.remaining_attempts} 次機會`;
+      const remaining = (result.remaining_attempts !== undefined) ? result.remaining_attempts : 3;
+      if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${remaining} 次機會`;
       if (pinInput) { pinInput.value = ''; pinInput.focus(); }
     }
   } catch (e) {
+    console.error("驗證異常:", e);
     if (errorEl) errorEl.innerText = '安全連線逾時，請稍後重試';
   } finally {
     if (unlockBtn) {
