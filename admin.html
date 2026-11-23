@@ -505,6 +505,16 @@ body.nav-hidden footer {
     <i class="fa-solid fa-magnifying-glass"></i>
     <span>依設定條件查詢業績明細</span>
   </button>
+  <div class="grid grid-cols-2 gap-2 pt-1">
+    <button type="button" onclick="exportRevenueReportCSV()" class="py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 text-xs">
+      <i class="fa-solid fa-file-csv"></i>
+      <span>匯出業績 CSV</span>
+    </button>
+    <button type="button" onclick="printRevenueReport()" class="py-2 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-xl shadow-2xs transition flex items-center justify-center gap-1.5 text-xs">
+      <i class="fa-solid fa-print"></i>
+      <span>列印業績報表</span>
+    </button>
+  </div>
 </div>
 
         <!-- 4 核心指標 -->
@@ -1366,20 +1376,51 @@ body.nav-hidden footer {
     </button>
   </div>
 
-  <!-- 通用前台規則說明區 (買斷版設定專用) -->
-  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
-    <div class="flex justify-between items-center">
-      <label class="font-bold text-brand-900 flex items-center gap-1.5">
-        <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「本月活動」文字內容編輯
-      </label>
-      <button type="button" onclick="savePromoRulesText('lt')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition hover:bg-[#7A6246]">
-        儲存說明內容
-      </button>
+  <!-- 🌟 本月活動與門市預約規範設定區 (買斷版) -->
+  <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+    
+    <!-- 1. 本月活動設定 -->
+    <div class="space-y-2 border-b border-brand-100 pb-3">
+      <div class="flex justify-between items-center">
+        <label class="font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-bullhorn text-amber-600"></i> 前台「本月活動」顯示與內容
+        </label>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="lt-toggle-enable-promo" class="sr-only peer" checked>
+          <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+        </label>
+      </div>
+      <textarea id="lt-promo" rows="2" class="w-full p-2.5 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs" placeholder="輸入前台本月熱門優惠或店休預告..."></textarea>
     </div>
-    <textarea id="lt-promo-rules" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明，例如：
-• 預約請準時抵達，為您保留 10 分鐘。
-• 如需改期請提前 24 小時告知店家。"></textarea>
-    <p class="text-[10px] text-gray-400">※ 即時連動前台「本月活動」說明卡片，未開通行銷模組之店家亦可在此編輯。</p>
+
+    <!-- 2. 門市預約規範設定 -->
+    <div class="space-y-2.5">
+      <div class="flex justify-between items-center">
+        <label class="font-bold text-brand-900 flex items-center gap-1.5">
+          <i class="fa-solid fa-clipboard-list text-brand-500"></i> 前台「門市預約規範」設定
+        </label>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="loadDefaultBookingRules('lt')" class="text-[10.5px] text-[#8C7355] underline font-bold hover:text-[#7A6246]">
+            帶入預設範本
+          </button>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="lt-toggle-enable-rules" class="sr-only peer" checked>
+            <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+          </label>
+        </div>
+      </div>
+      
+      <textarea id="lt-booking-rules" rows="4" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="請設定顧客預約需知規範..."></textarea>
+
+      <!-- 送單前強制打勾同意開關 -->
+      <div class="flex items-center justify-between p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+        <span class="font-bold text-brand-800 text-[11px]">前台送單前強制勾選「我同意上述門市預約規範」</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="lt-toggle-rule-agree" class="sr-only peer" checked>
+          <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+        </label>
+      </div>
+    </div>
   </div>
   
   <!-- 2. 門市營業時段、排班間隔與公休日 (標配) -->
@@ -1459,10 +1500,6 @@ body.nav-hidden footer {
         <i class="fa-solid fa-bullhorn text-brand-500"></i> 9:16 活動宣傳圖輪播與置頂公告
       </span>
       <span class="text-[10px] text-brand-400">最多 7 張直式圖</span>
-    </div>
-    <div>
-      <label class="block font-bold mb-1">前台置頂公告：</label>
-      <textarea id="lt-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
     </div>
     <div>
       <div class="flex justify-between items-center mb-1">
@@ -2264,7 +2301,6 @@ body.nav-hidden footer {
       <span>儲存買斷版全部設定</span>
     </button>
   </div>
-
 </div>
     
     <!-- 懸浮未儲存提醒與快速儲存列 (吸附在頂部) -->
@@ -2279,23 +2315,55 @@ body.nav-hidden footer {
       </button>
     </div>
 
-    <!-- 分頁 15. 訂閱版設定分頁 (page-settings) -->
+    <!-- 🌟 分頁 15. 訂閱版設定分頁 (必須有這個容器外框包裹！切分頁時才會自動隱藏) -->
     <div id="page-settings" class="page space-y-4 full-admin-only" style="display: none;">
 
-      <!-- 前台本月活動規則說明 -->
-      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-2 text-xs">
-        <div class="flex justify-between items-center">
-          <label class="font-bold text-brand-900 flex items-center gap-1.5">
-            <i class="fa-solid fa-pen-to-square text-brand-500"></i> 前台「本月活動」文字內容編輯
-          </label>
-          <button type="button" onclick="savePromoRulesText('')" class="px-3 py-1 bg-[#8C7355] text-white rounded-lg font-bold shadow-xs transition hover:bg-[#7A6246]">
-            儲存說明內容
-          </button>
+      <!-- 🌟 前台活動與預約規範 (訂閱版設定專用) -->
+      <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-4 text-xs">
+        
+        <!-- 本月活動 -->
+        <div class="space-y-2 border-b border-brand-100 pb-3">
+          <div class="flex justify-between items-center">
+            <label class="font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-bullhorn text-amber-600"></i> 前台「本月活動」顯示與說明
+            </label>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="cfg-toggle-enable-promo" class="sr-only peer" checked>
+              <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+          </div>
+          <textarea id="cfg-promo" rows="2" class="w-full p-2.5 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs" placeholder="輸入前台活動優惠說明..."></textarea>
         </div>
-        <textarea id="cfg-promo-rules" rows="3" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="輸入前台活動區塊規則說明..."></textarea>
-        <p class="text-[10px] text-gray-400">※ 即時連動前台「本月活動」卡片內容。</p>
+
+        <!-- 門市預約規範 -->
+        <div class="space-y-2.5">
+          <div class="flex justify-between items-center">
+            <label class="font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-clipboard-list text-brand-500"></i> 前台「門市預約規範」設定
+            </label>
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="loadDefaultBookingRules('')" class="text-[10.5px] text-[#8C7355] underline font-bold hover:text-[#7A6246]">
+                帶入預設範本
+              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="cfg-toggle-enable-rules" class="sr-only peer" checked>
+                <div class="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+              </label>
+            </div>
+          </div>
+          <textarea id="cfg-booking-rules" rows="4" class="w-full p-3 rounded-2xl border border-brand-200 bg-brand-50/50 outline-none leading-relaxed text-xs font-medium" placeholder="請設定顧客預約需知規範..."></textarea>
+          
+          <div class="flex items-center justify-between p-2.5 bg-brand-50 rounded-xl border border-brand-200">
+            <span class="font-bold text-brand-800 text-[11px]">前台送單前強制勾選「我同意上述門市預約規範」</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="cfg-toggle-rule-agree" class="sr-only peer" checked>
+              <div class="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-500"></div>
+            </label>
+          </div>
+        </div>
       </div>
 
+    
       <!-- 1. 營業時間與排班 -->
       <div data-setting-module="shift" class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b border-brand-100 pb-2">
@@ -2386,10 +2454,6 @@ body.nav-hidden footer {
       <!-- 3. 活動宣傳圖與公告 -->
       <div class="bg-white p-5 rounded-3xl border border-brand-200 shadow-sm space-y-3 text-xs">
         <span class="text-xs font-bold text-brand-900 block border-b border-brand-100 pb-2">3. 活動說明圖 (9:16 直式最多 7 張) 與置頂公告</span>
-        <div>
-          <label class="block font-bold mb-1">前台置頂公告：</label>
-          <textarea id="cfg-promo" rows="3" class="w-full p-2.5 rounded-xl border border-brand-200 leading-relaxed outline-none"></textarea>
-        </div>
         <div>
           <div class="flex justify-between items-center mb-1">
             <label class="font-bold text-brand-800">活動說明圖九宮格：</label>
@@ -3473,6 +3537,17 @@ body.nav-hidden footer {
       return THEME_PALETTES[themeKey]?.name || THEME_PALETTES['latte'].name;
     }
 
+    // 放在 <script> 開頭區域
+function parseServicePrice(rawPrice) {
+  const str = String(rawPrice || '0').trim();
+  const matchNum = str.match(/\d+/);
+  const baseNum = matchNum ? Number(matchNum[0]) : 0;
+  return {
+    display: str.startsWith('NT$') ? str : `NT$ ${str}`,
+    baseNum: baseNum
+  };
+}
+    
     function getThemeColorChipsHtml(themeKey) {
       const item = THEME_PALETTES[themeKey] || THEME_PALETTES['latte'];
       return (item.colors || []).map(c => `
@@ -4667,13 +4742,13 @@ async function fetchDataAndRender() {
     customOffDatesArray = Array.isArray(sCfg.custom_off_dates) ? sCfg.custom_off_dates : [];
     
     const availableDates = [];
-      const today = new Date();
-      for (let i = 0; i < 60; i++) {
-        const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
-        const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
-        // 🌟 60 天全部推入，休假按鈕不隱藏，方便後台排班與私約急客
-        availableDates.push(dStr);
-      }
+  const today = new Date();
+  // 往前生成過去 14 天，往後生成未來 45 天
+  for (let i = -14; i < 45; i++) {
+    const target = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    const dStr = `${target.getFullYear()}/${String(target.getMonth()+1).padStart(2,'0')}/${String(target.getDate()).padStart(2,'0')}`;
+    availableDates.push(dStr);
+  }
     // 🌟【修復】：支援字串與陣列雙向相容解析，確保多圖 100% 正確載入九宮格
     let loadedPromo = [];
     if (sCfg.promo_imgs) {
@@ -5046,10 +5121,14 @@ function switchPage(pageId, el) {
   if (pageId === 'slots') handleSlotRangeChange();
   if (pageId === 'subscription') renderSubscriptionUI();
   if (pageId === 'overview') {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const todayHyphen = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const viewDateInput = document.getElementById('overview-view-date');
+    if (viewDateInput) viewDateInput.value = todayHyphen;
+
     renderOverviewDateButtons();
-    setTimeout(() => {
-      renderOverviewGridCanvas();
-    }, 50);
+    renderOverviewGridCanvas();
   }
   
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5156,7 +5235,16 @@ function renderOverviewDateButtons() {
   const scrollArea = document.getElementById('overview-date-scroll-area');
   if (!scrollArea) return;
 
-  const currentViewDate = document.getElementById('overview-view-date')?.value || (dates[0] ? dates[0].date.replace(/\//g, '-') : '');
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const todayHyphen = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+  // 每次渲染總覽日期列時，若尚未指定或剛切入總覽，預設為當天
+  const viewDateEl = document.getElementById('overview-view-date');
+  if (viewDateEl && !viewDateEl.dataset.userPicked) {
+    viewDateEl.value = todayHyphen;
+  }
+  const currentViewDate = viewDateEl?.value || todayHyphen;
   const weekDays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
   scrollArea.innerHTML = dates.map(d => {
@@ -5164,15 +5252,16 @@ function renderOverviewDateButtons() {
     const weekStr = weekDays[dObj.getDay()];
     const dHyphen = d.date.replace(/\//g, '-');
     const isSelected = (dHyphen === currentViewDate);
-    const dateParts = d.date.split('/'); // [yyyy, mm, dd]
+    const dateParts = d.date.split('/');
     const monthNum = parseInt(dateParts[1], 10);
     const dayNum = dateParts[2];
+    const isPast = dHyphen < todayHyphen;
 
     return `
       <div class="shrink-0 px-3.5 py-1.5 rounded-xl text-center cursor-pointer border text-xs font-bold transition ${
-        isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50'
+        isSelected ? 'bg-[#8C7355] text-white border-[#8C7355] shadow-xs' : (isPast ? 'bg-gray-100/80 border-gray-200 text-gray-500' : 'bg-white border-brand-200 text-brand-800 hover:bg-brand-50')
       }" onclick="selectOverviewDateBtn('${dHyphen}')">
-        <div class="text-[9px] opacity-75">${weekStr}</div>
+        <div class="text-[9px] opacity-75">${weekStr} ${isPast ? '(過期)' : ''}</div>
         <div class="font-bold text-xs leading-tight font-mono">${monthNum}月${dayNum}日</div>
       </div>
     `;
@@ -5185,6 +5274,11 @@ function renderOverviewDateButtons() {
 
 function selectOverviewDateBtn(dHyphen) {
   document.getElementById('overview-view-date').value = dHyphen;
+  const viewDateEl = document.getElementById('overview-view-date');
+  if (viewDateEl) {
+    viewDateEl.value = dHyphen;
+    viewDateEl.dataset.userPicked = '1';
+  }
   renderOverviewDateButtons();
   renderOverviewGridCanvas();
 }
@@ -5270,11 +5364,14 @@ function renderOverviewGridCanvas() {
   let controlsHtml = `
     <div class="flex justify-between items-center mb-2 px-1">
       <div class="inline-flex p-1 bg-brand-100/70 rounded-xl border border-brand-200">
-        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
+        <button type="button" onclick="setOverviewZoomMode('scroll')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${!isFitMode ? 'bg-white text-brand-900 shadow-xs' : 'text-brand-600'}">
           <i class="fa-solid fa-arrows-left-right text-[10px] mr-1"></i>滑動檢視
         </button>
-        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3.5 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
+        <button type="button" onclick="setOverviewZoomMode('fit')" class="px-3 py-1 rounded-lg text-xs font-bold transition ${isFitMode ? 'bg-[#8C7355] text-white shadow-xs' : 'text-brand-600'}">
           <i class="fa-solid fa-compress text-[10px] mr-1"></i>全屏一覽
+        </button>
+        <button type="button" onclick="openPastWeekPrintModal()" class="px-3 py-1 rounded-lg text-xs font-bold transition bg-emerald-600 text-white shadow-xs ml-1 flex items-center gap-1">
+          <i class="fa-solid fa-print text-[10px]"></i>列印排程
         </button>
       </div>
 
@@ -5446,12 +5543,14 @@ function renderOverviewGridCanvas() {
 // ========================================================
 const STRICT_MORANDI_PALETTE = [
   // 第 1 輪 (經典莫蘭迪柔彩色)
-  { bg: '#E5A9A9', border: '#D49595', text: '#FFFFFF' }, // 0. 煙粉
-  { bg: '#E8B298', border: '#D69E83', text: '#FFFFFF' }, // 1. 暖杏橙
-  { bg: '#EDD382', border: '#DBC06E', text: '#3D3126' }, // 2. 麥香黃
-  { bg: '#9EBC9E', border: '#8AA88A', text: '#FFFFFF' }, // 3. 鼠尾草綠
-  { bg: '#97B3C6', border: '#839FB2', text: '#FFFFFF' }, // 4. 霧霾藍
-  { bg: '#BFA8C0', border: '#AA93AB', text: '#FFFFFF' }, // 5. 丁香灰紫
+  { bg: '#FF6B8B', border: '#E0486A', text: '#FFFFFF' }, // 0. 鮮亮草莓粉
+  { bg: '#4A90E2', border: '#2D72C4', text: '#FFFFFF' }, // 1. 晴空亮天藍
+  { bg: '#20C997', border: '#0FA77B', text: '#FFFFFF' }, // 2. 鮮亮薄荷綠
+  { bg: '#FD7E14', border: '#E06200', text: '#FFFFFF' }, // 3. 活潑陽光橘
+  { bg: '#EAB308', border: '#CA8A04', text: '#3D3126' }, // 4. 醒目芥末黃
+  { bg: '#9333EA', border: '#7E22CE', text: '#FFFFFF' }, // 5. 亮紫色
+  { bg: '#06B6D4', border: '#0891B2', text: '#FFFFFF' }, // 6. 亮青藍
+  { bg: '#E11D48', border: '#BE123C', text: '#FFFFFF' }, // 7. 亮玫瑰紅
   // 第 2 輪 (灰階加深沉穩色，項目過多時自動遞補)
   { bg: '#BA8B8B', border: '#A87979', text: '#FFFFFF' }, // 6. 灰陶粉
   { bg: '#C28B75', border: '#AF7761', text: '#FFFFFF' }, // 7. 焦糖灰橙
@@ -7288,16 +7387,16 @@ function renderCustomer() {
 // ==========================================
 async function notifyCustomerStatusChanged(bookingId, newStatus) {
   const appt = (backendData.appointments || []).find(a => String(a.id) === String(bookingId));
+  if (!appt) return;
+
   const s = backendData.settings || {};
-  const token = s.lineChannelToken || s.line_channel_token;
-  
-  // 取得客人的 LINE UID (必須是 U 開頭)
-  let custUid = appt?.line_user_id;
-  if (!custUid && appt?.lineName && appt.lineName.startsWith('U')) {
+  const token = s.lineChannelToken || s.line_channel_token || localStorage.getItem(`zy_line_token_${CURRENT_STORE_ID}`);
+  let custUid = appt.line_user_id;
+  if (!custUid && appt.lineName && String(appt.lineName).startsWith('U')) {
     custUid = appt.lineName;
   }
 
-  // 1. 若有取得客人 LINE UID 且有設定 Token，發送 LINE Flex 卡片
+  // A. 若客人有綁定 LINE UID，直接透過 GAS Proxy 推播 Flex 卡片
   if (token && custUid && custUid.startsWith('U')) {
     fetch(API_URL, {
       method: "POST",
@@ -7314,15 +7413,16 @@ async function notifyCustomerStatusChanged(bookingId, newStatus) {
           time: appt.time,
           service: appt.service,
           price: appt.finalPrice || appt.price,
-          storeName: s.storeName || "門市"
+          storeName: s.storeName || "沙龍門市",
+          notes: appt.notes || ""
         }
       })
-    }).catch(e => console.warn("客人 LINE 通知失敗:", e));
+    }).catch(e => console.warn("顧客 LINE 推播異常略過:", e));
   }
 
-  // 2. 若客人有留 Email，同時發送 Email 通知信
+  // B. 若顧客有填 Email，同步發送確認信
   let custEmail = '';
-  if (appt?.notes && appt.notes.includes('Email:')) {
+  if (appt.notes && appt.notes.includes('Email:')) {
     const m = appt.notes.match(/Email:\s*([^\s|]+)/);
     if (m) custEmail = m[1].trim();
   }
@@ -7340,9 +7440,9 @@ async function notifyCustomerStatusChanged(bookingId, newStatus) {
         date: appt.date,
         time: appt.time,
         service: appt.service,
-        store_name: s.storeName || "門市"
+        store_name: s.storeName || "沙龍門市"
       })
-    }).catch(e => console.warn("客人 Email 發送失敗:", e));
+    }).catch(e => console.warn("顧客 Email 發送異常略過:", e));
   }
 }
     
@@ -7759,14 +7859,26 @@ function renderShift() {
   const defaultMode = localStorage.getItem(`zy_shift_default_mode_${CURRENT_STORE_ID}`) || 'open';
   const staffKey = `${activeShiftStaffId}_${currentShiftDate}`;
 
+  // 替換原有的預設開關判斷
   if (!shiftSlotStates[staffKey]) {
     const savedSchedules = backendData.settings?.staffSchedules || {};
     if (savedSchedules[staffKey]) {
       shiftSlotStates[staffKey] = { ...savedSchedules[staffKey] };
     } else {
       shiftSlotStates[staffKey] = {};
-      const defaultState = (defaultMode === 'closed') ? false : !isTodayStoreOff;
-      slots.forEach(t => shiftSlotStates[staffKey][t] = defaultState);
+      // 讀取該專員自訂的常態時段範本，若未設定則依全店預設
+      const currentStaffObj = (backendData.settings?.staffList || []).find(s => s.id === activeShiftStaffId);
+      const staffDefaultSlots = currentStaffObj?.defaultSlots || backendData.settings?.defaultShiftSlots?.[activeShiftStaffId] || null;
+
+      slots.forEach(t => {
+        if (isTodayStoreOff) {
+          shiftSlotStates[staffKey][t] = false;
+        } else if (staffDefaultSlots && Array.isArray(staffDefaultSlots)) {
+          shiftSlotStates[staffKey][t] = staffDefaultSlots.includes(t);
+        } else {
+          shiftSlotStates[staffKey][t] = (defaultMode !== 'closed');
+        }
+      });
     }
   }
 
@@ -7783,6 +7895,9 @@ function renderShift() {
         <div class="flex gap-2">
           <button type="button" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', false)">全時段關閉</button>
           <button type="button" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition" onclick="toggleAllShift('${staffKey}', true)">全時段開啟</button>
+          <button type="button" class="px-3 py-1.5 bg-[#8C7355] text-white rounded-xl text-xs font-bold transition shadow-xs" onclick="saveAsStaffDefaultTemplate('${staffKey}')">
+  儲存為此專員固定範本
+</button>
         </div>
       </div>
       <div class="divide-y divide-brand-100 max-h-[60vh] overflow-y-auto">
@@ -7886,6 +8001,20 @@ function renderShift() {
       }).join('');
     }
 
+    async function saveAsStaffDefaultTemplate(staffKey) {
+  const currentSlots = shiftSlotStates[staffKey] || {};
+  const openSlots = Object.keys(currentSlots).filter(t => currentSlots[t] === true);
+
+  if (!backendData.settings.defaultShiftSlots) backendData.settings.defaultShiftSlots = {};
+  backendData.settings.defaultShiftSlots[activeShiftStaffId] = openSlots;
+
+  await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
+    default_shift_slots: backendData.settings.defaultShiftSlots
+  });
+
+  Swal.fire({ title: '已儲存為該專員常態時段！', text: '往後新開班日期將自動套用此時段組合。', icon: 'success' });
+}
+    
     // ========================================================
 // 【修改版】editServiceItem(id) — 支援設備資源動態回填
 // ========================================================
@@ -8680,6 +8809,22 @@ async function deleteInventoryItem(itemId, itemName) {
   }
 }
     
+    // 門市預約規範標準官方預設範本
+const DEFAULT_BOOKING_RULES_TEMPLATE = `1. 【準時抵達】：預約時段保留 10 分鐘，若遲到將依現場狀況微調施作項目或順延服務。
+2. 【改期與取消】：如需更改預約時段或取消，請務必於 24 小時前告知。
+3. 【同行規範】：因門市席位空間有限，如有親友同行請於備註提前告知。
+4. 【預收訂金】：特殊燙染造型或非營業時段預約，需完成訂金匯款回報後排程方正式成立。`;
+
+function loadDefaultBookingRules(prefix = 'lt') {
+  const targetId = (prefix === 'lt') ? 'lt-booking-rules' : 'cfg-booking-rules';
+  const el = document.getElementById(targetId);
+  if (el) {
+    el.value = DEFAULT_BOOKING_RULES_TEMPLATE;
+    Swal.fire({ title: '已帶入門市預約規範預設範本！', icon: 'success', timer: 900, showConfirmButton: false });
+    if (prefix === 'lt') markLifetimeSettingsUnsaved(); else markSettingsUnsaved();
+  }
+}
+    
     // 再次完整編輯品項 (名稱、分類複選、進價、零售價、安全存量)
 // ========================================================
 // 【庫存修改升級】分類支援複選勾選與自訂新分類
@@ -9397,7 +9542,7 @@ if (enableBomDeduct) {
           const selected = Array.from(document.querySelectorAll('.edit-svc-cb:checked'));
           if (selected.length === 0) return Swal.showValidationMessage('請至少勾選一項');
           let total = 0;
-          selected.forEach(cb => { total += Number((cb.getAttribute('data-price') || '0').match(/\d+/)?.[0] || 0); });
+          selected.forEach(cb => { total += parseServicePrice(cb.getAttribute('data-price')).baseNum; });
           return { names: selected.map(cb => cb.value).join(', '), totalPrice: total };
         }
       }).then(async r => {
@@ -9630,9 +9775,8 @@ function calcAdminQuickSlots() {
       const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
       let basePrice = 0;
       checked.forEach(cb => {
-        const num = (cb.getAttribute('data-price') || '0').match(/\d+/);
-        basePrice += num ? Number(num[0]) : 0;
-      });
+  basePrice += parseServicePrice(cb.getAttribute('data-price')).baseNum;
+});
 
       const pkgSel = document.getElementById('quick-addon-pkg');
       const walSel = document.getElementById('quick-addon-wal');
@@ -11295,6 +11439,11 @@ function populateSettings() {
   setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
+  setCheck('cfg-toggle-enable-promo', s.enable_promo !== false, true);
+  setVal('cfg-promo', s.promoText || s.promo_text || '');
+  setCheck('cfg-toggle-enable-rules', s.enable_booking_rules !== false, true);
+  setVal('cfg-booking-rules', s.booking_rules_text || s.promo_rules_text || DEFAULT_BOOKING_RULES_TEMPLATE);
+  setCheck('cfg-toggle-rule-agree', s.enable_rule_agreement !== false, true);
 
   // 2. LINE 憑證與獨立開關
   const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
@@ -11321,6 +11470,7 @@ function populateSettings() {
   setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
   setCheck('cfg-toggle-menu-query', menuQueryState, true);
   setCheck('cfg-toggle-pet-pickup', pickupState, true);
+  setCheck('cfg-toggle-rule-agree', s.enable_rule_agreement !== false, true);
 
   // 3. 前台開關與外觀
   const activeTheme = s.theme_color || s.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
@@ -11489,9 +11639,15 @@ async function saveStoreSettings() {
     enable_contract: getCheck('cfg-toggle-contract'),
     enable_phone_history_query: getCheck('setting-enable-phone-history'),
     enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+    enable_contact_specialist: getCheck('cfg-toggle-contact-specialist'),
+    enable_rule_agreement: getCheck('cfg-toggle-rule-agree'),
+    enable_promo: getCheck('cfg-toggle-enable-promo'),
+    promo_text: getVal('cfg-promo'),
+    enable_booking_rules: getCheck('cfg-toggle-enable-rules'),
+    booking_rules_text: getVal('cfg-booking-rules'),
+    promo_rules_text: getVal('cfg-promo-rules'),
     updated_at: new Date().toISOString()
   };
-
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/stores?id=eq.${CURRENT_STORE_ID}`, {
       method: "PATCH",
@@ -11654,6 +11810,7 @@ function populateLifetimeSettings() {
   // 4. 預約審核機制與定額訂金
   setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
   setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
+  setCheck('lt-toggle-rule-agree', s.enable_rule_agreement !== false, true);
   setVal('lt-deposit-mode', s.depositMode || 'all');
   setVal('lt-deposit-amount', s.depositAmount || 0);
   setVal('lt-deposit-report-mode', s.depositReportMode || 'both');
@@ -11974,7 +12131,8 @@ async function saveLifetimeStoreSettings() {
     shift_start_time: chosenStartTime,
     shift_end_time: chosenEndTime,
     shift_interval: chosenInterval,
-
+    enable_rule_agreement: Boolean(document.getElementById('lt-toggle-rule-agree')?.checked),
+    promo_rules_text: document.getElementById('lt-promo-rules')?.value.trim() || '',
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
     line_card_theme: lineCardTheme,
@@ -12002,6 +12160,10 @@ async function saveLifetimeStoreSettings() {
     enable_quick_contact: getCheck('lt-toggle-quick-contact'),
     enable_cancel_reason: getCheck('lt-toggle-cancel-reason'),
     enable_email_copy: getCheck('lt-toggle-email'),
+    enable_promo: getCheck('lt-toggle-enable-promo'),
+    enable_booking_rules: getCheck('lt-toggle-enable-rules'),
+    booking_rules_text: getVal('lt-booking-rules'),
+    enable_rule_agreement: getCheck('lt-toggle-rule-agree'),
 
     commission_rate: Number(getVal('lt-cfg-commission-rate') || 50),
     designated_bonus: Number(getVal('lt-cfg-designated-bonus') || 50),
@@ -13896,6 +14058,301 @@ function submitWish() {
 
 function openPayUniLink(url, planTitle) {
   window.open(url, '_blank');
+}
+
+    // ========================================================
+// 總覽 1~31 天 A4 連續列印模組（1500元加購項目完整版）
+// ==========================================
+function openPastWeekPrintModal() {
+  const pad = n => String(n).padStart(2, '0');
+  const now = new Date();
+  const defaultStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`;
+
+  Swal.fire({
+    title: '🖨️ 門市排程 A4 連續列印',
+    html: `
+      <div class="text-left text-xs space-y-3 font-sans p-1">
+        <div>
+          <label class="block font-bold text-brand-900 mb-1">1. 選擇起始日期（可選歷史過去日期）：</label>
+          <input type="date" id="print-range-start" class="swal2-input !m-0 !w-full text-xs font-mono font-bold" value="${defaultStart}">
+        </div>
+        <div>
+          <label class="block font-bold text-brand-900 mb-1">2. 連續列印天數（支援 1 ~ 31 天）：</label>
+          <select id="print-range-days" class="swal2-input !m-0 !w-full text-xs font-bold">
+            <option value="1">單日 1 天 (1 頁)</option>
+            <option value="7">一週 7 天 (7 頁)</option>
+            <option value="15">半個月 15 天 (15 頁)</option>
+            <option value="30" selected>整個月 30 天 (30 頁)</option>
+            <option value="31">整個月 31 天 (31 頁)</option>
+          </select>
+        </div>
+        <p class="text-[11px] text-gray-500 leading-relaxed bg-brand-50 p-2.5 rounded-xl border border-brand-200">
+          ※ 採用單日一張 A4 直向排版，時間軸自適應微縮，提供手寫備註欄，絕不斷頁。
+        </p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '開始產生並列印',
+    confirmButtonColor: '#8C7355',
+    cancelButtonText: '取消'
+  }).then(r => {
+    if (r.isConfirmed) {
+      const sDate = document.getElementById('print-range-start')?.value;
+      const daysCount = Number(document.getElementById('print-range-days')?.value || 30);
+      if (sDate) executeA4DailyPrint(sDate, daysCount);
+    }
+  });
+}
+
+function executeA4DailyPrint(startHyphen, daysCount) {
+  const pad = n => String(n).padStart(2, '0');
+  const startObj = new Date(startHyphen);
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const allStaff = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
+  const allAppts = backendData.appointments || [];
+  const storeName = backendData.settings?.storeName || '門市排程';
+
+  const rawStart = backendData.settings?.shiftStartTime || '09:00';
+  const rawEnd = backendData.settings?.shiftEndTime || '20:00';
+  const [sH] = rawStart.split(':').map(Number);
+  const [eH] = rawEnd.split(':').map(Number);
+  const timeLabels = [];
+  for (let h = sH; h <= eH; h++) {
+    timeLabels.push(`${pad(h)}:00`);
+    if (h < eH) timeLabels.push(`${pad(h)}:30`);
+  }
+
+  let pagesHtml = '';
+
+  for (let i = 0; i < daysCount; i++) {
+    const curD = new Date(startObj.getFullYear(), startObj.getMonth(), startObj.getDate() + i);
+    const dateSlash = `${curD.getFullYear()}/${pad(curD.getMonth() + 1)}/${pad(curD.getDate())}`;
+    const weekStr = weekDays[curD.getDay()];
+
+    const dayAppts = allAppts.filter(a => (a.date || '').replace(/-/g, '/') === dateSlash && a.status !== '已取消' && a.status !== '婉拒');
+
+    pagesHtml += `
+      <div class="print-page">
+        <div class="print-header">
+          <div class="title">${storeName} — 現場排程工作表</div>
+          <div class="sub">日期：<b>${dateSlash} (週${weekStr})</b> ｜ 專員：${allStaff.map(s=>s.name).join('、')}</div>
+        </div>
+
+        <table class="schedule-table">
+          <thead>
+            <tr>
+              <th class="th-time">時間</th>
+              ${allStaff.map(st => `<th>${st.name}</th>`).join('')}
+              <th style="width: 110px;">手寫備註</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${timeLabels.map(tStr => {
+              const [h, m] = tStr.split(':').map(Number);
+              const curMin = h * 60 + m;
+
+              return `
+                <tr>
+                  <td class="td-time">${tStr}</td>
+                  ${allStaff.map(st => {
+                    const matched = dayAppts.filter(a => {
+                      const isStaff = (a.staffName === st.name || a.staffId === st.id);
+                      if (!isStaff) return false;
+                      const [ah, am] = (a.time || '09:00').split(':').map(Number);
+                      const aStart = ah * 60 + am;
+                      const aEnd = aStart + Number(a.duration || 60);
+                      return curMin >= aStart && curMin < aEnd;
+                    });
+
+                    if (matched.length === 0) return `<td></td>`;
+
+                    const apptTexts = matched.map(a => {
+                      const isFirstSlot = (a.time === tStr);
+                      return isFirstSlot 
+                        ? `<div class="appt-block"><b>${a.name}</b><br><span class="svc">${a.service}</span></div>` 
+                        : `<div class="appt-cont">↳</div>`;
+                    }).join('');
+
+                    return `<td>${apptTexts}</td>`;
+                  }).join('')}
+                  <td></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) return Swal.fire('請允許瀏覽器快顯視窗以進行列印', '', 'warning');
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>排程連續列印 (${daysCount}天)</title>
+        <style>
+          @page { size: A4 portrait; margin: 6mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; font-size: 10px; color: #000; }          .print-page { width: 100%; height: 100vh; max-height: 285mm; page-break-after: always; display: flex; flex-direction: column; }
+          .print-page:last-child { page-break-after: auto; }
+          .print-header { text-align: center; margin-bottom: 6px; border-bottom: 2px solid #333; padding-bottom: 4px; }
+          .title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+          .sub { font-size: 10px; color: #444; }
+          .schedule-table { width: 100%; border-collapse: collapse; flex: 1; }
+          .schedule-table th, .schedule-table td { border: 1px solid #888; padding: 2px 3px; text-align: center; }
+          .schedule-table th { background-color: #f2ede9; font-size: 10px; }
+          .th-time { width: 50px; }
+          .td-time { font-family: monospace; font-weight: bold; font-size: 9.5px; background-color: #faf8f5; }
+          .appt-block { font-size: 9.5px; line-height: 1.1; text-align: left; padding: 1px; }
+          .appt-block .svc { font-size: 8.5px; color: #555; }
+          .appt-cont { font-size: 8px; color: #aaa; }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => { printWindow.print(); }, 500);
+}
+
+    function getFilteredRevenueRecords() {
+  const selectedSvc = document.getElementById('rev-service-select')?.value || 'ALL';
+  const selectedMethod = document.getElementById('rev-method-filter')?.value || 'ALL';
+  const timeFilter = document.getElementById('rev-time-filter')?.value || 'THIS_MONTH';
+  const sD = document.getElementById('rev-start-date')?.value?.replace(/-/g, '/');
+  const eD = document.getElementById('rev-end-date')?.value?.replace(/-/g, '/');
+  const now = new Date();
+  const currentYm = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevYm = `${prevDate.getFullYear()}/${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+  let list = (backendData.appointments || []).slice();
+  if (sD && eD) {
+    list = list.filter(a => a.date >= sD && a.date <= eD);
+  } else if (timeFilter === 'THIS_MONTH') {
+    list = list.filter(a => a.date && a.date.startsWith(currentYm));
+  } else if (timeFilter === 'LAST_MONTH') {
+    list = list.filter(a => a.date && a.date.startsWith(prevYm));
+  }
+
+  if (selectedSvc !== 'ALL') {
+    list = list.filter(a => (a.service || '').includes(selectedSvc));
+  }
+  if (selectedMethod === 'PACKAGE') {
+    list = list.filter(a => (a.notes || '').includes('包卡') || (a.notes || '').includes('扣點'));
+  } else if (selectedMethod === 'WALLET') {
+    list = list.filter(a => (a.notes || '').includes('儲值'));
+  } else if (selectedMethod === 'COUPON') {
+    list = list.filter(a => (a.notes || '').includes('折扣碼'));
+  } else if (selectedMethod === 'ADDON') {
+    list = list.filter(a => (a.notes || '').includes('加購') || (a.notes || '').includes('外帶') || (a.notes || '').includes('零售') || (a.notes || '').includes('車資'));
+  }
+  return list;
+}
+
+function exportRevenueReportCSV() {
+  const rows = getFilteredRevenueRecords();
+  if (!rows.length) {
+    return Swal.fire('查無資料', '目前篩選區間內沒有業績明細可供匯出。', 'info');
+  }
+
+  let csv = '\uFEFF日期,時間,顧客姓名,聯絡電話,客群,負責專員,服務項目,狀態,基準原價,實收金額,備註與抵扣\n';
+  rows.forEach(a => {
+    const finalAmt = Number(a.finalPrice !== undefined && a.finalPrice !== null ? a.finalPrice : (a.price || 0));
+    const custKind = a.customer_type === 'new' ? '新客' : '熟客';
+    const cleanNotes = String(a.notes || '').replace(/[\r\n,]/g, ' ');
+    csv += `"${a.date || ''}","${a.time || ''}","${a.name || ''}","${a.phone || ''}","${custKind}","${a.staffName || '不指定'}","${a.service || ''}","${a.status || ''}",${Number(a.price || 0)},${finalAmt},"${cleanNotes}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const sD = document.getElementById('rev-start-date')?.value || '全部';
+  const eD = document.getElementById('rev-end-date')?.value || '區間';
+  link.href = url;
+  link.download = `業績報表_${sD}_${eD}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  Swal.fire({ title: '業績 CSV 已匯出！', icon: 'success', timer: 1000, showConfirmButton: false });
+}
+
+function printRevenueReport() {
+  const rows = getFilteredRevenueRecords();
+  const paidRows = rows.filter(a => a.status === '已結單');
+  const totalPaid = paidRows.reduce((sum, a) => sum + Number(a.finalPrice !== undefined && a.finalPrice !== null ? a.finalPrice : (a.price || 0)), 0);
+  const sD = document.getElementById('rev-start-date')?.value || '';
+  const eD = document.getElementById('rev-end-date')?.value || '';
+  const rangeLabel = (sD && eD) ? `${sD} ～ ${eD}` : (document.getElementById('rev-time-filter')?.selectedOptions[0]?.text || '全部');
+  const storeName = backendData.settings?.storeName || '門市業績報表';
+
+  const printWin = window.open('', '_blank');
+  if (!printWin) return Swal.fire('請允許快顯視窗以列印報表', '', 'warning');
+
+  printWin.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>${storeName} - 業績報表</title>
+      <style>
+        @page { size: A4 portrait; margin: 12mm; }
+        body { font-family: "Noto Sans TC", sans-serif; color: #222; font-size: 11px; }
+        h1 { font-size: 18px; margin: 0 0 6px; }
+        .meta { margin-bottom: 12px; color: #555; }
+        .summary { background: #faf7f2; border: 1px solid #d5c7bc; padding: 10px; border-radius: 8px; margin-bottom: 14px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+        th { background: #f2ede9; }
+        .num { text-align: right; font-family: monospace; }
+      </style>
+    </head>
+    <body>
+      <h1>${storeName} — 業績統計報表</h1>
+      <div class="meta">統計區間：${rangeLabel} ｜ 匯出時間：${new Date().toLocaleString()}</div>
+      <div class="summary">已結單筆數：${paidRows.length} 筆 ｜ 已結單實收總額：NT$ ${totalPaid.toLocaleString()} 元</div>
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>時間</th>
+            <th>顧客</th>
+            <th>專員</th>
+            <th>服務項目</th>
+            <th>狀態</th>
+            <th class="num">實收金額</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(a => {
+            const amt = a.status === '已結單' ? Number(a.finalPrice !== undefined && a.finalPrice !== null ? a.finalPrice : (a.price || 0)) : 0;
+            return `
+              <tr>
+                <td>${a.date || ''}</td>
+                <td>${a.time || ''}</td>
+                <td>${a.name || ''}</td>
+                <td>${a.staffName || '不指定'}</td>
+                <td>${a.service || ''}</td>
+                <td>${a.status || ''}</td>
+                <td class="num">${a.status === '已結單' ? 'NT$ ' + amt.toLocaleString() : '-'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(() => printWin.print(), 400);
 }
   </script>
 </body>
