@@ -202,7 +202,7 @@
   </div>
   
   <div class="max-w-md mx-auto text-center pt-3 pb-4 px-4 relative bg-brand-50">
-    <h1 id="brand-title" class="font-sans font-black text-2xl tracking-wider text-brand-900" style="font-family: 'Playfair Display', 'Noto Sans TC', sans-serif;">線上預約系統</h1>
+    <h1 id="brand-title" class="font-sans font-black text-2xl tracking-wider text-brand-900" style="font-family: 'Playfair Display', 'Noto Sans TC', sans-serif;">線上系統</h1>
     <div id="brand-subtitle" class="text-xs tracking-[0.25em] mt-1 font-medium text-theme-primary">專業服務門市</div>
   </div>
 
@@ -212,7 +212,7 @@
         <i class="fa-regular fa-bell text-xs"></i>
         <span>最新公告</span>
       </div>
-      <div class="text-xs text-white/95 leading-relaxed tracking-wide whitespace-pre-line" id="promo-text">歡迎使用線上預約系統，請選取項目與合適時段。</div>
+      <div class="text-xs text-white/95 leading-relaxed tracking-wide whitespace-pre-line" id="promo-text">歡迎使用線上系統，請選取項目與合適時段。</div>
     </div>
   </div>
 </header>
@@ -1051,7 +1051,30 @@
       
         <!-- 聯絡與送單 -->
         <div class="pt-3 border-t border-brand-100">
-          <div class="flex justify-center gap-6 my-4">
+          
+          <!-- 🌟 本月活動與送單前規範勾選區 -->
+<div id="front-rules-agreement-box" class="p-3.5 bg-brand-50 rounded-2xl border border-brand-200 text-xs space-y-2 mb-3 text-left hidden">
+            <div class="font-bold text-brand-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-clipboard-list text-brand-500"></i>
+              <span>門市預約規範：</span>
+            </div>
+            <div id="front-rules-content-display" class="text-brand-700 leading-relaxed whitespace-pre-line text-[11px] bg-white p-2.5 rounded-xl border border-brand-100">
+              <!-- 這裡會由 JS 自動載入後台設定的 booking_rules_text -->
+            </div>
+            <label id="front-rules-checkbox-row" class="flex items-center gap-2 pt-1 border-t border-brand-200 cursor-pointer font-bold text-brand-900 text-xs">
+              <input type="checkbox" id="agree-rules-checkbox" class="accent-[#8C7355] w-4 h-4 rounded">
+              <span>我已詳閱並同意上述門市預約規範</span>
+            </label>
+          </div>
+          <button type="submit" id="subBtn" class="w-full py-4 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95" style="background-color: var(--theme-primary);">
+            送出預約
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div class="flex justify-center gap-6 my-4">
             <a id="nav-line" href="#" target="_blank" class="w-16 h-16 rounded-full border-2 border-[#D5C7BC] bg-white flex items-center justify-center shadow-sm hover:-translate-y-1 hover:border-theme-primary transition group" title="官方 LINE">
               <i class="fa-brands fa-line text-2xl text-[#5C4B3C] group-hover:text-[#06C755] transition"></i>
             </a>
@@ -1071,15 +1094,9 @@
             </div>
             <div id="store-hours" class="flex items-center justify-center gap-1.5">
               <i class="fa-regular fa-clock text-brand-400"></i> 營業時間：09:00 - 19:00
-            </div>
-          </div>
-          <button type="submit" id="subBtn" class="w-full py-4 text-white font-bold rounded-2xl shadow-md text-base tracking-widest transition transform active:scale-95" style="background-color: var(--theme-primary);">
-            送出預約申請
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
-  </main>
+  </div>
 
   <footer class="max-w-xl mx-auto py-8 px-4 text-center space-y-2 select-none">
     <div>
@@ -1626,6 +1643,10 @@ function applyIndustryModeUI(mode) {
         enableContract: checkModule('contract', sCfg.enable_contract ?? sCfg.enableContract, false),
         enableCare: checkModule('care', sCfg.enable_care ?? sCfg.enableCare, true),
         enableCarousel: sCfg.enable_carousel !== false,
+        enable_promo: parseBoolStrict(sCfg.enable_promo, true), // 👈 本月活動開關
+        enable_booking_rules: parseBoolStrict(sCfg.enable_booking_rules, true), // 👈 門市規範開關
+        enable_rule_agreement: parseBoolStrict(sCfg.enable_rule_agreement, true), // 👈 強制勾選開關
+        bookingRulesText: sCfg.booking_rules_text || sCfg.promo_rules_text || '',
 
         contractTitle: sCfg.contract_title || '線上定型化服務契約書',
         contractContent: sCfg.contract_content || '',
@@ -2486,15 +2507,44 @@ function recalcSmartCheckoutLayout() {
   const showCoupons = parseBoolStrict(db.enableCoupons, false);
   const showStaff = parseBoolStrict(db.enableStaffSelect, true);
 
-  // 1. 【常駐區塊】「本月活動」文字內容同步（永遠呈現）
-  const promoRuleContent = document.getElementById('promo-rule-content');
-  if (promoRuleContent && db.promoRulesText && db.promoRulesText.trim() !== '') {
-    promoRuleContent.innerText = db.promoRulesText;
-  }
+  // 1. 【本月活動】獨立開關控制
   const monthlyPromoSection = document.getElementById('section-monthly-promo-rules');
+  const promoRuleContent = document.getElementById('promo-rule-content');
+  const showPromo = (db.enable_promo !== false) && Boolean(db.promoText || db.promo_text);
+
   if (monthlyPromoSection) {
-    monthlyPromoSection.style.removeProperty('display');
-    monthlyPromoSection.classList.remove('hidden');
+    if (showPromo) {
+      monthlyPromoSection.classList.remove('hidden');
+      monthlyPromoSection.style.removeProperty('display');
+      if (promoRuleContent) {
+        promoRuleContent.innerText = db.promoText || db.promo_text || '';
+      }
+    } else {
+      monthlyPromoSection.classList.add('hidden');
+      monthlyPromoSection.style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  // 1-1. 【門市預約規範】獨立開關控制
+  const rulesBox = document.getElementById('front-rules-agreement-box');
+  const rulesContent = document.getElementById('front-rules-content-display');
+  const agreeCheckboxRow = document.getElementById('front-rules-checkbox-row');
+  const showRules = (db.enable_booking_rules !== false);
+
+  if (rulesBox) {
+    if (showRules) {
+      rulesBox.classList.remove('hidden');
+      rulesBox.style.removeProperty('display');
+      if (rulesContent) {
+        rulesContent.innerText = db.bookingRulesText || `1. 預約請準時抵達，為您保留 10 分鐘。\n2. 如需改期請提前 24 小時告知店家。\n3. 現場方案均可即時折抵與加購使用。`;
+      }
+      if (agreeCheckboxRow) {
+        agreeCheckboxRow.style.display = (db.enable_rule_agreement !== false) ? 'flex' : 'none';
+      }
+    } else {
+      rulesBox.classList.add('hidden');
+      rulesBox.style.setProperty('display', 'none', 'important');
+    }
   }
 
   // 2. 指定服務專員（獨立顯隱）
@@ -4897,6 +4947,20 @@ function applyFrontEndMarketingControls(storeInfo) {
 document.getElementById('bookForm').onsubmit = async function(e) {
   e.preventDefault();
 
+  // 🌟 檢查門市預約規範是否強制勾選
+  const isRulesEnabled = (db.enable_booking_rules !== false);
+  const mustAgree = (db.enable_rule_agreement !== false);
+  const isChecked = document.getElementById('agree-rules-checkbox')?.checked;
+
+  if (isRulesEnabled && mustAgree && !isChecked) {
+    return Swal.fire({
+      title: '請先閱讀規範',
+      text: '送出預約前，請勾選同意門市預約規範！',
+      icon: 'warning',
+      confirmButtonColor: '#8C7355'
+    });
+  }
+
   // 🌟【關鍵修復】：在此宣告 sCfg，解決送單時找不到變數的錯誤！
   const sCfg = window.storeSettings || {};
   const sInfo = window.currentStore || {};
@@ -5675,6 +5739,18 @@ function selectQuickSlotDirect(dateSlash, timeStr) {
 // 預約送單核心函式（修復 sCfg 報錯，買斷/訂閱雙模兼容）
 // ==========================================
 async function submitBooking() {
+  const mustAgree = (backendData.settings?.enable_rule_agreement !== false);
+const isChecked = document.getElementById('agree-rules-checkbox')?.checked;
+
+  // 如果後台有開啟強制勾選，但客人沒打勾，直接擋下彈窗提示
+if (mustAgree && !isChecked) {
+  return Swal.fire({
+    title: '請先閱讀規範',
+    text: '送出預約前，請勾選同意門市規範事項！',
+    icon: 'warning',
+    confirmButtonColor: '#8C7355'
+    });
+  } // 👈 補齊這個大括號！
   // 🌟【關鍵修復 1】：安全提取當前門市設定 sCfg，杜絕 Can't find variable: sCfg 崩潰
   const sCfg = window.storeSettings || (window.storeData && window.storeData.settings) || (typeof backendData !== 'undefined' && backendData.settings) || {};
   const sInfo = window.currentStore || (window.storeData && window.storeData.storeInfo) || (typeof backendData !== 'undefined' && backendData.storeInfo) || {};
