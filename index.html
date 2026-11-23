@@ -1498,13 +1498,14 @@ function applyIndustryModeUI(mode) {
       await resolveStoreIdAndInitLiff();
       await checkMaintenanceAndAnnouncement();
 
+      // ✅ 正確代碼（個資隔離安全視圖版）：
       const nowIso = new Date().toISOString();
       const [stores, settings, services, portfolios, bookings] = await Promise.all([
         directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
         directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
         directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
         directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-        directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&status=neq.已取消&select=appointment_time,staff_id,service_names`)
+        directSupabaseFetch(`public_booked_slots?store_id=eq.${CURRENT_STORE_ID}&appointment_time=gte.${nowIso}&select=appointment_time,staff_id,duration_minutes,service_group_type`)
       ]);
 
       const sCfg = (Array.isArray(settings) && settings.length > 0) ? settings[0] : {};
@@ -3653,22 +3654,14 @@ const resourceMaxCapacity = {};
     let staffConflict = false;
     const sameStaffAppts = dayAllAppts.filter(a => staffId === 'all' || a.staff_id === staffId || a.staffId === staffId);
     
+    // 從安全視圖比對撞期
     for (let a of sameStaffAppts) {
       const aDate = new Date(a.appointment_time);
       const aStart = aDate.getHours() * 60 + aDate.getMinutes();
-      let aDuration = 60;
-      let aIsGroupB = false;
-
-      if (a.service_names) {
-        a.service_names.split(',').forEach(n => {
-          const match = (db.services || []).find(s => s.name === n.trim());
-          if (match) {
-            aDuration = Math.max(aDuration, Number(match.duration || 60));
-            if (match.type === 'Group_B' || match.service_type === 'Group_B') aIsGroupB = true;
-          }
-        });
-      }
+      const aDuration = Number(a.duration_minutes || 60);
+      const aIsGroupB = (a.service_group_type === 'Group_B');
       const aEnd = aStart + aDuration;
+
       if (Math.max(t, aStart) < Math.min(t + totalDuration, aEnd)) {
         if (hasGroupB || aIsGroupB) { staffConflict = true; break; }
       }
@@ -5326,8 +5319,8 @@ document.getElementById('bookForm').onsubmit = async function(e) {
       action: "submitBooking",
       store_id: CURRENT_STORE_ID,
       store_name: db.storeName || "沙龍門市",
+      // ✅ 正確代碼：
       id: newBookingId,
-      bookingId: newBookingId,
       bookingId: newBookingId,
       enable_deposit: db.enableDeposit,              // 👈 補上訂金開關
       deposit_amount: db.depositAmount || 0,         // 👈 補上訂金金額
