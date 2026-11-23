@@ -5381,35 +5381,42 @@ function renderOverviewGridCanvas() {
     displayStaffList = allowedStaffList.filter(s => s.id === currentOverviewStaffTab);
   }
 
-  // 營業時間刻度 (15 分鐘一格)
-  // 營業時間刻度
-  const rawStartTime = backendData.settings?.shiftStartTime || backendData.settings?.shift_start_time || '09:00';
-  const rawEndTime = backendData.settings?.shiftEndTime || backendData.settings?.shift_end_time || '20:00';
-  const interval = Number(backendData.settings?.shiftInterval || backendData.settings?.shift_interval || 15);
-
-  const [rawSH, rawSM] = rawStartTime.split(':').map(Number);
-  const [rawEH, rawEM] = rawEndTime.split(':').map(Number);
-  
-  // 起訖分鐘數
-  const storeOpenMinutes = rawSH * 60 + (rawSM || 0);
-  const storeCloseMinutes = rawEH * 60 + (rawEM || 0);
-
-  // 🌟 確保結尾時間格完整包含（例如營業到 19:30，時間軸開滿至 19:30 甚至到下一個整點）
-  const timelineStartMinutes = Math.floor(storeOpenMinutes / 60) * 60;
-  const timelineEndMinutes = Math.ceil(storeCloseMinutes / interval) * interval;
-  const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
-
-  const slotHeight = isFitMode ? 18 : 24; 
-  const totalTimelineHeight = totalSlotsCount * slotHeight;
-  
-  const staffColStyle = isFitMode 
-    ? "flex: 1 1 0%; min-width: 0;" 
-    : "width: 130px; min-width: 130px; flex-shrink: 0;";
-
+  // ========================================================
+  // 1. 營業時間與時間軸自動延伸計算（修正變數宣告順序，解決無法載入）
+  // ========================================================
+  // 🌟 提前取出今日有效預約，供後續延伸時段安全運算
   const apptsToday = (backendData.appointments || []).filter(a => {
     const aDate = String(a.date || '').replace(/-/g, '/').trim();
     return aDate === targetDateSlash && a.status !== '已取消' && a.status !== '婉拒';
   });
+
+  const rawStartTime = backendData.settings?.shiftStartTime || backendData.settings?.shift_start_time || '09:00';
+  const rawEndTime = backendData.settings?.shiftEndTime || backendData.settings?.shift_end_time || '19:00';
+  const interval = 15; // 15 分鐘一格
+
+  const [rawSH, rawSM] = rawStartTime.split(':').map(Number);
+  const [rawEH, rawEM] = rawEndTime.split(':').map(Number);
+  const storeOpenMinutes = rawSH * 60 + (rawSM || 0);
+  const lastOrderMinutes = rawEH * 60 + (rawEM || 0);
+
+  // 時間軸自動延伸：至少延伸至最後接單後 90 分鐘，若有更晚結束的預約則動態涵蓋
+  let maxApptEndMin = lastOrderMinutes + 90;
+  apptsToday.forEach(a => {
+    const [ah, am] = (a.time || '09:00').split(':').map(Number);
+    const aEnd = ah * 60 + am + Number(a.duration || 60);
+    if (aEnd > maxApptEndMin) maxApptEndMin = aEnd;
+  });
+
+  const timelineStartMinutes = Math.floor(storeOpenMinutes / 60) * 60;
+  const timelineEndMinutes = Math.ceil(maxApptEndMin / 60) * 60;
+  const totalSlotsCount = Math.ceil((timelineEndMinutes - timelineStartMinutes) / interval);
+
+  const slotHeight = isFitMode ? 24 : 32; 
+  const totalTimelineHeight = totalSlotsCount * slotHeight;
+  
+  const staffColStyle = isFitMode 
+    ? "flex: 1 1 0%; min-width: 0;" 
+    : "width: 135px; min-width: 135px; flex-shrink: 0;";
 
   // 控制按鈕列
   let controlsHtml = `
@@ -5557,15 +5564,17 @@ function renderOverviewGridCanvas() {
             const hh = String(Math.floor(m / 60)).padStart(2, '0');
             const mm = String(m % 60).padStart(2, '0');
             const isHourLine = (mm === '00');
-            const isClosedSlot = (m < storeOpenMinutes || m >= storeCloseMinutes);
-
+            // 判斷是否為允許進場接單時段（小於開門時間 或 大於最後接單時間）
+            const isAfterLastOrder = (m >= lastOrderMinutes);
+            const isClosedSlot = (m < storeOpenMinutes);
+            
             return `
               <div style="height: ${slotHeight}px; box-sizing: border-box;"
                    class="relative flex items-start justify-center transition ${ isHourLine ? 'border-t border-[#D5C7BC]/80 bg-white' : 'border-t border-dashed border-[#F0EBE5] bg-white' } ${
-                     isClosedSlot ? 'bg-gray-50/70 cursor-not-allowed' : 'hover:bg-brand-50/60 cursor-pointer'
+                     isAfterLastOrder ? 'bg-amber-50/20' : (isClosedSlot ? 'bg-gray-50/60 cursor-not-allowed' : 'hover:bg-brand-50/60 cursor-pointer')
                    }"
-                   onclick="${isClosedSlot ? `Swal.fire('非營業時段', '門市營業時間為 ${rawStartTime} ~ ${rawEndTime}', 'info')` : `quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')`}">
-                ${isHourLine ? `<span class="text-[9px] font-mono font-medium text-gray-300 pointer-events-none select-none mt-0.5">${Number(hh)}:00</span>` : ''}
+                   onclick="${isClosedSlot ? `Swal.fire('非營業時段', '門市營業開始時間為 ${rawStartTime}', 'info')` : (isAfterLastOrder ? `quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')` : `quickInsertBooking('${targetDateSlash}', '${hh}:${mm}', '${st.id}', '${st.name}')`)}">
+                ${isHourLine ? `<span class="text-[9px] font-mono font-bold text-gray-300 pointer-events-none select-none mt-0.5">${Number(hh)}:00</span>` : ''}
               </div>
             `;
           }).join('')}
@@ -14181,16 +14190,20 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
   const allStaff = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
   const allAppts = backendData.appointments || [];
-  const storeName = backendData.settings?.storeName || backendData.storeInfo?.store_name || '門市排程';
+  const storeName = backendData.settings?.storeName || backendData.storeInfo?.store_name || '門市現場排程';
 
+  // 抓取門市設定之時間
   const rawStart = backendData.settings?.shiftStartTime || '09:00';
-  const rawEnd = backendData.settings?.shiftEndTime || '20:00';
+  const rawEnd = backendData.settings?.shiftEndTime || '19:00';
   const [sH] = rawStart.split(':').map(Number);
   const [eH, eM] = rawEnd.split(':').map(Number);
-  const endHour = eM > 0 ? eH + 1 : eH;
+  
+  // 列印時間軸自動涵蓋至最後接單後 2 小時（確保 19:00 接單的客人完整印出）
+  const printEndHour = Math.min(22, (eM > 0 ? eH + 2 : eH + 1));
 
+  // 列印以每 30 分鐘為一列
   const timeLabels = [];
-  for (let h = sH; h < endHour; h++) {
+  for (let h = sH; h < printEndHour; h++) {
     timeLabels.push(`${pad(h)}:00`);
     timeLabels.push(`${pad(h)}:30`);
   }
@@ -14211,8 +14224,8 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
     pagesHtml += `
       <div class="print-page">
         <div class="print-header">
-          <div class="title">${storeName} — 現場排程日報表</div>
-          <div class="sub">日期：<b>${dateSlash} (週${weekStr})</b> ｜ 專員：${allStaff.map(s => s.name).join('、')}</div>
+          <div class="title">${storeName} — 現場排程工作表</div>
+          <div class="sub">日期：<b>${dateSlash} (週${weekStr})</b> ｜ 專員名單：${allStaff.map(s => s.name).join('、')} ｜ 最後接單：${rawEnd}</div>
         </div>
 
         <table class="schedule-table">
@@ -14220,7 +14233,7 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
             <tr>
               <th class="th-time">時間</th>
               ${allStaff.map(st => `<th>${st.name}</th>`).join('')}
-              <th style="width: 80px;">備註</th>
+              <th style="width: 85px;">現場備註</th>
             </tr>
           </thead>
           <tbody>
@@ -14263,7 +14276,7 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
   }
 
   const printWindow = window.open('', '_blank');
-  if (!printWindow) return Swal.fire('請允許快顯視窗以進行列印', '', 'warning');
+  if (!printWindow) return Swal.fire('請允許瀏覽器快顯視窗以進行列印', '', 'warning');
 
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -14271,23 +14284,39 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
       <head>
         <title>排程列印 (${startDateStr} ~ ${endDateStr})</title>
         <style>
-          @page { size: A4 portrait; margin: 8mm 6mm; }
+          @page { size: A4 portrait; margin: 6mm 6mm 4mm 6mm; }
           * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; font-size: 9px; color: #000; background: #fff; }
-          .print-page { width: 100%; height: 98vh; page-break-after: always; break-after: page; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; font-size: 9.5px; color: #000; background: #fff; }
+          
+          /* 🌟 A4 單頁滿版不切頁核心樣式 */
+          .print-page { 
+            width: 100%; 
+            height: calc(100vh - 12mm); 
+            max-height: 282mm; 
+            page-break-after: always; 
+            break-after: page; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            overflow: hidden; 
+          }
           .print-page:last-child { page-break-after: avoid; break-after: avoid; }
-          .print-header { text-align: center; margin-bottom: 4px; border-bottom: 1.5px solid #000; padding-bottom: 3px; }
-          .title { font-size: 13px; font-weight: bold; }
-          .sub { font-size: 9px; color: #333; margin-top: 1px; }
-          .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; }
-          .schedule-table th, .schedule-table td { border: 1px solid #777; padding: 1px 2px; text-align: center; vertical-align: middle; overflow: hidden; }
-          .schedule-table th { background-color: #f0ebe5; font-size: 9.5px; height: 18px; }
-          .th-time { width: 44px; }
-          .td-time { font-family: monospace; font-weight: bold; font-size: 8.5px; background-color: #faf7f4; }
-          .appt-block { font-size: 8.5px; line-height: 1.1; text-align: left; padding: 0 1px; }
+          
+          .print-header { text-align: center; margin-bottom: 4px; border-bottom: 1.5px solid #222; padding-bottom: 3px; }
+          .title { font-size: 13.5px; font-weight: bold; letter-spacing: 0.5px; }
+          .sub { font-size: 9px; color: #444; margin-top: 1px; }
+          
+          .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; height: 100%; }
+          .schedule-table th, .schedule-table td { border: 1px solid #777; padding: 1px 3px; text-align: center; vertical-align: middle; }
+          .schedule-table th { background-color: #f2ede9; font-size: 9.5px; height: 20px; font-weight: bold; }
+          
+          .th-time { width: 46px; }
+          .td-time { font-family: monospace; font-weight: bold; font-size: 9px; background-color: #faf7f4; }
+          
+          .appt-block { font-size: 9px; line-height: 1.15; text-align: left; padding: 1px; }
           .appt-block b { display: block; color: #000; }
-          .appt-block .svc { font-size: 7.5px; color: #444; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .appt-cont { font-size: 8px; color: #999; line-height: 1; }
+          .appt-block .svc { font-size: 8px; color: #444; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .appt-cont { font-size: 9px; color: #aaa; line-height: 1; }
         </style>
       </head>
       <body>
