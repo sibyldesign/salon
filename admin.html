@@ -11469,7 +11469,10 @@ function isStoreLifetime() {
 }
 
 // ========================================================
-// 2. 訂閱版資料回填引擎 (populateSettings)
+// 訂閱版資料回填引擎 (populateSettings)
+// 【新增設定防遺失註解】：新增開關或欄位時，務必確保：
+// 1. 先宣告 s / store / setVal / setCheck
+// 2. 回填順序：s（資料庫） -> localStorage（本機保底） -> 預設值
 // ========================================================
 function populateSettings() {
   const subPage = document.getElementById('page-settings');
@@ -11487,8 +11490,39 @@ function populateSettings() {
   const setCheck = (id, val, defaultVal = true) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : defaultVal);
+    el.checked = (val === false || val === 'false' || val === 0 || val === '0')
+      ? false
+      : (val === true || val === 'true' || val === 1 || val === '1' ? true : defaultVal);
   };
+
+  // 【新增設定回填 - 訂閱版】本月活動 & 門市預約規範（含 localStorage 防重整還原）
+  const savedCfgEnablePromo = s.enable_promo ?? (
+    localStorage.getItem(`zy_cfg_enable_promo_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_cfg_enable_promo_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
+  const savedCfgPromoText = (s.promo_text !== undefined && s.promo_text !== '')
+    ? s.promo_text
+    : (localStorage.getItem(`zy_cfg_promo_text_${CURRENT_STORE_ID}`) ?? (s.promoText || ''));
+  const savedCfgEnableRules = s.enable_booking_rules ?? (
+    localStorage.getItem(`zy_cfg_enable_rules_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_cfg_enable_rules_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
+  const savedCfgBookingRules = (s.booking_rules_text || s.promo_rules_text) || (
+    localStorage.getItem(`zy_cfg_booking_rules_${CURRENT_STORE_ID}`) ?? DEFAULT_BOOKING_RULES_TEMPLATE
+  );
+  const savedCfgRuleAgree = s.enable_rule_agreement ?? (
+    localStorage.getItem(`zy_cfg_rule_agree_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_cfg_rule_agree_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
+
+  setCheck('cfg-toggle-enable-promo', savedCfgEnablePromo, true);
+  setVal('cfg-promo', savedCfgPromoText);
+  setCheck('cfg-toggle-enable-rules', savedCfgEnableRules, true);
+  setVal('cfg-booking-rules', savedCfgBookingRules);
+  setCheck('cfg-toggle-rule-agree', savedCfgRuleAgree, true);
 
   // 1. 基本設定與營業時段
   setVal('cfg-title', s.storeName || '');
@@ -11506,7 +11540,6 @@ function populateSettings() {
   setVal('cfg-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
   setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
-  setVal('cfg-promo', s.promoText || '');
   setVal('cfg-line', s.line || '');
   setVal('cfg-ig', s.ig || '');
   setVal('cfg-map', s.map || '');
@@ -11515,11 +11548,6 @@ function populateSettings() {
   setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
   setVal('cfg-commission-rate', s.commissionRate ?? 50);
   setVal('cfg-designated-bonus', s.designatedBonus ?? 50);
-  setCheck('cfg-toggle-enable-promo', s.enable_promo !== false, true);
-  setVal('cfg-promo', s.promoText || s.promo_text || '');
-  setCheck('cfg-toggle-enable-rules', s.enable_booking_rules !== false, true);
-  setVal('cfg-booking-rules', s.booking_rules_text || s.promo_rules_text || DEFAULT_BOOKING_RULES_TEMPLATE);
-  setCheck('cfg-toggle-rule-agree', s.enable_rule_agreement !== false, true);
 
   // 2. LINE 憑證與獨立開關
   const effectiveCardTheme = s.line_card_theme || localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || 'latte';
@@ -11546,7 +11574,6 @@ function populateSettings() {
   setCheck('cfg-toggle-line-auto-notify', autoNotifyState, false);
   setCheck('cfg-toggle-menu-query', menuQueryState, true);
   setCheck('cfg-toggle-pet-pickup', pickupState, true);
-  setCheck('cfg-toggle-rule-agree', s.enable_rule_agreement !== false, true);
 
   // 3. 前台開關與外觀
   const activeTheme = s.theme_color || s.themeColor || localStorage.getItem('zy_cached_theme') || 'latte';
@@ -11579,20 +11606,16 @@ function populateSettings() {
   setCheck('cfg-toggle-contact-specialist', s.enable_contact_specialist, true);
 
   // 公休日回填 (訂閱版)
-  // 1. 每週固定公休回填 (確保純數字陣列)
   const offList = (Array.isArray(s.weekly_off_days) ? s.weekly_off_days : []).map(Number);
   document.querySelectorAll('#weekly-off-grid input').forEach(input => {
     input.checked = offList.includes(Number(input.value));
   });
 
-  // 2. 特殊店休日標準化 (轉換為 yyyy/MM/dd 統一格式，去除無效空值)
-  // 確保從後台設定讀取自訂店休日期
   const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
   customOffDatesArray = rawCustomOff
     .map(d => String(d).trim().replace(/-/g, '/'))
     .filter(d => /^\d{4}\/\d{2}\/\d{2}$/.test(d));
 
-  // 渲染迷你月曆與下方標籤清單
   renderOffDateCalendar('lt');
   renderOffDateCalendar('');
 
@@ -11602,7 +11625,7 @@ function populateSettings() {
     logoPreviewImg.src = s.logoUrl;
     logoPreviewBox.classList.remove('hidden');
   }
-  
+
   // 管理員 PIN
   const subPinEl = document.getElementById('disp-store-admin-pin');
   if (subPinEl) subPinEl.innerText = store.admin_pin || '8888';
@@ -11610,7 +11633,7 @@ function populateSettings() {
   renderStaffManager('');
   renderPlanRules('');
   renderUploadSlots('');
-  
+
   markSettingsSaved();
   markLifetimeSettingsSaved();
 
@@ -11621,7 +11644,6 @@ function populateSettings() {
     }
   }, 350);
 }
-
 // ========================================================
 // 3. 訂閱版資料儲存引擎 (saveStoreSettings)
 // ========================================================
@@ -11650,6 +11672,22 @@ async function saveStoreSettings() {
   const chosenEndTime = getVal('cfg-shift-end') || '19:00';
   const chosenInterval = Number(getVal('cfg-shift-interval') || 30);
 
+  // ========================================================
+  // 【新增設定防遺失註解 - 訂閱版】本月活動 & 門市預約規範
+  // 規則：新增設定欄位時，務必同步寫入 localStorage 作為重整保底。
+  // ========================================================
+  const cfgEnablePromo = getCheck('cfg-toggle-enable-promo');
+  const cfgPromoText = getVal('cfg-promo');
+  const cfgEnableRules = getCheck('cfg-toggle-enable-rules');
+  const cfgBookingRules = getVal('cfg-booking-rules');
+  const cfgRuleAgree = getCheck('cfg-toggle-rule-agree');
+
+  localStorage.setItem(`zy_cfg_enable_promo_${CURRENT_STORE_ID}`, String(cfgEnablePromo));
+  localStorage.setItem(`zy_cfg_promo_text_${CURRENT_STORE_ID}`, cfgPromoText);
+  localStorage.setItem(`zy_cfg_enable_rules_${CURRENT_STORE_ID}`, String(cfgEnableRules));
+  localStorage.setItem(`zy_cfg_booking_rules_${CURRENT_STORE_ID}`, cfgBookingRules);
+  localStorage.setItem(`zy_cfg_rule_agree_${CURRENT_STORE_ID}`, String(cfgRuleAgree));
+  
   const settingsPayload = {
     store_id: CURRENT_STORE_ID,
     display_title: storeTitle,
@@ -11821,7 +11859,10 @@ function routeToSettingsPage(btnEl) {
 }
     
     // ========================================================
-// 1. 買斷版專用資料回填引擎 (已補齊所有遺漏欄位與客製標籤)
+// 買斷版專用資料回填引擎 (populateLifetimeSettings)
+// 【新增設定防遺失註解】：新增開關或欄位時，務必確保：
+// 1. 先宣告 s / store / setVal / setCheck
+// 2. 回填順序：s（資料庫） -> localStorage（本機保底） -> 預設值
 // ========================================================
 function populateLifetimeSettings() {
   const ltPage = document.getElementById('page-settings-lifetime');
@@ -11829,9 +11870,20 @@ function populateLifetimeSettings() {
   if (ltPage) { ltPage.oninput = null; ltPage.onchange = null; }
   if (subPage) { subPage.oninput = null; subPage.onchange = null; }
 
-  // 🌟 必須先宣告 s，才能讀取裡面的 custom_off_dates！
   const s = backendData.settings || {};
   const store = backendData.storeInfo || {};
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+  const setCheck = (id, val, def = true) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = (val === false || val === 'false' || val === 0 || val === '0')
+      ? false
+      : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
+  };
 
   const rawCustomOff = Array.isArray(s.custom_off_dates) ? s.custom_off_dates : [];
   customOffDatesArray = rawCustomOff
@@ -11841,19 +11893,44 @@ function populateLifetimeSettings() {
   const allowed = Array.isArray(store.allowed_modules) ? store.allowed_modules : [];
   const currentMode = s.industryMode || store.industry_type || 'beauty';
 
-  const setVal = (id, val) => {
-    const el = document.getElementById(id);
-    if (el && val !== undefined && val !== null) el.value = val;
-  };
-  const setCheck = (id, val, def = true) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.checked = (val === false || val === 'false' || val === 0 || val === '0') ? false : (val === true || val === 'true' || val === 1 || val === '1' ? true : def);
-  };
+  // 【新增設定回填 - 買斷版】本月活動 & 門市預約規範（含 localStorage 防重整還原）
+  const savedLtEnablePromo = s.enable_promo ?? (
+    localStorage.getItem(`zy_lt_enable_promo_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_lt_enable_promo_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
+  const savedLtPromoText = (s.promo_text !== undefined && s.promo_text !== '')
+    ? s.promo_text
+    : (localStorage.getItem(`zy_lt_promo_text_${CURRENT_STORE_ID}`) ?? (s.promoText || ''));
+  const savedLtEnableRules = s.enable_booking_rules ?? (
+    localStorage.getItem(`zy_lt_enable_rules_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_lt_enable_rules_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
+  const savedLtBookingRules = (s.booking_rules_text || s.promo_rules_text) || (
+    localStorage.getItem(`zy_lt_booking_rules_${CURRENT_STORE_ID}`) ?? DEFAULT_BOOKING_RULES_TEMPLATE
+  );
+  const savedLtRuleAgree = s.enable_rule_agreement ?? (
+    localStorage.getItem(`zy_lt_rule_agree_${CURRENT_STORE_ID}`) !== null
+      ? localStorage.getItem(`zy_lt_rule_agree_${CURRENT_STORE_ID}`) === 'true'
+      : true
+  );
 
-  // 1. 前台本月活動規則說明
+  setCheck('lt-toggle-enable-promo', savedLtEnablePromo, true);
+  setVal('lt-promo', savedLtPromoText);
+  setCheck('lt-toggle-enable-rules', savedLtEnableRules, true);
+  setVal('lt-booking-rules', savedLtBookingRules);
+  setCheck('lt-toggle-rule-agree', savedLtRuleAgree, true);
+
+  // 1. 前台本月活動規則說明與 9:16 宣傳圖
   setVal('lt-promo-rules', s.promoRulesText || s.promo_rules_text || '');
   setVal('cfg-promo-rules', s.promoRulesText || s.promo_rules_text || '');
+  setVal('cfg-promo', savedCfgPromoTextOrFallback(savedLtPromoText));
+  renderUploadSlots('lt');
+
+  function savedCfgPromoTextOrFallback(val) {
+    return val || s.promoText || '';
+  }
 
   // 2. 門市營業時間與排班時段
   setVal('lt-shift-start', s.shiftStartTime || s.shift_start_time || '09:00');
@@ -11863,7 +11940,7 @@ function populateLifetimeSettings() {
   setVal('cfg-shift-end', s.shiftEndTime || s.shift_end_time || '19:00');
   setVal('cfg-shift-interval', String(s.shiftInterval || s.shift_interval || 30));
 
-  // 公休日與特殊休假標籤回填（補齊）
+  // 公休日與特殊休假標籤回填
   const offDays = (Array.isArray(s.weekly_off_days) ? s.weekly_off_days : []).map(Number);
   document.querySelectorAll('#lt-weekly-off-grid input').forEach(input => {
     input.checked = offDays.includes(Number(input.value));
@@ -11878,15 +11955,9 @@ function populateLifetimeSettings() {
     `).join('');
   }
 
-  // 3. 活動置頂公告與 9:16 宣傳圖
-  setVal('lt-promo', s.promoText || '');
-  setVal('cfg-promo', s.promoText || '');
-  renderUploadSlots('lt');
-
   // 4. 預約審核機制與定額訂金
   setCheck('lt-toggle-audit-booking', s.enable_audit_booking ?? true, true);
   setCheck('lt-toggle-deposit', s.enable_deposit ?? false, false);
-  setCheck('lt-toggle-rule-agree', s.enable_rule_agreement !== false, true);
   setVal('lt-deposit-mode', s.depositMode || 'all');
   setVal('lt-deposit-amount', s.depositAmount || 0);
   setVal('lt-deposit-report-mode', s.depositReportMode || 'both');
@@ -11920,7 +11991,7 @@ function populateLifetimeSettings() {
   setVal('lt-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
   setVal('cfg-care', s.careText || '服務完成後請保持乾爽通風與定期保養。');
 
-  // 9. 管理員登入解鎖 PIN 碼顯示（補齊）
+  // 9. 管理員登入解鎖 PIN 碼顯示
   const adminPinVal = store.admin_pin || '8888';
   const ltPinEl = document.getElementById('lt-disp-store-admin-pin');
   if (ltPinEl) ltPinEl.innerText = adminPinVal;
@@ -11944,7 +12015,7 @@ function populateLifetimeSettings() {
   setVal('lt-ig', s.ig || '');
   setVal('lt-map', s.map || '');
 
-  // 13. 寵物住宿模式連動配置（補齊餐費矩陣與文字自訂）
+  // 13. 寵物住宿模式連動配置
   const petHotelCard = document.getElementById('lt-section-pet-hotel-settings');
   if (petHotelCard) {
     const isPetHotel = (currentMode === 'pet_hotel');
@@ -11958,13 +12029,11 @@ function populateLifetimeSettings() {
       setVal('lt-cfg-meal-time-breakfast', s.mealTimeBreakfast || '09:00');
       setVal('lt-cfg-meal-time-dinner', s.mealTimeDinner || '18:00');
 
-      // 供餐方案自訂提示語
       const ltMealNotes = s.boarding_meal_notes || {};
       setVal('lt-meal-note-one', ltMealNotes.one || '安排於晚間 18:00 供餐');
       setVal('lt-meal-note-two', ltMealNotes.two || '固定於早 09:00、晚 18:00 供餐');
       setVal('lt-meal-note-three', ltMealNotes.three || '早 09:00、午 12:30、晚 18:00 三餐完整照護');
 
-      // 鮮食餐費 3x3 矩陣回填（補齊）
       const mr = s.boardingMealRates || s.boarding_meal_rates || {};
       const mrSmall = Array.isArray(mr.small) ? mr.small : [80, 75, 70];
       const mrMed = Array.isArray(mr.medium) ? mr.medium : [100, 90, 85];
@@ -11980,7 +12049,6 @@ function populateLifetimeSettings() {
       setVal('lt-cfg-meal-large-2', mrLarge[1] ?? 110);
       setVal('lt-cfg-meal-large-3', mrLarge[2] ?? 105);
 
-      // 前台按鈕與附加服務文字自訂（補齊）
       setVal('lt-cfg-label-mode-grooming', s.labelModeGrooming || s.label_mode_grooming || '精緻洗護美容');
       setVal('lt-cfg-label-mode-boarding', s.labelModeBoarding || s.label_mode_boarding || '安親度假住宿');
       setVal('lt-cfg-label-hotel-bath-in', s.labelHotelBathIn || s.label_hotel_bath_in || '【入住當天】進房前基礎清潔洗護');
@@ -11989,9 +12057,9 @@ function populateLifetimeSettings() {
       renderAdminRoomTiers('lt');
       renderAdminMealOptions('lt');
       renderOffDateCalendar('lt');
-  renderOffDateCalendar('');
+      renderOffDateCalendar('');
       renderCustomOffDatesTags('lt');
-  renderCustomOffDatesTags('');
+      renderCustomOffDatesTags('');
     }
   }
 
@@ -12001,7 +12069,7 @@ function populateLifetimeSettings() {
     setVal('lt-cfg-designated-bonus', s.designatedBonus ?? 50);
   }
 
-  // 15. LINE 智慧通報憑證與 7 大子開關（雙向同步，徹底防呆）
+  // 15. LINE 智慧通報憑證與 7 大子開關
   const effectiveCardTheme = localStorage.getItem(`zy_line_card_theme_${CURRENT_STORE_ID}`) || s.line_card_theme || 'latte';
   const effectiveOwnerEmail = localStorage.getItem(`zy_owner_email_${CURRENT_STORE_ID}`) || s.owner_email || store.owner_email || '';
   const effectiveLineToken = s.line_channel_token || store.line_channel_token || '';
@@ -12047,7 +12115,7 @@ function populateLifetimeSettings() {
     linePushCard.style.setProperty('display', 'block', 'important');
   }
 
-  // 16. 定型化契約條款
+  // 16. 定型化契約條款與行銷規則
   if (allowed.includes('contract')) {
     setVal('lt-contract-title', s.contractTitle || '定型化服務契約書');
     setVal('lt-contract-content', s.contractContent || '');
@@ -12055,7 +12123,7 @@ function populateLifetimeSettings() {
   if (allowed.includes('wallet')) renderPlanRules('lt');
   if (allowed.includes('packages')) renderPlanRules('lt');
 
-  // 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
+// 🚨🚨🚨【客製專用：這理髮型 - 試算表卡片主動喚醒與回填】🚨🚨🚨
   const storeName = store.store_name || s.storeName || '';
   const storeSlug = store.slug || '';
   const isZheli = storeName.includes('這理') || storeSlug.includes('zheli') || CURRENT_STORE_ID === '2deb066f-98f2-4283-945b-6ae0d6a89acb';
@@ -12099,13 +12167,11 @@ function populateLifetimeSettings() {
   }
   // 🚨🚨🚨【客製專用：結束】🚨🚨🚨
 
-  // 關閉未儲存提示條
   markLifetimeSettingsSaved();
   markSettingsSaved();
   renderOffDateCalendar('lt');
   renderOffDateCalendar('');
 
-  // 延遲掛回監聽器，確保回填過程完全結束才開始監聽手動異動
   setTimeout(() => {
     if (ltPage) {
       ltPage.oninput = markLifetimeSettingsUnsaved;
@@ -12113,7 +12179,6 @@ function populateLifetimeSettings() {
     }
   }, 350);
 }
-
 // ========================================================
 // 2. 買斷版專用儲存邏輯 (雙重資料表保險 + 支援排除無效欄位)
 // ========================================================
@@ -12154,6 +12219,23 @@ async function saveLifetimeStoreSettings() {
   const lineCardTheme = getVal('lt-setting-line-card-theme') || getVal('cfg-line-card-theme') || 'latte';
   const ownerEmailVal = getVal('lt-cfg-owner-email') || getVal('cfg-owner-email');
 
+  // ========================================================
+  // 🌟🌟🌟【新增設定防遺失註解 - 買斷版】本月活動 & 門市預約規範🌟🌟🌟
+  // 規則：新增任何設定欄位，務必在此同步寫入 localStorage（以 store_id 隔離），
+  // 🌟🌟🌟避免 DB 尚未建新欄位或 PATCH 漏寫時，重整後恢復原樣！🌟🌟🌟
+  // ========================================================
+  const ltEnablePromo = getCheck('lt-toggle-enable-promo');
+  const ltPromoText = getVal('lt-promo');
+  const ltEnableRules = getCheck('lt-toggle-enable-rules');
+  const ltBookingRules = getVal('lt-booking-rules');
+  const ltRuleAgree = getCheck('lt-toggle-rule-agree');
+
+  localStorage.setItem(`zy_lt_enable_promo_${CURRENT_STORE_ID}`, String(ltEnablePromo));
+  localStorage.setItem(`zy_lt_promo_text_${CURRENT_STORE_ID}`, ltPromoText);
+  localStorage.setItem(`zy_lt_enable_rules_${CURRENT_STORE_ID}`, String(ltEnableRules));
+  localStorage.setItem(`zy_lt_booking_rules_${CURRENT_STORE_ID}`, ltBookingRules);
+  localStorage.setItem(`zy_lt_rule_agree_${CURRENT_STORE_ID}`, String(ltRuleAgree));
+  
   // 🌟【本地多重持久化】：確保重整絕對不丟失
   if (lineTokenVal) {
     localStorage.setItem(`zy_line_token_${CURRENT_STORE_ID}`, lineTokenVal);
@@ -12212,6 +12294,12 @@ async function saveLifetimeStoreSettings() {
     line_channel_token: lineTokenVal,
     owner_line_uid: ownerUidVal,
     line_card_theme: lineCardTheme,
+    enable_promo: ltEnablePromo,
+    promo_text: ltPromoText,
+    enable_booking_rules: ltEnableRules,
+    booking_rules_text: ltBookingRules,
+    promo_rules_text: ltBookingRules,
+    enable_rule_agreement: ltRuleAgree,
 
     enable_owner_line_push: getCheck('lt-cfg-toggle-owner-line-push'),
     enable_line_one_click_audit: getCheck('lt-cfg-toggle-line-one-click'),
