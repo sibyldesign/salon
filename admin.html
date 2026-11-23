@@ -14192,16 +14192,15 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
   const allAppts = backendData.appointments || [];
   const storeName = backendData.settings?.storeName || backendData.storeInfo?.store_name || '門市現場排程';
 
-  // 抓取門市設定之時間
   const rawStart = backendData.settings?.shiftStartTime || '09:00';
   const rawEnd = backendData.settings?.shiftEndTime || '19:00';
   const [sH] = rawStart.split(':').map(Number);
   const [eH, eM] = rawEnd.split(':').map(Number);
   
-  // 列印時間軸自動涵蓋至最後接單後 2 小時（確保 19:00 接單的客人完整印出）
+  // 自動延伸涵蓋至最後接單後 2 小時（確保晚單完整印出）
   const printEndHour = Math.min(22, (eM > 0 ? eH + 2 : eH + 1));
 
-  // 列印以每 30 分鐘為一列
+  // 列印刻度：每 30 分鐘一列
   const timeLabels = [];
   for (let h = sH; h < printEndHour; h++) {
     timeLabels.push(`${pad(h)}:00`);
@@ -14233,37 +14232,62 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
             <tr>
               <th class="th-time">時間</th>
               ${allStaff.map(st => `<th>${st.name}</th>`).join('')}
-              <th style="width: 85px;">現場備註</th>
+              <th style="width: 80px;">現場備註</th>
             </tr>
           </thead>
           <tbody>
-            ${timeLabels.map(tStr => {
+            ${timeLabels.map((tStr, tIdx) => {
               const [h, m] = tStr.split(':').map(Number);
-              const curMin = h * 60 + m;
+              const curSlotMin = h * 60 + m;
+              const nextSlotMin = curSlotMin + 30;
 
               return `
                 <tr>
                   <td class="td-time">${tStr}</td>
-                  ${allStaff.map(st => {
-                    const matched = dayAppts.filter(a => {
-                      const isStaff = (a.staffName === st.name || a.staffId === st.id);
-                      if (!isStaff) return false;
+                  ${allStaff.map((st, staffIdx) => {
+                    // 比對專員
+                    const staffAppts = dayAppts.filter(a => {
+                      const aStaff = String(a.staffName || '').trim();
+                      const aStaffId = String(a.staffId || '').trim();
+                      const isDirect = (aStaff === st.name || (aStaffId && aStaffId === st.id));
+                      const isUnassigned = (!aStaff || aStaff === '不指定' || aStaffId === 'all');
+                      return isDirect || (isUnassigned && staffIdx === 0);
+                    });
+
+                    // 🌟 1. 抓取在此 30 分鐘內「剛好開始」的所有預約（包含 09:15, 09:45, 12:15 等 15 分插單！）
+                    const startingAppts = staffAppts.filter(a => {
+                      const [ah, am] = (a.time || '09:00').split(':').map(Number);
+                      const aStart = ah * 60 + am;
+                      return aStart >= curSlotMin && aStart < nextSlotMin;
+                    });
+
+                    // 🌟 2. 抓取從前面時段延伸過來、目前仍在進行中的預約
+                    const continuingAppts = staffAppts.filter(a => {
                       const [ah, am] = (a.time || '09:00').split(':').map(Number);
                       const aStart = ah * 60 + am;
                       const aEnd = aStart + Number(a.duration || 60);
-                      return curMin >= aStart && curMin < aEnd;
+                      return aStart < curSlotMin && aEnd > curSlotMin;
                     });
 
-                    if (matched.length === 0) return `<td></td>`;
+                    if (startingAppts.length === 0 && continuingAppts.length === 0) {
+                      return `<td></td>`;
+                    }
 
-                    const apptTexts = matched.map(a => {
-                      const isFirstSlot = (a.time === tStr);
-                      return isFirstSlot 
-                        ? `<div class="appt-block"><b>${a.name}</b><span class="svc">${a.service}</span></div>` 
-                        : `<div class="appt-cont">·</div>`;
-                    }).join('');
+                    // 渲染起始預約（多位重疊完整列出，附帶精準起始時間）
+                    const startHtml = startingAppts.map(a => `
+                      <div class="appt-block">
+                        <span class="appt-time-tag">${a.time}</span>
+                        <b>${a.name}</b>
+                        <span class="svc">${a.service}</span>
+                      </div>
+                    `).join('');
 
-                    return `<td>${apptTexts}</td>`;
+                    // 延續中的預約以箭頭銜接
+                    const contHtml = continuingAppts.map(a => `
+                      <div class="appt-cont">↳ ${a.name} (${a.service})</div>
+                    `).join('');
+
+                    return `<td><div class="cell-wrap">${startHtml}${contHtml}</div></td>`;
                   }).join('')}
                   <td></td>
                 </tr>
@@ -14284,15 +14308,14 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
       <head>
         <title>排程列印 (${startDateStr} ~ ${endDateStr})</title>
         <style>
-          @page { size: A4 portrait; margin: 6mm 6mm 4mm 6mm; }
+          @page { size: A4 portrait; margin: 5mm 5mm 3mm 5mm; }
           * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; font-size: 9.5px; color: #000; background: #fff; }
+          html, body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif; font-size: 9px; color: #000; background: #fff; }
           
-          /* 🌟 A4 單頁滿版不切頁核心樣式 */
           .print-page { 
             width: 100%; 
-            height: calc(100vh - 12mm); 
-            max-height: 282mm; 
+            height: calc(100vh - 8mm); 
+            max-height: 287mm; 
             page-break-after: always; 
             break-after: page; 
             display: flex; 
@@ -14302,21 +14325,34 @@ function executeA4DailyPrintByRange(startDateStr, endDateStr) {
           }
           .print-page:last-child { page-break-after: avoid; break-after: avoid; }
           
-          .print-header { text-align: center; margin-bottom: 4px; border-bottom: 1.5px solid #222; padding-bottom: 3px; }
-          .title { font-size: 13.5px; font-weight: bold; letter-spacing: 0.5px; }
-          .sub { font-size: 9px; color: #444; margin-top: 1px; }
+          .print-header { text-align: center; margin-bottom: 2px; border-bottom: 1.5px solid #222; padding-bottom: 2px; }
+          .title { font-size: 13px; font-weight: bold; }
+          .sub { font-size: 8.5px; color: #444; margin-top: 1px; }
           
           .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; height: 100%; }
-          .schedule-table th, .schedule-table td { border: 1px solid #777; padding: 1px 3px; text-align: center; vertical-align: middle; }
-          .schedule-table th { background-color: #f2ede9; font-size: 9.5px; height: 20px; font-weight: bold; }
+          .schedule-table th, .schedule-table td { border: 1px solid #777; padding: 1px 2px; text-align: center; vertical-align: top; }
+          .schedule-table th { background-color: #f2ede9; font-size: 9px; height: 18px; font-weight: bold; vertical-align: middle; }
           
-          .th-time { width: 46px; }
-          .td-time { font-family: monospace; font-weight: bold; font-size: 9px; background-color: #faf7f4; }
+          .th-time { width: 44px; }
+          .td-time { font-family: monospace; font-weight: bold; font-size: 8.5px; background-color: #faf7f4; vertical-align: middle; }
           
-          .appt-block { font-size: 9px; line-height: 1.15; text-align: left; padding: 1px; }
-          .appt-block b { display: block; color: #000; }
-          .appt-block .svc { font-size: 8px; color: #444; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-          .appt-cont { font-size: 9px; color: #aaa; line-height: 1; }
+          .cell-wrap { display: flex; flex-direction: column; gap: 1px; height: 100%; justify-content: flex-start; }
+          
+          /* 預約色塊標籤 */
+          .appt-block { 
+            background: #f7f4f0; 
+            border: 1px solid #c9beaf; 
+            border-left: 2.5px solid #8C7355; 
+            border-radius: 3px; 
+            padding: 1px 2px; 
+            text-align: left; 
+            line-height: 1.1; 
+          }
+          .appt-time-tag { font-family: monospace; font-weight: bold; font-size: 7.5px; color: #8C7355; margin-right: 2px; }
+          .appt-block b { font-size: 8.5px; color: #111; }
+          .appt-block .svc { font-size: 7.5px; color: #555; margin-left: 2px; }
+          
+          .appt-cont { font-size: 7.5px; color: #888; text-align: left; line-height: 1; padding-left: 2px; }
         </style>
       </head>
       <body>
