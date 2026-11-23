@@ -849,7 +849,7 @@
         </div>
 
         <!-- ======================================================== -->
-        <!-- 【常駐獨立卡片】本月活動（不管行銷開關為何，一律正常呈現） -->
+        <!-- 【常駐獨立卡片】本月活動（受後台開關與內容控制） -->
         <!-- ======================================================== -->
         <div id="section-monthly-promo-rules" class="my-4 p-5 rounded-3xl bg-brand-50/80 border border-brand-200 shadow-xs space-y-3 text-xs">
           <div class="font-bold text-brand-900 flex items-center gap-1.5 text-sm">
@@ -860,11 +860,7 @@
               <i class="fa-solid fa-circle-info text-amber-600"></i>
               <span>說明：</span>
             </div>
-            <div id="promo-rule-content" class="whitespace-pre-line space-y-1">
-              • 預約請準時抵達，為您保留 10 分鐘。<br>
-              • 如需改期請提前 24 小時告知店家。<br>
-              • 現場方案均可即時折抵與加購使用。
-            </div>
+            <div id="promo-rule-content" class="whitespace-pre-line space-y-1"></div>
           </div>
         </div>
 
@@ -1600,8 +1596,10 @@ function applyIndustryModeUI(mode) {
         hotelRoomTiers: sCfg.hotel_room_tiers || [],
         enableLogo: sCfg.enable_logo !== false,
         logoUrl: sCfg.logo_url || "",
+        // ✅ 正確代碼：
         storePhone: sCfg.store_phone || "",
-        promoText: sCfg.promo_text || "歡迎使用線上預約系統，請選取項目與合適時段。",
+        enable_promo: (sCfg.enable_promo !== false) && (sCfg.enablePromo !== false),
+        promoText: (sCfg.promo_text !== undefined ? sCfg.promo_text : (sCfg.promoText || '')),
         promoImgs: parsedPromoImgs,
         address: sCfg.address || "門市服務據點",
         businessHours: sCfg.business_hours || "營業時間：09:00 - 19:00",
@@ -2508,17 +2506,20 @@ function recalcSmartCheckoutLayout() {
   const showCoupons = parseBoolStrict(db.enableCoupons, false);
   const showStaff = parseBoolStrict(db.enableStaffSelect, true);
 
-  // 1. 【本月活動】獨立開關控制
+  // 1. 【本月活動】後台關閉或無內容時，前台 100% 徹底隱藏
   const monthlyPromoSection = document.getElementById('section-monthly-promo-rules');
   const promoRuleContent = document.getElementById('promo-rule-content');
-  const showPromo = (db.enable_promo !== false) && Boolean(db.promoText || db.promo_text);
+  
+  const isPromoEnabled = (db.enable_promo !== false) && (db.enablePromo !== false);
+  const promoTextValue = (db.promoText || '').trim();
+  const showPromo = isPromoEnabled && Boolean(promoTextValue);
 
   if (monthlyPromoSection) {
     if (showPromo) {
       monthlyPromoSection.classList.remove('hidden');
       monthlyPromoSection.style.removeProperty('display');
       if (promoRuleContent) {
-        promoRuleContent.innerText = db.promoText || db.promo_text || '';
+        promoRuleContent.innerText = promoTextValue;
       }
     } else {
       monthlyPromoSection.classList.add('hidden');
