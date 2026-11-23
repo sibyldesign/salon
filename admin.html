@@ -4652,29 +4652,44 @@ async function fetchDataAndRender() {
   try {
     const sessionToken = sessionStorage.getItem(`admin_session_${CURRENT_STORE_ID}`) || '';
 
-    // 透過安全 RPC 帶入 Token 獲取完整預約清單
-    const bookingsPromise = fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_bookings`, {
-      method: "POST",
-      headers: {
-        "apikey": SUPABASE_ANON_KEY,
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        p_store_id: CURRENT_STORE_ID,
-        p_session_token: sessionToken
-      })
-    }).then(r => r.ok ? r.json() : []);
+    // 1. 優先嘗試透過 RPC 取單，若無有效 Token 或 RPC 失敗則啟動直接讀取備援
+    let bookingsData = [];
+    try {
+      const rpcRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_bookings`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          p_store_id: CURRENT_STORE_ID,
+          p_session_token: sessionToken
+        })
+      });
+      if (rpcRes.ok) {
+        bookingsData = await rpcRes.json();
+      }
+    } catch (e) {
+      console.warn("RPC 取單失敗，切換直查備援");
+    }
 
-    let [stores, settings, services, portfolios, bookings, custsRes, invRes] = await Promise.all([
+    // 若 RPC 未取到資料，改走直查備援讀取
+    if (!bookingsData || bookingsData.length === 0) {
+      bookingsData = await directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`);
+    }
+
+    // 2. 平行讀取其餘設定與檔案主檔（僅執行單次，不重複覆蓋）
+    const [stores, settings, services, portfolios, custsRes, invRes] = await Promise.all([
       directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-      bookingsPromise,
       directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`),
       directSupabaseFetch(`inventory_items?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`)
     ]);
+
+    const bookings = bookingsData || [];
 
     // 🌟 第一時間安全宣告
     const sInfo = (stores && stores.length > 0) ? stores[0] : {};
