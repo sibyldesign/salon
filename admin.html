@@ -4368,7 +4368,6 @@ function previewSelectedThemeColor(themeKey) {
 // 核心修復：相容 Token 與 UUID，保證買斷與訂閱版皆能秒進
 // ==========================================
 async function checkPin() {
-  if (checkLockoutStatus()) return;
   const pinInput = document.getElementById('pin-input');
   const errorEl = document.getElementById('lock-error');
   const unlockBtn = document.getElementById('unlock-btn');
@@ -4382,68 +4381,44 @@ async function checkPin() {
 
   if (unlockBtn) {
     unlockBtn.disabled = true;
-    unlockBtn.innerText = '驗證中...';
+    unlockBtn.innerText = '後端安全驗證中...';
   }
 
   try {
-    // 1. 智慧解析：相容 admin_token 與直接傳入之 store_id (UUID)
-    const tokenParam = urlParams.get('token');
-    const storeIdParam = urlParams.get('store_id');
-    const queryTarget = tokenParam || storeIdParam;
+    // 呼叫後端安全 RPC
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        p_store_id: CURRENT_STORE_ID,
+        p_pin: inputPin
+      })
+    });
 
-    if (queryTarget) {
-      let storeRes = await directSupabaseFetch(`stores?admin_token=eq.${encodeURIComponent(queryTarget)}&select=id,admin_pin,plan_type,plan_status,plan_name`);
-      if (!storeRes || storeRes.length === 0) {
-        storeRes = await directSupabaseFetch(`stores?id=eq.${encodeURIComponent(queryTarget)}&select=id,admin_pin,plan_type,plan_status,plan_name`);
-      }
-      if (storeRes && storeRes.length > 0) {
-        CURRENT_STORE_ID = storeRes[0].id;
-      }
+    const result = await res.json();
+
+    if (result.locked) {
+      showLockoutUI(result.remaining_seconds);
+      if (errorEl) errorEl.innerText = `密碼錯誤達上限，已安全鎖定！請等待 ${result.remaining_seconds} 秒後再試。`;
+      return;
     }
 
-    // 2. 獲取該店設定之 PIN 碼與專員名冊
-    let correctPin = '8888';
-    const [stores, settings] = await Promise.all([
-      directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=admin_pin`),
-      directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=staff_list`)
-    ]);
-
-    if (stores && stores.length > 0 && stores[0].admin_pin) {
-      correctPin = String(stores[0].admin_pin).trim();
-    }
-
-    // 專員個人登入比對
-    if (CURRENT_STAFF_PARAM && CURRENT_STAFF_PARAM !== 'all') {
-      const staffList = (settings && settings.length > 0) ? (settings[0].staff_list || []) : [];
-      const matchedStaff = staffList.find(s => s.id === CURRENT_STAFF_PARAM);
-      if (matchedStaff && matchedStaff.pin) correctPin = String(matchedStaff.pin).trim();
-    }
-
-    // 3. 通行驗證：店長 PIN、專員 PIN，或全域管理者金鑰 888 / 8888 均可安全通過
-    const isPass = (inputPin === correctPin) || (inputPin === '8888') || (inputPin === '888');
-
-    if (isPass) {
+    if (result.success) {
+      // 驗證通過，將後端簽發的 Session Token 存在 SessionStorage
+      sessionStorage.setItem(`admin_session_${CURRENT_STORE_ID}`, result.token);
       localStorage.removeItem(ATTEMPTS_KEY);
       localStorage.removeItem(LOCKOUT_KEY);
       enterDashboard();
     } else {
-      let attempts = Number(localStorage.getItem(ATTEMPTS_KEY) || 0) + 1;
-      localStorage.setItem(ATTEMPTS_KEY, attempts);
-      if (attempts >= 5) {
-        const lockoutTime = Date.now() + 15 * 60 * 1000;
-        localStorage.setItem(LOCKOUT_KEY, lockoutTime);
-        showLockoutUI(900);
-      } else {
-        if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${5 - attempts} 次機會`;
-        if (pinInput) { pinInput.value = ''; pinInput.focus(); }
-      }
+      if (errorEl) errorEl.innerText = `密碼錯誤！還剩 ${result.remaining_attempts} 次機會`;
+      if (pinInput) { pinInput.value = ''; pinInput.focus(); }
     }
   } catch (e) {
-    if (inputPin === '8888' || inputPin === '888') {
-      enterDashboard();
-    } else {
-      if (errorEl) errorEl.innerText = '系統連線異常，請稍後重試';
-    }
+    if (errorEl) errorEl.innerText = '安全連線逾時，請稍後重試';
   } finally {
     if (unlockBtn) {
       unlockBtn.disabled = false;
@@ -4645,6 +4620,7 @@ async function adminQuickCheckCustomer(phoneVal) {
     // ========================================================
 // 【修復升級】fetchDataAndRender — 解決 sInfo TDZ 語法崩潰，保證設定秒回填
 // ========================================================
+// ✅ 正確代碼：
 async function fetchDataAndRender() {
   const dispStoreId = document.getElementById('disp-current-store-id');
   if (dispStoreId && CURRENT_STORE_ID) {
@@ -4652,12 +4628,28 @@ async function fetchDataAndRender() {
   }
   
   try {
+    const sessionToken = sessionStorage.getItem(`admin_session_${CURRENT_STORE_ID}`) || '';
+
+    // 透過安全 RPC 帶入 Token 獲取完整預約清單
+    const bookingsPromise = fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_bookings`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        p_store_id: CURRENT_STORE_ID,
+        p_session_token: sessionToken
+      })
+    }).then(r => r.ok ? r.json() : []);
+
     let [stores, settings, services, portfolios, bookings, custsRes, invRes] = await Promise.all([
       directSupabaseFetch(`stores?id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`store_settings?store_id=eq.${CURRENT_STORE_ID}&select=*`),
       directSupabaseFetch(`services?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.asc&select=*`),
       directSupabaseFetch(`portfolios?store_id=eq.${CURRENT_STORE_ID}&order=sort_order.asc,created_at.desc&select=*`),
-      directSupabaseFetch(`bookings?store_id=eq.${CURRENT_STORE_ID}&order=appointment_time.asc&select=*`),
+      bookingsPromise,
       directSupabaseFetch(`customers?store_id=eq.${CURRENT_STORE_ID}&select=phone,is_blacklisted`),
       directSupabaseFetch(`inventory_items?store_id=eq.${CURRENT_STORE_ID}&order=created_at.desc`)
     ]);
@@ -7365,12 +7357,28 @@ function renderCustomer() {
         return;
       }
       try {
-        await directSupabasePatch('bookings', `id=eq.${id}`, { status: newStatus });
+        const sessionToken = sessionStorage.getItem(`admin_session_${CURRENT_STORE_ID}`) || '';
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_update_booking_status`, {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            p_store_id: CURRENT_STORE_ID,
+            p_session_token: sessionToken,
+            p_booking_id: id,
+            p_status: newStatus
+          })
+        });
+
+        if (!res.ok) throw new Error('授權逾時，請重新登入');
+
         const appt = (backendData.appointments || []).find(a => String(a.id) === String(id));
         if (appt) appt.status = newStatus;
         renderCustomer();
 
-        // 🌟 狀態變更時自動通知顧客 (有 UID 發 LINE，無 UID 發 Email)
         if (typeof notifyCustomerStatusChanged === 'function') {
           notifyCustomerStatusChanged(id, newStatus);
         }
