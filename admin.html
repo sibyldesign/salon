@@ -11177,42 +11177,54 @@ if (peakChartBox) {
     let slotCalYear = 2026;
     let slotCalMonth = 11;
 
-    // 後台空檔月曆 10 色質感色盤（與前台完全同步）
+    // ========================================================
+    // 【專員質感色系智慧引擎 - 後台】
+    // 規則：依專員順序自動配對 粉 / 黃 / 紫 / 藍 / 綠；
+    // 超過 5 位專員自動改用對應的 灰階粉 / 灰黃 / 灰紫 / 灰藍 / 灰綠。
+    // 圖例圓點與月曆色塊共用同一套色票，徹底消除舊色殘留。
+    // ========================================================
     const SLOT_STAFF_PALETTE = [
-      { bg: '#FFE4E6', text: '#9F1239', dot: '#E11D48', border: '#FDA4AF', name: '專員 1' }, // 1. 柔櫻粉
-      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', border: '#FCD34D', name: '專員 2' }, // 2. 暖杏黃
-      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#D8B4FE', name: '專員 3' }, // 3. 薰衣紫
-      { bg: '#E0F2FE', text: '#0369A1', dot: '#0284C7', border: '#7DD3FC', name: '專員 4' }, // 4. 冰川藍
-      { bg: '#DCFCE7', text: '#15803D', dot: '#16A34A', border: '#86EFAC', name: '專員 5' }, // 5. 薄荷綠
-      { bg: '#EDE4E6', text: '#643843', dot: '#88505E', border: '#CDB5BC', name: '專員 6' }, // 6. 灰粉
-      { bg: '#ECE5D8', text: '#5D4F37', dot: '#85724F', border: '#C8BEAA', name: '專員 7' }, // 7. 灰黃
-      { bg: '#E8E3ED', text: '#4D3B5C', dot: '#73588A', border: '#C2B8CC', name: '專員 8' }, // 8. 灰紫
-      { bg: '#DDE5EB', text: '#344C5C', dot: '#526F82', border: '#AFC0CC', name: '專員 9' }, // 9. 灰藍
-      { bg: '#DFE7E2', text: '#344E3D', dot: '#50755C', border: '#AFC2B5', name: '專員 10' } // 10. 灰綠
+      // 第 1 輪：質感柔色（粉、黃、紫、藍、綠）
+      { bg: '#FFE4E6', text: '#9F1239', dot: '#F472B6', border: '#FBCFE8', name: '粉' }, // 1. 質感粉
+      { bg: '#FEF3C7', text: '#92400E', dot: '#FBBF24', border: '#FDE68A', name: '黃' }, // 2. 質感黃
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#C084FC', border: '#E9D5FF', name: '紫' }, // 3. 質感紫
+      { bg: '#E0F2FE', text: '#0369A1', dot: '#38BDF8', border: '#BAE6FD', name: '藍' }, // 4. 質感藍
+      { bg: '#DCFCE7', text: '#15803D', dot: '#4ADE80', border: '#BBF7D0', name: '綠' }, // 5. 質感綠
+
+      // 第 2 輪：灰階質感色（超過 5 人自動啟用：灰粉、灰黃、灰紫、灰藍、灰綠）
+      { bg: '#EDE4E6', text: '#6E4752', dot: '#A68891', border: '#D8C5CB', name: '灰粉' }, // 6. 灰階粉
+      { bg: '#ECE5D8', text: '#665A43', dot: '#A3957A', border: '#D6CCBA', name: '灰黃' }, // 7. 灰階黃
+      { bg: '#E8E3ED', text: '#574966', dot: '#8E7FA1', border: '#C9C0D4', name: '灰紫' }, // 8. 灰階紫
+      { bg: '#DDE5EB', text: '#425969', dot: '#7A94A6', border: '#BDCBD4', name: '灰藍' }, // 9. 灰階藍
+      { bg: '#DFE7E2', text: '#42594A', dot: '#7B9685', border: '#BECBC2', name: '灰綠' }  // 10. 灰階綠
     ];
 
     function getSlotStaffColorMap() {
       const staffList = (backendData.settings?.staffList || []).filter(s => s && s.id !== 'all');
       const map = {};
+
+      // 1. 優先依門市專員名單順序分配顏色
       staffList.forEach((st, idx) => {
         const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
-        const obj = { ...c, name: st.name };
+        const obj = { ...c, label: st.name };
         if (st.id) map[String(st.id).trim()] = obj;
         if (st.name) map[String(st.name).trim()] = obj;
       });
 
+      // 2. 若排程中有未列在名單的專員名稱，自動依序補上顏色
       pendingSlotsList.forEach(s => {
         const nameKey = String(s.staffName || '').trim();
         const idKey = String(s.staffId || '').trim();
         if (nameKey && !map[nameKey]) {
-          const idx = Object.keys(map).length;
-          const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
-          map[nameKey] = { ...c, name: nameKey };
+          const uniqueCount = new Set(Object.values(map).map(item => item.label)).size;
+          const c = SLOT_STAFF_PALETTE[uniqueCount % SLOT_STAFF_PALETTE.length];
+          map[nameKey] = { ...c, label: nameKey };
         }
         if (idKey && nameKey && map[nameKey]) {
           map[idKey] = map[nameKey];
         }
       });
+
       return map;
     }
 
@@ -11247,7 +11259,7 @@ if (peakChartBox) {
           </div>
           <div class="flex flex-wrap gap-2.5">
             ${staffList.map(st => {
-              const c = staffMap[st.id] || SLOT_STAFF_PALETTE[0];
+              const c = staffMap[st.id] || staffMap[st.name] || SLOT_STAFF_PALETTE[0];
               return `
                 <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-brand-200 bg-[#FAF7F2] text-xs font-bold">
                   <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${c.dot};"></span>
