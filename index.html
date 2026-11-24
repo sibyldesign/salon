@@ -307,7 +307,7 @@
   maxlength="10"
   class="w-full px-4 py-3 rounded-xl border border-brand-200 bg-brand-50/40 text-sm font-mono font-bold outline-none transition focus:border-theme-primary focus:ring-1 focus:ring-theme-primary" 
   oninput="checkPhoneLength(this)"
-  onblur="if(this.value.trim().replace(/\D/g,'').length>=8) checkCustomerBenefitsByPhone();"
+  onblur="if(this.value.trim().replace(/\D/g,'').length>=8 && typeof checkCustomerBenefitsByPhone === 'function') checkCustomerBenefitsByPhone();"
 >
 
           <!-- 舊客自動帶入歡迎提示 -->
@@ -1672,11 +1672,11 @@ function applyIndustryModeUI(mode) {
         enableContract: checkModule('contract', sCfg.enable_contract ?? sCfg.enableContract, false),
         enableCare: checkModule('care', sCfg.enable_care ?? sCfg.enableCare, true),
         enableCarousel: sCfg.enable_carousel !== false,
-        enable_promo: parseBoolStrict(sCfg.enable_promo, true), // 👈 本月活動開關
-        enable_booking_rules: parseBoolStrict(sCfg.enable_booking_rules, true), // 👈 門市規範開關
-        enable_rule_agreement: parseBoolStrict(sCfg.enable_rule_agreement, true), // 👈 強制勾選開關
-        bookingRulesText: sCfg.booking_rules_text || sCfg.promo_rules_text || '',
-
+        enable_promo: (sCfg.enable_promo !== false) && (sCfg.enablePromo !== false) && (localStorage.getItem(`zy_lt_enable_promo_${CURRENT_STORE_ID}`) !== 'false') && (localStorage.getItem(`zy_cfg_enable_promo_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_booking_rules: (sCfg.enable_booking_rules !== false) && (localStorage.getItem(`zy_lt_enable_rules_${CURRENT_STORE_ID}`) !== 'false'),
+        enable_rule_agreement: (sCfg.enable_rule_agreement !== false) && (localStorage.getItem(`zy_lt_rule_agree_${CURRENT_STORE_ID}`) !== 'false'),
+        bookingRulesText: sCfg.booking_rules_text || sCfg.promo_rules_text || localStorage.getItem(`zy_lt_booking_rules_${CURRENT_STORE_ID}`) || '',
+        
         contractTitle: sCfg.contract_title || '線上定型化服務契約書',
         contractContent: sCfg.contract_content || '',
         promoRulesText: sCfg.promo_rules_text || '',
@@ -3937,8 +3937,9 @@ function updateCheckoutSummary() {
       finalEl.innerText = `預估 NT$ ${finalMin.toLocaleString()} ~ ${finalMax.toLocaleString()}${hasAnyUp ? ' 起' : ''}`;
     }
   }
+} // 👈 補上這個結束大括號，結束 updateCheckoutSummary 函式！
 
-  function handleDeductMethodChange(type) {
+function handleDeductMethodChange(type) {
     const chkPkg = document.getElementById('chk-use-package');
     const chkWal = document.getElementById('chk-use-wallet');
     if (type === 'package' && chkPkg.checked) chkWal.checked = false;
