@@ -4695,6 +4695,25 @@ async function fetchDataAndRender() {
     const sInfo = (stores && stores.length > 0) ? stores[0] : {};
     const sCfg = (settings && settings.length > 0) ? settings[0] : {};
 
+    // ========================================================
+    // 🌟【設定防重整覆蓋保護】：若 DB 欄位尚未開通，自動自 localStorage 補齊
+    // ========================================================
+    const storeKey = CURRENT_STORE_ID;
+    const readCache = (key, fallback) => {
+      const v = localStorage.getItem(`${key}_${storeKey}`);
+      if (v === null || v === undefined) return fallback;
+      if (v === 'true') return true;
+      if (v === 'false') return false;
+      return v;
+    };
+
+    // 補齊本月活動與門市預約規範
+    sCfg.enable_promo = sCfg.enable_promo ?? readCache('zy_lt_enable_promo', readCache('zy_cfg_enable_promo', true));
+    sCfg.promo_text = (sCfg.promo_text !== undefined && sCfg.promo_text !== '') ? sCfg.promo_text : readCache('zy_lt_promo_text', readCache('zy_cfg_promo_text', sCfg.promoText || ''));
+    sCfg.enable_booking_rules = sCfg.enable_booking_rules ?? readCache('zy_lt_enable_rules', readCache('zy_cfg_enable_rules', true));
+    sCfg.booking_rules_text = (sCfg.booking_rules_text || sCfg.promo_rules_text) || readCache('zy_lt_booking_rules', readCache('zy_cfg_booking_rules', ''));
+    sCfg.enable_rule_agreement = sCfg.enable_rule_agreement ?? readCache('zy_lt_rule_agree', readCache('zy_cfg_rule_agree', true));
+    
     // 🌟 安全回填月數設定，不再發生 TDZ 拋錯
     const openMonths = sCfg.booking_open_months || localStorage.getItem(`zy_booking_open_months_${CURRENT_STORE_ID}`) || 3;
     const monthsSel = document.getElementById('booking-open-months-select');
@@ -9848,32 +9867,64 @@ function calcAdminQuickSlots() {
     }
 
     function calcAdminQuickSummary() {
-      const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
-      let basePrice = 0;
-      checked.forEach(cb => {
-  basePrice += parseServicePrice(cb.getAttribute('data-price')).baseNum;
-});
+  const checked = Array.from(document.querySelectorAll('#admin-quick-service-grid input:checked'));
+  let baseMin = 0;
+  let baseMax = 0;
+  let hasUp = false;
 
-      const pkgSel = document.getElementById('quick-addon-pkg');
-      const walSel = document.getElementById('quick-addon-wal');
-      const addonPkgPrice = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
-      const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
-      const totalAddon = addonPkgPrice + addonWalPrice;
+  checked.forEach(cb => {
+    const raw = cb.getAttribute('data-price') || '0';
+    const isUp = /起|up/i.test(String(raw));
+    if (isUp) hasUp = true;
 
-      const usePkg = document.getElementById('quick-use-pkg')?.checked;
-      const useWal = document.getElementById('quick-use-wal')?.checked;
-
-      let deductPrice = 0;
-      if (usePkg && basePrice > 0) deductPrice = basePrice;
-      else if (useWal && basePrice > 0) deductPrice = Math.round(basePrice * 0.1);
-
-      let finalPrice = Math.max(0, basePrice - deductPrice) + totalAddon;
-      document.getElementById('quick-disp-base').innerText = `$${basePrice}`;
-      document.getElementById('quick-disp-deduct').innerText = `-$${deductPrice}`;
-      document.getElementById('quick-disp-addon').innerText = `+$${totalAddon}`;
-      document.getElementById('admin-quick-total-price').innerText = finalPrice.toLocaleString();
-      document.getElementById('quick-final-price').value = finalPrice;
+    if (String(raw).includes('-') || String(raw).includes('~')) {
+      const parts = String(raw).split(/[-~]/).map(s => Number(s.replace(/[^\d]/g, '')) || 0);
+      baseMin += parts[0] || 0;
+      baseMax += parts[1] || parts[0] || 0;
+    } else {
+      const n = Number(String(raw).replace(/[^\d]/g, '')) || 0;
+      baseMin += n;
+      baseMax += n;
     }
+  });
+
+  const pkgSel = document.getElementById('quick-addon-pkg');
+  const walSel = document.getElementById('quick-addon-wal');
+  const addonPkgPrice = Number(pkgSel?.options[pkgSel.selectedIndex]?.getAttribute('data-price') || 0);
+  const addonWalPrice = Number(walSel?.options[walSel.selectedIndex]?.getAttribute('data-price') || 0);
+  const totalAddon = addonPkgPrice + addonWalPrice;
+
+  const usePkg = document.getElementById('quick-use-pkg')?.checked;
+  const useWal = document.getElementById('quick-use-wal')?.checked;
+
+  let deductMin = 0;
+  let deductMax = 0;
+  if (usePkg && baseMax > 0) {
+    deductMin = baseMin;
+    deductMax = baseMax;
+  } else if (useWal && baseMax > 0) {
+    deductMin = Math.round(baseMin * 0.1);
+    deductMax = Math.round(baseMax * 0.1);
+  }
+
+  let finalMin = Math.max(0, baseMin - deductMin) + totalAddon;
+  let finalMax = Math.max(0, baseMax - deductMax) + totalAddon;
+
+  // 介面文字呈現
+  let dispBaseStr = (baseMin === baseMax) 
+    ? `$${baseMin.toLocaleString()}${hasUp ? ' 起' : ''}` 
+    : `$${baseMin.toLocaleString()} ~ ${baseMax.toLocaleString()}${hasUp ? ' 起' : ''}`;
+  
+  let dispFinalStr = (finalMin === finalMax) 
+    ? `${finalMin.toLocaleString()}${hasUp ? ' 起' : ''}` 
+    : `${finalMin.toLocaleString()} ~ ${finalMax.toLocaleString()}${hasUp ? ' 起' : ''}`;
+
+  document.getElementById('quick-disp-base').innerText = dispBaseStr;
+  document.getElementById('quick-disp-deduct').innerText = `-$${deductMin.toLocaleString()}`;
+  document.getElementById('quick-disp-addon').innerText = `+$${totalAddon.toLocaleString()}`;
+  document.getElementById('admin-quick-total-price').innerText = dispFinalStr;
+  document.getElementById('quick-final-price').value = finalMin; // 存入低消保底
+}
 
     // ========================================================
 // 【升級版】adminQuickCheckCustomer() — 智慧聯動接送地址框
@@ -11156,11 +11207,11 @@ if (peakChartBox) {
     }
 
     // 🌟 渲染主日曆控制面板
+    // 🌟 渲染主日曆控制面板（清楚標註特殊項目與一般開放時段）
     function renderSlotsMasterInterface() {
       const mountPoint = document.getElementById('slot-picker-checkboxes');
       if (!mountPoint) return;
 
-      // 自動從後台設定回填既有時段
       if (pendingSlotsList.length === 0 && backendData.settings?.published_slots) {
         pendingSlotsList = [...backendData.settings.published_slots];
       }
@@ -11173,7 +11224,7 @@ if (peakChartBox) {
         <div class="col-span-full bg-white rounded-2xl p-3 border border-brand-200 shadow-sm mb-2 font-sans">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-bold text-brand-900">專員顏色對照表</span>
-            <span class="text-[10px] text-brand-500 font-medium">點選下方任一日曆格可批次勾選與填寫備註</span>
+            <span class="text-[10px] text-brand-500 font-medium">點選日期可勾選時段並填寫特殊項目備註</span>
           </div>
           <div class="flex flex-wrap gap-2.5">
             ${staffList.map(st => {
@@ -11195,7 +11246,7 @@ if (peakChartBox) {
 
       let cellsHtml = '';
       for (let b = 0; b < firstDayWeekIndex; b++) {
-        cellsHtml += `<div class="bg-gray-50/50 min-h-[92px] border-b border-r border-[#EFECE8] p-1"></div>`;
+        cellsHtml += `<div class="bg-gray-50/50 min-h-[96px] border-b border-r border-[#EFECE8] p-1"></div>`;
       }
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -11203,36 +11254,49 @@ if (peakChartBox) {
         const dd = String(d).padStart(2, '0');
         const dayStr = `${slotCalYear}/${mm}/${dd}`;
 
-        // 該日所有專員設定之時段
-        const daySlots = pendingSlotsList.filter(s => (s.date || '').replace(/-/g, '/') === dayStr);
+        // 依時間先後排序當日時段
+        const daySlots = pendingSlotsList
+          .filter(s => (s.date || '').replace(/-/g, '/') === dayStr)
+          .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+
         const isDayFull = daySlots.some(s => s.isFull);
 
         cellsHtml += `
-          <div class="bg-white min-h-[92px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative hover:bg-brand-50/40 transition cursor-pointer select-none"
+          <div class="bg-white min-h-[96px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative hover:bg-brand-50/40 transition cursor-pointer select-none"
                onclick="openBatchSlotModal('${dayStr}')">
             <div class="flex justify-between items-center mb-1">
               <span class="text-[11px] font-mono font-black ${isDayFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
               ${isDayFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
             </div>
 
-            <!-- 多專員時段色塊展示 -->
-            <div class="flex flex-col gap-0.5 overflow-hidden">
+            <!-- 多專員時段色塊展示：有特殊備註時完整顯示備註標籤，一般時段顯示時間與專員 -->
+            <div class="flex flex-col gap-1 overflow-hidden">
               ${daySlots.map(s => {
                 const stKey = s.staffId || s.staffName || '';
                 const c = staffMap[stKey] || SLOT_STAFF_PALETTE[0];
                 const note = (s.note || '').trim();
+                const hasSpecialNote = Boolean(note);
 
                 let bgStyle = c.bg;
                 let textStyle = c.text;
+                let borderStyle = `border: 1px solid ${c.dot}33;`;
+
                 if (s.isFull) {
                   bgStyle = '#FEF3C7';
                   textStyle = '#92400E';
+                  borderStyle = 'border: 1px solid #F59E0B66;';
+                } else if (hasSpecialNote) {
+                  // 特殊項目以醒目邊框與標籤區隔
+                  borderStyle = `border: 1.5px solid ${c.dot};`;
                 }
 
                 return `
-                  <div style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between">
-                    <span class="font-mono">${s.time}</span>
-                    <span class="font-black scale-90 truncate ml-0.5">${note || c.name}</span>
+                  <div style="background-color: ${bgStyle}; color: ${textStyle}; ${borderStyle}" class="text-[8px] font-bold px-1 py-0.5 rounded leading-tight flex flex-col">
+                    <div class="flex items-center justify-between gap-0.5">
+                      <span class="font-mono font-black">${s.time}</span>
+                      <span class="text-[7.5px] opacity-85 truncate">${s.staffName || c.name}</span>
+                    </div>
+                    ${hasSpecialNote ? `<span class="mt-0.5 px-1 py-[1px] rounded bg-white/85 text-rose-700 font-black text-[7.5px] truncate">★ ${note}</span>` : ''}
                   </div>
                 `;
               }).join('')}
@@ -11243,21 +11307,18 @@ if (peakChartBox) {
 
       mountPoint.innerHTML = legendHtml + `
         <div class="col-span-full bg-white rounded-2xl border border-brand-200 shadow-sm overflow-hidden font-sans">
-          <!-- 月份切換 -->
           <div class="flex items-center justify-between px-3.5 py-2 border-b border-[#EFECE8] bg-[#FAF8F5]">
             <button type="button" onclick="changeAdminSlotMonth(-1)" class="w-7 h-7 rounded-lg bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-left"></i></button>
             <span class="font-black text-xs text-brand-900 font-mono tracking-wide">${slotCalYear} 年 ${slotCalMonth} 月 空檔月曆</span>
             <button type="button" onclick="changeAdminSlotMonth(1)" class="w-7 h-7 rounded-lg bg-white border border-brand-200 flex items-center justify-center text-xs text-brand-800"><i class="fa-solid fa-chevron-right"></i></button>
           </div>
 
-          <!-- 星期列 -->
           <div class="grid grid-cols-7 text-center py-1.5 border-b border-[#EFECE8] bg-white text-[10.5px] font-bold text-brand-500">
             <span class="text-rose-500">週日</span>
             <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
             <span class="text-rose-500">週六</span>
           </div>
 
-          <!-- 日期網格 -->
           <div class="grid grid-cols-7 border-l border-t border-[#EFECE8] bg-[#EFECE8]">
             ${cellsHtml}
           </div>
@@ -11412,32 +11473,58 @@ if (peakChartBox) {
     }
 
     // 發布空檔到雲端 Supabase
+    // 發布空檔到雲端 Supabase（100% 依勾選時段與備註生成）
     async function publishSlotsToPage() {
-      if (pendingSlotsList.length === 0) return Swal.fire('請至少設定一個時段再發布', '', 'warning');
-      Swal.showLoading();
-      try {
-        const payload = {
-          published_slots: pendingSlotsList,
-          settings: {
-            ...(backendData.settings || {}),
-            published_slots: pendingSlotsList
-          }
-        };
+      if (!Array.isArray(pendingSlotsList) || pendingSlotsList.length === 0) {
+        return Swal.fire('請至少設定一個時段再發布', '', 'warning');
+      }
 
-        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, payload);
+      Swal.fire({
+        title: '正在發布空檔表...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        // 正規化每筆時段資料，確保 date / time / staffId / staffName / note / isFull 完整一致
+        const normalizedSlots = pendingSlotsList
+          .map(s => ({
+            date: String(s.date || '').replace(/-/g, '/').trim(),
+            time: String(s.time || '').trim(),
+            staffId: String(s.staffId || 'all').trim(),
+            staffName: String(s.staffName || '專員').trim(),
+            note: String(s.note || '').trim(),
+            isFull: Boolean(s.isFull)
+          }))
+          .filter(s => s.date && s.time)
+          .sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.time.localeCompare(b.time);
+          });
+
+        pendingSlotsList = normalizedSlots;
+
+        await directSupabasePatch('store_settings', `store_id=eq.${CURRENT_STORE_ID}`, {
+          published_slots: normalizedSlots,
+          updated_at: new Date().toISOString()
+        });
+
         if (!backendData.settings) backendData.settings = {};
-        backendData.settings.published_slots = pendingSlotsList;
+        backendData.settings.published_slots = normalizedSlots;
 
         const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
+        const specialCount = normalizedSlots.filter(s => s.note).length;
+
         Swal.fire({
-          title: '空檔月曆已成功發布！',
+          title: '空檔表已成功發布！',
           html: `
             <div class="text-xs text-brand-800 space-y-2 text-left bg-brand-50 p-3 rounded-2xl border border-brand-200 font-sans">
-              <div><b>預約時間表網址：</b><br><a href="${slotsUrl}" target="_blank" class="text-blue-600 underline break-all font-mono">${slotsUrl}</a></div>
-              <p class="text-[11px] text-brand-500">已同步至前台預約時間表，支援 4 位專員專屬色塊與自訂備註！</p>
+              <div>• 已發布時段總數：<b>${normalizedSlots.length} 筆</b>（含特殊項目備註：<b>${specialCount} 筆</b>）</div>
+              <div><b>專屬空檔表網址：</b><br><a href="${slotsUrl}" target="_blank" class="text-blue-600 underline break-all font-mono">${slotsUrl}</a></div>
             </div>
           `,
-          icon: 'success'
+          icon: 'success',
+          confirmButtonColor: '#8C7355'
         });
       } catch (e) {
         Swal.fire('發布失敗', e.message, 'error');
