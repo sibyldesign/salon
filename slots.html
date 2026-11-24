@@ -120,11 +120,13 @@
     let calMonth = new Date().getMonth() + 1;
 
     // 專員四色盤配置
+    // 專員 5 大高質感且對比鮮明的莫蘭迪色盤（粉、黃、紫、藍、綠，互不相近）
     const STAFF_COLORS = [
-      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', border: '#FED7D7', name: '專員 1' },
-      { bg: '#FFEDD5', text: '#9A3412', dot: '#EA580C', border: '#FED7AA', name: '專員 2' },
-      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#E9D5FF', name: '專員 3' },
-      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', border: '#BAE6FD', name: '專員 4' }
+      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', border: '#FCA5A5', name: '專員 1' }, // 0. 暮粉 (紅)
+      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', border: '#FCD34D', name: '專員 2' }, // 1. 暖杏 (黃橙)
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#D8B4FE', name: '專員 3' }, // 2. 薰衣 (紫)
+      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', border: '#7DD3FC', name: '專員 4' }, // 3. 冰川 (藍)
+      { bg: '#DCFCE7', text: '#166534', dot: '#16A34A', border: '#86EFAC', name: '專員 5' }  // 4. 鼠尾草 (綠)
     ];
 
     async function initSlots() {
@@ -251,6 +253,7 @@
     }
 
     // 🌟 核心月曆：嚴格依 published_slots 渲染，有勾選才印、特殊備註白底紅字醒目呈現
+    // 🌟 極致俐落排版：顏色代表專員（免印名字）、移除多重內框、文字滿格呈現絕不截斷
     function renderMultiStaffCalendar(container) {
       const daysInMonth = new Date(calYear, calMonth, 0).getDate();
       const firstDayWeek = new Date(calYear, calMonth - 1, 1).getDay();
@@ -259,7 +262,7 @@
       let cellsHtml = '';
 
       for (let i = 0; i < firstDayWeek; i++) {
-        cellsHtml += `<div class="bg-[#F6F1EC]/60 min-h-[86px] border-b border-r border-[#EFECE8] p-1"></div>`;
+        cellsHtml += `<div class="bg-[#F8F5F2]/50 min-h-[96px] border-b border-r border-[#EFECE8] p-0.5"></div>`;
       }
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -267,7 +270,7 @@
         const dd = String(d).padStart(2, '0');
         const daySlash = `${calYear}/${mm}/${dd}`;
 
-        // 雙向相容標準化日期比對
+        // 精準比對當日發布之時段
         const daySlots = allSlots.filter(s => {
           if (!s || !s.date) return false;
           const cleanD = String(s.date).replace(/-/g, '/').trim();
@@ -280,14 +283,14 @@
         const isFull = daySlots.some(s => s.isFull || (s.note && s.note.includes('滿')));
 
         cellsHtml += `
-          <div class="bg-white min-h-[86px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative select-none hover:bg-brand-50/30 transition">
+          <div class="bg-white min-h-[96px] border-b border-r border-[#EFECE8] p-1 flex flex-col justify-start relative select-none">
             <div class="flex justify-between items-center mb-1 px-0.5">
-              <span class="text-[10px] font-mono font-black ${isFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
-              ${isFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded shadow-2xs">滿</span>` : ''}
+              <span class="text-[11px] font-mono font-black ${isFull ? 'text-gray-400' : 'text-brand-900'}">${d}</span>
+              ${isFull ? `<span class="bg-amber-100 text-amber-900 text-[8px] font-black px-1 rounded">滿</span>` : ''}
             </div>
 
-            <!-- 時段條列表：多專員各自色塊展示 -->
-            <div class="flex flex-col gap-1 overflow-hidden">
+            <!-- 時段列表：單純靠底色代表專員，文字一行完整呈現 -->
+            <div class="flex flex-col gap-1 w-full">
               ${daySlots.map(s => {
                 const note = (s.note || '').trim();
                 const stKey = s.staffId || s.staffName || '';
@@ -296,25 +299,22 @@
 
                 let bgStyle = staffColor.bg;
                 let textStyle = staffColor.text;
+                let borderStyle = `border: 1px solid ${staffColor.border};`;
 
                 if (s.isFull) {
                   bgStyle = '#FEF3C7';
                   textStyle = '#92400E';
+                  borderStyle = 'border: 1px solid #FCD34D;';
                 }
 
                 const targetUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(daySlash)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
 
                 return `
-                  <a href="${targetUrl}" style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[8px] font-bold px-1.5 py-0.5 rounded-lg leading-tight truncate flex flex-col gap-0.5 transition hover:shadow-xs active:scale-95 block border border-black/5">
-                    <div class="flex items-center justify-between">
-                      <span class="font-mono font-black">${s.time}</span>
-                      <span class="text-[7.5px] opacity-80 truncate ml-0.5">${s.staffName || ''}</span>
-                    </div>
-                    ${hasSpecialNote ? `
-                      <span class="bg-white/95 text-rose-700 px-1 py-[1px] rounded text-[7.5px] font-black truncate shadow-2xs border border-rose-200">
-                        ★ ${note}
-                      </span>
-                    ` : ''}
+                  <a href="${targetUrl}" 
+                     style="background-color: ${bgStyle}; color: ${textStyle}; ${borderStyle}" 
+                     class="w-full text-[9px] font-bold py-1 px-1 rounded-md leading-tight text-center transition hover:opacity-90 active:scale-95 block shadow-2xs">
+                    <div class="font-mono tracking-tight font-black">${s.time}</div>
+                    ${hasSpecialNote ? `<div class="text-[8px] font-black truncate text-rose-700 mt-0.5">★ ${note}</div>` : ''}
                   </a>
                 `;
               }).join('')}
@@ -324,7 +324,7 @@
       }
 
       container.innerHTML = `
-        <div class="bg-white rounded-3xl border border-[#E8DFD5] shadow-sm overflow-hidden font-sans">
+        <div class="bg-white rounded-3xl border border-[#E8DFD5] shadow-xs overflow-hidden font-sans">
           <div class="grid grid-cols-7 text-center py-2 border-b border-[#EFECE8] bg-[#FAF8F5] text-[11px] font-bold text-brand-800">
             <span class="text-[#E02424]">週日</span>
             <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
