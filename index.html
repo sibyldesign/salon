@@ -1269,6 +1269,36 @@ if (!guestLineUid && window.liff && typeof liff.init === 'function') {
   let isPortfolioExpanded = false;
   let sigCanvas, sigCtx, isSigDrawing = false;
 
+  // ========================================================
+// 🌟 智慧價格解析器（支援：單一金額、區間 800-1200、起跳 800起/800up）
+// ========================================================
+function parseSmartPrice(rawVal) {
+  const str = String(rawVal || '0').trim();
+  const isUp = /起|up/i.test(str);
+  
+  if (str.includes('-') || str.includes('~')) {
+    const parts = str.split(/[-~]/).map(s => Number(s.replace(/[^\d]/g, '')) || 0);
+    const pMin = parts[0] || 0;
+    const pMax = parts[1] || pMin;
+    return {
+      min: pMin,
+      max: pMax,
+      isRange: pMin !== pMax,
+      isUp: isUp,
+      display: `NT$ ${pMin.toLocaleString()} ~ ${pMax.toLocaleString()}${isUp ? ' 起' : ''}`
+    };
+  } else {
+    const num = Number(str.replace(/[^\d]/g, '')) || 0;
+    return {
+      min: num,
+      max: num,
+      isRange: false,
+      isUp: isUp,
+      display: isUp ? `NT$ ${num.toLocaleString()} 起` : `NT$ ${num.toLocaleString()}`
+    };
+  }
+}
+  
   async function directSupabaseFetch(endpoint) {
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
@@ -3758,9 +3788,10 @@ function updateCheckoutSummary() {
     if (!hasUsablePackage) chkPkg.checked = false;
   }
 
-  // 1. 收集所有勾選項目的價格區間 (min ~ max)
+  // 1. 收集勾選項目的價格
   let minTotal = 0;
   let maxTotal = 0;
+  let hasAnyUp = false;
   let breakdownLines = [];
   const selectedItems = [];
 
@@ -3768,30 +3799,19 @@ function updateCheckoutSummary() {
 
   allChecked.forEach(cb => {
     const rawPrice = String(cb.getAttribute('data-price') || '0');
-    let pMin = 0, pMax = 0;
+    const pObj = parseSmartPrice(rawPrice);
 
-    if (rawPrice.includes('-') || rawPrice.includes('~')) {
-      const parts = rawPrice.split(/[-~]/).map(s => Number(s.replace(/[^\d]/g, '')) || 0);
-      pMin = parts[0] || 0;
-      pMax = parts[1] || pMin;
-    } else {
-      const num = Number(rawPrice.replace(/[^\d]/g, '')) || 0;
-      pMin = num;
-      pMax = num;
-    }
-
-    minTotal += pMin;
-    maxTotal += pMax;
+    minTotal += pObj.min;
+    maxTotal += pObj.max;
+    if (pObj.isUp) hasAnyUp = true;
 
     const isAddon = cb.classList.contains('pet-1-addon') || cb.getAttribute('data-isaddon') === 'true' || cb.className.includes('-addon');
-    selectedItems.push({ name: cb.value, min: pMin, max: pMax, isAddon });
-
-    const priceRangeText = (pMin === pMax) ? `NT$ ${pMin.toLocaleString()}` : `NT$ ${pMin.toLocaleString()} ~ ${pMax.toLocaleString()}`;
+    selectedItems.push({ name: cb.value, min: pObj.min, max: pObj.max, isAddon });
 
     breakdownLines.push(`
       <div class="flex justify-between items-center py-0.5">
         <span>${isAddon ? '<span class="text-[10px] text-brand-400 bg-brand-100 px-1 py-0.2 rounded mr-1">加購</span>' : ''}${cb.value}</span>
-        <span class="font-mono font-bold">${showPrice ? priceRangeText : '現場確認'}</span>
+        <span class="font-mono font-bold">${showPrice ? pObj.display : '現場確認'}</span>
       </div>
     `);
   });
@@ -3800,8 +3820,14 @@ function updateCheckoutSummary() {
   const summaryRange = document.getElementById('summary-service-range');
   if (summaryItems && summaryRange) {
     summaryItems.innerHTML = breakdownLines.length > 0 ? breakdownLines.join('') : '<div>(尚未選擇項目)</div>';
-    const totalRangeText = (minTotal === maxTotal) ? `NT$ ${minTotal.toLocaleString()}` : `NT$ ${minTotal.toLocaleString()} ~ ${maxTotal.toLocaleString()}`;
-    summaryRange.innerText = showPrice ? totalRangeText : '現場確認';
+    
+    let rangeText = '';
+    if (minTotal === maxTotal) {
+      rangeText = hasAnyUp ? `NT$ ${minTotal.toLocaleString()} 起` : `NT$ ${minTotal.toLocaleString()}`;
+    } else {
+      rangeText = `NT$ ${minTotal.toLocaleString()} ~ ${maxTotal.toLocaleString()}${hasAnyUp ? ' 起' : ''}`;
+    }
+    summaryRange.innerText = showPrice ? rangeText : '現場確認';
   }
 
   // 2. 方案抵扣運算
@@ -3895,26 +3921,22 @@ function updateCheckoutSummary() {
     document.getElementById('summary-addon-total').innerText = totalAddon.toLocaleString();
   }
 
-  // 3. 現場預估應付金額精準核算
-  // 若顧客購買儲值金，項目已由儲值抵扣，顧客現場應付金額為：新購儲值金總額 + (若有不足之項目差額)
+  // 3. 現場預估應付金額渲染
   let finalMin = outOfPocketMin + totalAddon;
   let finalMax = outOfPocketMax + totalAddon;
-
-  const finalEl = document.getElementById('summary-final-total');
-  // 🌟【保留計算出的真實金額】：無論前端是否隱藏，此數值皆為真實費用
   window.actualCalculatedMinPrice = finalMin;
   window.actualCalculatedMaxPrice = finalMax;
 
+  const finalEl = document.getElementById('summary-final-total');
   if (finalEl) {
     if (!showPrice) {
       finalEl.innerText = '現場確認';
     } else if (finalMin === finalMax) {
-      finalEl.innerText = `預估 NT$ ${finalMin.toLocaleString()}`;
+      finalEl.innerText = hasAnyUp ? `預估 NT$ ${finalMin.toLocaleString()} 起` : `預估 NT$ ${finalMin.toLocaleString()}`;
     } else {
-      finalEl.innerText = `預估 NT$ ${finalMin.toLocaleString()} ~ ${finalMax.toLocaleString()}`;
+      finalEl.innerText = `預估 NT$ ${finalMin.toLocaleString()} ~ ${finalMax.toLocaleString()}${hasAnyUp ? ' 起' : ''}`;
     }
   }
-}
 
   function handleDeductMethodChange(type) {
     const chkPkg = document.getElementById('chk-use-package');
