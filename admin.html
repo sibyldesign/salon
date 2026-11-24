@@ -11177,13 +11177,44 @@ if (peakChartBox) {
     let slotCalYear = 2026;
     let slotCalMonth = 11;
 
-    // 專員 4 色代表盤配置
+    // 後台空檔月曆 10 色質感色盤（與前台完全同步）
     const SLOT_STAFF_PALETTE = [
-      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', name: '專員 1' }, // 柔櫻粉
-      { bg: '#FFEDD5', text: '#9A3412', dot: '#EA580C', name: '專員 2' }, // 暖杏橘
-      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', name: '專員 3' }, // 薰衣紫
-      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', name: '專員 4' }  // 霧天藍
+      { bg: '#FFE4E6', text: '#9F1239', dot: '#E11D48', border: '#FDA4AF', name: '專員 1' }, // 1. 柔櫻粉
+      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', border: '#FCD34D', name: '專員 2' }, // 2. 暖杏黃
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#D8B4FE', name: '專員 3' }, // 3. 薰衣紫
+      { bg: '#E0F2FE', text: '#0369A1', dot: '#0284C7', border: '#7DD3FC', name: '專員 4' }, // 4. 冰川藍
+      { bg: '#DCFCE7', text: '#15803D', dot: '#16A34A', border: '#86EFAC', name: '專員 5' }, // 5. 薄荷綠
+      { bg: '#EDE4E6', text: '#643843', dot: '#88505E', border: '#CDB5BC', name: '專員 6' }, // 6. 灰粉
+      { bg: '#ECE5D8', text: '#5D4F37', dot: '#85724F', border: '#C8BEAA', name: '專員 7' }, // 7. 灰黃
+      { bg: '#E8E3ED', text: '#4D3B5C', dot: '#73588A', border: '#C2B8CC', name: '專員 8' }, // 8. 灰紫
+      { bg: '#DDE5EB', text: '#344C5C', dot: '#526F82', border: '#AFC0CC', name: '專員 9' }, // 9. 灰藍
+      { bg: '#DFE7E2', text: '#344E3D', dot: '#50755C', border: '#AFC2B5', name: '專員 10' } // 10. 灰綠
     ];
+
+    function getSlotStaffColorMap() {
+      const staffList = (backendData.settings?.staffList || []).filter(s => s && s.id !== 'all');
+      const map = {};
+      staffList.forEach((st, idx) => {
+        const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
+        const obj = { ...c, name: st.name };
+        if (st.id) map[String(st.id).trim()] = obj;
+        if (st.name) map[String(st.name).trim()] = obj;
+      });
+
+      pendingSlotsList.forEach(s => {
+        const nameKey = String(s.staffName || '').trim();
+        const idKey = String(s.staffId || '').trim();
+        if (nameKey && !map[nameKey]) {
+          const idx = Object.keys(map).length;
+          const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
+          map[nameKey] = { ...c, name: nameKey };
+        }
+        if (idKey && nameKey && map[nameKey]) {
+          map[idKey] = map[nameKey];
+        }
+      });
+      return map;
+    }
 
     function initSlotsLiveUrl() {
       const slotsUrl = `https://salon.heysibyl.com/slots.html?store_id=${CURRENT_STORE_ID}`;
@@ -11192,18 +11223,6 @@ if (peakChartBox) {
         liveElem.href = slotsUrl;
         liveElem.innerText = slotsUrl;
       }
-    }
-
-    // 取得專員與色票映射
-    function getSlotStaffColorMap() {
-      const staffList = (backendData.settings?.staffList || []).filter(s => s.id !== 'all');
-      const map = {};
-      staffList.forEach((st, idx) => {
-        const c = SLOT_STAFF_PALETTE[idx % SLOT_STAFF_PALETTE.length];
-        map[st.id] = { ...c, name: st.name };
-        map[st.name] = { ...c, name: st.name };
-      });
-      return map;
     }
 
     // 🌟 渲染主日曆控制面板
@@ -11269,34 +11288,30 @@ if (peakChartBox) {
               ${isDayFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
             </div>
 
-            <!-- 多專員時段色塊展示：有特殊備註時完整顯示備註標籤，一般時段顯示時間與專員 -->
+            <!-- 多專員時段色塊展示 -->
             <div class="flex flex-col gap-1 overflow-hidden">
               ${daySlots.map(s => {
-                const stKey = s.staffId || s.staffName || '';
-                const c = staffMap[stKey] || SLOT_STAFF_PALETTE[0];
+                const nameKey = String(s.staffName || '').trim();
+                const idKey = String(s.staffId || '').trim();
+                const c = staffMap[nameKey] || staffMap[idKey] || SLOT_STAFF_PALETTE[0];
                 const note = (s.note || '').trim();
-                const hasSpecialNote = Boolean(note);
+                const hasSpecialNote = Boolean(note && !note.includes('常態'));
 
                 let bgStyle = c.bg;
                 let textStyle = c.text;
-                let borderStyle = `border: 1px solid ${c.dot}33;`;
+                let borderStyle = c.border;
 
                 if (s.isFull) {
                   bgStyle = '#FEF3C7';
                   textStyle = '#92400E';
-                  borderStyle = 'border: 1px solid #F59E0B66;';
-                } else if (hasSpecialNote) {
-                  // 特殊項目以醒目邊框與標籤區隔
-                  borderStyle = `border: 1.5px solid ${c.dot};`;
+                  borderStyle = '#FCD34D';
                 }
 
                 return `
-                  <div style="background-color: ${bgStyle}; color: ${textStyle}; ${borderStyle}" class="text-[8px] font-bold px-1 py-0.5 rounded leading-tight flex flex-col">
-                    <div class="flex items-center justify-between gap-0.5">
-                      <span class="font-mono font-black">${s.time}</span>
-                      <span class="text-[7.5px] opacity-85 truncate">${s.staffName || c.name}</span>
-                    </div>
-                    ${hasSpecialNote ? `<span class="mt-0.5 px-1 py-[1px] rounded bg-white/85 text-rose-700 font-black text-[7.5px] truncate">★ ${note}</span>` : ''}
+                  <div style="background-color: ${bgStyle}; color: ${textStyle}; border: 1px solid ${borderStyle};" 
+                       class="w-full text-center py-1 px-0.5 rounded-lg leading-tight select-none shadow-2xs">
+                    <div class="font-mono text-[9px] font-black tracking-tight leading-none">${s.time}</div>
+                    ${hasSpecialNote ? `<div class="text-[7.5px] font-black leading-none mt-1 truncate">★ ${note}</div>` : ''}
                   </div>
                 `;
               }).join('')}
