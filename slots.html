@@ -120,15 +120,23 @@
     let calMonth = new Date().getMonth() + 1;
 
     // 專員四色盤配置
-    // 專員 5 大高質感且對比鮮明的莫蘭迪色盤（粉、黃、紫、藍、綠，互不相近）
+    // 專員 10 色質感色盤（前 5 色粉黃紫藍綠；超過 5 人使用灰階粉黃紫藍綠）
     const STAFF_COLORS = [
-      { bg: '#FDE8E8', text: '#9B1C1C', dot: '#E02424', border: '#FCA5A5', name: '專員 1' }, // 0. 暮粉 (紅)
-      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', border: '#FCD34D', name: '專員 2' }, // 1. 暖杏 (黃橙)
-      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#D8B4FE', name: '專員 3' }, // 2. 薰衣 (紫)
-      { bg: '#E0F2FE', text: '#075985', dot: '#0284C7', border: '#7DD3FC', name: '專員 4' }, // 3. 冰川 (藍)
-      { bg: '#DCFCE7', text: '#166534', dot: '#16A34A', border: '#86EFAC', name: '專員 5' }  // 4. 鼠尾草 (綠)
+      // === 第 1 輪：經典高質感馬卡龍柔色（粉、黃、紫、藍、綠）===
+      { bg: '#FFE4E6', text: '#9F1239', dot: '#E11D48', border: '#FDA4AF', name: '專員 1' }, // 1. 柔櫻粉
+      { bg: '#FEF3C7', text: '#92400E', dot: '#D97706', border: '#FCD34D', name: '專員 2' }, // 2. 暖杏黃
+      { bg: '#F3E8FF', text: '#6B21A8', dot: '#9333EA', border: '#D8B4FE', name: '專員 3' }, // 3. 薰衣紫
+      { bg: '#E0F2FE', text: '#0369A1', dot: '#0284C7', border: '#7DD3FC', name: '專員 4' }, // 4. 冰川藍
+      { bg: '#DCFCE7', text: '#15803D', dot: '#16A34A', border: '#86EFAC', name: '專員 5' }, // 5. 薄荷綠
+      
+      // === 第 2 輪：降飽和灰階莫蘭迪色（超過 5 人自動遞補，絕不撞色）===
+      { bg: '#EDE4E6', text: '#643843', dot: '#88505E', border: '#CDB5BC', name: '專員 6' }, // 6. 灰粉
+      { bg: '#ECE5D8', text: '#5D4F37', dot: '#85724F', border: '#C8BEAA', name: '專員 7' }, // 7. 灰黃 (焙茶)
+      { bg: '#E8E3ED', text: '#4D3B5C', dot: '#73588A', border: '#C2B8CC', name: '專員 8' }, // 8. 灰紫
+      { bg: '#DDE5EB', text: '#344C5C', dot: '#526F82', border: '#AFC0CC', name: '專員 9' }, // 9. 灰藍
+      { bg: '#DFE7E2', text: '#344E3D', dot: '#50755C', border: '#AFC2B5', name: '專員 10' } // 10. 灰綠
     ];
-
+    
     async function initSlots() {
       try {
         // 1. 抓取 store_settings 設定主檔
@@ -177,23 +185,39 @@
     }
 
     // 取得專員顏色映射
+    // 專員顏色映射（雙向相容名字與 ID，保證每位專員顏色絕對獨立）
     function getStaffColorMapping() {
-      const rawStaffList = (storeInfo.settings?.staffList || []).filter(s => s.id !== 'all');
+      const rawStaffList = (storeInfo.staff_list || storeInfo.settings?.staffList || []).filter(s => s && s.id !== 'all');
       const staffMap = {};
 
       if (rawStaffList.length > 0) {
         rawStaffList.forEach((st, idx) => {
           const color = STAFF_COLORS[idx % STAFF_COLORS.length];
-          staffMap[st.id] = { ...color, name: st.name };
-          staffMap[st.name] = { ...color, name: st.name };
-        });
-      } else {
-        const uniqueStaff = [...new Set(allSlots.map(s => s.staffName || s.staffId).filter(Boolean))];
-        uniqueStaff.forEach((stName, idx) => {
-          const color = STAFF_COLORS[idx % STAFF_COLORS.length];
-          staffMap[stName] = { ...color, name: stName };
+          const stObj = { ...color, name: st.name };
+          if (st.id) staffMap[String(st.id).trim()] = stObj;
+          if (st.name) staffMap[String(st.name).trim()] = stObj;
         });
       }
+
+      // 從發布時段中抓取所有不重複專員，確保排程內的專員皆分派專屬顏色
+      const slotStaffNames = [...new Set(allSlots.map(s => String(s.staffName || '').trim()).filter(Boolean))];
+      slotStaffNames.forEach(stName => {
+        if (!staffMap[stName]) {
+          const idx = Object.keys(staffMap).length;
+          const color = STAFF_COLORS[idx % STAFF_COLORS.length];
+          staffMap[stName] = { ...color, name: stName };
+        }
+      });
+
+      // ID 與名字交叉映射
+      allSlots.forEach(s => {
+        const idKey = String(s.staffId || '').trim();
+        const nameKey = String(s.staffName || '').trim();
+        if (idKey && nameKey && staffMap[nameKey]) {
+          staffMap[idKey] = staffMap[nameKey];
+        }
+      });
+
       return staffMap;
     }
 
@@ -253,7 +277,7 @@
     }
 
     // 🌟 核心月曆：嚴格依 published_slots 渲染，有勾選才印、特殊備註白底紅字醒目呈現
-    // 🌟 極致俐落排版：顏色代表專員（免印名字）、移除多重內框、文字滿格呈現絕不截斷
+    // 🌟 簡潔無遮擋排版：純色塊代表專員（免印名字）、移除多重內框、文字放大且完整呈現
     function renderMultiStaffCalendar(container) {
       const daysInMonth = new Date(calYear, calMonth, 0).getDate();
       const firstDayWeek = new Date(calYear, calMonth - 1, 1).getDay();
@@ -270,7 +294,6 @@
         const dd = String(d).padStart(2, '0');
         const daySlash = `${calYear}/${mm}/${dd}`;
 
-        // 精準比對當日發布之時段
         const daySlots = allSlots.filter(s => {
           if (!s || !s.date) return false;
           const cleanD = String(s.date).replace(/-/g, '/').trim();
@@ -289,32 +312,33 @@
               ${isFull ? `<span class="bg-amber-100 text-amber-900 text-[8px] font-black px-1 rounded">滿</span>` : ''}
             </div>
 
-            <!-- 時段列表：單純靠底色代表專員，文字一行完整呈現 -->
+            <!-- 時段條：顏色代表專員，純文字 1~2 行呈現，字體不換行不截斷 -->
             <div class="flex flex-col gap-1 w-full">
               ${daySlots.map(s => {
                 const note = (s.note || '').trim();
-                const stKey = s.staffId || s.staffName || '';
-                const staffColor = staffMap[stKey] || STAFF_COLORS[0];
+                const nameKey = String(s.staffName || '').trim();
+                const idKey = String(s.staffId || '').trim();
+                const staffColor = staffMap[nameKey] || staffMap[idKey] || STAFF_COLORS[0];
                 const hasSpecialNote = Boolean(note && !note.includes('常態'));
 
                 let bgStyle = staffColor.bg;
                 let textStyle = staffColor.text;
-                let borderStyle = `border: 1px solid ${staffColor.border};`;
+                let borderStyle = staffColor.border;
 
                 if (s.isFull) {
                   bgStyle = '#FEF3C7';
                   textStyle = '#92400E';
-                  borderStyle = 'border: 1px solid #FCD34D;';
+                  borderStyle = '#FCD34D';
                 }
 
                 const targetUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(daySlash)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
 
                 return `
                   <a href="${targetUrl}" 
-                     style="background-color: ${bgStyle}; color: ${textStyle}; ${borderStyle}" 
-                     class="w-full text-[9px] font-bold py-1 px-1 rounded-md leading-tight text-center transition hover:opacity-90 active:scale-95 block shadow-2xs">
-                    <div class="font-mono tracking-tight font-black">${s.time}</div>
-                    ${hasSpecialNote ? `<div class="text-[8px] font-black truncate text-rose-700 mt-0.5">★ ${note}</div>` : ''}
+                     style="background-color: ${bgStyle}; color: ${textStyle}; border: 1px solid ${borderStyle};" 
+                     class="w-full text-center py-1 px-0.5 rounded-lg transition active:scale-95 block shadow-2xs">
+                    <div class="font-mono text-[9.5px] font-black tracking-tight leading-none">${s.time}</div>
+                    ${hasSpecialNote ? `<div class="text-[8px] font-black leading-none mt-1 truncate">★ ${note}</div>` : ''}
                   </a>
                 `;
               }).join('')}
