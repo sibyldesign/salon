@@ -236,6 +236,7 @@
     }
 
     // 🌟 多位專員同月曆同格呈現
+    // 🌟 嚴格依照 published_slots 輸出（有勾選才印、無勾選留白、特殊備註醒目標註）
     function renderMultiStaffCalendar(container) {
       const daysInMonth = new Date(calYear, calMonth, 0).getDate();
       const firstDayWeek = new Date(calYear, calMonth - 1, 1).getDay();
@@ -253,10 +254,16 @@
         const daySlash = `${calYear}/${mm}/${dd}`;
         const dayHyphen = `${calYear}-${mm}-${dd}`;
 
+        // 🌟 雙向相容標準化日期比對，精確過濾出「後台真正有勾選」的時段
         const daySlots = allSlots.filter(s => {
-          const cDate = (s.date || '').replace(/\//g, '-');
-          return cDate === dayHyphen;
-        });
+          if (!s || !s.date) return false;
+          const cleanD = String(s.date).replace(/-/g, '/').trim();
+          // 同時支援 2026/11/04 與 2026/11/4 格式
+          const parts = cleanD.split('/');
+          if (parts.length < 3) return false;
+          const stdSlash = `${parts[0]}/${String(parts[1]).padStart(2, '0')}/${String(parts[2]).padStart(2, '0')}`;
+          return stdSlash === daySlash;
+        }).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
 
         const isFull = daySlots.some(s => s.isFull || (s.note && s.note.includes('滿')));
 
@@ -267,12 +274,13 @@
               ${isFull ? `<span class="bg-[#FEF3C7] text-[#92400E] text-[7.5px] font-bold px-1 rounded">滿</span>` : ''}
             </div>
 
-            <!-- 時段條列表：多專員各自色塊展示 -->
+            <!-- 時段條列表：100% 依後台勾選時段呈現，有備註(如撥筋)獨立顯目顯示 -->
             <div class="flex flex-col gap-0.5 overflow-hidden">
               ${daySlots.map(s => {
                 const note = (s.note || '').trim();
                 const stKey = s.staffId || s.staffName || '';
                 const staffColor = staffMap[stKey] || STAFF_COLORS[0];
+                const hasSpecialNote = Boolean(note && !note.includes('常態'));
 
                 let bgStyle = staffColor.bg;
                 let textStyle = staffColor.text;
@@ -285,9 +293,11 @@
                 const targetUrl = `index.html?store_id=${CURRENT_STORE_ID}&date=${encodeURIComponent(daySlash)}&time=${encodeURIComponent(s.time)}` + (s.staffId ? `&staff=${encodeURIComponent(s.staffId)}` : '');
 
                 return `
-                  <a href="${targetUrl}" style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between transition block">
-                    <span class="font-mono">${s.time}</span>
-                    ${note ? `<span class="font-black scale-90 truncate ml-0.5">${note}</span>` : ''}
+                  <a href="${targetUrl}" style="background-color: ${bgStyle}; color: ${textStyle};" class="text-[7.5px] font-bold px-1 py-0.5 rounded leading-tight truncate flex items-center justify-between transition block ${hasSpecialNote ? 'border border-red-300 shadow-2xs' : ''}">
+                    <span class="font-mono font-bold">${s.time}</span>
+                    ${hasSpecialNote 
+                      ? `<span class="bg-white/90 text-rose-700 px-1 rounded font-black scale-90 truncate ml-0.5">★ ${note}</span>` 
+                      : (s.staffName ? `<span class="opacity-75 scale-90 truncate ml-0.5 font-normal">${s.staffName}</span>` : '')}
                   </a>
                 `;
               }).join('')}
@@ -295,6 +305,20 @@
           </div>
         `;
       }
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl border border-[#E8DFD5] shadow-xs overflow-hidden font-sans">
+          <div class="grid grid-cols-7 text-center py-1.5 border-b border-[#EFECE8] bg-white text-[10.5px] font-bold text-brand-800">
+            <span class="text-[#E02424]">週日</span>
+            <span>週一</span><span>週二</span><span>週三</span><span>週四</span><span>週五</span>
+            <span class="text-[#E02424]">週六</span>
+          </div>
+          <div class="grid grid-cols-7 border-l border-t border-[#EFECE8] bg-[#EFECE8]">
+            ${cellsHtml}
+          </div>
+        </div>
+      `;
+    }
 
       container.innerHTML = `
         <div class="bg-white rounded-2xl border border-[#E8DFD5] shadow-xs overflow-hidden font-sans">
